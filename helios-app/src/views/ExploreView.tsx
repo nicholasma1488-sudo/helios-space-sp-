@@ -5,10 +5,12 @@ import {
 } from 'lucide-react'
 import { api, type ExploreResults, type Post, type Project } from '../api'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { LEARNING_SUBJECTS, UTILITY_MINI_APPS, requestOpenMiniApp } from '../miniapps'
+import { MiniAppIcon } from '../miniapps/MiniAppIcon'
 import { useApp } from '../store/appStore'
 import './ExploreView.css'
 
-type ExploreTab = 'for-you' | 'projects' | 'books' | 'live' | 'creators' | 'spaces'
+type ExploreTab = 'for-you' | 'projects' | 'books' | 'live' | 'creators' | 'spaces' | 'apps' | 'learn'
 const EMPTY: ExploreResults = { projects: [], posts: [], live: [], creators: [], spaces: [] }
 
 export function ExploreView() {
@@ -57,11 +59,11 @@ export function ExploreView() {
   return (
     <div className="explore-page">
       <header className="explore-header">
-        <div><span><Compass size={13} /> PERMISSION-AWARE DISCOVERY</span><h1>Explore meaningful work</h1><p>Find useful Projects, creators, books, comics, Live work and communities that are public or shared with you.</p></div>
+        <div><span><Compass size={13} /> DISCOVER</span><h1>Find work, people and tools worth entering.</h1><p>Trending projects, interesting posts, learning paths and popular Mini Apps — using real Helios data, never invented counts.</p></div>
         <label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Projects, people, books, Live and Spaces" />{query && <button type="button" onClick={() => setQuery('')}>×</button>}</label>
       </header>
       <nav className="explore-tabs" aria-label="Explore sections">{([
-        ['for-you', 'For you'], ['projects', 'Projects'], ['books', 'Books & Comics'], ['live', 'Live'], ['creators', 'Creators'], ['spaces', 'Communities'],
+        ['for-you', 'For you'], ['projects', 'Projects'], ['apps', 'Mini Apps'], ['learn', 'Learn'], ['books', 'Books & Comics'], ['live', 'Live'], ['creators', 'Creators'], ['spaces', 'Communities'],
       ] as const).map(([id, label]) => <button type="button" key={id} className={tab === id ? 'is-active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
 
       <main className="explore-content">
@@ -77,6 +79,24 @@ export function ExploreView() {
         {!loading && !error && tab === 'live' && <ExploreSection title="Active collaborative sessions" eyebrow="OPEN THE ACTUAL PROJECT"><div className="explore-live-grid">{live.map(session => <LiveDiscoveryCard key={session.id} session={session} onOpen={() => dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: session.id })} />)}{live.length === 0 && <ExploreInlineEmpty text="No matching Live sessions." />}</div></ExploreSection>}
         {!loading && !error && tab === 'creators' && <ExploreSection title="Creators and learners" eyebrow="DISCOVERED THROUGH SHARED WORK"><div className="explore-creators-grid">{creators.map(creator => <CreatorCard key={creator.id} creator={creator} current={creator.id === state.user?.id} />)}{creators.length === 0 && <ExploreInlineEmpty text="No matching discoverable creators." />}</div></ExploreSection>}
         {!loading && !error && tab === 'spaces' && <ExploreSection title="Subject and Hobby communities" eyebrow="CONTEXT BEFORE CONTENT"><div className="explore-spaces-grid">{spaces.map(space => <SpaceDiscoveryCard key={space.id} space={space} onOpen={() => dispatch({ type: 'OPEN_SPACE', spaceId: space.id })} />)}{spaces.length === 0 && <ExploreInlineEmpty text="No matching Spaces." />}</div></ExploreSection>}
+        {!loading && !error && tab === 'apps' && <ExploreSection title="Popular Mini Apps" eyebrow="NATIVE HELIOS TOOLS"><div className="explore-project-grid wide">{UTILITY_MINI_APPS.filter(app => !needle || `${app.name} ${app.description}`.toLowerCase().includes(needle)).map(app => (
+          <button key={app.id} type="button" className="explore-project-card" onClick={() => { requestOpenMiniApp(app.id); dispatch({ type: 'SET_VIEW', view: 'apps' }) }} style={{ '--explore-accent': app.accent } as React.CSSProperties}>
+            <div><MiniAppIcon name={app.icon} /><span>{app.categoryLabel}</span></div>
+            <small>Utility app</small>
+            <h3>{app.name}</h3>
+            <p>{app.description}</p>
+            <footer><span>{app.categoryLabel}</span><b>Open app <ChevronRight size={12} /></b></footer>
+          </button>
+        ))}</div></ExploreSection>}
+        {!loading && !error && tab === 'learn' && <ExploreSection title="Learning paths" eyebrow="SUBJECTS CONNECTED TO APPS"><div className="explore-spaces-grid">{LEARNING_SUBJECTS.map(subject => (
+          <button key={subject.id} type="button" className="explore-space-card" onClick={() => dispatch({ type: 'SET_VIEW', view: 'learn' })} style={{ '--explore-accent': subject.accent } as React.CSSProperties}>
+            <i>{subject.name.slice(0, 1)}</i>
+            <span>Learning</span>
+            <h3>{subject.name}</h3>
+            <p>{subject.description}</p>
+            <footer>{subject.apps.map(id => <b key={id}>{id}</b>)}</footer>
+          </button>
+        ))}</div></ExploreSection>}
       </main>
     </div>
   )

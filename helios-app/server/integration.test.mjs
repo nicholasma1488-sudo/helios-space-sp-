@@ -447,6 +447,16 @@ async function run() {
   assert.equal(comments.body.comments.length, 1)
   assert.equal(comments.body.comments[0].can_delete, true)
 
+  const replyResult = await alice.post('/api/posts/' + publicPostId + '/comments', {
+    body: 'Replying with a useful next step.',
+    parent_id: commentId,
+  })
+  expectStatus(replyResult, 201, 'create reply')
+  assert.equal(replyResult.body.comment.parent_id, commentId)
+  const threaded = await alice.get('/api/posts/' + publicPostId + '/comments')
+  expectStatus(threaded, 200, 'list threaded comments')
+  assert.equal(threaded.body.comments.length, 2)
+
   const privateComments = await bob.get('/api/posts/' + privatePost.body.post.id + '/comments')
   expectStatus(privateComments, 404, 'private comments hidden')
 

@@ -17,6 +17,8 @@ import { LifestyleView } from './views/LifestyleView'
 import { LiveView } from './views/LiveView'
 import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
+import { MiniAppsView } from './views/MiniAppsView'
+import { LearnView } from './views/LearnView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
 import './App.css'
 
@@ -39,6 +41,8 @@ function MainContent() {
   switch (state.view) {
     case 'home':      content = <HomeView />; break
     case 'explore':   content = <ExploreView />; break
+    case 'apps':      content = <MiniAppsView />; break
+    case 'learn':     content = <LearnView />; break
     case 'spaces':    content = <SpaceView />; break
     case 'lifestyle': content = <LifestyleView currentUser={state.user} />; break
     case 'live':      content = <LiveView />; break
@@ -79,7 +83,9 @@ function AppInner() {
   useEffect(() => {
     const VIEW_TITLES: Record<string, string> = {
       home: 'Home',
-      explore: 'Explore',
+      explore: 'Discover',
+      apps: 'Mini Apps',
+      learn: 'Learn',
       spaces: 'Spaces',
       lifestyle: 'Lifestyle',
       live: 'Live',

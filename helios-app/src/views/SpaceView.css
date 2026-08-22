@@ -118,6 +118,8 @@
 .space-post-card > footer button[aria-pressed='true'] { background: color-mix(in srgb, var(--space-accent) 7%, transparent); color: var(--space-accent); }
 .space-comments { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-top: 1px solid var(--helios-border); background: rgba(255,255,255,.012); animation: helios-fade-in var(--dur-standard) var(--ease-enter); }
 .space-comments article { display: flex; gap: 8px; }
+.space-comments article.is-reply { margin-left: 22px; }
+.space-comments article button { border: 0; background: transparent; color: var(--helios-muted); font-size: 8px; cursor: pointer; }
 .space-comments article > span { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 50%; background: var(--helios-surface2); color: var(--space-accent); font-size: 9px; }
 .space-comments article strong { font-size: 9px; }
 .space-comments article p { margin: 2px 0 0; color: var(--helios-text2); font-size: 9px; }

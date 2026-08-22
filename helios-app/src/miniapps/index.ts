@@ -1,0 +1,5 @@
+export { MiniAppLauncher } from './MiniAppLauncher'
+export { UTILITY_MINI_APPS, LEARNING_SUBJECTS, getUtilityMiniApp } from './catalog'
+export { loadRecent, loadFavorites, loadStreak } from './persistence'
+export { requestOpenMiniApp } from './launch'
+export type { MiniAppId } from './types'

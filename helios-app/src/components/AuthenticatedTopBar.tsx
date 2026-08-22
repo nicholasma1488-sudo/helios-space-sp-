@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, BookOpen, ChevronDown, Compass, Dumbbell, FolderGit2, MessageCircle,
+  Bell, BookOpen, ChevronDown, Compass, Dumbbell, FolderGit2, Home, MessageCircle,
   Plus, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults, type SpaceSummary } from '../api'
@@ -171,7 +171,10 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
       </nav>
 
       <nav className="topbar-destination-nav" aria-label="Fast destinations">
-        <button type="button" className={state.view === 'explore' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'explore' })}><Compass size={15} /><span>Explore</span></button>
+        <button type="button" className={state.view === 'home' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })}><Home size={15} /><span>Home</span></button>
+        <button type="button" className={state.view === 'explore' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'explore' })}><Compass size={15} /><span>Discover</span></button>
+        <button type="button" className={state.view === 'apps' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}><span>Apps</span></button>
+        <button type="button" className={state.view === 'learn' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'learn' })}><span>Learn</span></button>
         <button type="button" className={state.view === 'live' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'live' })}><Radio size={15} /><span>Live</span></button>
       </nav>
 

@@ -161,12 +161,6 @@
   background: transparent;
   color: var(--helios-text);
   text-align: left;
-  cursor: pointer;
-}
-
-.lifestyle-profile-shortcut:hover {
-  border-color: var(--helios-border);
-  background: var(--helios-surface);
 }
 
 .lifestyle-profile-shortcut > span:last-child {
@@ -935,7 +929,6 @@
   color: var(--helios-accent);
   font: inherit;
   font-size: 9px;
-  cursor: pointer;
 }
 
 .post-project span {
@@ -1114,8 +1107,36 @@
   font-size: 9px;
 }
 
-.comment-item {
-  display: grid;
+.comment-item.is-reply {
+  margin-left: 28px;
+}
+
+.comment-replying {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  color: var(--helios-muted);
+  font-size: 12px;
+}
+
+.comment-replying button {
+  border: 0;
+  background: transparent;
+  color: var(--helios-accent2);
+  cursor: pointer;
+}
+
+.comment-item > div > button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--helios-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.comment-item {  display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   gap: 8px;

@@ -361,6 +361,7 @@ ensureColumn('posts', 'space_id', "TEXT NOT NULL DEFAULT 'lifestyle'")
 ensureColumn('posts', 'post_type', "TEXT NOT NULL DEFAULT 'progress'")
 ensureColumn('posts', 'media_url', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('chat_messages', 'attachment_json', "TEXT NOT NULL DEFAULT '{}'")
+ensureColumn('comments', 'parent_id', 'INTEGER')
 
 // Seed / reconcile the single owner admin from environment-provided credentials
 if (ADMIN_EMAIL && ADMIN_PASSWORD) {
@@ -1632,6 +1633,7 @@ function serializeComments(rows, userId) {
     body: row.body,
     created_at: row.created_at,
     can_delete: row.user_id === userId || row.post_author_id === userId,
+    parent_id: row.parent_id ?? null,
   }))
 }
 
@@ -1665,9 +1667,15 @@ app.post('/api/posts/:id/comments', requireUser, socialRateLimit, (req, res) => 
     { required: true, trim: true },
   )
   if (checkedBody.error) return res.status(400).json({ error: checkedBody.error })
+  const parentId = req.body?.parent_id == null || req.body?.parent_id === '' ? null : positiveInt(req.body.parent_id)
+  if (req.body?.parent_id && !parentId) return res.status(400).json({ error: 'Invalid parent comment' })
+  if (parentId) {
+    const parent = db.prepare('SELECT id FROM comments WHERE id = ? AND post_id = ?').get(parentId, postId)
+    if (!parent) return res.status(400).json({ error: 'Parent comment not found' })
+  }
   const info = db.prepare(
-    'INSERT INTO comments (post_id,user_id,body,created_at) VALUES (?,?,?,?)'
-  ).run(postId, req.user.id, checkedBody.value, new Date().toISOString())
+    'INSERT INTO comments (post_id,user_id,body,created_at,parent_id) VALUES (?,?,?,?,?)'
+  ).run(postId, req.user.id, checkedBody.value, new Date().toISOString(), parentId)
   const post = db.prepare('SELECT user_id FROM posts WHERE id = ?').get(postId)
   createNotification(post?.user_id, req.user.id, 'comment', `${req.user.name} commented on your progress`,
     checkedBody.value.slice(0, 120), 'post', postId)
