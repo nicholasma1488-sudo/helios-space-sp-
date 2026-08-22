@@ -124,7 +124,7 @@
   --hero-rush: 0;
   position: relative;
   z-index: 2;
-  height: 560vh;
+  height: 820vh;
   margin: 0;
   overflow: visible;
 }
@@ -875,30 +875,53 @@
   letter-spacing: -.04em;
 }
 
+.hero-station-copy,
 .hero-copy-layer {
   position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
+  top: auto;
+  right: auto;
+  bottom: 92px;
+  left: 28px;
   z-index: 6;
   flex: none;
-  max-width: none;
-  max-height: 36vh;
+  max-width: min(420px, 42vw);
+  max-height: none;
   margin: 0;
-  padding: 84px 28px 0;
-  text-align: center;
+  padding: 0;
+  text-align: left;
   overflow: visible;
   transform: none;
-  opacity: calc(var(--hero-intro, 0) * (1 - min(1, var(--hero-scroll) * 2.4)));
+  opacity: 1;
   pointer-events: none;
 }
 
+.hero-copy-layer { top: 0; right: 0; left: 0; bottom: auto; padding: 84px 28px 0; text-align: center; max-width: none; }
+
+.hero-station-copy > * { pointer-events: auto; }
+
+.hero-station-copy .landing-eyebrow {
+  margin-bottom: 10px;
+}
+
+.hero-station-copy h1,
 .hero-copy-layer h1 {
   margin: 10px 0 12px;
-  font-size: clamp(48px, 7vw, 86px);
+  font-size: clamp(34px, 4.4vw, 58px);
   font-weight: 650;
   line-height: .98;
   letter-spacing: -.05em;
+}
+
+.hero-station-copy > p {
+  max-width: 390px;
+  color: rgba(247, 246, 242, .78);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.hero-station-copy .landing-hero-actions {
+  justify-content: flex-start;
+  margin-top: 18px;
 }
 
 .hero-copy-layer h1 > span {
@@ -2945,8 +2968,8 @@
 }
 
 .hero-css3d-window-host {
-  width: 920px;
-  height: 600px;
+  width: 760px;
+  height: 500px;
   pointer-events: auto;
 }
 
@@ -2970,8 +2993,8 @@
   bottom: auto;
   left: auto;
   z-index: auto;
-  width: 920px;
-  height: 600px;
+  width: 760px;
+  height: 500px;
   margin: 0;
   transform: none !important;
   animation: none !important;

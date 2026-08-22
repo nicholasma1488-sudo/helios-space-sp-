@@ -6,13 +6,74 @@ import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRe
 export type StageMode = 'feed' | 'project' | 'chat' | 'live' | 'apps'
 export type HeroPhase = 'void' | 'push' | 'flanks' | 'identity' | 'live'
 
+export const STAGE_IDS: StageMode[] = ['feed', 'project', 'chat', 'live', 'apps']
+
+export type LandingStation = {
+  id: StageMode
+  title: string
+  body: string
+  scroll: number
+  x: number
+  y: number
+  z: number
+}
+
+export const LANDING_STATIONS: LandingStation[] = [
+  {
+    id: 'feed',
+    title: 'The Feed',
+    body: 'Real updates from people doing the work. Like, reply, and keep the project attached to the post.',
+    scroll: 0.06,
+    x: 0,
+    y: 0.08,
+    z: 96,
+  },
+  {
+    id: 'project',
+    title: 'Project workspace',
+    body: 'The file you are editing stays bound to the Space. Open code, notes, and Live from the same room.',
+    scroll: 0.28,
+    x: 0.14,
+    y: 0.06,
+    z: 72,
+  },
+  {
+    id: 'chat',
+    title: 'Project Chat',
+    body: 'The conversation sits next to the files. Decisions do not disappear into a separate app.',
+    scroll: 0.48,
+    x: -0.12,
+    y: 0.04,
+    z: 48,
+  },
+  {
+    id: 'live',
+    title: 'Live work',
+    body: 'Watch someone build in real time. Comments land on the same session, not a clip after the fact.',
+    scroll: 0.68,
+    x: 0.1,
+    y: 0.06,
+    z: 26,
+  },
+  {
+    id: 'apps',
+    title: 'Mini Apps',
+    body: 'Calculator, notes, whiteboard, and the rest open as workspaces — not toys floating off the project.',
+    scroll: 0.88,
+    x: 0,
+    y: 0.1,
+    z: 6,
+  },
+]
+
 interface Props {
   activeMode: StageMode
   phase: HeroPhase
   hostRef: RefObject<HTMLElement | HTMLDivElement | null>
-  windowRef: RefObject<HTMLElement | null>
   onInteract: () => void
-  children: ReactNode
+  onStationChange: (mode: StageMode) => void
+  onSelectStation: (mode: StageMode) => void
+  windows: Partial<Record<StageMode, ReactNode>>
 }
 
 type CameraKey = {
@@ -28,30 +89,31 @@ type CameraKey = {
 
 type Pose = { x: number; y: number; z: number; rx: number; ry: number }
 
-const WINDOW_WIDTH = 920
-const WINDOW_HEIGHT = 600
-const WINDOW_SCALE = 0.008
+const WINDOW_WIDTH = 760
+const WINDOW_HEIGHT = 500
+const WINDOW_SCALE = 0.0084
 
 const PATH: CameraKey[] = [
-  { t: 0, x: 0, y: 0.55, z: 80, lx: -0.2, ly: 0.12, lz: 64, fov: 32 },
-  { t: 0.16, x: 0.18, y: 0.5, z: 68, lx: 0.42, ly: 0.16, lz: 52, fov: 30 },
-  { t: 0.32, x: -0.16, y: 0.46, z: 56, lx: -0.48, ly: 0.06, lz: 40, fov: 28 },
-  { t: 0.48, x: 0.22, y: 0.42, z: 44, lx: 0.38, ly: -0.06, lz: 28, fov: 26 },
-  { t: 0.64, x: -0.08, y: 0.46, z: 34, lx: -0.12, ly: 0.02, lz: 18, fov: 25 },
-  { t: 0.8, x: 0.04, y: 0.5, z: 26, lx: 0, ly: -0.08, lz: 8, fov: 24 },
-  { t: 1, x: 0, y: 0.55, z: 18.4, lx: 0, ly: -0.22, lz: 0, fov: 22 },
+  { t: 0, x: 0.12, y: 1.35, z: 132, lx: 0, ly: 0.22, lz: 108, fov: 34 },
+  { t: 0.1, x: 0.04, y: 0.72, z: 114, lx: 0.02, ly: 0.1, lz: 98, fov: 30 },
+  { t: 0.2, x: 0, y: 0.52, z: 108, lx: 0, ly: 0.06, lz: 96, fov: 26 },
+  { t: 0.32, x: 0.28, y: 0.48, z: 90, lx: 0.16, ly: 0.06, lz: 74, fov: 28 },
+  { t: 0.42, x: 0.12, y: 0.46, z: 84, lx: 0.12, ly: 0.04, lz: 72, fov: 25 },
+  { t: 0.54, x: -0.22, y: 0.44, z: 66, lx: -0.12, ly: 0.02, lz: 50, fov: 28 },
+  { t: 0.64, x: -0.1, y: 0.42, z: 60, lx: -0.1, ly: 0.02, lz: 48, fov: 25 },
+  { t: 0.74, x: 0.16, y: 0.44, z: 42, lx: 0.1, ly: 0.03, lz: 28, fov: 27 },
+  { t: 0.82, x: 0.08, y: 0.44, z: 38, lx: 0.08, ly: 0.02, lz: 26, fov: 25 },
+  { t: 0.92, x: 0.02, y: 0.5, z: 20, lx: 0, ly: -0.06, lz: 8, fov: 24 },
+  { t: 1, x: 0, y: 0.52, z: 17.2, lx: 0, ly: -0.16, lz: 6, fov: 22 },
 ]
 
-const FEED_HOME: Pose = { x: -0.22, y: 0.12, z: 64, rx: 0.02, ry: 0.04 }
-const CLOSE_LEFT: Pose = { x: -1.05, y: 0.38, z: 58, rx: 0.04, ry: 0.12 }
-const CODE_HOME: Pose = { x: 0.44, y: 0.16, z: 52, rx: -0.02, ry: -0.06 }
-const PROJECT_HOME: Pose = { x: -0.5, y: 0.08, z: 40, rx: 0.02, ry: 0.08 }
-const CLOSE_RIGHT: Pose = { x: 1.08, y: -0.22, z: 46, rx: -0.04, ry: -0.12 }
-const DATA_HOME: Pose = { x: 0.96, y: 0.48, z: 36, rx: 0.04, ry: -0.1 }
-const CHAT_HOME: Pose = { x: 0.36, y: -0.1, z: 28, rx: 0.06, ry: -0.04 }
-const CLOSE_LOW: Pose = { x: -0.88, y: -0.62, z: 22, rx: 0.1, ry: 0.08 }
-const MINI_HOME: Pose = { x: -0.18, y: 0.16, z: 16, rx: -0.02, ry: 0.04 }
-const BRAND_HOME: Pose = { x: 0, y: 0.04, z: 8, rx: 0, ry: 0 }
+const DECOR: Record<string, Pose> = {
+  left: { x: -1.35, y: 0.55, z: 104, rx: 0.06, ry: 0.18 },
+  right: { x: 1.4, y: -0.2, z: 86, rx: -0.05, ry: -0.16 },
+  data: { x: 1.15, y: 0.62, z: 58, rx: 0.04, ry: -0.12 },
+  low: { x: -1.2, y: -0.7, z: 38, rx: 0.12, ry: 0.1 },
+  brand: { x: 1.05, y: 0.35, z: 14, rx: 0, ry: -0.08 },
+}
 
 function damp(current: number, target: number, smoothing: number, delta: number) {
   return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-smoothing * delta))
@@ -226,13 +288,42 @@ function setGroupOpacity(group: THREE.Group, opacity: number) {
 
 function cinematicProgress(elapsed: number, skipped: boolean) {
   if (skipped) return 1
-  const held = Math.max(0, elapsed - 0.55)
-  const t = THREE.MathUtils.clamp(held / 6.45, 0, 1)
-  if (t > 0.9) {
-    const u = (t - 0.9) / 0.1
-    return 0.9 + (1 - (1 - u) * (1 - u)) * 0.1
+  return THREE.MathUtils.clamp((elapsed - 0.35) / 2.6, 0, 1)
+}
+
+function makeFloor(width: number, depth: number) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  if (ctx) {
+    ctx.fillStyle = '#070910'
+    ctx.fillRect(0, 0, 512, 512)
+    ctx.strokeStyle = 'rgba(143, 212, 255, 0.16)'
+    ctx.lineWidth = 1
+    for (let i = 0; i <= 16; i += 1) {
+      const p = (i / 16) * 512
+      ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, 512); ctx.stroke()
+      ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(512, p); ctx.stroke()
+    }
   }
-  return t
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(8, 18)
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, depth),
+    new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false,
+    }),
+  )
+  mesh.rotation.x = -Math.PI / 2
+  mesh.position.y = -2.4
+  mesh.position.z = 48
+  return mesh
 }
 
 function paintWorld(kind: 'mini' | 'project' | 'data' | 'brand') {
@@ -330,36 +421,38 @@ function makeWorldPanel(kind: 'mini' | 'project' | 'data' | 'brand', width: numb
   return group
 }
 
-export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, children }: Props) {
+
+export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, onSelectStation, windows }: Props) {
   const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null)
-  const phaseRef = useRef(phase)
   const onInteractRef = useRef(onInteract)
-  const [windowHost] = useState(() => {
-    const el = document.createElement('div')
-    el.className = 'hero-css3d-window-host'
-    el.style.width = `${WINDOW_WIDTH}px`
-    el.style.height = `${WINDOW_HEIGHT}px`
-    return el
+  const onStationChangeRef = useRef(onStationChange)
+  const onSelectStationRef = useRef(onSelectStation)
+  const [hosts] = useState(() => {
+    const map = {} as Record<StageMode, HTMLDivElement>
+    STAGE_IDS.forEach(id => {
+      const el = document.createElement('div')
+      el.className = 'hero-css3d-window-host'
+      el.dataset.station = id
+      el.style.width = `${WINDOW_WIDTH}px`
+      el.style.height = `${WINDOW_HEIGHT}px`
+      map[id] = el
+    })
+    return map
   })
 
-  useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { onInteractRef.current = onInteract }, [onInteract])
-
-  useEffect(() => {
-    const windowEl = windowRef.current
-    if (!windowEl) return
-    windowEl.classList.add('is-css3d')
-    return () => windowEl.classList.remove('is-css3d')
-  }, [windowRef])
+  useEffect(() => { onStationChangeRef.current = onStationChange }, [onStationChange])
+  useEffect(() => { onSelectStationRef.current = onSelectStation }, [onSelectStation])
 
   useLayoutEffect(() => {
     const mount = mountEl
     if (!mount) return
     const host = hostRef.current ?? mount.parentElement ?? mount
+    const fallbackHost = hosts.feed
 
     const showFallbackWindow = () => {
-      windowHost.classList.add('is-fallback')
-      if (windowHost.parentElement !== mount) mount.appendChild(windowHost)
+      fallbackHost.classList.add('is-fallback')
+      if (fallbackHost.parentElement !== mount) mount.appendChild(fallbackHost)
     }
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -371,8 +464,8 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       host.dataset.webgl = 'unavailable'
       showFallbackWindow()
       return () => {
-        windowHost.classList.remove('is-fallback')
-        if (windowHost.parentElement === mount) mount.removeChild(windowHost)
+        fallbackHost.classList.remove('is-fallback')
+        if (fallbackHost.parentElement === mount) mount.removeChild(fallbackHost)
         delete host.dataset.webgl
       }
     }
@@ -399,30 +492,31 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const look = new THREE.Vector3(startShot.lx, startShot.ly, startShot.lz)
     camera.lookAt(look)
 
-    const ambient = new THREE.AmbientLight(0xb8c4ff, 0.42)
-    const keyLight = new THREE.PointLight(0x4fc3f7, 36, 140)
-    const fill = new THREE.PointLight(0x8576f5, 22, 110)
-    const rim = new THREE.PointLight(0xf2b84b, 14, 90)
+    const ambient = new THREE.AmbientLight(0xb8c4ff, 0.5)
+    const keyLight = new THREE.PointLight(0x4fc3f7, 36, 160)
+    const fill = new THREE.PointLight(0x8576f5, 22, 120)
+    const rim = new THREE.PointLight(0xf2b84b, 14, 100)
     keyLight.position.set(-8, 6, 18)
     fill.position.set(10, -3, 8)
     rim.position.set(0, 8, -12)
     scene.add(ambient, keyLight, fill, rim)
 
     const nebula = new THREE.Mesh(
-      new THREE.SphereGeometry(160, 24, 24),
+      new THREE.SphereGeometry(180, 28, 28),
       new THREE.MeshBasicMaterial({
         color: 0x140c28,
         side: THREE.BackSide,
         transparent: true,
-        opacity: 0.94,
+        opacity: 0.96,
       }),
     )
     scene.add(nebula)
+    scene.add(makeFloor(90, 220))
 
-    const rings = [8.5, 13, 19].map((radius, index) => {
+    const rings = [7, 11, 16].map((radius, index) => {
       const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(radius, 0.016, 8, 96),
-        new THREE.MeshBasicMaterial({ color: index === 1 ? 0x8576f5 : 0x4fc3f7, transparent: true, opacity: 0.2 }),
+        new THREE.TorusGeometry(radius, 0.018, 8, 96),
+        new THREE.MeshBasicMaterial({ color: index === 1 ? 0x8576f5 : 0x4fc3f7, transparent: true, opacity: 0.18 }),
       )
       ring.rotation.x = 1.22 + index * 0.16
       ring.rotation.y = index * 0.45
@@ -431,72 +525,70 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     })
 
     const starGroup = new THREE.Group()
-    starGroup.add(makeStarfield(280, 40, 110, 0.055), makeStarfield(420, 88, 220, 0.038))
+    starGroup.add(makeStarfield(360, 46, 140, 0.055), makeStarfield(520, 96, 260, 0.038))
     scene.add(starGroup)
 
-    const feedPanel = makePanel('feed', 7.2, 4.5)
-    const codePanel = makePanel('code', 6.4, 4)
-    const chatPanel = makePanel('chat', 5.8, 3.6)
-    const miniPanel = makeWorldPanel('mini', 6, 3.7)
-    const projectPanel = makeWorldPanel('project', 6.6, 4.1)
-    const dataPanel = makeWorldPanel('data', 4.6, 3)
-    const brandPanel = makeWorldPanel('brand', 7.4, 4.1)
-    const closeLeft = makePanel('code', 4.4, 2.8)
-    const closeRight = makeWorldPanel('mini', 4.3, 2.7)
-    const closeLow = makePanel('chat', 4.2, 2.6)
-    applyPose(feedPanel, FEED_HOME)
-    applyPose(codePanel, CODE_HOME)
-    applyPose(chatPanel, CHAT_HOME)
-    applyPose(miniPanel, MINI_HOME)
-    applyPose(projectPanel, PROJECT_HOME)
-    applyPose(dataPanel, DATA_HOME)
-    applyPose(brandPanel, BRAND_HOME)
-    applyPose(closeLeft, CLOSE_LEFT)
-    applyPose(closeRight, CLOSE_RIGHT)
-    applyPose(closeLow, CLOSE_LOW)
-    ;[codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel, closeLeft, closeRight, closeLow].forEach(panel => setGroupOpacity(panel, 0))
-    setGroupOpacity(feedPanel, 0.98)
-    scene.add(feedPanel, codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel, closeLeft, closeRight, closeLow)
+    const stationPanels: Record<StageMode, THREE.Group> = {
+      feed: makePanel('feed', 6.6, 4.3),
+      project: makeWorldPanel('project', 6.4, 4.1),
+      chat: makePanel('chat', 6.2, 4),
+      live: makePanel('code', 6.2, 4),
+      apps: makeWorldPanel('mini', 6.4, 4.1),
+    }
+    LANDING_STATIONS.forEach(station => {
+      const panel = stationPanels[station.id]
+      applyPose(panel, { x: station.x, y: station.y, z: station.z, rx: 0.02, ry: station.x * 0.12 })
+      panel.userData.stationId = station.id
+      panel.children.forEach(child => { child.userData.stationId = station.id })
+      setGroupOpacity(panel, 0)
+      scene.add(panel)
+    })
+
+    const decorLeft = makePanel('code', 4.2, 2.6)
+    const decorRight = makeWorldPanel('mini', 4.1, 2.5)
+    const decorData = makeWorldPanel('data', 3.8, 2.5)
+    const decorLow = makePanel('chat', 4, 2.4)
+    const decorBrand = makeWorldPanel('brand', 5.2, 2.9)
+    applyPose(decorLeft, DECOR.left)
+    applyPose(decorRight, DECOR.right)
+    applyPose(decorData, DECOR.data)
+    applyPose(decorLow, DECOR.low)
+    applyPose(decorBrand, DECOR.brand)
+    ;[decorLeft, decorRight, decorData, decorLow, decorBrand].forEach(panel => {
+      setGroupOpacity(panel, 0)
+      scene.add(panel)
+    })
 
     const dustGeometry = new THREE.BufferGeometry()
-    const dustCount = 260
+    const dustCount = 280
     const dustPositions = new Float32Array(dustCount * 3)
     for (let i = 0; i < dustCount; i += 1) {
-      const nearField = i % 5 === 0
-      dustPositions[i * 3] = (seededRandom(i + 201) - 0.5) * (nearField ? 8 : 28)
-      dustPositions[i * 3 + 1] = (seededRandom(i + 277) - 0.5) * (nearField ? 5 : 16)
-      dustPositions[i * 3 + 2] = seededRandom(i + 331) * 360
+      dustPositions[i * 3] = (seededRandom(i + 201) - 0.5) * 22
+      dustPositions[i * 3 + 1] = (seededRandom(i + 277) - 0.5) * 10
+      dustPositions[i * 3 + 2] = seededRandom(i + 331) * 160
     }
     dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3))
     const dust = new THREE.Points(dustGeometry, new THREE.PointsMaterial({
       color: 0xb8d7ff,
       size: 0.045,
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.5,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }))
     scene.add(dust)
 
-    const glow = new THREE.Mesh(
-      new THREE.PlaneGeometry(8.4, 5.6),
-      new THREE.MeshBasicMaterial({
-        color: 0x4fc3f7,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      }),
-    )
-    glow.position.set(0, -1.15, -0.2)
-    scene.add(glow)
-
-    const cssObject = new CSS3DObject(windowHost)
-    cssObject.scale.setScalar(WINDOW_SCALE)
-    cssObject.position.set(0, -1.15, 0)
-    cssObject.rotation.set(0.08, -0.06, 0)
-    cssObject.visible = false
-    cssScene.add(cssObject)
+    const cssObjects = {} as Record<StageMode, CSS3DObject>
+    STAGE_IDS.forEach(id => {
+      const object = new CSS3DObject(hosts[id])
+      const station = LANDING_STATIONS.find(item => item.id === id)!
+      object.scale.setScalar(WINDOW_SCALE)
+      object.position.set(station.x, station.y, station.z)
+      object.rotation.set(0.03, station.x * 0.1, 0)
+      object.visible = false
+      cssScene.add(object)
+      cssObjects[id] = object
+    })
 
     const resize = () => {
       const width = host.clientWidth || window.innerWidth
@@ -506,7 +598,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       renderer.setSize(width, height, false)
       cssRenderer.setSize(width, height)
       const fit = THREE.MathUtils.clamp(width / 1180, 0.42, 1)
-      cssObject.scale.setScalar(WINDOW_SCALE * fit)
+      STAGE_IDS.forEach(id => cssObjects[id].scale.setScalar(WINDOW_SCALE * fit))
     }
     const resizeObserver = new ResizeObserver(resize)
     resizeObserver.observe(host)
@@ -514,13 +606,25 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
 
     const pointer = { x: 0, y: 0 }
     const pointerTarget = { x: 0, y: 0 }
+    const raycaster = new THREE.Raycaster()
+    const pointerNdc = new THREE.Vector2()
     const onPointerMove = (event: Event) => {
       const pointerEvent = event as PointerEvent
       const rect = host.getBoundingClientRect()
       pointerTarget.x = ((pointerEvent.clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1
       pointerTarget.y = ((pointerEvent.clientY - rect.top) / Math.max(rect.height, 1)) * 2 - 1
     }
-    const onPointerDown = () => onInteractRef.current()
+    const onPointerDown = (event: Event) => {
+      onInteractRef.current()
+      const pointerEvent = event as PointerEvent
+      const rect = host.getBoundingClientRect()
+      pointerNdc.x = ((pointerEvent.clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1
+      pointerNdc.y = -(((pointerEvent.clientY - rect.top) / Math.max(rect.height, 1)) * 2 - 1)
+      raycaster.setFromCamera(pointerNdc, camera)
+      const hits = raycaster.intersectObjects(scene.children, true)
+      const stationId = hits.find(hit => hit.object.userData.stationId)?.object.userData.stationId as StageMode | undefined
+      if (stationId) onSelectStationRef.current(stationId)
+    }
     host.addEventListener('pointermove', onPointerMove)
     host.addEventListener('pointerdown', onPointerDown)
 
@@ -530,9 +634,9 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     let warmFrames = 0
     let cancelled = false
     let visible = !document.hidden
-    host.dataset.scrollProgress = '0'
-    host.dataset.introReady = '0'
-    host.dataset.flightT = '0'
+    let lastStation: StageMode | null = null
+    host.dataset.scrollProgress = host.dataset.scrollProgress || '0'
+    host.dataset.introReady = '1'
     if (host.dataset.skipIntro !== '1') host.dataset.skipIntro = '0'
 
     const animate = () => {
@@ -544,74 +648,80 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       previous = now
       const delta = Math.min(rawDelta, 0.05)
       const skipped = host.dataset.skipIntro === '1'
-      if (skipped) {
-        flightTime = 7
-      } else if (warmFrames < 5) {
-        warmFrames += 1
-      } else if (flightTime < 7) {
-        flightTime += Math.min(rawDelta, 1 / 18)
-      }
-      const introT = cinematicProgress(flightTime, skipped)
-      const introDone = skipped || flightTime >= 7
-      const scroll = introDone ? THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1) : 0
-      const ease = scroll * scroll * (3 - 2 * scroll)
-      const pathT = THREE.MathUtils.clamp(Math.max(introT, ease), 0, 1)
+      if (skipped) flightTime = 3
+      else if (warmFrames < 4) warmFrames += 1
+      else if (flightTime < 3) flightTime += Math.min(rawDelta, 1 / 18)
+      const introMapped = cinematicProgress(flightTime, skipped) * 0.2
+      const scroll = THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1)
+      const scrollMapped = 0.18 + scroll * 0.82
+      const pathT = THREE.MathUtils.clamp(Math.max(introMapped, scroll > 0.004 ? scrollMapped : introMapped), 0, 1)
       const shot = samplePath(pathT)
-      const enter = THREE.MathUtils.smoothstep(pathT, 0.94, 1)
-      const copyReveal = THREE.MathUtils.smoothstep(pathT, 0.95, 1)
-      const facing = (z: number, peak = 14, falloff = 13) => {
+      const facing = (z: number, peak = 13, falloff = 12) => {
         const depth = shot.z - z
-        if (depth < 1.2) return 0
+        if (depth < 1) return 0
         return THREE.MathUtils.clamp(1 - Math.abs(depth - peak) / falloff, 0, 1)
       }
 
       pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
       pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
-
-      const bank = reducedMotion || !introDone ? 0 : Math.sin(pathT * Math.PI) * 0.05 * (1 - enter)
-      camera.position.x = shot.x + pointer.x * (introDone ? 0.22 : 0.04)
-      camera.position.y = shot.y + pointer.y * (introDone ? -0.12 : -0.02)
+      camera.position.x = shot.x + pointer.x * 0.18
+      camera.position.y = shot.y + pointer.y * -0.1
       camera.position.z = shot.z
       camera.fov = shot.fov
       camera.updateProjectionMatrix()
-      look.set(shot.lx, shot.ly, shot.lz)
+      look.set(shot.lx + pointer.x * 0.08, shot.ly - pointer.y * 0.05, shot.lz)
       camera.lookAt(look)
-      camera.rotation.z += bank
 
-      const windowReveal = THREE.MathUtils.smoothstep(pathT, 0.94, 1)
-      cssObject.visible = windowReveal > 0.04
-      cssObject.rotation.x = damp(cssObject.rotation.x, 0.08 * (1 - enter * 0.4), 3.4, delta)
-      cssObject.rotation.y = damp(cssObject.rotation.y, -0.06 * (1 - enter * 0.4), 3.4, delta)
-      windowHost.style.opacity = windowReveal.toFixed(3)
-      windowHost.style.pointerEvents = windowReveal > 0.72 ? 'auto' : 'none'
-
-      setGroupOpacity(feedPanel, facing(FEED_HOME.z) * 0.98)
-      setGroupOpacity(closeLeft, facing(CLOSE_LEFT.z, 12, 10) * 0.94)
-      setGroupOpacity(codePanel, facing(CODE_HOME.z) * 0.96)
-      setGroupOpacity(closeRight, facing(CLOSE_RIGHT.z, 12, 10) * 0.92)
-      setGroupOpacity(projectPanel, facing(PROJECT_HOME.z) * 0.96)
-      setGroupOpacity(dataPanel, facing(DATA_HOME.z, 12, 10) * 0.88)
-      setGroupOpacity(chatPanel, facing(CHAT_HOME.z) * 0.94)
-      setGroupOpacity(closeLow, facing(CLOSE_LOW.z, 11, 9) * 0.9)
-      setGroupOpacity(miniPanel, facing(MINI_HOME.z) * 0.94)
-      setGroupOpacity(brandPanel, facing(BRAND_HOME.z, 12, 11) * (1 - windowReveal))
-      dust.position.z = shot.z - 24
-      starGroup.position.z = shot.z - 40
-      rings.forEach((ring, index) => {
-        ring.rotation.z += delta * (0.04 + index * 0.014)
-        ring.position.z = shot.z - 10 - index * 4
+      let nearest = LANDING_STATIONS[0]
+      let nearestScore = -1
+      LANDING_STATIONS.forEach(station => {
+        const score = facing(station.z, 12, 14)
+        if (score > nearestScore) {
+          nearest = station
+          nearestScore = score
+        }
       })
-      const glowMat = glow.material as THREE.MeshBasicMaterial
-      glowMat.opacity = 0.04 + enter * 0.14
-      keyLight.intensity = 18 + (1 - pathT) * 22
+      if (nearest.id !== lastStation && nearestScore > 0.28) {
+        lastStation = nearest.id
+        onStationChangeRef.current(nearest.id)
+      }
 
-      host.style.setProperty('--hero-scroll', ease.toFixed(4))
-      host.style.setProperty('--hero-intro', copyReveal.toFixed(4))
+      let cssNeeded = false
+      STAGE_IDS.forEach(id => {
+        const station = LANDING_STATIONS.find(item => item.id === id)!
+        const closeness = facing(station.z, 12, 14)
+        const live = closeness > 0.42
+        const object = cssObjects[id]
+        object.visible = live
+        hosts[id].style.opacity = live ? closeness.toFixed(3) : '0'
+        hosts[id].style.pointerEvents = closeness > 0.62 ? 'auto' : 'none'
+        setGroupOpacity(stationPanels[id], live ? 0 : closeness * 0.95)
+        if (live) cssNeeded = true
+      })
+      setGroupOpacity(decorLeft, facing(DECOR.left.z, 11, 10) * 0.7)
+      setGroupOpacity(decorRight, facing(DECOR.right.z, 11, 10) * 0.68)
+      setGroupOpacity(decorData, facing(DECOR.data.z, 11, 10) * 0.62)
+      setGroupOpacity(decorLow, facing(DECOR.low.z, 11, 9) * 0.6)
+      setGroupOpacity(decorBrand, facing(DECOR.brand.z, 11, 10) * 0.55)
+
+      dust.position.z = shot.z - 20
+      starGroup.position.z = shot.z - 36
+      nebula.position.z = shot.z - 8
+      rings.forEach((ring, index) => {
+        ring.rotation.z += delta * (0.035 + index * 0.012)
+        ring.position.z = shot.z - 8 - index * 3
+      })
+      keyLight.position.z = shot.z - 8
+      fill.position.z = shot.z - 4
+
+      host.style.setProperty('--hero-scroll', scroll.toFixed(4))
+      host.style.setProperty('--hero-intro', Math.max(introMapped * 5, nearestScore).toFixed(4))
       host.dataset.flightT = pathT.toFixed(3)
-      host.dataset.flightS = flightTime.toFixed(2)
-      host.dataset.introReady = introDone ? '1' : '0'
+      host.dataset.station = nearest.id
+      host.dataset.stationStrength = nearestScore.toFixed(3)
+      host.dataset.introReady = '1'
       renderer.render(scene, camera)
-      if (windowReveal > 0.04) cssRenderer.render(cssScene, camera)
+      if (cssNeeded) cssRenderer.render(cssScene, camera)
     }
 
     const onVisibility = () => {
@@ -629,7 +739,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       host.removeEventListener('pointermove', onPointerMove)
       host.removeEventListener('pointerdown', onPointerDown)
       delete host.dataset.webgl
-      cssScene.remove(cssObject)
+      STAGE_IDS.forEach(id => cssScene.remove(cssObjects[id]))
       scene.traverse(object => {
         if (object instanceof THREE.Mesh || object instanceof THREE.Line || object instanceof THREE.LineSegments || object instanceof THREE.Points) {
           object.geometry.dispose()
@@ -643,7 +753,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       renderer.dispose()
       renderer.domElement.remove()
       cssRenderer.domElement.remove()
-      if (windowHost.parentElement) windowHost.remove()
+      STAGE_IDS.forEach(id => { if (hosts[id].parentElement) hosts[id].remove() })
     }
     } catch (error) {
       console.error('[Helios hero] scene init failed', error)
@@ -652,16 +762,16 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       host.dataset.webgl = 'unavailable'
       showFallbackWindow()
       return () => {
-        windowHost.classList.remove('is-fallback')
-        if (windowHost.parentElement === mount) mount.removeChild(windowHost)
+        fallbackHost.classList.remove('is-fallback')
+        if (fallbackHost.parentElement === mount) mount.removeChild(fallbackHost)
         delete host.dataset.webgl
       }
     }
-  }, [hostRef, windowHost, mountEl])
+  }, [hostRef, hosts, mountEl])
 
   return (
     <div ref={setMountEl} className="interactive-orbit-scene">
-      {createPortal(children, windowHost)}
+      {STAGE_IDS.map(id => hosts[id] ? createPortal(windows[id] ?? null, hosts[id]) : null)}
     </div>
   )
 }

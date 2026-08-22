@@ -1,47 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Code2, Compass, Grid3X3, Heart, Layers3,
-  MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
+  ArrowRight, Bookmark, Code2, Compass, Heart, Layers3,
+  MessageCircle, Play, Radio, Repeat2, Share, Sparkles,
 } from 'lucide-react'
 import { Logo } from './Logo'
-import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
+import { InteractiveOrbitScene, LANDING_STATIONS, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
 import './LandingPage.css'
 
 interface Props {
   onGetStarted: () => void
   onSignIn: () => void
 }
-
-const MODES = [
-  {
-    n: '01',
-    icon: <Code2 size={20} />,
-    title: 'Make the work visible',
-    body: 'Projects, notes, designs, and research stay connected to the progress you share.',
-    accent: '#4fc3f7',
-  },
-  {
-    n: '02',
-    icon: <Users size={20} />,
-    title: 'A feed with a purpose',
-    body: 'React, comment, save, and learn from real updates without turning the work into a performance.',
-    accent: '#8576f5',
-  },
-  {
-    n: '03',
-    icon: <Grid3X3 size={20} />,
-    title: 'Workspaces, not toys',
-    body: 'Code Editor, Notebook, Data Viz, and Writing stay bound to the Project you are actually making.',
-    accent: '#f2b84b',
-  },
-]
-
-const PRINCIPLES = [
-  ['Projects first', 'Your work is the source of truth.'],
-  ['Public or private', 'You choose who sees each update.'],
-  ['Useful reactions', 'Appreciate, learn, and inspire.'],
-  ['Workspaces', 'Mini Apps open the Project, not a detached toy.'],
-]
 
 const STAGE_MODES: Array<{ id: StageMode; label: string }> = [
   { id: 'feed', label: 'Feed' },
@@ -57,7 +26,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   const [stageMode, setStageMode] = useState<StageMode>('feed')
   const [stageInteracted, setStageInteracted] = useState(false)
   const [heroPhase, setHeroPhase] = useState<HeroPhase>('void')
-  const [introReady, setIntroReady] = useState(false)
+  const [stationId, setStationId] = useState<StageMode>('feed')
   const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou')
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({ alex: true })
   const [activeFile, setActiveFile] = useState('OrbitStage.tsx')
@@ -101,32 +70,9 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     return () => timers.forEach(id => window.clearTimeout(id))
   }, [])
 
-  useEffect(() => {
-    const sticky = stickyRef.current
-    const root = rootRef.current
-    if (!sticky) return
-    root?.scrollTo({ top: 0, behavior: 'auto' })
-    const timer = window.setInterval(() => {
-      if (sticky.dataset.introReady === '1' || sticky.dataset.skipIntro === '1') {
-        setIntroReady(true)
-        window.clearInterval(timer)
-      }
-    }, 200)
-    const blockWheel = (event: WheelEvent) => {
-      if (sticky.dataset.introReady === '1' || sticky.dataset.skipIntro === '1') return
-      event.preventDefault()
-    }
-    root?.addEventListener('wheel', blockWheel, { passive: false })
-    return () => {
-      window.clearInterval(timer)
-      root?.removeEventListener('wheel', blockWheel)
-    }
-  }, [])
-
   function skipIntro() {
     if (stickyRef.current) stickyRef.current.dataset.skipIntro = '1'
     setHeroPhase('live')
-    setIntroReady(true)
   }
 
   function enterAuth(mode: 'register' | 'login') {
@@ -139,10 +85,14 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     )
   }
 
-  function scrollTo(id: string) {
-    if (!introReady) return
-    rootRef.current?.querySelector(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  function scrollToProgress(progress: number) {
+    const root = rootRef.current
+    const scene = sceneRef.current
+    if (!root || !scene) return
+    const runway = Math.max(240, scene.offsetHeight - root.clientHeight)
+    root.scrollTo({ top: progress * runway, behavior: 'smooth' })
   }
+
 
   function selectStageMode(mode: StageMode) {
     setStageInteracted(true)
@@ -153,11 +103,6 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     const scroller = event.currentTarget
     const scrollTop = scroller.scrollTop
     setScrolled(scrollTop > 24)
-    if (!introReady) {
-      if (scrollTop > 0) scroller.scrollTop = 0
-      if (stickyRef.current) stickyRef.current.dataset.scrollProgress = '0'
-      return
-    }
     const runway = Math.max(240, (sceneRef.current?.offsetHeight ?? 1) - scroller.clientHeight)
     const progress = Math.min(1, Math.max(0, scrollTop / runway))
     const sticky = stickyRef.current
@@ -168,7 +113,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   return (
     <div
       ref={rootRef}
-      className={'landing-v2' + (transitioning ? ' is-entering-auth intent-' + transitioning : '') + (introReady ? '' : ' is-intro-locked')}
+      className={'landing-v2' + (transitioning ? ' is-entering-auth intent-' + transitioning : '')}
       onScroll={handleLandingScroll}
     >
       <div className="landing-noise" aria-hidden="true" />
@@ -177,9 +122,9 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <Logo size="sm" />
         </button>
         <nav aria-label="Landing page">
-          <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
-          <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
-          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Mini Apps</button>
+          <button type="button" onClick={() => scrollToProgress(0.06)}>Feed</button>
+          <button type="button" onClick={() => scrollToProgress(0.28)}>Project</button>
+          <button type="button" onClick={() => scrollToProgress(0.88)}>Mini Apps</button>
         </nav>
         <div className="landing-nav-actions">
           <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
@@ -202,50 +147,67 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               activeMode={stageMode}
               phase={heroPhase}
               hostRef={stickyRef}
-              windowRef={windowRef}
               onInteract={() => setStageInteracted(true)}
-            >
-              <div ref={windowRef} className="hero-app-window is-css3d" onPointerDown={() => setStageInteracted(true)}>
-                <div className="hero-app-titlebar">
-                  <i /><i /><i />
-                  <strong>Helios Space</strong>
-                  <nav aria-label="Product views">
-                    {STAGE_MODES.map(mode => (
-                      <button
-                        key={mode.id}
-                        type="button"
-                        className={stageMode === mode.id ? 'is-on' : ''}
-                        data-testid={`stage-mode-${mode.id}`}
-                        onClick={() => selectStageMode(mode.id)}
-                      >
-                        {mode.label}
-                      </button>
-                    ))}
-                  </nav>
+              onStationChange={mode => { setStageMode(mode); setStationId(mode) }}
+              onSelectStation={mode => {
+                setStageInteracted(true)
+                setStageMode(mode)
+                setStationId(mode)
+                const station = LANDING_STATIONS.find(item => item.id === mode)
+                if (station) scrollToProgress(station.scroll)
+              }}
+              windows={Object.fromEntries(STAGE_MODES.map(mode => [mode.id, (
+                <div
+                  key={mode.id}
+                  ref={mode.id === 'feed' ? windowRef : undefined}
+                  className="hero-app-window is-css3d"
+                  onPointerDown={() => { setStageInteracted(true); selectStageMode(mode.id) }}
+                >
+                  <div className="hero-app-titlebar">
+                    <i /><i /><i />
+                    <strong>{mode.label}</strong>
+                    <nav aria-label={`${mode.label} tools`}>
+                      {STAGE_MODES.map(item => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className={item.id === mode.id ? 'is-on' : ''}
+                          data-testid={mode.id === 'feed' ? `stage-mode-${item.id}` : undefined}
+                          onClick={() => {
+                            selectStageMode(item.id)
+                            const station = LANDING_STATIONS.find(entry => entry.id === item.id)
+                            if (station) scrollToProgress(station.scroll)
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </nav>
+                  </div>
+                  <div className="hero-app-body">
+                    <HeroPageScreen
+                      page={mode.id}
+                      compact
+                      feedTab={feedTab}
+                      onFeedTab={tab => { setStageInteracted(true); setFeedTab(tab) }}
+                      likedPosts={likedPosts}
+                      onLike={id => {
+                        setStageInteracted(true)
+                        setLikedPosts(current => ({ ...current, [id]: !current[id] }))
+                      }}
+                      activeFile={activeFile}
+                      onFile={file => { setStageInteracted(true); setActiveFile(file) }}
+                    />
+                  </div>
                 </div>
-                <div className="hero-app-body">
-                  <HeroPageScreen
-                    page={stageMode}
-                    feedTab={feedTab}
-                    onFeedTab={tab => { setStageInteracted(true); setFeedTab(tab) }}
-                    likedPosts={likedPosts}
-                    onLike={id => {
-                      setStageInteracted(true)
-                      setLikedPosts(current => ({ ...current, [id]: !current[id] }))
-                    }}
-                    activeFile={activeFile}
-                    onFile={file => { setStageInteracted(true); setActiveFile(file) }}
-                  />
-                </div>
-              </div>
-            </InteractiveOrbitScene>
-            <div className={'hero-copy-layer' + (introReady ? ' is-ready' : '')}>
-              <span className="landing-eyebrow"><Sparkles size={14} /> HELIOS SPACE</span>
+              )]))}
+            />
+            <div className="hero-station-copy is-ready">
+              <span className="landing-eyebrow"><Sparkles size={14} /> {LANDING_STATIONS.find(item => item.id === stationId)?.title}</span>
               <h1>
-                The social OS
-                <span>for real work.</span>
+                {stationId === 'feed' ? <>The social OS<span>for real work.</span></> : LANDING_STATIONS.find(item => item.id === stationId)?.title}
               </h1>
-              <p>The camera flies through Helios Space. Then you can use the product.</p>
+              <p>{LANDING_STATIONS.find(item => item.id === stationId)?.body}</p>
               <div className="landing-hero-actions">
                 <button
                   type="button"
@@ -255,97 +217,28 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                 >
                   <span>Create your space</span><ArrowRight size={16} />
                 </button>
-                <button type="button" className="landing-play-cta" onClick={() => scrollTo('#connected-modes')}>
-                  <i><Play size={13} fill="currentColor" /></i><span>See how it connects</span>
+                <button type="button" className="landing-play-cta" onClick={() => scrollToProgress(Math.min(1, (LANDING_STATIONS.find(item => item.id === stationId)?.scroll ?? 0) + 0.2))}>
+                  <i><Play size={13} fill="currentColor" /></i><span>Fly to the next room</span>
                 </button>
               </div>
             </div>
             <p className="stage-interaction-hint">
-              {stageInteracted
-                ? 'You’re inside Helios'
-                : introReady
-                  ? 'Scroll forward · go deeper into Helios'
-                  : 'The camera is flying through Helios'}
+              {stageInteracted ? 'Click a live page · swipe to fly the camera' : 'Swipe down · the camera flies through Helios'}
             </p>
-            {!introReady && (
-              <button type="button" className="landing-skip-intro" onClick={skipIntro}>
-                Skip intro
-              </button>
-            )}
-            {introReady && (
-              <button type="button" className="landing-scroll-cue" onClick={() => scrollTo('#why-helios')}>
-                <span>Scroll to explore</span><i />
-              </button>
-            )}
+            <button type="button" className="landing-skip-intro" onClick={skipIntro}>
+              Skip approach
+            </button>
+            <button type="button" className="landing-scroll-cue" onClick={() => scrollToProgress(0.28)}>
+              <span>Swipe to fly</span><i />
+            </button>
           </div>
         </section>
 
-        <section className="landing-principles" id="why-helios" data-reveal>
-          <div className="landing-section-label"><span>01</span> WHY HELIOS</div>
-          <div className="principles-heading">
-            <h2>Social should move the work forward.</h2>
-            <p>A familiar feed, rebuilt around progress instead of endless consumption.</p>
-          </div>
-          <div className="principles-grid">
-            {PRINCIPLES.map((principle, index) => (
-              <article key={principle[0]} style={{ '--principle-delay': String(index * 70) + 'ms' } as React.CSSProperties}>
-                <span>0{index + 1}</span>
-                <strong>{principle[0]}</strong>
-                <p>{principle[1]}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="landing-connected" id="connected-modes">
-          <div className="connected-intro" data-reveal>
-            <div className="landing-section-label"><span>02</span> ONE CONNECTED SPACE</div>
-            <h2>Move through the day.<br />Keep the context.</h2>
-            <p>Your project, the update it became, and the tool that helped you finish it remain part of the same story.</p>
-          </div>
-
-          <div className="connected-modes">
-            {MODES.map((mode, index) => (
-              <article
-                key={mode.n}
-                className="connected-mode"
-                data-reveal
-                style={{ '--mode-color': mode.accent } as React.CSSProperties}
-              >
-                <div className="mode-visual">
-                  {index === 0 && <ProjectModeVisual />}
-                  {index === 1 && <SocialModeVisual />}
-                  {index === 2 && <AppsModeVisual />}
-                </div>
-                <div className="mode-copy">
-                  <span>{mode.n} / {mode.icon} CONNECT</span>
-                  <h3>{mode.title}</h3>
-                  <p>{mode.body}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="landing-mini-app-band" id="mini-app-preview" data-reveal>
-          <div className="mini-band-orbit" aria-hidden="true"><Grid3X3 size={30} /></div>
-          <div>
-            <span>MINI APPS ARE WORKSPACES</span>
-            <h2>Open a workspace.<br />It stays bound to the Project.</h2>
-          </div>
-          <div className="mini-band-list">
-            <span><Code2 size={15} /> Code Editor</span>
-            <span><Layers3 size={15} /> Notebook</span>
-            <span><Compass size={15} /> Data Viz</span>
-            <span><MessageCircle size={15} /> Writing</span>
-          </div>
-        </section>
-
-        <section className="landing-final-cta" data-reveal>
+        <section className="landing-final-cta" id="enter-helios" data-reveal>
           <div className="final-cta-light" aria-hidden="true" />
-          <span className="landing-eyebrow"><Sparkles size={13} /> YOUR SPACE STARTS QUIET</span>
-          <h2>Make one thing.<br />Share one honest update.</h2>
-          <p>That is enough to begin an orbit.</p>
+          <span className="landing-eyebrow"><Sparkles size={13} /> YOU ARE INSIDE THE ENVIRONMENT</span>
+          <h2>The camera just flew the product.<br />Now make it yours.</h2>
+          <p>Feed, Project, Chat, Live, and Mini Apps stay one space.</p>
           <button type="button" onClick={() => enterAuth('register')}>
             Start building free <ArrowRight size={16} />
           </button>
@@ -558,39 +451,3 @@ function HeroAppsScreen() {
   )
 }
 
-function ProjectModeVisual() {
-  return (
-    <div className="mode-project-ui">
-      <aside><i /><i /><i /><i /></aside>
-      <main>
-        <header><span>orbit-interface.tsx</span><small>Saved</small></header>
-        <div><i /><i /><i /><i /><i /><i /></div>
-      </main>
-      <section><Sparkles size={16} /><strong>Helios</strong><p>Clarify this transition</p><span>Thinking through the flow…</span></section>
-    </div>
-  )
-}
-
-function SocialModeVisual() {
-  return (
-    <div className="mode-social-ui twitter-like">
-      <nav><span className="is-on">For you</span><span>Following</span></nav>
-      <article>
-        <header><span className="stage-avatar">LS</span><span><strong>Lea Stone</strong><small>@lea · 12m</small></span></header>
-        <p>I stopped optimizing the plan and tested the uncomfortable assumption.</p>
-        <footer><span>Reply 7</span><span>Repost 3</span><span>Like 24</span></footer>
-      </article>
-    </div>
-  )
-}
-
-function AppsModeVisual() {
-  return (
-    <div className="mode-apps-ui">
-      <div><Code2 size={22} /><strong>Code Editor</strong><small>BUILD</small></div>
-      <div><Layers3 size={22} /><strong>Notebook</strong><small>LAB</small></div>
-      <div><Compass size={22} /><strong>Data Viz</strong><small>SEE</small></div>
-      <div><MessageCircle size={22} /><strong>Writing</strong><small>DRAFT</small></div>
-    </div>
-  )
-}
