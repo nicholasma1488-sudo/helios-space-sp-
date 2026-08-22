@@ -57,6 +57,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   const [stageMode, setStageMode] = useState<StageMode>('feed')
   const [stageInteracted, setStageInteracted] = useState(false)
   const [heroPhase, setHeroPhase] = useState<HeroPhase>('void')
+  const [introReady, setIntroReady] = useState(false)
   const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou')
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({ alex: true })
   const [activeFile, setActiveFile] = useState('OrbitStage.tsx')
@@ -91,11 +92,6 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   }, [])
 
   useEffect(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduced) {
-      setHeroPhase('live')
-      return
-    }
     const timers = [
       window.setTimeout(() => setHeroPhase('push'), 1000),
       window.setTimeout(() => setHeroPhase('flanks'), 2000),
@@ -104,6 +100,24 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     ]
     return () => timers.forEach(id => window.clearTimeout(id))
   }, [])
+
+  useEffect(() => {
+    const sticky = stickyRef.current
+    if (!sticky) return
+    const timer = window.setInterval(() => {
+      if (sticky.dataset.introReady === '1' || sticky.dataset.skipIntro === '1') {
+        setIntroReady(true)
+        window.clearInterval(timer)
+      }
+    }, 200)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  function skipIntro() {
+    if (stickyRef.current) stickyRef.current.dataset.skipIntro = '1'
+    setHeroPhase('live')
+    setIntroReady(true)
+  }
 
   function enterAuth(mode: 'register' | 'login') {
     if (transitioning) return
@@ -209,7 +223,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                 </div>
               </div>
             </InteractiveOrbitScene>
-            <div className="hero-copy-layer">
+            <div className={'hero-copy-layer' + (introReady ? ' is-ready' : '')}>
               <span className="landing-eyebrow"><Sparkles size={14} /> HELIOS SPACE</span>
               <h1>
                 The social OS
@@ -231,10 +245,19 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               </div>
             </div>
             <p className="stage-interaction-hint">
-              {stageInteracted ? 'You’re inside Helios' : 'Scroll forward · the camera enters Helios'}
+              {stageInteracted
+                ? 'You’re inside Helios'
+                : introReady
+                  ? 'Scroll forward · go deeper into Helios'
+                  : 'The camera is flying through Helios'}
             </p>
+            {!introReady && (
+              <button type="button" className="landing-skip-intro" onClick={skipIntro}>
+                Skip intro
+              </button>
+            )}
             <button type="button" className="landing-scroll-cue" onClick={() => scrollTo('#why-helios')}>
-              <span>Scroll to enter</span><i />
+              <span>{introReady ? 'Scroll to explore' : 'Hold still · camera is moving'}</span><i />
             </button>
           </div>
         </section>

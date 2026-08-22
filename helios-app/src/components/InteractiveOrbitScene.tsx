@@ -33,27 +33,26 @@ const WINDOW_HEIGHT = 600
 const WINDOW_SCALE = 0.008
 
 const PATH: CameraKey[] = [
-  { t: 0, x: 0.28, y: 10.8, z: 410, lx: 0.2, ly: 0.55, lz: 48, fov: 30 },
-  { t: 0.16, x: 0.9, y: 7.1, z: 348, lx: 1.05, ly: 0.32, lz: 26, fov: 27 },
-  { t: 0.28, x: -0.75, y: 4.4, z: 300, lx: -1.1, ly: 0.16, lz: 16, fov: 26 },
-  { t: 0.4, x: -0.32, y: 2.6, z: 236, lx: -0.7, ly: 0.2, lz: 9, fov: 25 },
-  { t: 0.52, x: 0.92, y: 1.55, z: 178, lx: 0.82, ly: 0, lz: 5, fov: 24 },
-  { t: 0.64, x: -0.42, y: 1.08, z: 118, lx: -0.18, ly: -0.16, lz: 2.6, fov: 23 },
-  { t: 0.76, x: 0.18, y: 0.72, z: 70, lx: 0.12, ly: 0.04, lz: 1.2, fov: 24 },
-  { t: 0.88, x: 0.04, y: 0.6, z: 34, lx: 0, ly: -0.14, lz: 0.25, fov: 23 },
+  { t: 0, x: -0.15, y: 1.15, z: 232, lx: -0.95, ly: 0.18, lz: 224, fov: 36 },
+  { t: 0.14, x: 0.35, y: 0.95, z: 208, lx: 0.55, ly: 0.28, lz: 192, fov: 30 },
+  { t: 0.28, x: -0.4, y: 0.7, z: 174, lx: -0.9, ly: 0.08, lz: 158, fov: 28 },
+  { t: 0.42, x: 0.55, y: 0.45, z: 140, lx: 0.95, ly: -0.12, lz: 124, fov: 26 },
+  { t: 0.56, x: -0.28, y: 0.55, z: 104, lx: -0.35, ly: -0.2, lz: 88, fov: 25 },
+  { t: 0.7, x: 0.16, y: 0.48, z: 72, lx: 0.2, ly: 0.02, lz: 52, fov: 24 },
+  { t: 0.84, x: 0.04, y: 0.52, z: 40, lx: 0, ly: -0.08, lz: 18, fov: 23 },
   { t: 1, x: 0, y: 0.55, z: 18.4, lx: 0, ly: -0.22, lz: 0, fov: 22 },
 ]
 
-const FEED_HOME: Pose = { x: -3.05, y: 1.05, z: 210, rx: 0.06, ry: 0.28 }
-const CODE_HOME: Pose = { x: 3.15, y: -0.85, z: 148, rx: -0.05, ry: -0.28 }
-const CHAT_HOME: Pose = { x: -2.75, y: -1.55, z: 92, rx: 0.14, ry: 0.2 }
-const MINI_HOME: Pose = { x: 2.85, y: 1.35, z: 66, rx: -0.08, ry: -0.22 }
-const PROJECT_HOME: Pose = { x: -3.35, y: 0.45, z: 292, rx: 0.04, ry: 0.3 }
-const DATA_HOME: Pose = { x: 3.15, y: 1.55, z: 340, rx: 0.08, ry: -0.26 }
-const BRAND_HOME: Pose = { x: 0, y: 0.12, z: 38, rx: 0, ry: 0 }
-const CLOSE_LEFT: Pose = { x: -1.65, y: 0.88, z: 248, rx: 0.1, ry: 0.4 }
-const CLOSE_RIGHT: Pose = { x: 1.78, y: -0.42, z: 176, rx: -0.06, ry: -0.36 }
-const CLOSE_LOW: Pose = { x: -1.4, y: -1.28, z: 118, rx: 0.18, ry: 0.14 }
+const FEED_HOME: Pose = { x: -1.35, y: 0.28, z: 224, rx: 0.03, ry: 0.14 }
+const CLOSE_LEFT: Pose = { x: 1.7, y: 0.95, z: 196, rx: -0.06, ry: -0.22 }
+const PROJECT_HOME: Pose = { x: -2.15, y: 0.15, z: 170, rx: 0.03, ry: 0.2 }
+const CLOSE_RIGHT: Pose = { x: 1.45, y: -0.35, z: 146, rx: -0.05, ry: -0.24 }
+const CODE_HOME: Pose = { x: 2.05, y: -0.55, z: 124, rx: -0.04, ry: -0.2 }
+const CLOSE_LOW: Pose = { x: -1.25, y: -1.05, z: 102, rx: 0.16, ry: 0.12 }
+const CHAT_HOME: Pose = { x: -2.05, y: -1.15, z: 80, rx: 0.1, ry: 0.16 }
+const MINI_HOME: Pose = { x: 1.95, y: 0.95, z: 58, rx: -0.06, ry: -0.16 }
+const DATA_HOME: Pose = { x: 2.25, y: 1.15, z: 188, rx: 0.06, ry: -0.18 }
+const BRAND_HOME: Pose = { x: 0, y: 0.08, z: 36, rx: 0, ry: 0 }
 
 function damp(current: number, target: number, smoothing: number, delta: number) {
   return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-smoothing * delta))
@@ -226,16 +225,13 @@ function setGroupOpacity(group: THREE.Group, opacity: number) {
   group.visible = opacity > 0.02
 }
 
-function cinematicProgress(elapsed: number, reducedMotion: boolean) {
-  if (reducedMotion) {
-    const t = THREE.MathUtils.clamp(elapsed / 2.2, 0, 1)
-    return 0.62 + 0.38 * t * t * (3 - 2 * t)
-  }
+function cinematicProgress(elapsed: number, skipped: boolean) {
+  if (skipped) return 1
   const t = THREE.MathUtils.clamp(elapsed / 7, 0, 1)
-  if (t < 0.1) return (t / 0.1) * (t / 0.1) * 0.1
-  if (t > 0.88) {
-    const u = (t - 0.88) / 0.12
-    return 0.88 + (1 - (1 - u) * (1 - u)) * 0.12
+  if (t < 0.08) return (t / 0.08) * (t / 0.08) * 0.08
+  if (t > 0.9) {
+    const u = (t - 0.9) / 0.1
+    return 0.9 + (1 - (1 - u) * (1 - u)) * 0.1
   }
   return t
 }
@@ -398,7 +394,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
 
     const scene = new THREE.Scene()
     const cssScene = new THREE.Scene()
-    const startShot = samplePath(cinematicProgress(0, reducedMotion))
+    const startShot = samplePath(0)
     const camera = new THREE.PerspectiveCamera(startShot.fov, 1, 0.08, 800)
     camera.position.set(startShot.x, startShot.y, startShot.z)
     const look = new THREE.Vector3(startShot.lx, startShot.ly, startShot.lz)
@@ -439,16 +435,16 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     starGroup.add(makeStarfield(280, 40, 110, 0.055), makeStarfield(420, 88, 220, 0.038))
     scene.add(starGroup)
 
-    const feedPanel = makePanel('feed', 6.2, 3.9)
-    const codePanel = makePanel('code', 5.8, 3.6)
-    const chatPanel = makePanel('chat', 5.2, 3.2)
-    const miniPanel = makeWorldPanel('mini', 5.6, 3.5)
-    const projectPanel = makeWorldPanel('project', 5.8, 3.6)
-    const dataPanel = makeWorldPanel('data', 4.2, 2.8)
-    const brandPanel = makeWorldPanel('brand', 7.6, 4.2)
-    const closeLeft = makePanel('code', 5.0, 3.1)
-    const closeRight = makeWorldPanel('mini', 4.8, 2.9)
-    const closeLow = makePanel('chat', 4.6, 2.8)
+    const feedPanel = makePanel('feed', 8.2, 5.1)
+    const codePanel = makePanel('code', 6.2, 3.8)
+    const chatPanel = makePanel('chat', 5.4, 3.3)
+    const miniPanel = makeWorldPanel('mini', 5.8, 3.6)
+    const projectPanel = makeWorldPanel('project', 6.0, 3.7)
+    const dataPanel = makeWorldPanel('data', 4.4, 2.9)
+    const brandPanel = makeWorldPanel('brand', 8.2, 4.5)
+    const closeLeft = makePanel('code', 5.4, 3.3)
+    const closeRight = makeWorldPanel('mini', 5.2, 3.1)
+    const closeLow = makePanel('chat', 5.0, 3.0)
     applyPose(feedPanel, FEED_HOME)
     applyPose(codePanel, CODE_HOME)
     applyPose(chatPanel, CHAT_HOME)
@@ -459,7 +455,8 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     applyPose(closeLeft, CLOSE_LEFT)
     applyPose(closeRight, CLOSE_RIGHT)
     applyPose(closeLow, CLOSE_LOW)
-    ;[feedPanel, codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel, closeLeft, closeRight, closeLow].forEach(panel => setGroupOpacity(panel, 0))
+    ;[codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel, closeLeft, closeRight, closeLow].forEach(panel => setGroupOpacity(panel, 0))
+    setGroupOpacity(feedPanel, 0.98)
     scene.add(feedPanel, codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel, closeLeft, closeRight, closeLow)
 
     const dustGeometry = new THREE.BufferGeometry()
@@ -542,11 +539,13 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       const elapsed = (now - started) / 1000
       const scroll = THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1)
       const ease = scroll * scroll * (3 - 2 * scroll)
-      const introT = cinematicProgress(elapsed, reducedMotion)
+      const skipped = host.dataset.skipIntro === '1'
+      const introT = cinematicProgress(elapsed, skipped)
       const pathT = THREE.MathUtils.clamp(Math.max(introT, ease), 0, 1)
       const shot = samplePath(pathT)
-      const enter = THREE.MathUtils.smoothstep(pathT, 0.84, 1)
-      const near = (z: number, width = 36) => {
+      const enter = THREE.MathUtils.smoothstep(pathT, 0.86, 1)
+      const copyReveal = THREE.MathUtils.smoothstep(pathT, 0.8, 0.93)
+      const near = (z: number, width = 22) => {
         const distance = Math.abs(shot.z - z)
         return THREE.MathUtils.smoothstep(1 - distance / width, 0, 1)
       }
@@ -554,49 +553,49 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
       pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
 
-      const follow = reducedMotion ? 7.4 : 11.2
-      const bank = reducedMotion ? 0 : Math.sin(pathT * Math.PI) * 0.06 * (1 - enter)
-      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.28, follow, delta)
-      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.16, follow, delta)
-      camera.position.z = damp(camera.position.z, shot.z, follow + 1.4, delta)
-      camera.fov = damp(camera.fov, shot.fov, 6.4, delta)
+      const follow = 12.4
+      const bank = reducedMotion ? 0 : Math.sin(pathT * Math.PI) * 0.05 * (1 - enter)
+      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.22, follow, delta)
+      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.12, follow, delta)
+      camera.position.z = damp(camera.position.z, shot.z, follow + 1.6, delta)
+      camera.fov = damp(camera.fov, shot.fov, 7.2, delta)
       camera.updateProjectionMatrix()
-      look.x = damp(look.x, shot.lx + pointer.x * 0.1, follow, delta)
-      look.y = damp(look.y, shot.ly - pointer.y * 0.07, follow, delta)
+      look.x = damp(look.x, shot.lx + pointer.x * 0.08, follow, delta)
+      look.y = damp(look.y, shot.ly - pointer.y * 0.06, follow, delta)
       look.z = damp(look.z, shot.lz, follow, delta)
       camera.lookAt(look)
       camera.rotation.z += bank
 
-      const windowReveal = reducedMotion
-        ? THREE.MathUtils.smoothstep(pathT, 0.86, 0.98)
-        : THREE.MathUtils.smoothstep(pathT, 0.84, 0.98)
+      const windowReveal = THREE.MathUtils.smoothstep(pathT, 0.88, 0.99)
       cssObject.visible = windowReveal > 0.04
       cssObject.rotation.x = damp(cssObject.rotation.x, 0.08 * (1 - enter * 0.4), 3.4, delta)
       cssObject.rotation.y = damp(cssObject.rotation.y, -0.06 * (1 - enter * 0.4), 3.4, delta)
       windowHost.style.opacity = windowReveal.toFixed(3)
       windowHost.style.pointerEvents = windowReveal > 0.72 ? 'auto' : 'none'
 
-      setGroupOpacity(dataPanel, near(DATA_HOME.z, 42) * 0.86)
-      setGroupOpacity(projectPanel, near(PROJECT_HOME.z, 38) * 0.9)
-      setGroupOpacity(closeLeft, near(CLOSE_LEFT.z, 16) * 0.98)
-      setGroupOpacity(feedPanel, near(FEED_HOME.z, 32) * 0.92)
-      setGroupOpacity(closeRight, near(CLOSE_RIGHT.z, 15) * 0.98)
-      setGroupOpacity(codePanel, near(CODE_HOME.z, 30) * 0.9)
-      setGroupOpacity(closeLow, near(CLOSE_LOW.z, 14) * 0.96)
-      setGroupOpacity(chatPanel, near(CHAT_HOME.z, 26) * 0.86)
-      setGroupOpacity(miniPanel, near(MINI_HOME.z, 24) * 0.88)
-      setGroupOpacity(brandPanel, near(BRAND_HOME.z, 28) * (1 - windowReveal) * 1)
-      dust.position.z = pathT * 160
-      starGroup.position.z = pathT * 290
+      setGroupOpacity(feedPanel, near(FEED_HOME.z, 28) * 0.98)
+      setGroupOpacity(closeLeft, near(CLOSE_LEFT.z, 14) * 0.98)
+      setGroupOpacity(dataPanel, near(DATA_HOME.z, 16) * 0.88)
+      setGroupOpacity(projectPanel, near(PROJECT_HOME.z, 16) * 0.94)
+      setGroupOpacity(closeRight, near(CLOSE_RIGHT.z, 13) * 0.98)
+      setGroupOpacity(codePanel, near(CODE_HOME.z, 16) * 0.92)
+      setGroupOpacity(closeLow, near(CLOSE_LOW.z, 12) * 0.96)
+      setGroupOpacity(chatPanel, near(CHAT_HOME.z, 14) * 0.88)
+      setGroupOpacity(miniPanel, near(MINI_HOME.z, 14) * 0.9)
+      setGroupOpacity(brandPanel, near(BRAND_HOME.z, 20) * (1 - windowReveal))
+      dust.position.z = pathT * 120
+      starGroup.position.z = pathT * 180
       rings.forEach((ring, index) => {
         ring.rotation.z += delta * (0.04 + index * 0.014)
-        ring.position.z = pathT * (18 + index * 7)
+        ring.position.z = pathT * (12 + index * 5)
       })
       const glowMat = glow.material as THREE.MeshBasicMaterial
       glowMat.opacity = 0.04 + enter * 0.14
       keyLight.intensity = 18 + (1 - pathT) * 22
 
       host.style.setProperty('--hero-scroll', ease.toFixed(4))
+      host.style.setProperty('--hero-intro', copyReveal.toFixed(4))
+      host.dataset.introReady = copyReveal > 0.92 ? '1' : '0'
       renderer.render(scene, camera)
       if (windowReveal > 0.04) cssRenderer.render(cssScene, camera)
     }
