@@ -85,12 +85,26 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     )
   }
 
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root) return
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey) return
+      event.preventDefault()
+      root.scrollTop += event.deltaY * 0.32 + event.deltaX * 0.08
+    }
+    root.addEventListener('wheel', onWheel, { passive: false })
+    return () => root.removeEventListener('wheel', onWheel)
+  }, [])
+
   function scrollToProgress(progress: number) {
     const root = rootRef.current
     const scene = sceneRef.current
     if (!root || !scene) return
     const runway = Math.max(240, scene.offsetHeight - root.clientHeight)
+    root.classList.add('is-seeking')
     root.scrollTo({ top: progress * runway, behavior: 'smooth' })
+    window.setTimeout(() => root.classList.remove('is-seeking'), 1400)
   }
 
 
@@ -122,9 +136,9 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <Logo size="sm" />
         </button>
         <nav aria-label="Landing page">
-          <button type="button" onClick={() => scrollToProgress(0.06)}>Feed</button>
-          <button type="button" onClick={() => scrollToProgress(0.28)}>Project</button>
-          <button type="button" onClick={() => scrollToProgress(0.88)}>Mini Apps</button>
+          <button type="button" onClick={() => scrollToProgress(0.1)}>Feed</button>
+          <button type="button" onClick={() => scrollToProgress(0.3)}>Project</button>
+          <button type="button" onClick={() => scrollToProgress(0.9)}>Mini Apps</button>
         </nav>
         <div className="landing-nav-actions">
           <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
@@ -223,7 +237,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               </div>
             </div>
             <p className="stage-interaction-hint">
-              {stageInteracted ? 'Click a live page · swipe to fly the camera' : 'Swipe down · the camera flies through Helios'}
+              {stageInteracted ? 'Drag to look around · click a room · scroll slowly to fly' : 'Move the pointer to look · scroll slowly to fly through the rooms'}
             </p>
             <button type="button" className="landing-skip-intro" onClick={skipIntro}>
               Skip approach

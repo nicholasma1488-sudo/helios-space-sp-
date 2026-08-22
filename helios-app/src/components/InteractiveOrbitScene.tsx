@@ -16,6 +16,7 @@ export type LandingStation = {
   x: number
   y: number
   z: number
+  ry: number
 }
 
 export const LANDING_STATIONS: LandingStation[] = [
@@ -23,46 +24,51 @@ export const LANDING_STATIONS: LandingStation[] = [
     id: 'feed',
     title: 'The Feed',
     body: 'Real updates from people doing the work. Like, reply, and keep the project attached to the post.',
-    scroll: 0.06,
-    x: 0,
-    y: 0.08,
-    z: 96,
+    scroll: 0.1,
+    x: -2.8,
+    y: 0.16,
+    z: 268,
+    ry: 0.32,
   },
   {
     id: 'project',
     title: 'Project workspace',
     body: 'The file you are editing stays bound to the Space. Open code, notes, and Live from the same room.',
-    scroll: 0.28,
-    x: 0.14,
-    y: 0.06,
-    z: 72,
+    scroll: 0.3,
+    x: 3.2,
+    y: 0.42,
+    z: 188,
+    ry: -0.36,
   },
   {
     id: 'chat',
     title: 'Project Chat',
     body: 'The conversation sits next to the files. Decisions do not disappear into a separate app.',
-    scroll: 0.48,
-    x: -0.12,
-    y: 0.04,
-    z: 48,
+    scroll: 0.5,
+    x: -2.6,
+    y: 0.1,
+    z: 112,
+    ry: 0.3,
   },
   {
     id: 'live',
     title: 'Live work',
     body: 'Watch someone build in real time. Comments land on the same session, not a clip after the fact.',
-    scroll: 0.68,
-    x: 0.1,
-    y: 0.06,
-    z: 26,
+    scroll: 0.7,
+    x: 2.5,
+    y: 0.38,
+    z: 48,
+    ry: -0.28,
   },
   {
     id: 'apps',
     title: 'Mini Apps',
     body: 'Calculator, notes, whiteboard, and the rest open as workspaces — not toys floating off the project.',
-    scroll: 0.88,
+    scroll: 0.9,
     x: 0,
-    y: 0.1,
+    y: 0.2,
     z: 6,
+    ry: 0,
   },
 ]
 
@@ -89,30 +95,41 @@ type CameraKey = {
 
 type Pose = { x: number; y: number; z: number; rx: number; ry: number }
 
-const WINDOW_WIDTH = 760
-const WINDOW_HEIGHT = 500
-const WINDOW_SCALE = 0.0084
+const WINDOW_WIDTH = 820
+const WINDOW_HEIGHT = 540
+const WINDOW_SCALE = 0.0092
+const WHEEL_SCALE = 0.32
 
 const PATH: CameraKey[] = [
-  { t: 0, x: 0.12, y: 1.35, z: 132, lx: 0, ly: 0.22, lz: 108, fov: 34 },
-  { t: 0.1, x: 0.04, y: 0.72, z: 114, lx: 0.02, ly: 0.1, lz: 98, fov: 30 },
-  { t: 0.2, x: 0, y: 0.52, z: 108, lx: 0, ly: 0.06, lz: 96, fov: 26 },
-  { t: 0.32, x: 0.28, y: 0.48, z: 90, lx: 0.16, ly: 0.06, lz: 74, fov: 28 },
-  { t: 0.42, x: 0.12, y: 0.46, z: 84, lx: 0.12, ly: 0.04, lz: 72, fov: 25 },
-  { t: 0.54, x: -0.22, y: 0.44, z: 66, lx: -0.12, ly: 0.02, lz: 50, fov: 28 },
-  { t: 0.64, x: -0.1, y: 0.42, z: 60, lx: -0.1, ly: 0.02, lz: 48, fov: 25 },
-  { t: 0.74, x: 0.16, y: 0.44, z: 42, lx: 0.1, ly: 0.03, lz: 28, fov: 27 },
-  { t: 0.82, x: 0.08, y: 0.44, z: 38, lx: 0.08, ly: 0.02, lz: 26, fov: 25 },
-  { t: 0.92, x: 0.02, y: 0.5, z: 20, lx: 0, ly: -0.06, lz: 8, fov: 24 },
-  { t: 1, x: 0, y: 0.52, z: 17.2, lx: 0, ly: -0.16, lz: 6, fov: 22 },
+  { t: 0, x: 0.3, y: 5.4, z: 358, lx: 0, ly: 0.9, lz: 286, fov: 48 },
+  { t: 0.05, x: -0.8, y: 2.5, z: 312, lx: -2.1, ly: 0.35, lz: 272, fov: 36 },
+  { t: 0.09, x: -1.7, y: 0.72, z: 286, lx: -2.6, ly: 0.18, lz: 268, fov: 28 },
+  { t: 0.16, x: -1.85, y: 0.52, z: 282, lx: -2.8, ly: 0.16, lz: 268, fov: 24 },
+  { t: 0.18, x: -1.85, y: 0.5, z: 281, lx: -2.8, ly: 0.16, lz: 268, fov: 24 },
+  { t: 0.24, x: 0.9, y: 1.25, z: 244, lx: 2.3, ly: 0.42, lz: 200, fov: 34 },
+  { t: 0.28, x: 1.85, y: 0.78, z: 206, lx: 3.05, ly: 0.4, lz: 188, fov: 28 },
+  { t: 0.34, x: 1.95, y: 0.6, z: 202, lx: 3.2, ly: 0.4, lz: 188, fov: 24 },
+  { t: 0.36, x: 1.95, y: 0.58, z: 201, lx: 3.2, ly: 0.4, lz: 188, fov: 24 },
+  { t: 0.42, x: -0.35, y: 1.05, z: 164, lx: -2.1, ly: 0.18, lz: 120, fov: 34 },
+  { t: 0.47, x: -1.45, y: 0.52, z: 129, lx: -2.5, ly: 0.12, lz: 112, fov: 28 },
+  { t: 0.53, x: -1.55, y: 0.4, z: 126, lx: -2.6, ly: 0.1, lz: 112, fov: 24 },
+  { t: 0.55, x: -1.55, y: 0.4, z: 125, lx: -2.6, ly: 0.1, lz: 112, fov: 24 },
+  { t: 0.61, x: 0.7, y: 0.95, z: 92, lx: 2.05, ly: 0.36, lz: 56, fov: 33 },
+  { t: 0.66, x: 1.35, y: 0.58, z: 64, lx: 2.4, ly: 0.36, lz: 48, fov: 28 },
+  { t: 0.72, x: 1.42, y: 0.52, z: 61, lx: 2.5, ly: 0.36, lz: 48, fov: 24 },
+  { t: 0.74, x: 1.42, y: 0.5, z: 60, lx: 2.5, ly: 0.36, lz: 48, fov: 24 },
+  { t: 0.81, x: 0.28, y: 0.78, z: 32, lx: 0.08, ly: 0.22, lz: 8, fov: 30 },
+  { t: 0.87, x: 0, y: 0.5, z: 20, lx: 0, ly: 0.16, lz: 6, fov: 26 },
+  { t: 0.94, x: 0, y: 0.44, z: 18.2, lx: 0, ly: 0.14, lz: 6, fov: 23 },
+  { t: 1, x: 0, y: 0.4, z: 16.6, lx: 0, ly: 0.08, lz: 6, fov: 22 },
 ]
 
 const DECOR: Record<string, Pose> = {
-  left: { x: -1.35, y: 0.55, z: 104, rx: 0.06, ry: 0.18 },
-  right: { x: 1.4, y: -0.2, z: 86, rx: -0.05, ry: -0.16 },
-  data: { x: 1.15, y: 0.62, z: 58, rx: 0.04, ry: -0.12 },
-  low: { x: -1.2, y: -0.7, z: 38, rx: 0.12, ry: 0.1 },
-  brand: { x: 1.05, y: 0.35, z: 14, rx: 0, ry: -0.08 },
+  left: { x: -4.2, y: 0.85, z: 238, rx: 0.08, ry: 0.42 },
+  right: { x: 4.6, y: -0.35, z: 226, rx: -0.06, ry: -0.38 },
+  data: { x: 4.1, y: 1.15, z: 148, rx: 0.05, ry: -0.34 },
+  low: { x: -4.4, y: -0.95, z: 78, rx: 0.14, ry: 0.28 },
+  brand: { x: 3.8, y: 0.55, z: 26, rx: 0.02, ry: -0.22 },
 }
 
 function damp(current: number, target: number, smoothing: number, delta: number) {
@@ -288,21 +305,31 @@ function setGroupOpacity(group: THREE.Group, opacity: number) {
 
 function cinematicProgress(elapsed: number, skipped: boolean) {
   if (skipped) return 1
-  return THREE.MathUtils.clamp((elapsed - 0.35) / 2.6, 0, 1)
+  return THREE.MathUtils.clamp((elapsed - 0.55) / 6.4, 0, 1)
 }
 
-function makeFloor(width: number, depth: number) {
+function stationScore(camera: THREE.Vector3, station: LandingStation) {
+  const depth = camera.z - station.z
+  if (depth < 1.2) return 0
+  const planar = Math.hypot(camera.x - station.x, camera.y - station.y)
+  const depthScore = 1 - Math.abs(depth - 14) / 22
+  const alignScore = 1 - Math.min(planar / 5.5, 1)
+  return THREE.MathUtils.clamp(depthScore * 0.72 + alignScore * 0.28, 0, 1)
+}
+
+function makeGridTexture(color: string, alpha: number) {
   const canvas = document.createElement('canvas')
   canvas.width = 512
   canvas.height = 512
   const ctx = canvas.getContext('2d')
   if (ctx) {
-    ctx.fillStyle = '#070910'
+    ctx.fillStyle = '#05070c'
     ctx.fillRect(0, 0, 512, 512)
-    ctx.strokeStyle = 'rgba(143, 212, 255, 0.16)'
+    ctx.strokeStyle = color
+    ctx.globalAlpha = alpha
     ctx.lineWidth = 1
-    for (let i = 0; i <= 16; i += 1) {
-      const p = (i / 16) * 512
+    for (let i = 0; i <= 20; i += 1) {
+      const p = (i / 20) * 512
       ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, 512); ctx.stroke()
       ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(512, p); ctx.stroke()
     }
@@ -310,20 +337,110 @@ function makeFloor(width: number, depth: number) {
   const texture = new THREE.CanvasTexture(canvas)
   texture.wrapS = THREE.RepeatWrapping
   texture.wrapT = THREE.RepeatWrapping
-  texture.repeat.set(8, 18)
+  texture.repeat.set(10, 28)
+  return texture
+}
+
+function makeFloor() {
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(width, depth),
+    new THREE.PlaneGeometry(90, 420),
     new THREE.MeshBasicMaterial({
-      map: texture,
+      map: makeGridTexture('rgba(143, 212, 255, 0.9)', 0.22),
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.34,
       depthWrite: false,
     }),
   )
   mesh.rotation.x = -Math.PI / 2
-  mesh.position.y = -2.4
-  mesh.position.z = 48
+  mesh.position.set(0, -2.8, 160)
   return mesh
+}
+
+function makeCeiling() {
+  const mesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(70, 400),
+    new THREE.MeshBasicMaterial({
+      map: makeGridTexture('rgba(133, 118, 245, 0.9)', 0.14),
+      transparent: true,
+      opacity: 0.16,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  )
+  mesh.rotation.x = Math.PI / 2
+  mesh.position.set(0, 7.2, 160)
+  return mesh
+}
+
+function makeCorridor() {
+  const group = new THREE.Group()
+  const ribMaterial = new THREE.LineBasicMaterial({ color: 0x6ec8ff, transparent: true, opacity: 0.16 })
+  const railMaterial = new THREE.LineBasicMaterial({ color: 0x8576f5, transparent: true, opacity: 0.2 })
+  for (let z = -10; z <= 360; z += 16) {
+    const rib = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(18, 10.4, 0.08)), ribMaterial)
+    rib.position.set(0, 1.4, z)
+    group.add(rib)
+  }
+  const leftRail = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-8.6, -2.4, 360),
+    new THREE.Vector3(-8.6, -2.4, -16),
+  ])
+  const rightRail = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(8.6, -2.4, 360),
+    new THREE.Vector3(8.6, -2.4, -16),
+  ])
+  const leftHigh = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-8.6, 6.4, 360),
+    new THREE.Vector3(-8.6, 6.4, -16),
+  ])
+  const rightHigh = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(8.6, 6.4, 360),
+    new THREE.Vector3(8.6, 6.4, -16),
+  ])
+  group.add(
+    new THREE.Line(leftRail, railMaterial),
+    new THREE.Line(rightRail, railMaterial),
+    new THREE.Line(leftHigh, railMaterial.clone()),
+    new THREE.Line(rightHigh, railMaterial.clone()),
+  )
+  const beamMaterial = new THREE.MeshBasicMaterial({
+    color: 0x6aa8ff,
+    transparent: true,
+    opacity: 0.055,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  ;[-7.4, 7.4].forEach(x => {
+    for (let z = 20; z <= 340; z += 48) {
+      const beam = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 16), beamMaterial)
+      beam.position.set(x, 2.2, z)
+      group.add(beam)
+    }
+  })
+  return group
+}
+
+function makePortal(width: number, height: number) {
+  const group = new THREE.Group()
+  const frameMaterial = new THREE.LineBasicMaterial({ color: 0x8fd4ff, transparent: true, opacity: 0.55 })
+  const frame = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(width + 0.55, height + 0.55, 0.7)),
+    frameMaterial,
+  )
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color: 0x4fc3f7,
+    transparent: true,
+    opacity: 0.08,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(width + 1.1, height + 1.1), glowMaterial)
+  glow.position.z = -0.2
+  group.add(frame, glow)
+  group.userData.hoverMaterials = [frameMaterial, glowMaterial]
+  return group
 }
 
 function paintWorld(kind: 'mini' | 'project' | 'data' | 'brand') {
@@ -487,37 +604,44 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
     const scene = new THREE.Scene()
     const cssScene = new THREE.Scene()
     const startShot = samplePath(0)
-    const camera = new THREE.PerspectiveCamera(startShot.fov, 1, 0.08, 800)
+    const camera = new THREE.PerspectiveCamera(startShot.fov, 1, 0.08, 1100)
     camera.position.set(startShot.x, startShot.y, startShot.z)
     const look = new THREE.Vector3(startShot.lx, startShot.ly, startShot.lz)
     camera.lookAt(look)
 
-    const ambient = new THREE.AmbientLight(0xb8c4ff, 0.5)
-    const keyLight = new THREE.PointLight(0x4fc3f7, 36, 160)
-    const fill = new THREE.PointLight(0x8576f5, 22, 120)
-    const rim = new THREE.PointLight(0xf2b84b, 14, 100)
-    keyLight.position.set(-8, 6, 18)
-    fill.position.set(10, -3, 8)
-    rim.position.set(0, 8, -12)
+    scene.fog = new THREE.FogExp2(0x070914, 0.012)
+
+    const ambient = new THREE.AmbientLight(0xb8c4ff, 0.55)
+    const keyLight = new THREE.PointLight(0x4fc3f7, 42, 220)
+    const fill = new THREE.PointLight(0x8576f5, 26, 180)
+    const rim = new THREE.PointLight(0xf2b84b, 16, 140)
+    keyLight.position.set(-10, 7, 280)
+    fill.position.set(12, -2, 200)
+    rim.position.set(0, 8, 120)
     scene.add(ambient, keyLight, fill, rim)
 
     const nebula = new THREE.Mesh(
-      new THREE.SphereGeometry(180, 28, 28),
+      new THREE.SphereGeometry(520, 28, 28),
       new THREE.MeshBasicMaterial({
-        color: 0x140c28,
+        color: 0x120a22,
         side: THREE.BackSide,
         transparent: true,
-        opacity: 0.96,
+        opacity: 0.97,
+        fog: false,
       }),
     )
+    nebula.position.set(0, 0, 160)
     scene.add(nebula)
-    scene.add(makeFloor(90, 220))
+    scene.add(makeFloor())
+    scene.add(makeCeiling())
+    scene.add(makeCorridor())
 
-    const rings = [7, 11, 16].map((radius, index) => {
+    const rings = [240, 160, 80].map((z, index) => {
       const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(radius, 0.018, 8, 96),
-        new THREE.MeshBasicMaterial({ color: index === 1 ? 0x8576f5 : 0x4fc3f7, transparent: true, opacity: 0.18 }),
+        new THREE.TorusGeometry(7 + index * 2.4, 0.02, 8, 96),
+        new THREE.MeshBasicMaterial({ color: index === 1 ? 0x8576f5 : 0x4fc3f7, transparent: true, opacity: 0.2 }),
       )
+      ring.position.set(index === 1 ? 1.4 : -0.6, 1.1, z)
       ring.rotation.x = 1.22 + index * 0.16
       ring.rotation.y = index * 0.45
       scene.add(ring)
@@ -525,23 +649,30 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
     })
 
     const starGroup = new THREE.Group()
-    starGroup.add(makeStarfield(360, 46, 140, 0.055), makeStarfield(520, 96, 260, 0.038))
+    starGroup.add(makeStarfield(420, 70, 420, 0.06), makeStarfield(620, 120, 520, 0.04))
+    starGroup.position.set(0, 2, 180)
     scene.add(starGroup)
 
     const stationPanels: Record<StageMode, THREE.Group> = {
-      feed: makePanel('feed', 6.6, 4.3),
-      project: makeWorldPanel('project', 6.4, 4.1),
-      chat: makePanel('chat', 6.2, 4),
-      live: makePanel('code', 6.2, 4),
-      apps: makeWorldPanel('mini', 6.4, 4.1),
+      feed: makePanel('feed', 7.2, 4.7),
+      project: makeWorldPanel('project', 7, 4.5),
+      chat: makePanel('chat', 6.8, 4.4),
+      live: makePanel('code', 6.8, 4.4),
+      apps: makeWorldPanel('mini', 7, 4.5),
     }
+    const portals = {} as Record<StageMode, THREE.Group>
     LANDING_STATIONS.forEach(station => {
       const panel = stationPanels[station.id]
-      applyPose(panel, { x: station.x, y: station.y, z: station.z, rx: 0.02, ry: station.x * 0.12 })
+      applyPose(panel, { x: station.x, y: station.y, z: station.z, rx: 0.02, ry: station.ry })
       panel.userData.stationId = station.id
       panel.children.forEach(child => { child.userData.stationId = station.id })
       setGroupOpacity(panel, 0)
-      scene.add(panel)
+      const portal = makePortal(7.4, 4.9)
+      applyPose(portal, { x: station.x, y: station.y, z: station.z, rx: 0.02, ry: station.ry })
+      portal.userData.stationId = station.id
+      portal.children.forEach(child => { child.userData.stationId = station.id })
+      portals[station.id] = portal
+      scene.add(panel, portal)
     })
 
     const decorLeft = makePanel('code', 4.2, 2.6)
@@ -555,17 +686,17 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
     applyPose(decorLow, DECOR.low)
     applyPose(decorBrand, DECOR.brand)
     ;[decorLeft, decorRight, decorData, decorLow, decorBrand].forEach(panel => {
-      setGroupOpacity(panel, 0)
+      setGroupOpacity(panel, 0.18)
       scene.add(panel)
     })
 
     const dustGeometry = new THREE.BufferGeometry()
-    const dustCount = 280
+    const dustCount = 520
     const dustPositions = new Float32Array(dustCount * 3)
     for (let i = 0; i < dustCount; i += 1) {
-      dustPositions[i * 3] = (seededRandom(i + 201) - 0.5) * 22
-      dustPositions[i * 3 + 1] = (seededRandom(i + 277) - 0.5) * 10
-      dustPositions[i * 3 + 2] = seededRandom(i + 331) * 160
+      dustPositions[i * 3] = (seededRandom(i + 201) - 0.5) * 28
+      dustPositions[i * 3 + 1] = (seededRandom(i + 277) - 0.5) * 12
+      dustPositions[i * 3 + 2] = seededRandom(i + 331) * 380 - 20
     }
     dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3))
     const dust = new THREE.Points(dustGeometry, new THREE.PointsMaterial({
@@ -584,7 +715,7 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
       const station = LANDING_STATIONS.find(item => item.id === id)!
       object.scale.setScalar(WINDOW_SCALE)
       object.position.set(station.x, station.y, station.z)
-      object.rotation.set(0.03, station.x * 0.1, 0)
+      object.rotation.set(0.03, station.ry, 0)
       object.visible = false
       cssScene.add(object)
       cssObjects[id] = object
@@ -606,16 +737,24 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
 
     const pointer = { x: 0, y: 0 }
     const pointerTarget = { x: 0, y: 0 }
+    const lookBoost = { x: 0, y: 0 }
     const raycaster = new THREE.Raycaster()
     const pointerNdc = new THREE.Vector2()
+    let dragging = false
+    let hoverId: StageMode | null = null
     const onPointerMove = (event: Event) => {
       const pointerEvent = event as PointerEvent
       const rect = host.getBoundingClientRect()
       pointerTarget.x = ((pointerEvent.clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1
       pointerTarget.y = ((pointerEvent.clientY - rect.top) / Math.max(rect.height, 1)) * 2 - 1
+      if (dragging) {
+        lookBoost.x = THREE.MathUtils.clamp(lookBoost.x + pointerEvent.movementX * 0.004, -1.8, 1.8)
+        lookBoost.y = THREE.MathUtils.clamp(lookBoost.y + pointerEvent.movementY * 0.003, -1.1, 1.1)
+      }
     }
     const onPointerDown = (event: Event) => {
       onInteractRef.current()
+      dragging = true
       const pointerEvent = event as PointerEvent
       const rect = host.getBoundingClientRect()
       pointerNdc.x = ((pointerEvent.clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1
@@ -625,15 +764,19 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
       const stationId = hits.find(hit => hit.object.userData.stationId)?.object.userData.stationId as StageMode | undefined
       if (stationId) onSelectStationRef.current(stationId)
     }
+    const onPointerUp = () => { dragging = false }
     const forwardWheel = (event: Event) => {
       const wheel = event as WheelEvent
       const scroller = host.closest('.landing-v2') as HTMLElement | null
       if (!scroller) return
-      scroller.scrollTop += wheel.deltaY
+      wheel.preventDefault()
+      wheel.stopPropagation()
+      scroller.scrollTop += wheel.deltaY * WHEEL_SCALE + wheel.deltaX * 0.08
     }
-    STAGE_IDS.forEach(id => hosts[id].addEventListener('wheel', forwardWheel, { passive: true }))
+    STAGE_IDS.forEach(id => hosts[id].addEventListener('wheel', forwardWheel, { passive: false }))
     host.addEventListener('pointermove', onPointerMove)
     host.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('pointerup', onPointerUp)
 
     let frame = 0
     let previous = performance.now()
@@ -656,75 +799,87 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
       previous = now
       const delta = Math.min(rawDelta, 0.05)
       const skipped = host.dataset.skipIntro === '1'
-      if (skipped) flightTime = 3
+      if (skipped) flightTime = 8
       else if (warmFrames < 4) warmFrames += 1
-      else if (flightTime < 3) flightTime += Math.min(rawDelta, 1 / 18)
-      const introMapped = cinematicProgress(flightTime, skipped) * 0.2
+      else if (flightTime < 8) flightTime += Math.min(rawDelta, 1 / 18)
+      const introMapped = cinematicProgress(flightTime, skipped) * 0.14
       const scroll = THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1)
-      const scrollMapped = 0.18 + scroll * 0.82
-      const pathT = THREE.MathUtils.clamp(Math.max(introMapped, scroll > 0.004 ? scrollMapped : introMapped), 0, 1)
-      flyT = damp(flyT, pathT, reducedMotion ? 10 : 2.6, delta)
+      const scrollMapped = 0.08 + scroll * 0.92
+      const pathT = THREE.MathUtils.clamp(Math.max(introMapped, scroll > 0.003 ? scrollMapped : introMapped), 0, 1)
+      flyT = damp(flyT, pathT, reducedMotion ? 8 : 1.15, delta)
       const shot = samplePath(flyT)
-      const facing = (z: number, peak = 13, falloff = 12) => {
-        const depth = shot.z - z
+      const facing = (z: number, peak = 16, falloff = 20) => {
+        const depth = camera.position.z - z
         if (depth < 1) return 0
         return THREE.MathUtils.clamp(1 - Math.abs(depth - peak) / falloff, 0, 1)
       }
 
-      pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
-      pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
-      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.2, 5.8, delta)
-      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.12, 5.8, delta)
-      camera.position.z = damp(camera.position.z, shot.z, 6.4, delta)
-      camera.fov = damp(camera.fov, shot.fov, 4.8, delta)
+      if (!dragging) {
+        lookBoost.x = damp(lookBoost.x, 0, 1.6, delta)
+        lookBoost.y = damp(lookBoost.y, 0, 1.6, delta)
+      }
+      pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x + lookBoost.x, 3.1, delta)
+      pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y + lookBoost.y, 3.1, delta)
+      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 1.15, 3.4, delta)
+      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.55, 3.4, delta)
+      camera.position.z = damp(camera.position.z, shot.z, 3.8, delta)
+      camera.fov = damp(camera.fov, shot.fov, 2.8, delta)
       camera.updateProjectionMatrix()
-      look.x = damp(look.x, shot.lx + pointer.x * 0.1, 5.4, delta)
-      look.y = damp(look.y, shot.ly - pointer.y * 0.06, 5.4, delta)
-      look.z = damp(look.z, shot.lz, 5.4, delta)
+      look.x = damp(look.x, shot.lx + pointer.x * 1.35, 3.2, delta)
+      look.y = damp(look.y, shot.ly - pointer.y * 0.7, 3.2, delta)
+      look.z = damp(look.z, shot.lz, 3.2, delta)
       camera.lookAt(look)
-      if (!reducedMotion) camera.rotation.z += Math.sin(flyT * Math.PI) * 0.012
+      if (!reducedMotion) camera.rotation.z += THREE.MathUtils.clamp((shot.x - camera.position.x) * 0.05, -0.07, 0.07)
 
       let nearest = LANDING_STATIONS[0]
       let nearestScore = -1
       LANDING_STATIONS.forEach(station => {
-        const score = facing(station.z, 12, 14)
+        const score = stationScore(camera.position, station)
         if (score > nearestScore) {
           nearest = station
           nearestScore = score
         }
       })
-      if (nearest.id !== lastStation && nearestScore > 0.28) {
+      if (nearest.id !== lastStation && nearestScore > 0.22) {
         lastStation = nearest.id
         onStationChangeRef.current(nearest.id)
       }
 
+      pointerNdc.set(pointerTarget.x, -pointerTarget.y)
+      raycaster.setFromCamera(pointerNdc, camera)
+      const hoverHit = raycaster.intersectObjects(scene.children, true)
+        .find(hit => hit.object.userData.stationId)?.object.userData.stationId as StageMode | undefined
+      hoverId = hoverHit ?? null
+      host.style.cursor = hoverId ? 'pointer' : ''
+
       let cssNeeded = false
       STAGE_IDS.forEach(id => {
         const station = LANDING_STATIONS.find(item => item.id === id)!
-        const closeness = facing(station.z, 12, 16)
-        const live = closeness > 0.28
+        const closeness = stationScore(camera.position, station)
+        const live = closeness > 0.2
         const object = cssObjects[id]
         object.visible = live
-        hosts[id].style.opacity = live ? Math.max(closeness, 0.35).toFixed(3) : '0'
-        hosts[id].style.pointerEvents = closeness > 0.4 ? 'auto' : 'none'
-        setGroupOpacity(stationPanels[id], live ? 0 : closeness * 0.95)
+        hosts[id].style.opacity = live ? Math.max(closeness, 0.42).toFixed(3) : '0'
+        hosts[id].style.pointerEvents = closeness > 0.28 ? 'auto' : 'none'
+        setGroupOpacity(stationPanels[id], live ? 0 : Math.max(closeness, facing(station.z, 28, 36) * 0.55))
+        const portalMats = portals[id].userData.hoverMaterials as THREE.Material[]
+        portalMats.forEach((material, index) => {
+          material.opacity = (hoverId === id ? 0.85 : 0.28 + closeness * 0.4) * (index === 1 ? 0.22 : 1)
+        })
         if (live) cssNeeded = true
       })
-      setGroupOpacity(decorLeft, facing(DECOR.left.z, 11, 10) * 0.7)
-      setGroupOpacity(decorRight, facing(DECOR.right.z, 11, 10) * 0.68)
-      setGroupOpacity(decorData, facing(DECOR.data.z, 11, 10) * 0.62)
-      setGroupOpacity(decorLow, facing(DECOR.low.z, 11, 9) * 0.6)
-      setGroupOpacity(decorBrand, facing(DECOR.brand.z, 11, 10) * 0.55)
+      setGroupOpacity(decorLeft, Math.max(0.12, facing(DECOR.left.z, 18, 24) * 0.78))
+      setGroupOpacity(decorRight, Math.max(0.12, facing(DECOR.right.z, 18, 24) * 0.76))
+      setGroupOpacity(decorData, Math.max(0.1, facing(DECOR.data.z, 18, 24) * 0.7))
+      setGroupOpacity(decorLow, Math.max(0.1, facing(DECOR.low.z, 16, 22) * 0.68))
+      setGroupOpacity(decorBrand, Math.max(0.1, facing(DECOR.brand.z, 16, 22) * 0.62))
 
-      dust.position.z = shot.z - 20
-      starGroup.position.z = shot.z - 36
-      nebula.position.z = shot.z - 8
       rings.forEach((ring, index) => {
-        ring.rotation.z += delta * (0.035 + index * 0.012)
-        ring.position.z = shot.z - 8 - index * 3
+        ring.rotation.z += delta * (0.04 + index * 0.012)
       })
-      keyLight.position.z = shot.z - 8
-      fill.position.z = shot.z - 4
+      keyLight.position.z = camera.position.z - 12
+      fill.position.z = camera.position.z + 8
+      rim.position.z = camera.position.z - 40
 
       host.style.setProperty('--hero-scroll', scroll.toFixed(4))
       host.style.setProperty('--hero-intro', Math.max(introMapped * 5, nearestScore).toFixed(4))
@@ -751,6 +906,7 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
       resizeObserver.disconnect()
       host.removeEventListener('pointermove', onPointerMove)
       host.removeEventListener('pointerdown', onPointerDown)
+      window.removeEventListener('pointerup', onPointerUp)
       STAGE_IDS.forEach(id => hosts[id].removeEventListener('wheel', forwardWheel))
       delete host.dataset.webgl
       STAGE_IDS.forEach(id => cssScene.remove(cssObjects[id]))

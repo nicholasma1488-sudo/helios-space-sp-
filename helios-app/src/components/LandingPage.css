@@ -8,7 +8,7 @@
   overflow-y: auto;
   background: var(--landing-bg);
   color: #f7f6f2;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   perspective: none;
   isolation: isolate;
 }
@@ -16,6 +16,10 @@
 .landing-v2.is-intro-locked {
   overflow: hidden;
   scroll-behavior: auto;
+}
+
+.landing-v2.is-seeking {
+  scroll-behavior: smooth;
 }
 
 .landing-noise {
@@ -124,7 +128,7 @@
   --hero-rush: 0;
   position: relative;
   z-index: 2;
-  height: 820vh;
+  height: 1860vh;
   margin: 0;
   overflow: visible;
 }
@@ -2969,8 +2973,8 @@
 }
 
 .hero-css3d-window-host {
-  width: 760px;
-  height: 500px;
+  width: 820px;
+  height: 540px;
   pointer-events: auto;
 }
 
@@ -2994,8 +2998,8 @@
   bottom: auto;
   left: auto;
   z-index: auto;
-  width: 760px;
-  height: 500px;
+  width: 820px;
+  height: 540px;
   margin: 0;
   transform: none !important;
   animation: none !important;
