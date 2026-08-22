@@ -1,0 +1,17 @@
+{
+  "name": "helios-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-sqlite server.js",
+    "test": "node integration.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.0",
+    "pg": "^8.23.0"
+  }
+}

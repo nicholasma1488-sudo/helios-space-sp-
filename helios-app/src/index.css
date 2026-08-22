@@ -1,0 +1,496 @@
+@import "tailwindcss";
+
+/*
+  Helios Space design tokens
+  Chapter 12 (Design System) + exact token reference pages 359-368
+  Raw tokens are fixed; semantic tokens carry meaning across themes.
+*/
+
+:root {
+  /* ── Raw graphite neutral scale (P359) ── */
+  --graphite-950: #111213;
+  --graphite-900: #171819;
+  --graphite-800: #1e2022;
+  --graphite-700: #242628;
+  --graphite-600: #2f3134;
+
+  /* ── Raw text ── */
+  --white: #f6f5f2;
+  --text-secondary: #a7a5a0;
+  /* Muted copy is still body text in many surfaces, so it must clear 4.5:1. */
+  --text-tertiary: #989590;
+  --divider: #3b3e41;
+
+  /* ── Raw solar-gold accent (P332, P359) ── */
+  --solar-300: #ffd681;
+  --solar-400: #f2b84b;
+
+  /* ── Raw status (P333, P359) ── */
+  --s-success: #6ed69a;
+  --s-info: #68b7ff;
+  --s-warning: #ff9b6a;
+  --s-danger: #ff6b6b;
+  --s-collab: #b794ff;
+
+  /* ── Semantic tokens — dark theme default ── */
+  --helios-bg:       var(--graphite-950);
+  --helios-surface:  var(--graphite-900);
+  --helios-surface2: var(--graphite-800);
+  --helios-surface3: var(--graphite-700);
+  --helios-border:   var(--divider);
+
+  --helios-text:  var(--white);
+  --helios-text2: var(--text-secondary);
+  --helios-muted: var(--text-tertiary);
+
+  /* Primary accent (violet) and info accent (blue) */
+  --helios-accent:  #8576f5;
+  --helios-accent2: #4fc3f7;
+
+  /* Foregrounds for filled semantic colours. */
+  --helios-on-accent:  #0f1012;
+  --helios-on-accent2: #0f1012;
+  --helios-on-success: #0f1012;
+
+  --helios-solar:   var(--solar-400);
+  --helios-success: var(--s-success);
+  --helios-info:    var(--s-info);
+  --helios-warning: var(--s-warning);
+  --helios-danger:  var(--s-danger);
+  --helios-collab:  var(--s-collab);
+
+  /* ── Radius scale (P361) ── */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+
+  /* ── Motion tokens (P362) ── */
+  --dur-instant:    80ms;
+  --dur-quick:      160ms;
+  --dur-standard:   240ms;
+  --dur-deliberate: 360ms;
+  --ease-enter:  cubic-bezier(.16, 1, .3, 1);
+  --ease-exit:   cubic-bezier(.7, 0, .84, 0);
+  --ease-move:   cubic-bezier(.4, 0, .2, 1);
+
+  /* ── Typography scale (P360) ── */
+  --type-display-lg: 600 40px/44px 'Inter', system-ui, sans-serif;
+  --type-display-md: 600 32px/38px 'Inter', system-ui, sans-serif;
+  --type-title-lg:   600 28px/34px 'Inter', system-ui, sans-serif;
+  --type-title-md:   600 24px/30px 'Inter', system-ui, sans-serif;
+  --type-heading-lg: 600 20px/26px 'Inter', system-ui, sans-serif;
+  --type-heading-md: 600 17px/23px 'Inter', system-ui, sans-serif;
+  --type-heading-sm: 600 15px/20px 'Inter', system-ui, sans-serif;
+  --type-label:      600 13px/16px 'Inter', system-ui, sans-serif;
+  --type-body-lg:    400 17px/25px 'Inter', system-ui, sans-serif;
+  --type-body-md:    400 15px/22px 'Inter', system-ui, sans-serif;
+  --type-body-sm:    400 13px/19px 'Inter', system-ui, sans-serif;
+  --type-caption:    400 11px/16px 'Inter', system-ui, sans-serif;
+  --type-mono-md:    400 13px/19px 'Fira Code', monospace;
+  --type-mono-sm:    400 11px/16px 'Fira Code', monospace;
+}
+
+/* ── High-contrast theme (P330, P357) ── */
+[data-theme="high-contrast"] {
+  --helios-bg:       #000000;
+  --helios-surface:  #0a0a0a;
+  --helios-surface2: #141414;
+  --helios-surface3: #1f1f1f;
+  --helios-border:   #6a6a6a;
+  --helios-text:     #ffffff;
+  --helios-text2:    #e4e4e4;
+  --helios-muted:    #c0c0c0;
+  --helios-accent:   #a596ff;
+  --helios-accent2:  #7fd6ff;
+  --helios-on-accent:  #000000;
+  --helios-on-accent2: #000000;
+  --helios-on-success: #000000;
+  --helios-solar:    #ffcf5c;
+  --helios-success:  #5effaa;
+  --helios-danger:   #ff8080;
+  /* Status tokens missing from dark-only definition — all boosted for contrast */
+  --helios-warning:  #ffb347;
+  --helios-info:     #8fd4ff;
+  --helios-collab:   #c9a0ff;
+  --helios-text2:    #e8e8e8;
+}
+
+/*
+  Compatibility bridge for existing inline filled controls and message bubbles.
+  The accent/success colours are deliberately bright enough to work as text on
+  graphite, so their filled variants need the paired dark foreground tokens.
+*/
+[style*="background: var(--helios-accent)"] {
+  color: var(--helios-on-accent) !important;
+}
+[style*="background: var(--helios-success)"] {
+  color: var(--helios-on-success) !important;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font: var(--type-body-md);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--helios-bg);
+  color: var(--helios-text);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Focus ring (P367): 2px solar inner ring, never clipped ── */
+:focus-visible {
+  outline: 2px solid var(--helios-solar);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* Skip navigation link for keyboard users (P367) */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 4px;
+  z-index: 9999;
+  padding: 8px 16px;
+  background: var(--helios-accent);
+  color: #fff;
+  border-radius: var(--radius-md);
+  font: var(--type-label);
+  text-decoration: none;
+}
+.skip-link:focus { left: 8px; }
+
+/* ── Scrollbar (matte, minimal) ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--helios-surface3);
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--helios-border); }
+
+/* ── Reduced motion (P362): dissolve replaces spatial travel ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Also responds to app-level reducedMotion toggle from store */
+.motion-reduced *, .motion-reduced *::before, .motion-reduced *::after {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* ── Animation library ── */
+@keyframes helios-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes helios-scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes helios-slide-right {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes liveblink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50%       { opacity: 1; transform: translateY(-3px); }
+}
+
+/* ── Elevation (P339, P361) ── */
+.elevation-1 { border: 1px solid var(--helios-border); }
+.elevation-2 { box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.elevation-3 { backdrop-filter: blur(20px); border: 1px solid var(--helios-border); }
+
+/* ── Responsive two-column layout (handbook ch.02 responsive tiers) ──────── */
+/* On mobile (≤720px) the side panel stacks above the main content column.    */
+@media (max-width: 720px) {
+  .helios-cols {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    gap: 20px !important;
+  }
+  .helios-side {
+    flex: none !important;
+    width: 100% !important;
+    max-height: none !important;
+    /* Reset both axes: a lone `overflow-y: visible` next to a hidden
+       `overflow-x` is computed back to `auto`, which re-clipped the stacked
+       sidebar on phones. */
+    overflow: visible !important;
+  }
+  /* Give page headers smaller padding on mobile */
+  .helios-pg-header { padding-left: 16px !important; padding-right: 16px !important; }
+
+  /* Helios becomes an overlay instead of squeezing the active view to a sliver. */
+  .helios-main > [aria-label="Helios AI assistant"] {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    width: 100% !important;
+    max-width: none !important;
+    border-left: 0 !important;
+  }
+
+  .helios-editor-header {
+    flex-wrap: wrap;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+  .helios-editor-project {
+    min-width: 0;
+  }
+  .helios-editor-status {
+    margin-left: auto;
+  }
+  .helios-editor-actions {
+    flex: 1 0 100%;
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px !important;
+  }
+  .helios-editor-actions > button {
+    min-width: 0;
+    min-height: 42px;
+    justify-content: center;
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+}
+
+/* ── Glass card (P339) ── */
+.glass-card {
+  background: rgba(23, 24, 25, 0.72);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--helios-border);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Touch target minimums (P366: 44pt mobile, 32pt pointer) ── */
+button, [role="button"], a, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Keep desktop controls compact while giving touch users dependable hit areas. */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a[href],
+  input,
+  select,
+  textarea {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/*
+  Exempt small icon-only controls that are intentionally compact (delete
+  buttons inside list rows, reaction chips, etc.).  These carry an
+  aria-label so they are still accessible — the exemption only prevents
+  them from stretching their containing scroll row.
+*/
+@media (pointer: coarse) {
+  button[aria-label]:not([aria-label=""]):not(.helios-rail-btn):not(.helios-mobile-nav-item) {
+    min-width: unset;
+    min-height: unset;
+  }
+}
+
+/* The mobile destination bar deliberately scrolls when every destination does not fit. */
+.helios-mobile-nav {
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.helios-mobile-nav::-webkit-scrollbar { display: none; }
+
+/* ── sr-only (screen reader only text) ── */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border-width: 0;
+}
+.sr-only:focus-visible {
+  position: static;
+  width: auto; height: auto;
+  padding: inherit; margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ── Primary view and navigation transitions ── */
+.helios-view-frame {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  will-change: transform, opacity;
+}
+
+.helios-view-frame.view-forward {
+  animation: helios-view-forward var(--dur-standard) var(--ease-enter) both;
+}
+
+.helios-view-frame.view-backward {
+  animation: helios-view-backward var(--dur-standard) var(--ease-enter) both;
+}
+
+@keyframes helios-view-forward {
+  from { opacity: 0; transform: translateX(16px) scale(.995); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes helios-view-backward {
+  from { opacity: 0; transform: translateX(-16px) scale(.995); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+.helios-rail-btn {
+  position: relative;
+  isolation: isolate;
+}
+
+.helios-rail-btn > :not(.helios-rail-indicator) {
+  position: relative;
+  z-index: 1;
+}
+
+.helios-rail-indicator {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--helios-accent);
+  box-shadow: 0 7px 22px rgba(133, 118, 245, .22);
+  animation: rail-indicator-in var(--dur-standard) var(--ease-enter) both;
+}
+
+@keyframes rail-indicator-in {
+  from { opacity: 0; transform: scale(.72); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.helios-mobile-nav-item {
+  position: relative;
+}
+
+.helios-mobile-nav-item::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 22px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--helios-accent);
+  content: '';
+  opacity: 0;
+  transform: translateX(-50%) scaleX(.3);
+  transition: opacity var(--dur-quick) var(--ease-move), transform var(--dur-standard) var(--ease-enter);
+}
+
+.helios-mobile-nav-item.is-active::before {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helios-view-frame.view-forward,
+  .helios-view-frame.view-backward {
+    animation: none;
+  }
+}
+
+.motion-reduced .helios-view-frame.view-forward,
+.motion-reduced .helios-view-frame.view-backward {
+  animation: none;
+}
+
+/* ── Authenticated shell additions ── */
+.helios-internal-frame {
+  background:
+    radial-gradient(circle at 78% -20%, rgba(133, 118, 245, .055), transparent 36%),
+    var(--helios-bg);
+}
+
+.helios-rail-space-context {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  margin-top: 7px;
+  place-items: center;
+  border: 1px solid var(--helios-border);
+  border-radius: 12px;
+  background: var(--helios-surface2);
+  color: var(--helios-accent);
+}
+
+.helios-rail-space-context span { font-size: 15px; }
+.helios-rail-space-context i {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--helios-success);
+  box-shadow: 0 0 8px var(--helios-success);
+}
+
+.helios-floating-agent {
+  position: absolute;
+  z-index: 34;
+  right: 20px;
+  bottom: 20px;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(189, 183, 255, .28);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(133, 118, 245, .92), rgba(79, 195, 247, .72));
+  color: #fff;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, .42), 0 0 28px rgba(133, 118, 245, .18);
+  cursor: pointer;
+  transition: right var(--dur-deliberate) var(--ease-enter), transform var(--dur-quick) var(--ease-enter), box-shadow var(--dur-quick);
+}
+
+.helios-floating-agent:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 20px 55px rgba(0, 0, 0, .48), 0 0 36px rgba(133, 118, 245, .25); }
+.helios-floating-agent:active { transform: scale(.94); }
+.helios-floating-agent.is-open { right: 380px; }
+.helios-floating-agent > span { display: grid; place-items: center; }
+.helios-floating-agent > i { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border: 2px solid var(--helios-bg); border-radius: 50%; background: var(--helios-success); }
+
+@media (max-width: 720px) {
+  .helios-floating-agent,
+  .helios-floating-agent.is-open { right: 14px; bottom: 14px; width: 45px; height: 45px; border-radius: 15px; }
+}

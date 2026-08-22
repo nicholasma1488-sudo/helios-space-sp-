@@ -1,0 +1,30 @@
+[Unit]
+Description=Helios Space web application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=helios-space
+Group=helios-space
+WorkingDirectory=/opt/helios-space/current/server
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=8080
+Environment=DATA_DIR=/var/lib/helios-space
+Environment=HOME=/var/lib/helios-space
+ExecStart=/usr/local/bin/node --experimental-sqlite /opt/helios-space/current/server/server.js
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWriteDirectories=/var/lib/helios-space
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

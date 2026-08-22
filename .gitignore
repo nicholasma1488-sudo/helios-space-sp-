@@ -1,0 +1,52 @@
+# Dependencies and build output
+node_modules/
+dist/
+dist-ssr/
+
+# Tooling / scratch
+.playwright-cli/
+output/
+tmp/
+__pycache__/
+*.pyc
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.db-shm
+*.db-wal
+helios.db*
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Local review artifacts
+_review_shots/
+_live_snapshot/
+
+# OS / editor
+.DS_Store
+.idea
+*.sw?
+
+# Root-only Playwright/PDF toolkit — not part of the product
+/package.json
+/package-lock.json
+/to_pdf.js
+/generate_helios_handbook.py
+/Helios_Space_Product_Specification.pdf
+/state.png
+
+# Internal notes, not needed to build
+INTERNAL_PRODUCT_AUDIT.md
+HELIOS_UPGRADE_MASTER_PROMPT.md
+HELIOS_UPGRADE_TODO.md
+LANDING_3D_CHANGES.md

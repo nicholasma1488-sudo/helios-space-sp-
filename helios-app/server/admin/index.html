@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Helios Space — Admin</title>
+  <style>
+    :root{
+      --bg:#0f0f13;--surf:#16161d;--surf2:#1e1e28;--bdr:#2a2a38;
+      --txt:#e8e8f0;--mut:#7070a0;--acc:#7c6af7;--acc2:#4fc3f7;
+      --sol:#f5a623;--ok:#4caf7d;--err:#ef5350;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden}
+    a{color:var(--acc)}
+    button,input,select,textarea{font-family:inherit}
+
+    /* Login */
+    #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .login-card{background:var(--surf);border:1px solid var(--bdr);border-radius:20px;padding:36px;width:100%;max-width:380px}
+    .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+    .logo-icon{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#7c6af7,#4fc3f7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
+    .logo-text{display:flex;align-items:baseline;gap:4px;font-size:22px;letter-spacing:-.3px}
+    .logo-helios{font-weight:400;color:var(--txt)}
+    .logo-space{font-weight:800;background:linear-gradient(90deg,#7c6af7,#4fc3f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;position:relative}
+    .logo-star{font-size:8px;position:relative;top:-8px;left:-1px;background:linear-gradient(90deg,#7c6af7,#4fc3f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    h1{font-size:18px;margin-bottom:4px}
+    .sub{color:var(--mut);font-size:13px;margin-bottom:24px}
+    label{display:block;font-size:12px;color:var(--mut);margin:14px 0 5px;font-weight:600}
+    .field{width:100%;padding:11px 13px;border-radius:10px;background:var(--surf2);border:1px solid var(--bdr);color:var(--txt);font-size:14px;outline:none}
+    .field:focus{border-color:var(--acc)}
+    .btn{padding:11px 18px;border-radius:10px;background:var(--acc);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer}
+    .btn.full{width:100%;margin-top:20px}
+    .btn.sm{padding:7px 12px;font-size:12px;border-radius:8px}
+    .btn.ghost{background:var(--surf2);color:var(--mut)}
+    .btn.danger{background:var(--err)}
+    .btn.ok-btn{background:var(--ok)}
+    .err-msg{color:var(--err);font-size:13px;margin-top:12px;min-height:18px}
+
+    /* App shell */
+    #app{display:flex;height:100vh}
+    .side{width:220px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--bdr);padding:16px 12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+    .side-brand{display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:14px}
+    .nav-btn{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:10px;color:var(--mut);font-size:13px;border:none;background:transparent;cursor:pointer;width:100%;text-align:left}
+    .nav-btn.active{background:var(--acc);color:#fff}
+    .nav-btn:hover:not(.active){background:var(--surf2);color:var(--txt)}
+    .main{flex:1;overflow-y:auto;padding:28px 32px;background:var(--bg)}
+    .page-head{display:flex;align-items:center;margin-bottom:24px;gap:12px}
+    .page-head h2{font-size:22px;flex:1}
+    .hidden{display:none!important}
+
+    /* Stats */
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:28px}
+    .stat{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:18px}
+    .stat .n{font-size:30px;font-weight:800}
+    .stat .l{font-size:12px;color:var(--mut);margin-top:4px}
+
+    /* Table */
+    .table-wrap{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:12px 14px;font-size:13px;text-align:left;border-bottom:1px solid var(--bdr)}
+    th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.07em}
+    tr:last-child td{border-bottom:none}
+    .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+    .pill.active{background:rgba(76,175,125,.15);color:var(--ok)}
+    .pill.suspended{background:rgba(239,83,80,.15);color:var(--err)}
+    .row-btns{display:flex;gap:6px;justify-content:flex-end}
+
+    /* Settings sections */
+    .sec{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:20px;max-width:540px;margin-bottom:16px}
+    .sec h3{font-size:14px;font-weight:700;margin-bottom:14px}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+    .sw-wrap{width:44px;height:24px;border-radius:12px;background:var(--surf2);border:none;cursor:pointer;position:relative;flex-shrink:0}
+    .sw-wrap.on{background:var(--acc)}
+    .sw-wrap i{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s}
+    .sw-wrap.on i{left:23px}
+    .ok-msg{color:var(--ok);font-size:13px;min-height:18px;margin-top:10px}
+    .key-preview{font-family:monospace;font-size:12px;color:var(--mut);margin-top:4px}
+    .search-row{margin-bottom:14px}
+    .search-field{max-width:320px}
+
+    /* API key section */
+    .api-key-box{background:var(--surf2);border:1px solid var(--bdr);border-radius:10px;padding:14px;margin:12px 0}
+    .api-key-status{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .dot-ok{width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0}
+    .dot-no{width:8px;height:8px;border-radius:50%;background:var(--err);flex-shrink:0}
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">✦</div>
+      <div class="logo-text">
+        <span class="logo-helios">helios</span>
+        <span class="logo-space">space<span class="logo-star">✦</span></span>
+      </div>
+    </div>
+    <h1>Admin Panel</h1>
+    <p class="sub">Sign in to manage helioschat.space</p>
+    <label for="u">Email</label>
+    <input id="u" class="field" type="email" autocomplete="username" placeholder="admin@example.com" />
+    <label for="p">Password</label>
+    <input id="p" class="field" type="password" autocomplete="current-password" />
+    <button class="btn full" id="loginBtn">Sign in</button>
+    <div class="err-msg" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- Admin app -->
+<div id="app" class="hidden">
+  <aside class="side">
+    <div class="side-brand">
+      <div class="logo-icon" style="width:32px;height:32px;font-size:16px">✦</div>
+      <div style="font-size:13px;font-weight:700">Admin</div>
+    </div>
+    <button class="nav-btn active" data-view="dashboard">📊 Dashboard</button>
+    <button class="nav-btn" data-view="users">👤 Users</button>
+    <button class="nav-btn" data-view="ai">🤖 Helios AI</button>
+    <button class="nav-btn" data-view="settings">⚙️ Site Settings</button>
+    <div style="flex:1"></div>
+    <div id="whoami" style="padding:8px 12px;font-size:11px;color:var(--mut)"></div>
+    <button class="nav-btn" id="logoutBtn">← Sign out</button>
+  </aside>
+
+  <main class="main">
+    <!-- Dashboard -->
+    <section id="v-dashboard">
+      <div class="page-head"><h2>Dashboard</h2></div>
+      <div class="stats" id="stats"></div>
+      <div class="sec"><h3>Recent signups</h3><div id="recent"></div></div>
+    </section>
+
+    <!-- Users -->
+    <section id="v-users" class="hidden">
+      <div class="page-head"><h2>Users</h2></div>
+      <div class="search-row">
+        <input class="field search-field" id="userSearch" placeholder="Search name, handle, or email…" />
+      </div>
+      <div id="usersTable"></div>
+    </section>
+
+    <!-- AI / OpenAI Key -->
+    <section id="v-ai" class="hidden">
+      <div class="page-head"><h2>Helios AI</h2></div>
+      <div class="sec">
+        <h3>OpenAI API Key</h3>
+        <p style="font-size:13px;color:var(--mut);line-height:1.6;margin-bottom:14px">
+          This key is used by all users of Helios Space to access the Helios agent. It is stored server-side and never exposed to clients.
+          To get a key, visit <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a>.
+        </p>
+        <div class="api-key-box">
+          <div class="api-key-status" id="keyStatus">
+            <div class="dot-no" id="keyDot"></div>
+            <span id="keyStatusText" style="font-size:13px">Not configured</span>
+          </div>
+          <div class="key-preview" id="keyPreview"></div>
+        </div>
+        <label>New API Key (starts with sk-)</label>
+        <input class="field" id="apiKeyInput" type="password" placeholder="sk-proj-…" style="font-family:monospace;font-size:13px" />
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <button class="btn sm" id="saveKey">Save key</button>
+          <button class="btn sm ghost" id="clearKey">Remove key</button>
+        </div>
+        <div class="ok-msg" id="keyMsg"></div>
+      </div>
+      <div class="sec">
+        <h3>Model</h3>
+        <p style="font-size:13px;color:var(--mut);margin-bottom:12px">Choose which OpenAI model Helios uses. gpt-4o-mini is fast and cheap; gpt-4o is more capable.</p>
+        <label>Model</label>
+        <select class="field" id="modelSelect" style="width:auto;min-width:200px">
+          <option value="gpt-4o-mini">gpt-4o-mini (fast, low cost)</option>
+          <option value="gpt-4o">gpt-4o (most capable)</option>
+          <option value="gpt-3.5-turbo">gpt-3.5-turbo (legacy)</option>
+        </select>
+        <button class="btn sm" id="saveModel" style="margin-top:10px">Save model</button>
+        <div class="ok-msg" id="modelMsg"></div>
+      </div>
+      <div class="sec">
+        <h3>API Base URL</h3>
+        <p style="font-size:13px;color:var(--mut);margin-bottom:12px">The OpenAI-compatible API endpoint Helios calls. Change this to a proxy/mirror if the server's region is blocked by OpenAI. Default: https://api.openai.com</p>
+        <label>Base URL</label>
+        <input class="field" id="baseUrlInput" type="text" placeholder="https://api.openai.com" style="font-family:monospace;font-size:13px" />
+        <button class="btn sm" id="saveBaseUrl" style="margin-top:10px">Save base URL</button>
+        <div class="ok-msg" id="baseUrlMsg"></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="v-settings" class="hidden">
+      <div class="page-head"><h2>Site Settings</h2></div>
+      <div class="sec">
+        <h3>Public site</h3>
+        <label>Site name</label>
+        <input class="field" id="s_name" />
+        <label>Tagline</label>
+        <input class="field" id="s_tagline" />
+        <label>Announcement banner</label>
+        <textarea class="field" id="s_announce" rows="2"></textarea>
+        <div class="toggle-row" style="margin-top:14px">
+          <div>
+            <div style="font-size:14px">Open signups</div>
+            <div style="font-size:12px;color:var(--mut)">Allow new users to register</div>
+          </div>
+          <button class="sw-wrap" id="s_signup"><i></i></button>
+        </div>
+        <button class="btn" id="saveSettings" style="margin-top:16px">Save settings</button>
+        <div class="ok-msg" id="settingsOk"></div>
+      </div>
+      <div class="sec">
+        <h3>Admin credentials</h3>
+        <p style="font-size:13px;color:var(--mut);line-height:1.55;margin:0">
+          The admin email and password are managed by HELIOS_ADMIN_EMAIL and HELIOS_ADMIN_PASSWORD.
+          Update those environment variables and restart the server to rotate credentials and revoke admin sessions.
+        </p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s)
+const api = async (path, opts={}) => {
+  const r = await fetch(path, { credentials:'same-origin', headers:{'Content-Type':'application/json'}, ...opts })
+  let body = null; try{ body = await r.json() }catch(_){}
+  return { ok:r.ok, status:r.status, body }
+}
+
+async function boot(){
+  const me = await api('/api/admin/me')
+  if(me.ok){ showApp(me.body.username) }
+  else{ $('#login').classList.remove('hidden'); $('#app').classList.add('hidden') }
+}
+
+function showApp(username){
+  $('#login').classList.add('hidden')
+  $('#app').classList.remove('hidden')
+  $('#whoami').textContent = username
+  loadDashboard()
+}
+
+$('#loginBtn').onclick = async () => {
+  $('#loginErr').textContent = ''
+  const r = await api('/api/admin/login', { method:'POST', body: JSON.stringify({ username:$('#u').value, password:$('#p').value }) })
+  if(r.ok) showApp(r.body.username)
+  else $('#loginErr').textContent = (r.body&&r.body.error) || 'Login failed'
+}
+$('#p').addEventListener('keydown', e => { if(e.key==='Enter') $('#loginBtn').click() })
+$('#logoutBtn').onclick = async () => { await api('/api/admin/logout',{method:'POST'}); location.reload() }
+
+document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.nav-btn[data-view]').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    const v = btn.dataset.view
+    ;['dashboard','users','ai','settings'].forEach(x => $('#v-'+x).classList.toggle('hidden', x!==v))
+    if(v==='dashboard') loadDashboard()
+    if(v==='users') loadUsers()
+    if(v==='ai') loadAI()
+    if(v==='settings') loadSettings()
+  }
+})
+
+function fmtDate(s){ try{ return new Date(s).toLocaleString() }catch(_){ return s } }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])) }
+
+async function loadDashboard(){
+  const s = await api('/api/admin/stats')
+  if(!s.ok) return
+  const st = s.body
+  $('#stats').innerHTML = [
+    ['Total users', st.total, 'var(--acc)'],
+    ['Active', st.active, 'var(--ok)'],
+    ['Suspended', st.suspended, 'var(--err)'],
+    ['New this week', st.last7, 'var(--sol)'],
+    ['Projects', st.projects, 'var(--acc2)'],
+    ['Posts', st.posts, 'var(--mut)'],
+  ].map(([l,n,c]) => `<div class="stat"><div class="n" style="color:${c}">${n}</div><div class="l">${l}</div></div>`).join('')
+  const u = await api('/api/admin/users')
+  const recent = (u.body?.users||[]).slice(0,8)
+  $('#recent').innerHTML = !recent.length ? '<div style="color:var(--mut);font-size:13px;padding:12px 0">No users yet</div>' :
+    recent.map(x => `<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--bdr)">
+      <div style="width:34px;height:34px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px">${esc(x.name[0]||'?')}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600">${esc(x.name)}</div><div style="font-size:12px;color:var(--mut)">${esc(x.handle)} · ${esc(x.email)}</div></div>
+      <div style="font-size:11px;color:var(--mut)">${fmtDate(x.created_at)}</div>
+    </div>`).join('')
+}
+
+let searchTimer
+$('#userSearch').oninput = () => { clearTimeout(searchTimer); searchTimer=setTimeout(loadUsers,250) }
+
+async function loadUsers(){
+  const q = encodeURIComponent($('#userSearch').value.trim())
+  const r = await api('/api/admin/users'+(q?('?q='+q):''))
+  const users = r.body?.users || []
+  if(!users.length){ $('#usersTable').innerHTML='<div style="color:var(--mut);font-size:13px;padding:12px">No matching users</div>'; return }
+  $('#usersTable').innerHTML = `<div class="table-wrap"><table><thead><tr>
+    <th>Name</th><th>Handle</th><th>Email</th><th>Joined</th><th>Status</th><th style="text-align:right">Actions</th>
+    </tr></thead><tbody>${users.map(u=>`<tr>
+      <td>${esc(u.name)}</td><td>${esc(u.handle)}</td><td>${esc(u.email)}</td>
+      <td style="font-size:12px;color:var(--mut)">${fmtDate(u.created_at)}</td>
+      <td><span class="pill ${u.status}">${u.status}</span></td>
+      <td><div class="row-btns">
+        <button class="btn sm ghost" onclick="toggleStatus(${u.id},'${u.status}')">${u.status==='active'?'Suspend':'Activate'}</button>
+        <button class="btn sm danger" onclick="delUser(${u.id},'${esc(u.handle)}')">Delete</button>
+      </div></td></tr>`).join('')}</tbody></table></div>`
+}
+
+window.toggleStatus = async (id, cur) => {
+  const next = cur==='active'?'suspended':'active'
+  await api('/api/admin/users/'+id+'/status',{method:'POST',body:JSON.stringify({status:next})})
+  loadUsers(); loadDashboard()
+}
+window.delUser = async (id, handle) => {
+  if(!confirm('Delete user '+handle+'? This cannot be undone.')) return
+  await api('/api/admin/users/'+id,{method:'DELETE'})
+  loadUsers(); loadDashboard()
+}
+
+async function loadAI(){
+  const r = await api('/api/admin/settings')
+  if(!r.ok) return
+  const s = r.body
+  const hasKey = s.openai_key_set
+  $('#keyDot').className = hasKey ? 'dot-ok' : 'dot-no'
+  $('#keyStatusText').textContent = hasKey ? 'API key configured' : 'No API key set — Helios is disabled'
+  $('#keyPreview').textContent = s.openai_key_preview ? 'Key: '+s.openai_key_preview : ''
+  $('#modelSelect').value = s.openai_model || 'gpt-4o-mini'
+  $('#baseUrlInput').value = s.openai_base_url || 'https://api.openai.com'
+}
+$('#saveKey').onclick = async () => {
+  const val = $('#apiKeyInput').value.trim()
+  if(!val){ $('#keyMsg').textContent='Please enter a key'; return }
+  if(!val.startsWith('sk-')){ $('#keyMsg').textContent='Key should start with sk-'; return }
+  const r = await api('/api/admin/settings',{method:'POST',body:JSON.stringify({openai_api_key:val})})
+  $('#apiKeyInput').value = ''
+  $('#keyMsg').style.color = r.ok ? 'var(--ok)' : 'var(--err)'
+  $('#keyMsg').textContent = r.ok ? 'Key saved.' : 'Failed to save key'
+  if(r.ok) loadAI()
+  setTimeout(()=>{ $('#keyMsg').textContent='' },3000)
+}
+$('#clearKey').onclick = async () => {
+  if(!confirm('Remove the OpenAI API key? Helios will be disabled for all users.')) return
+  await api('/api/admin/settings/clear-key',{method:'POST'})
+  loadAI()
+}
+$('#saveModel').onclick = async () => {
+  await api('/api/admin/settings',{method:'POST',body:JSON.stringify({openai_model:$('#modelSelect').value})})
+  $('#modelMsg').textContent='Model saved.'
+  setTimeout(()=>{ $('#modelMsg').textContent='' },2000)
+}
+$('#saveBaseUrl').onclick = async () => {
+  const val = $('#baseUrlInput').value.trim() || 'https://api.openai.com'
+  const r = await api('/api/admin/settings',{method:'POST',body:JSON.stringify({openai_base_url:val})})
+  $('#baseUrlMsg').style.color = r.ok ? 'var(--ok)' : 'var(--err)'
+  $('#baseUrlMsg').textContent = r.ok ? 'Base URL saved.' : 'Failed to save'
+  setTimeout(()=>{ $('#baseUrlMsg').textContent='' },2500)
+}
+
+async function loadSettings(){
+  const r = await api('/api/admin/settings')
+  if(!r.ok) return
+  const s = r.body
+  $('#s_name').value = s.site_name||''
+  $('#s_tagline').value = s.tagline||''
+  $('#s_announce').value = s.announcement||''
+  $('#s_signup').classList.toggle('on', !!s.signup_open)
+}
+$('#s_signup').onclick = () => $('#s_signup').classList.toggle('on')
+$('#saveSettings').onclick = async () => {
+  const r = await api('/api/admin/settings',{method:'POST',body:JSON.stringify({
+    site_name:$('#s_name').value, tagline:$('#s_tagline').value,
+    announcement:$('#s_announce').value, signup_open:$('#s_signup').classList.contains('on'),
+  })})
+  $('#settingsOk').textContent = r.ok?'Saved.':'Failed'
+  setTimeout(()=>{ $('#settingsOk').textContent='' },2000)
+}
+boot()
+</script>
+</body>
+</html>

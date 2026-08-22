@@ -118,7 +118,7 @@
   --hero-rush: 0;
   position: relative;
   z-index: 2;
-  height: 440vh;
+  height: 560vh;
   margin: 0;
   overflow: visible;
 }
@@ -882,7 +882,7 @@
   text-align: center;
   overflow: visible;
   transform: none;
-  opacity: calc(1 - min(1, var(--hero-scroll) * 1.35));
+  opacity: calc(1 - min(1, var(--hero-scroll) * 2.4));
   pointer-events: none;
 }
 
@@ -2426,13 +2426,13 @@
 
 [data-reveal] {
   opacity: 0;
-  transform: translate3d(0, 50px, -180px) rotateX(18deg) scale(.88);
-  transition: opacity 780ms var(--ease-enter), transform 780ms var(--ease-enter);
+  transform: translateY(18px);
+  transition: opacity 520ms ease, transform 520ms ease;
 }
 
 [data-reveal].is-visible {
   opacity: 1;
-  transform: translate3d(0, 0, 0) rotateX(0) scale(1);
+  transform: none;
 }
 
 .landing-auth-portal {

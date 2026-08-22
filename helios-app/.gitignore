@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies and build
+node_modules
+dist
+dist-ssr
+*.local
+
+# Tooling / scratch
+.playwright-cli/
+output/
+tmp/
+__pycache__/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.db-shm
+*.db-wal
+helios.db*
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Internal notes, not needed to build
+INTERNAL_PRODUCT_AUDIT.md
+HELIOS_UPGRADE_MASTER_PROMPT.md
+HELIOS_UPGRADE_TODO.md
+LANDING_3D_CHANGES.md

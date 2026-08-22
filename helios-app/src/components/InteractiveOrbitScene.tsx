@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import * as THREE from 'three'
-import { CSS3DObject, CSS3DRenderer } from 'three/addons/renderers/CSS3DRenderer.js'
+import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 
 export type StageMode = 'feed' | 'project' | 'chat' | 'live' | 'apps'
 export type HeroPhase = 'void' | 'push' | 'flanks' | 'live'
@@ -33,20 +33,18 @@ const WINDOW_HEIGHT = 600
 const WINDOW_SCALE = 0.008
 
 const PATH: CameraKey[] = [
-  { t: 0, x: 0, y: 5.4, z: 148, lx: 0, ly: 0.35, lz: 0, fov: 20 },
-  { t: 0.14, x: 0.55, y: 3.2, z: 96, lx: 0.04, ly: 0.18, lz: 0, fov: 21 },
-  { t: 0.3, x: -0.35, y: 1.6, z: 58, lx: 0, ly: 0.08, lz: 0, fov: 22 },
-  { t: 0.48, x: 0.18, y: 0.55, z: 34, lx: 0, ly: 0.02, lz: -0.15, fov: 23 },
-  { t: 0.7, x: 0.04, y: 0.12, z: 20, lx: 0, ly: 0, lz: -0.35, fov: 24 },
-  { t: 1, x: 0, y: 0, z: 12.4, lx: 0, ly: 0, lz: -0.6, fov: 26 },
+  { t: 0, x: 0, y: 9, z: 240, lx: 0, ly: 0.25, lz: 0, fov: 16 },
+  { t: 0.18, x: 0.25, y: 5.2, z: 155, lx: 0.02, ly: 0.14, lz: 0, fov: 16.5 },
+  { t: 0.36, x: -0.18, y: 2.8, z: 96, lx: 0, ly: 0.08, lz: 0, fov: 17 },
+  { t: 0.54, x: 0.08, y: 1.2, z: 52, lx: 0, ly: 0.03, lz: 0.1, fov: 18 },
+  { t: 0.72, x: 0.02, y: 0.4, z: 24, lx: 0, ly: 0.01, lz: 0.2, fov: 19 },
+  { t: 0.88, x: 0, y: 0.1, z: 11.5, lx: 0, ly: 0, lz: 0.3, fov: 20 },
+  { t: 1, x: 0, y: 0, z: 6.2, lx: 0, ly: 0, lz: 0.4, fov: 21 },
 ]
 
-const FEED_HOME: Pose = { x: -9.4, y: 1.15, z: -7.2, rx: 0.04, ry: 0.7 }
-const FEED_AWAY: Pose = { x: -30, y: 4.2, z: -48, rx: 0.12, ry: 1.42 }
-const CODE_HOME: Pose = { x: 9.6, y: -0.35, z: -9.4, rx: -0.05, ry: -0.68 }
-const CODE_AWAY: Pose = { x: 32, y: -3.6, z: -52, rx: -0.1, ry: -1.38 }
-const CHAT_HOME: Pose = { x: -2.4, y: -3.1, z: -16, rx: 0.22, ry: 0.08 }
-const CHAT_AWAY: Pose = { x: -6, y: -14, z: -56, rx: 0.7, ry: 0.2 }
+const FEED_HOME: Pose = { x: -28, y: 4.5, z: -62, rx: 0.08, ry: 1.05 }
+const CODE_HOME: Pose = { x: 30, y: -3.2, z: -70, rx: -0.06, ry: -1.08 }
+const CHAT_HOME: Pose = { x: -6, y: -16, z: -88, rx: 0.5, ry: 0.12 }
 
 function damp(current: number, target: number, smoothing: number, delta: number) {
   return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-smoothing * delta))
@@ -55,16 +53,6 @@ function damp(current: number, target: number, smoothing: number, delta: number)
 function seededRandom(seed: number) {
   const value = Math.sin(seed * 12.9898) * 43758.5453
   return value - Math.floor(value)
-}
-
-function lerpPose(a: Pose, b: Pose, t: number): Pose {
-  return {
-    x: THREE.MathUtils.lerp(a.x, b.x, t),
-    y: THREE.MathUtils.lerp(a.y, b.y, t),
-    z: THREE.MathUtils.lerp(a.z, b.z, t),
-    rx: THREE.MathUtils.lerp(a.rx, b.rx, t),
-    ry: THREE.MathUtils.lerp(a.ry, b.ry, t),
-  }
 }
 
 function samplePath(t: number): CameraKey {
@@ -229,18 +217,13 @@ function setGroupOpacity(group: THREE.Group, opacity: number) {
   group.visible = opacity > 0.02
 }
 
-function introProgress(elapsed: number, phase: HeroPhase, reducedMotion: boolean) {
-  if (reducedMotion) return 0.34
-  if (phase === 'live' && elapsed >= 3) return 0.34
-  if (elapsed < 1 || phase === 'void') return THREE.MathUtils.smoothstep(elapsed, 0, 1) * 0.07
-  if (elapsed < 2 || phase === 'push') return 0.07 + THREE.MathUtils.smoothstep(elapsed, 1, 2) * 0.2
-  if (elapsed < 3) return 0.27 + THREE.MathUtils.smoothstep(elapsed, 2, 3) * 0.07
-  return 0.34
+function introProgress(elapsed: number, _phase: HeroPhase, reducedMotion: boolean) {
+  if (reducedMotion) return 0
+  return THREE.MathUtils.smoothstep(elapsed, 0, 1.15) * 0.04
 }
 
-export function InteractiveOrbitScene({ activeMode, phase, hostRef, windowRef, onInteract, children }: Props) {
-  const mountRef = useRef<HTMLDivElement>(null)
-  const activeModeRef = useRef(activeMode)
+export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, children }: Props) {
+  const [mountEl, setMountEl] = useState<HTMLDivElement | null>(null)
   const phaseRef = useRef(phase)
   const onInteractRef = useRef(onInteract)
   const [windowHost] = useState(() => {
@@ -251,7 +234,6 @@ export function InteractiveOrbitScene({ activeMode, phase, hostRef, windowRef, o
     return el
   })
 
-  useEffect(() => { activeModeRef.current = activeMode }, [activeMode])
   useEffect(() => { phaseRef.current = phase }, [phase])
   useEffect(() => { onInteractRef.current = onInteract }, [onInteract])
 
@@ -263,18 +245,23 @@ export function InteractiveOrbitScene({ activeMode, phase, hostRef, windowRef, o
   }, [windowRef])
 
   useLayoutEffect(() => {
-    const mount = mountRef.current
-    const host = hostRef.current
-    if (!mount || !host) return
+    const mount = mountEl
+    if (!mount) return
+    const host = hostRef.current ?? mount.parentElement ?? mount
+
+    const showFallbackWindow = () => {
+      windowHost.classList.add('is-fallback')
+      if (windowHost.parentElement !== mount) mount.appendChild(windowHost)
+    }
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let renderer: THREE.WebGLRenderer
     try {
       renderer = new THREE.WebGLRenderer({ alpha: false, antialias: true, powerPreference: 'high-performance' })
-    } catch {
+    } catch (error) {
+      console.error('[Helios hero] WebGL unavailable', error)
       host.dataset.webgl = 'unavailable'
-      windowHost.classList.add('is-fallback')
-      mount.appendChild(windowHost)
+      showFallbackWindow()
       return () => {
         windowHost.classList.remove('is-fallback')
         if (windowHost.parentElement === mount) mount.removeChild(windowHost)
@@ -283,6 +270,7 @@ export function InteractiveOrbitScene({ activeMode, phase, hostRef, windowRef, o
     }
 
     host.dataset.webgl = 'ready'
+    try {
     renderer.setClearColor(0x04060b, 1)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25))
     renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -340,9 +328,12 @@ export function InteractiveOrbitScene({ activeMode, phase, hostRef, windowRef, o
     const feedPanel = makePanel('feed', 5.6, 3.5)
     const codePanel = makePanel('code', 5.2, 3.3)
     const chatPanel = makePanel('chat', 4.6, 2.9)
-    applyPose(feedPanel, FEED_AWAY)
-    applyPose(codePanel, CODE_AWAY)
-    applyPose(chatPanel, CHAT_AWAY)
+    applyPose(feedPanel, FEED_HOME)
+    applyPose(codePanel, CODE_HOME)
+    applyPose(chatPanel, CHAT_HOME)
+    setGroupOpacity(feedPanel, 0)
+    setGroupOpacity(codePanel, 0)
+    setGroupOpacity(chatPanel, 0)
     scene.add(feedPanel, codePanel, chatPanel)
 
     const glow = new THREE.Mesh(
@@ -361,8 +352,8 @@ export function InteractiveOrbitScene({ activeMode, phase, hostRef, windowRef, o
     const cssObject = new CSS3DObject(windowHost)
     cssObject.scale.setScalar(WINDOW_SCALE)
     cssObject.position.set(0, 0.04, 0)
-    cssObject.rotation.set(0.2, -0.34, 0)
-    cssObject.visible = false
+    cssObject.rotation.set(0.05, -0.08, 0)
+    cssObject.visible = true
     cssScene.add(cssObject)
 
     const resize = () => {
@@ -408,60 +399,40 @@ export function InteractiveOrbitScene({ activeMode, phase, hostRef, windowRef, o
       const introT = introProgress(elapsed, phaseRef.current, reducedMotion)
       const pathT = THREE.MathUtils.clamp(introT + ease * (1 - introT), 0, 1)
       const shot = samplePath(pathT)
-      const flank = reducedMotion ? 1 : THREE.MathUtils.smoothstep(elapsed, 2.02, 2.95)
-      const face = THREE.MathUtils.smoothstep(pathT, 0.28, 0.82)
-      const mode = activeModeRef.current
+      const enter = THREE.MathUtils.smoothstep(pathT, 0.82, 1)
+      const glimpse = THREE.MathUtils.smoothstep(pathT, 0.08, 0.28) * (1 - THREE.MathUtils.smoothstep(pathT, 0.48, 0.74))
 
       pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
       pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
 
-      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.55, 3.6, delta)
-      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.28, 3.6, delta)
-      camera.position.z = damp(camera.position.z, shot.z, 2.35, delta)
-      camera.fov = damp(camera.fov, shot.fov, 3.2, delta)
+      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.35, 5.4, delta)
+      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.18, 5.4, delta)
+      camera.position.z = damp(camera.position.z, shot.z, 6.8, delta)
+      camera.fov = damp(camera.fov, shot.fov, 4.2, delta)
       camera.updateProjectionMatrix()
-      look.x = damp(look.x, shot.lx + pointer.x * 0.2, 3.8, delta)
-      look.y = damp(look.y, shot.ly - pointer.y * 0.12, 3.8, delta)
-      look.z = damp(look.z, shot.lz, 3.8, delta)
+      look.x = damp(look.x, shot.lx + pointer.x * 0.12, 5.2, delta)
+      look.y = damp(look.y, shot.ly - pointer.y * 0.08, 5.2, delta)
+      look.z = damp(look.z, shot.lz, 5.2, delta)
       camera.lookAt(look)
 
-      cssObject.visible = pathT > 0.08
-      cssObject.rotation.x = damp(cssObject.rotation.x, 0.2 * (1 - face), 3.1, delta)
-      cssObject.rotation.y = damp(cssObject.rotation.y, -0.34 * (1 - face), 3.1, delta)
-      windowHost.style.opacity = String(THREE.MathUtils.clamp((pathT - 0.08) / 0.12, 0, 1))
-      windowHost.style.pointerEvents = pathT > 0.12 ? 'auto' : 'none'
+      cssObject.visible = true
+      cssObject.rotation.x = damp(cssObject.rotation.x, 0.05 * (1 - enter), 3.4, delta)
+      cssObject.rotation.y = damp(cssObject.rotation.y, -0.08 * (1 - enter), 3.4, delta)
+      windowHost.style.opacity = '1'
+      windowHost.style.pointerEvents = pathT > 0.18 ? 'auto' : 'none'
 
-      const feedPose = lerpPose(FEED_AWAY, FEED_HOME, flank)
-      const codePose = lerpPose(CODE_AWAY, CODE_HOME, flank)
-      const chatPose = lerpPose(CHAT_AWAY, CHAT_HOME, flank)
-      const rush = ease * 11
-      feedPanel.position.x = damp(feedPanel.position.x, feedPose.x + (mode === 'feed' ? 0.35 : 0), 2.8, delta)
-      feedPanel.position.y = damp(feedPanel.position.y, feedPose.y, 2.8, delta)
-      feedPanel.position.z = damp(feedPanel.position.z, feedPose.z + rush + (mode === 'feed' ? 1.4 : 0), 2.5, delta)
-      feedPanel.rotation.x = damp(feedPanel.rotation.x, feedPose.rx, 2.8, delta)
-      feedPanel.rotation.y = damp(feedPanel.rotation.y, feedPose.ry, 2.8, delta)
-      codePanel.position.x = damp(codePanel.position.x, codePose.x + (mode === 'project' ? -0.3 : 0), 2.8, delta)
-      codePanel.position.y = damp(codePanel.position.y, codePose.y, 2.8, delta)
-      codePanel.position.z = damp(codePanel.position.z, codePose.z + rush * 1.1 + (mode === 'project' ? 1.4 : 0), 2.5, delta)
-      codePanel.rotation.x = damp(codePanel.rotation.x, codePose.rx, 2.8, delta)
-      codePanel.rotation.y = damp(codePanel.rotation.y, codePose.ry, 2.8, delta)
-      chatPanel.position.x = damp(chatPanel.position.x, chatPose.x, 2.8, delta)
-      chatPanel.position.y = damp(chatPanel.position.y, chatPose.y + (mode === 'chat' ? 0.4 : 0), 2.8, delta)
-      chatPanel.position.z = damp(chatPanel.position.z, chatPose.z + rush * 1.25 + (mode === 'chat' ? 1.6 : 0), 2.5, delta)
-      chatPanel.rotation.x = damp(chatPanel.rotation.x, chatPose.rx, 2.8, delta)
-      chatPanel.rotation.y = damp(chatPanel.rotation.y, chatPose.ry, 2.8, delta)
-      setGroupOpacity(feedPanel, flank)
-      setGroupOpacity(codePanel, flank)
-      setGroupOpacity(chatPanel, flank)
+      setGroupOpacity(feedPanel, glimpse * 0.5)
+      setGroupOpacity(codePanel, glimpse * 0.5)
+      setGroupOpacity(chatPanel, glimpse * 0.42)
 
-      starGroup.position.z = pathT * 64
+      starGroup.position.z = pathT * 150
       rings.forEach((ring, index) => {
         ring.rotation.z += delta * (0.035 + index * 0.012)
-        ring.position.z = pathT * (5 + index * 2.2)
+        ring.position.z = pathT * (14 + index * 5)
       })
       const glowMat = glow.material as THREE.MeshBasicMaterial
-      glowMat.opacity = 0.08 + face * 0.1
-      keyLight.intensity = 24 + (1 - pathT) * 16
+      glowMat.opacity = 0.04 + enter * 0.14
+      keyLight.intensity = 18 + (1 - pathT) * 22
 
       host.style.setProperty('--hero-scroll', ease.toFixed(4))
       renderer.render(scene, camera)
@@ -496,11 +467,24 @@ export function InteractiveOrbitScene({ activeMode, phase, hostRef, windowRef, o
       renderer.dispose()
       renderer.domElement.remove()
       cssRenderer.domElement.remove()
+      if (windowHost.parentElement) windowHost.remove()
     }
-  }, [hostRef, windowHost])
+    } catch (error) {
+      console.error('[Helios hero] scene init failed', error)
+      renderer.dispose()
+      renderer.domElement.remove()
+      host.dataset.webgl = 'unavailable'
+      showFallbackWindow()
+      return () => {
+        windowHost.classList.remove('is-fallback')
+        if (windowHost.parentElement === mount) mount.removeChild(windowHost)
+        delete host.dataset.webgl
+      }
+    }
+  }, [hostRef, windowHost, mountEl])
 
   return (
-    <div ref={mountRef} className="interactive-orbit-scene">
+    <div ref={setMountEl} className="interactive-orbit-scene">
       {createPortal(children, windowHost)}
     </div>
   )

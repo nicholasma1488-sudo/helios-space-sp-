@@ -1,0 +1,1815 @@
+.lifestyle-view {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 62% -10%, rgba(133, 118, 245, .09), transparent 30%),
+    var(--helios-bg);
+}
+
+.lifestyle-topbar {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  min-height: 64px;
+  flex-shrink: 0;
+  grid-template-columns: minmax(250px, 1fr) minmax(260px, 460px) minmax(170px, 1fr);
+  align-items: center;
+  gap: 22px;
+  padding: 8px 26px;
+  border-bottom: 1px solid var(--helios-border);
+  background: color-mix(in srgb, var(--helios-bg) 86%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.lifestyle-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lifestyle-title-mark {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid rgba(133, 118, 245, .28);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(133, 118, 245, .2), rgba(79, 195, 247, .08));
+  color: var(--helios-accent);
+  box-shadow: 0 8px 28px rgba(133, 118, 245, .12);
+}
+
+.lifestyle-title > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.lifestyle-title strong {
+  font-size: 14px;
+}
+
+.lifestyle-title small {
+  overflow: hidden;
+  max-width: 340px;
+  color: var(--helios-muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifestyle-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background: var(--helios-surface);
+  color: var(--helios-muted);
+  transition: border-color var(--dur-quick) var(--ease-move), box-shadow var(--dur-quick) var(--ease-move);
+}
+
+.lifestyle-search:focus-within {
+  border-color: rgba(133, 118, 245, .62);
+  box-shadow: 0 0 0 3px rgba(133, 118, 245, .1);
+}
+
+.lifestyle-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.lifestyle-search button {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  cursor: pointer;
+}
+
+.lifestyle-compose-top {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 39px;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  gap: 7px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--helios-accent);
+  color: var(--helios-on-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(133, 118, 245, .16);
+}
+
+.lifestyle-layout {
+  display: grid;
+  width: 100%;
+  max-width: 1440px;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(190px, 220px) minmax(490px, 690px) minmax(230px, 270px);
+  align-items: start;
+  gap: 20px;
+  margin: 0 auto;
+  padding: 18px 24px 52px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.lifestyle-left,
+.lifestyle-right {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lifestyle-profile-shortcut {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--helios-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lifestyle-profile-shortcut:hover {
+  border-color: var(--helios-border);
+  background: var(--helios-surface);
+}
+
+.lifestyle-profile-shortcut > span:last-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.lifestyle-profile-shortcut strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifestyle-profile-shortcut small {
+  color: var(--helios-muted);
+  font-size: 9px;
+}
+
+.lifestyle-avatar {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  border: 1px solid rgba(133, 118, 245, .28);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .18), transparent 30%),
+    linear-gradient(135deg, #7666ed, #3e8cb4);
+  color: #fff;
+  font-weight: 780;
+  letter-spacing: -.02em;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, .06);
+}
+
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 9px;
+}
+
+.avatar-md {
+  width: 41px;
+  height: 41px;
+  font-size: 11px;
+}
+
+.lifestyle-side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--helios-border);
+}
+
+.lifestyle-side-nav button,
+.lifestyle-side-section button {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--helios-text2);
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lifestyle-side-nav button:hover,
+.lifestyle-side-section button:hover,
+.lifestyle-side-nav button.is-active,
+.lifestyle-side-section button.is-active {
+  background: var(--helios-surface);
+  color: var(--helios-text);
+}
+
+.lifestyle-side-nav button.is-active {
+  box-shadow: inset 3px 0 var(--helios-accent);
+}
+
+.lifestyle-side-nav svg {
+  color: var(--helios-accent);
+}
+
+.lifestyle-side-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--helios-border);
+}
+
+.lifestyle-side-section > span,
+.right-card-eyebrow {
+  display: block;
+  margin: 4px 10px 6px;
+  color: var(--helios-muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .13em;
+}
+
+.lifestyle-side-section button i {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 9px;
+  font-style: normal;
+}
+
+.lifestyle-side-section button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-shortcuts button i {
+  border: 1px solid var(--helios-border);
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+}
+
+.lifestyle-feed {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0;
+  border-left: 1px solid var(--helios-border);
+  border-right: 1px solid var(--helios-border);
+}
+
+.feed-home-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--helios-border);
+}
+
+.feed-home-tabs button {
+  min-height: 52px;
+  border: 0;
+  background: transparent;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.feed-home-tabs button.is-active {
+  color: var(--helios-text);
+  box-shadow: inset 0 -3px 0 #1d9bf0;
+}
+
+.tweet-post {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 16px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--helios-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tweet-post:hover { background: rgba(255, 255, 255, .03); }
+
+.tweet-main .post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tweet-main .post-author {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.tweet-main .post-author-button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tweet-main .post-author strong { font-size: 15px; }
+.tweet-main .post-author span,
+.tweet-main time {
+  color: var(--helios-muted);
+  font-size: 14px;
+}
+
+.tweet-post .post-body {
+  margin: 4px 0 10px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.tweet-actions {
+  display: flex;
+  justify-content: space-between;
+  max-width: 460px;
+  padding-top: 4px;
+}
+
+.tweet-actions > button {
+  min-height: 34px;
+  justify-content: flex-start;
+  font-size: 13px;
+}
+
+.tweet-actions .is-liked { color: #f91880; }
+.tweet-actions .is-reposted { color: #00ba7c; }
+.tweet-more-react { color: var(--helios-muted); }
+
+.feed-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 2px 10px;
+}
+
+.feed-section-heading h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.feed-section-heading span {
+  color: var(--helios-muted);
+  font-size: 9px;
+}
+
+.highlight-row {
+  display: flex;
+  gap: 9px;
+  overflow-x: auto;
+  padding: 1px 1px 6px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.highlight-row::-webkit-scrollbar {
+  display: none;
+}
+
+.highlight-card {
+  position: relative;
+  display: flex;
+  width: 128px;
+  min-width: 128px;
+  height: 174px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  overflow: hidden;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, .17), transparent 25%),
+    linear-gradient(150deg, #2e2952, #141723 70%);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  scroll-snap-align: start;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .2);
+  transition: transform var(--dur-standard) var(--ease-enter), border-color var(--dur-quick) ease;
+}
+
+.highlight-card::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 32%, rgba(5, 7, 11, .87));
+  content: '';
+}
+
+.highlight-card:hover {
+  border-color: rgba(133, 118, 245, .55);
+  transform: translateY(-3px);
+}
+
+.highlight-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.highlight-card .lifestyle-avatar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  border-width: 2px;
+}
+
+.highlight-category {
+  margin-bottom: 5px;
+  color: rgba(255, 255, 255, .7);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.highlight-card strong {
+  width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.highlight-card small {
+  display: -webkit-box;
+  width: 100%;
+  margin-top: 3px;
+  overflow: hidden;
+  color: rgba(255, 255, 255, .7);
+  font-size: 8px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.highlight-tone-1 { background: radial-gradient(circle at 75% 0, rgba(79, 195, 247, .32), transparent 30%), linear-gradient(150deg, #173441, #12151c 70%); }
+.highlight-tone-2 { background: radial-gradient(circle at 20% 0, rgba(242, 184, 75, .3), transparent 30%), linear-gradient(150deg, #40351d, #15151a 70%); }
+.highlight-tone-3 { background: radial-gradient(circle at 70% 0, rgba(110, 214, 154, .28), transparent 30%), linear-gradient(150deg, #19382c, #11161a 70%); }
+.highlight-tone-4 { background: radial-gradient(circle at 30% 0, rgba(255, 155, 106, .3), transparent 30%), linear-gradient(150deg, #3a251e, #151318 70%); }
+
+.create-highlight {
+  justify-content: flex-end;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(133, 118, 245, .24), transparent 34%),
+    var(--helios-surface);
+}
+
+.create-highlight::before {
+  background: linear-gradient(transparent, rgba(10, 11, 15, .7));
+}
+
+.create-highlight > span {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(133, 118, 245, .42);
+  border-radius: 50%;
+  background: var(--helios-accent);
+  transform: translateX(-50%);
+}
+
+.lifestyle-composer,
+.lifestyle-post {
+  border: 1px solid var(--helios-border);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--helios-surface) 96%, transparent);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .12);
+}
+
+.lifestyle-composer {
+  overflow: hidden;
+  transition: border-color var(--dur-quick) ease, box-shadow var(--dur-standard) ease;
+}
+
+.lifestyle-composer.is-open {
+  border-color: rgba(133, 118, 245, .3);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .18), 0 0 0 1px rgba(133, 118, 245, .04);
+}
+
+.composer-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px 11px;
+}
+
+.composer-compact > button {
+  min-height: 41px;
+  flex: 1;
+  padding: 0 15px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 17px;
+  text-align: left;
+  cursor: text;
+}
+
+.composer-compact > button:hover {
+  border-color: rgba(133, 118, 245, .35);
+  color: var(--helios-text2);
+}
+
+.composer-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--helios-border);
+}
+
+.composer-quick-actions button {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.composer-quick-actions button:hover {
+  background: var(--helios-surface2);
+  color: var(--helios-text);
+}
+
+.composer-quick-actions button:nth-child(1) svg { color: var(--helios-accent2); }
+.composer-quick-actions button:nth-child(2) svg { color: var(--helios-danger); }
+.composer-quick-actions button:nth-child(3) svg { color: var(--helios-warning); }
+
+.lifestyle-composer form {
+  animation: composer-expand 320ms var(--ease-enter) both;
+}
+
+.lifestyle-composer form > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 14px 8px;
+}
+
+.lifestyle-composer form > header > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lifestyle-composer form > header > div > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.lifestyle-composer form > header strong {
+  font-size: 12px;
+}
+
+.lifestyle-composer form > header small {
+  color: var(--helios-muted);
+  font-size: 9px;
+}
+
+.lifestyle-composer form > header > button,
+.post-more {
+  display: grid;
+  width: 33px;
+  height: 33px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--helios-muted);
+  cursor: pointer;
+}
+
+.lifestyle-composer form > header > button:hover,
+.post-more:hover {
+  background: var(--helios-surface2);
+  color: var(--helios-text);
+}
+
+.lifestyle-composer form > textarea {
+  width: calc(100% - 28px);
+  min-height: 126px;
+  margin: 2px 14px 8px;
+  resize: vertical;
+  padding: 13px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.lifestyle-composer form > textarea::placeholder {
+  color: var(--helios-muted);
+}
+
+.composer-category-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 3px 14px 10px;
+  scrollbar-width: none;
+}
+
+.composer-category-row::-webkit-scrollbar { display: none; }
+
+.composer-category-row button {
+  --category-color: var(--helios-accent);
+  display: inline-flex;
+  min-height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.composer-category-row button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--category-color) 55%, transparent);
+  background: color-mix(in srgb, var(--category-color) 14%, var(--helios-surface2));
+  color: var(--category-color);
+}
+
+.composer-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--helios-border);
+}
+
+.composer-audience {
+  display: flex;
+  gap: 5px;
+}
+
+.composer-audience button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.composer-audience button[aria-pressed='true'] {
+  border-color: rgba(133, 118, 245, .25);
+  background: rgba(133, 118, 245, .1);
+  color: var(--helios-accent);
+}
+
+.composer-project {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--helios-border);
+  border-radius: 9px;
+  color: var(--helios-muted);
+}
+
+.composer-project select {
+  min-width: 0;
+  max-width: 170px;
+  padding: 7px 0;
+  border: 0;
+  outline: 0;
+  appearance: none;
+  background: transparent;
+  color: var(--helios-text2);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.lifestyle-composer form > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px 13px;
+}
+
+.lifestyle-composer form > footer > span {
+  color: var(--helios-muted);
+  font-size: 8px;
+}
+
+.lifestyle-composer form > footer > button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--helios-accent);
+  color: var(--helios-on-accent);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lifestyle-composer form > footer > button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.composer-error,
+.comments-error {
+  margin: 0 14px;
+  color: var(--helios-danger);
+  font-size: 10px;
+}
+
+.feed-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0 1px;
+}
+
+.feed-filter-scroll {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.feed-filter-scroll::-webkit-scrollbar { display: none; }
+
+.feed-filter-bar button {
+  display: inline-flex;
+  min-height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.feed-filter-bar button:hover,
+.feed-filter-bar button.is-active {
+  border-color: var(--helios-border);
+  background: var(--helios-surface);
+  color: var(--helios-text);
+}
+
+.lifestyle-post {
+  position: relative;
+  padding: 15px 15px 10px;
+  animation: post-enter 360ms var(--ease-enter) both;
+}
+
+.post-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.post-author {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.post-author strong {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-author > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: var(--helios-muted);
+  font-size: 9px;
+}
+
+.post-category {
+  padding: 5px 8px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.post-category.category-code { color: var(--helios-accent2); }
+.post-category.category-study { color: var(--helios-collab); }
+.post-category.category-activity { color: var(--helios-success); }
+.post-category.category-reading { color: var(--helios-solar); }
+.post-category.category-reflection { color: var(--helios-warning); }
+
+.post-more:disabled {
+  opacity: .5;
+}
+
+.post-body {
+  margin: 14px 3px 12px;
+  color: var(--helios-text);
+  font-size: 13px;
+  line-height: 1.64;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.post-project {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  margin: 0 3px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--helios-border);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(133, 118, 245, .08), transparent),
+    var(--helios-surface2);
+  color: var(--helios-accent);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.post-project span {
+  color: var(--helios-muted);
+}
+
+.post-project strong {
+  overflow: hidden;
+  color: var(--helios-text2);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-project:disabled {
+  cursor: default;
+}
+
+.post-insights {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 3px;
+  border-bottom: 1px solid var(--helios-border);
+  color: var(--helios-muted);
+  font-size: 9px;
+}
+
+.post-reaction-summary {
+  display: flex;
+  align-items: center;
+}
+
+.post-reaction-summary i {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  margin-right: -3px;
+  place-items: center;
+  border: 2px solid var(--helios-surface);
+  border-radius: 50%;
+  background: var(--helios-surface2);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.post-reaction-summary i:last-of-type {
+  margin-right: 6px;
+}
+
+.post-insights > button {
+  border: 0;
+  background: transparent;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.post-insights > button:hover {
+  color: var(--helios-text);
+  text-decoration: underline;
+}
+
+.post-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  padding-top: 7px;
+}
+
+.post-actions > button,
+.reaction-action-wrap > button {
+  display: flex;
+  min-width: 0;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.post-actions > button:hover,
+.reaction-action-wrap > button:hover {
+  background: var(--helios-surface2);
+  color: var(--helios-text);
+}
+
+.post-actions > button.is-saved {
+  color: var(--helios-accent);
+}
+
+.reaction-action-wrap {
+  position: relative;
+}
+
+.reaction-action-wrap > button {
+  width: 100%;
+}
+
+.reaction-action-wrap > button > span {
+  font-size: 14px;
+}
+
+.reaction-picker {
+  position: absolute;
+  z-index: 15;
+  bottom: calc(100% + 6px);
+  left: -7px;
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--helios-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--helios-surface2) 96%, transparent);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, .42);
+  backdrop-filter: blur(16px);
+  animation: reaction-picker-in 190ms var(--ease-enter) both;
+}
+
+.reaction-picker button {
+  display: flex;
+  width: 41px;
+  min-height: 48px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--helios-muted);
+  cursor: pointer;
+}
+
+.reaction-picker button:hover,
+.reaction-picker button.is-active {
+  background: var(--helios-surface3);
+  transform: translateY(-4px) scale(1.08);
+}
+
+.reaction-picker button span {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.reaction-picker button small {
+  font-size: 6px;
+}
+
+.comments-section {
+  margin: 3px -3px -2px;
+  padding: 12px 3px 3px;
+  border-top: 1px solid var(--helios-border);
+  animation: comments-open 280ms var(--ease-enter) both;
+}
+
+.comments-loading,
+.comments-empty {
+  padding: 10px 4px;
+  color: var(--helios-muted);
+  font-size: 9px;
+}
+
+.comment-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.comment-item > div {
+  padding: 8px 10px;
+  border-radius: 3px 13px 13px;
+  background: var(--helios-surface2);
+}
+
+.comment-item > div > span {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.comment-item strong {
+  font-size: 9px;
+}
+
+.comment-item time {
+  color: var(--helios-muted);
+  font-size: 7px;
+}
+
+.comment-item p {
+  margin: 3px 0 0;
+  color: var(--helios-text2);
+  font-size: 10px;
+  line-height: 1.48;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.comment-item > button {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--helios-muted);
+  cursor: pointer;
+}
+
+.comment-item > button:hover {
+  background: rgba(255, 107, 107, .1);
+  color: var(--helios-danger);
+}
+
+.comment-form {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.comment-form label {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 5px 3px 10px;
+  border: 1px solid var(--helios-border);
+  border-radius: 16px;
+  background: var(--helios-surface2);
+}
+
+.comment-form textarea {
+  min-width: 0;
+  min-height: 30px;
+  max-height: 110px;
+  flex: 1;
+  resize: vertical;
+  padding: 7px 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.comment-form button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--helios-accent);
+  color: var(--helios-on-accent);
+  cursor: pointer;
+}
+
+.comment-form button:disabled {
+  opacity: .4;
+}
+
+.comments-error {
+  margin-top: 7px;
+}
+
+.lifestyle-feed-state {
+  display: flex;
+  min-height: 220px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  border: 1px dashed var(--helios-border);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--helios-surface) 75%, transparent);
+  color: var(--helios-muted);
+  text-align: center;
+}
+
+.lifestyle-feed-state > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 12px;
+  place-items: center;
+  border-radius: 15px;
+  background: rgba(133, 118, 245, .1);
+  color: var(--helios-accent);
+}
+
+.lifestyle-feed-state strong {
+  color: var(--helios-text);
+  font-size: 13px;
+}
+
+.lifestyle-feed-state p {
+  max-width: 350px;
+  margin: 5px 0 13px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.lifestyle-feed-state button,
+.feed-load-more {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--helios-border);
+  border-radius: 10px;
+  background: var(--helios-surface2);
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.feed-load-more {
+  width: 100%;
+}
+
+.feed-load-more:hover {
+  border-color: rgba(133, 118, 245, .4);
+  color: var(--helios-accent);
+}
+
+.feed-end {
+  padding: 18px;
+  color: var(--helios-muted);
+  font-size: 9px;
+  text-align: center;
+}
+
+.feed-end span {
+  margin-right: 5px;
+  color: var(--helios-accent);
+}
+
+.lifestyle-pulse-card,
+.lifestyle-right-card,
+.lifestyle-app-callout {
+  overflow: hidden;
+  border: 1px solid var(--helios-border);
+  border-radius: 16px;
+  background: var(--helios-surface);
+}
+
+.lifestyle-pulse-card {
+  padding: 14px;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(133, 118, 245, .14), transparent 36%),
+    var(--helios-surface);
+}
+
+.pulse-orbit {
+  display: grid;
+  width: 112px;
+  height: 112px;
+  margin: 8px auto 13px;
+  place-items: center;
+  border: 1px solid rgba(133, 118, 245, .3);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(133, 118, 245, .12), transparent 55%),
+    conic-gradient(from 30deg, rgba(133, 118, 245, .7), transparent 18%, rgba(79, 195, 247, .5), transparent 60%, rgba(133, 118, 245, .7));
+  box-shadow: 0 0 38px rgba(133, 118, 245, .08);
+}
+
+.pulse-orbit > div {
+  display: flex;
+  width: 88px;
+  height: 88px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--helios-surface);
+}
+
+.pulse-orbit strong {
+  font-size: 26px;
+  letter-spacing: -.05em;
+}
+
+.pulse-orbit span {
+  color: var(--helios-muted);
+  font-size: 7px;
+}
+
+.pulse-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.pulse-stats span {
+  display: flex;
+  flex-direction: column;
+  padding: 9px;
+  border-radius: 10px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  font-size: 7px;
+}
+
+.pulse-stats strong {
+  margin-bottom: 2px;
+  color: var(--helios-text);
+  font-size: 13px;
+}
+
+.lifestyle-right-card {
+  padding: 13px 8px 8px;
+}
+
+.lifestyle-right-card > header {
+  display: flex;
+  flex-direction: column;
+  padding: 0 5px 10px;
+}
+
+.lifestyle-right-card > header strong {
+  font-size: 11px;
+}
+
+.lifestyle-right-card > header small {
+  margin-top: 2px;
+  color: var(--helios-muted);
+  font-size: 8px;
+}
+
+.lifestyle-right-card > button {
+  display: grid;
+  width: 100%;
+  min-height: 46px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--helios-muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lifestyle-right-card > button:hover {
+  background: var(--helios-surface2);
+}
+
+.lifestyle-right-card > button i {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 9px;
+  font-style: normal;
+}
+
+.lifestyle-right-card > button > span:nth-child(2) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.lifestyle-right-card > button strong {
+  color: var(--helios-text2);
+  font-size: 9px;
+}
+
+.lifestyle-right-card > button small {
+  overflow: hidden;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lifestyle-app-callout {
+  padding: 16px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(79, 195, 247, .13), transparent 40%),
+    linear-gradient(140deg, rgba(133, 118, 245, .09), transparent),
+    var(--helios-surface);
+}
+
+.lifestyle-app-callout > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--helios-accent2);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .11em;
+}
+
+.lifestyle-app-callout > strong {
+  display: block;
+  margin-top: 16px;
+  font-size: 16px;
+  letter-spacing: -.03em;
+}
+
+.lifestyle-app-callout p {
+  margin: 5px 0 13px;
+  color: var(--helios-muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.lifestyle-app-callout button {
+  width: 100%;
+  min-height: 35px;
+  border: 1px solid rgba(133, 118, 245, .3);
+  border-radius: 10px;
+  background: rgba(133, 118, 245, .1);
+  color: var(--helios-accent);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 680;
+  cursor: pointer;
+}
+
+.highlight-dialog-backdrop {
+  position: absolute;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5, 6, 9, .76);
+  backdrop-filter: blur(12px);
+  animation: lifestyle-backdrop-in 200ms ease both;
+}
+
+.highlight-dialog {
+  position: relative;
+  width: min(460px, 100%);
+  min-height: 540px;
+  overflow: hidden;
+  padding: 44px 38px 32px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 27px;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(133, 118, 245, .32), transparent 35%),
+    linear-gradient(160deg, #282247, #11131a 68%);
+  box-shadow: 0 36px 100px rgba(0, 0, 0, .55);
+  animation: highlight-dialog-in 420ms var(--ease-enter) both;
+}
+
+.highlight-dialog.category-code { background: radial-gradient(circle at 50% 10%, rgba(79, 195, 247, .3), transparent 35%), linear-gradient(160deg, #173441, #11131a 68%); }
+.highlight-dialog.category-activity { background: radial-gradient(circle at 50% 10%, rgba(110, 214, 154, .28), transparent 35%), linear-gradient(160deg, #19382c, #11131a 68%); }
+.highlight-dialog.category-reading { background: radial-gradient(circle at 50% 10%, rgba(242, 184, 75, .28), transparent 35%), linear-gradient(160deg, #40351d, #11131a 68%); }
+.highlight-dialog.category-reflection { background: radial-gradient(circle at 50% 10%, rgba(255, 155, 106, .26), transparent 35%), linear-gradient(160deg, #3a251e, #11131a 68%); }
+
+.highlight-dialog-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .2);
+  color: rgba(255, 255, 255, .7);
+  cursor: pointer;
+}
+
+.highlight-dialog-orbit {
+  display: grid;
+  width: 120px;
+  height: 120px;
+  margin: 45px auto 48px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, .13), transparent 65%);
+  color: #fff;
+  box-shadow: 0 0 70px rgba(133, 118, 245, .2), inset 0 0 40px rgba(255, 255, 255, .05);
+  animation: highlight-orbit 8s linear infinite;
+}
+
+.highlight-dialog-category {
+  color: rgba(255, 255, 255, .62);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.highlight-dialog h2 {
+  margin: 9px 0 12px;
+  font-size: clamp(24px, 5vw, 34px);
+  line-height: 1.05;
+  letter-spacing: -.045em;
+}
+
+.highlight-dialog > p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, .72);
+  font-size: 13px;
+  line-height: 1.65;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+}
+
+.highlight-dialog > footer {
+  position: absolute;
+  right: 38px;
+  bottom: 30px;
+  left: 38px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+
+.highlight-dialog > footer > span {
+  display: flex;
+  flex-direction: column;
+}
+
+.highlight-dialog > footer strong {
+  font-size: 10px;
+}
+
+.highlight-dialog > footer small {
+  color: rgba(255, 255, 255, .55);
+  font-size: 8px;
+}
+
+@keyframes composer-expand {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes post-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes reaction-picker-in {
+  from { opacity: 0; transform: translateY(6px) scale(.94); transform-origin: bottom left; }
+  to { opacity: 1; transform: translateY(0) scale(1); transform-origin: bottom left; }
+}
+
+@keyframes comments-open {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes lifestyle-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes highlight-dialog-in {
+  from { opacity: 0; transform: translateY(16px) scale(.96); clip-path: inset(22% 18% round 27px); }
+  to { opacity: 1; transform: translateY(0) scale(1); clip-path: inset(0 round 27px); }
+}
+
+@keyframes highlight-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1180px) {
+  .lifestyle-layout {
+    max-width: 1030px;
+    grid-template-columns: 210px minmax(490px, 720px);
+  }
+  .lifestyle-right { display: none; }
+}
+
+@media (max-width: 930px) {
+  .lifestyle-layout {
+    max-width: 730px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lifestyle-left { display: none; }
+  .lifestyle-topbar {
+    grid-template-columns: minmax(150px, 1fr) minmax(220px, 390px) auto;
+  }
+  .lifestyle-compose-top {
+    width: 40px;
+    padding: 0;
+    font-size: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .lifestyle-topbar {
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  .lifestyle-title small { display: none; }
+  .lifestyle-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .lifestyle-compose-top {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .lifestyle-layout {
+    display: block;
+    padding: 13px 10px 36px;
+  }
+  /* `display: block` above drops the grid scroll context, so the feed could not
+     be scrolled on phones. Restore explicit vertical scrolling. */
+  .lifestyle-layout {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .lifestyle-feed { gap: 10px; }
+  .highlight-card {
+    width: 116px;
+    min-width: 116px;
+    height: 158px;
+  }
+  .feed-section-heading span { display: none; }
+  .lifestyle-composer,
+  .lifestyle-post { border-radius: 15px; }
+  .composer-category-row button span { display: none; }
+  .composer-options {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .composer-project select { max-width: none; width: 100%; }
+  .lifestyle-composer form > footer > span { display: none; }
+  .lifestyle-composer form > footer { justify-content: flex-end; }
+  .post-category { display: none; }
+  .post-header { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .post-actions > button,
+  .reaction-action-wrap > button { font-size: 0; }
+  .post-actions > button svg,
+  .reaction-action-wrap > button > span { width: 18px; height: 18px; font-size: 15px; }
+  .reaction-picker {
+    position: fixed;
+    right: 10px;
+    bottom: calc(68px + env(safe-area-inset-bottom));
+    left: 10px;
+    justify-content: space-around;
+  }
+  .reaction-picker button {
+    width: auto;
+    flex: 1;
+  }
+  .highlight-dialog-backdrop { padding: 0; }
+  .highlight-dialog {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 46px 25px 28px;
+  }
+  .highlight-dialog > footer { right: 25px; bottom: 24px; left: 25px; }
+}
+
+.composer-media-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--helios-border);
+  border-radius: 9px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.composer-media-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 14px 10px;
+  padding: 9px;
+  border: 1px solid rgba(133, 118, 245, .24);
+  border-radius: 12px;
+  background: rgba(119, 92, 216, .08);
+}
+
+.composer-media-preview img,
+.composer-media-preview video {
+  width: 72px;
+  height: 56px;
+  border-radius: 8px;
+  background: #09090d;
+  object-fit: cover;
+}
+
+.composer-media-preview > span { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.composer-media-preview strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.composer-media-preview small { color: var(--helios-muted); font-size: 8px; }
+.composer-media-preview > button { border: 0; background: transparent; color: var(--helios-muted); cursor: pointer; }
+
+.post-media {
+  display: block;
+  width: 100%;
+  max-height: 520px;
+  margin: 0 0 14px;
+  border: 1px solid var(--helios-border);
+  border-radius: 14px;
+  background: #09090d;
+  object-fit: cover;
+}
+
+.lifestyle-post.is-targeted { animation: lifestyle-target 2.2s ease both; }
+@keyframes lifestyle-target {
+  0%, 100% { border-color: var(--helios-border); box-shadow: none; }
+  18%, 70% { border-color: rgba(171, 148, 255, .7); box-shadow: 0 0 0 4px rgba(133, 118, 245, .12), 0 22px 55px rgba(0, 0, 0, .3); }
+}
+
+.solar-integrity-note { margin: 12px 0 0; color: var(--helios-muted); font-size: 8px; line-height: 1.5; text-align: center; }
+.composer-kind-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 8px; }
+.composer-kind-row button { min-height: 30px; padding: 0 10px; border: 1px solid var(--helios-border); border-radius: 999px; background: transparent; color: var(--helios-muted); font: inherit; font-size: 9px; cursor: pointer; }
+.composer-kind-row button[aria-pressed='true'] { border-color: rgba(133,118,245,.4); background: rgba(133,118,245,.12); color: var(--helios-text); }
+.post-project-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.post-author-button { padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .highlight-card,
+  .lifestyle-composer form,
+  .lifestyle-post,
+  .reaction-picker,
+  .comments-section,
+  .highlight-dialog-backdrop,
+  .highlight-dialog,
+  .highlight-dialog-orbit {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.motion-reduced .highlight-card,
+.motion-reduced .lifestyle-composer form,
+.motion-reduced .lifestyle-post,
+.motion-reduced .reaction-picker,
+.motion-reduced .comments-section,
+.motion-reduced .highlight-dialog-backdrop,
+.motion-reduced .highlight-dialog,
+.motion-reduced .highlight-dialog-orbit {
+  animation: none !important;
+  transition: none !important;
+}
