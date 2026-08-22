@@ -557,8 +557,8 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       const ease = scroll * scroll * (3 - 2 * scroll)
       const pathT = THREE.MathUtils.clamp(Math.max(introT, ease), 0, 1)
       const shot = samplePath(pathT)
-      const enter = THREE.MathUtils.smoothstep(pathT, 0.9, 1)
-      const copyReveal = THREE.MathUtils.smoothstep(pathT, 0.9, 0.98)
+      const enter = THREE.MathUtils.smoothstep(pathT, 0.94, 1)
+      const copyReveal = THREE.MathUtils.smoothstep(pathT, 0.95, 1)
       const facing = (z: number, peak = 14, falloff = 13) => {
         const depth = shot.z - z
         if (depth < 1.2) return 0
@@ -578,7 +578,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       camera.lookAt(look)
       camera.rotation.z += bank
 
-      const windowReveal = THREE.MathUtils.smoothstep(pathT, 0.92, 0.995)
+      const windowReveal = THREE.MathUtils.smoothstep(pathT, 0.94, 1)
       cssObject.visible = windowReveal > 0.04
       cssObject.rotation.x = damp(cssObject.rotation.x, 0.08 * (1 - enter * 0.4), 3.4, delta)
       cssObject.rotation.y = damp(cssObject.rotation.y, -0.06 * (1 - enter * 0.4), 3.4, delta)
