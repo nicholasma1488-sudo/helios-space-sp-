@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentType, type KeyboardEvent, type LazyExoticComponent } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentType, type KeyboardEvent as ReactKeyboardEvent, type LazyExoticComponent } from 'react'
 import { Grid3X3, Sparkles } from 'lucide-react'
 import { NewProjectModal } from '../components/NewProjectModal'
 import { useApp } from '../store/appStore'
@@ -61,8 +61,12 @@ export function MiniAppLauncher() {
 
   useEffect(() => {
     const requested = consumeOpenMiniApp()
-    if (requested && getUtilityMiniApp(requested)) openApp(requested)
-  }, [])
+    if (requested && getUtilityMiniApp(requested)) {
+      setActiveApp(requested)
+      setFullscreen(false)
+      setRecent(current => [requested, ...current.filter(item => item !== requested)].slice(0, 8))
+    }
+  }, [setRecent])
 
   useEffect(() => {
     setSelectedIndex(0)
@@ -95,7 +99,7 @@ export function MiniAppLauncher() {
     setFavorites(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id])
   }
 
-  function handleGridKey(event: KeyboardEvent<HTMLDivElement>) {
+  function handleGridKey(event: ReactKeyboardEvent<HTMLDivElement>) {
     if (!filtered.length) return
     const columns = window.innerWidth >= 1100 ? 4 : window.innerWidth >= 780 ? 3 : window.innerWidth >= 560 ? 2 : 1
     let next = selectedIndex

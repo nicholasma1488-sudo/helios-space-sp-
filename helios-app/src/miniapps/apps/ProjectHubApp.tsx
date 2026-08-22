@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { FolderGit2, Plus, Users } from 'lucide-react'
 import { api, type Collaborator, type Project } from '../../api'
 import { MiniAppEmpty, MiniAppError, MiniAppLoading } from '../MiniAppStates'
@@ -24,21 +24,21 @@ export default function ProjectHubApp({ accountId, onToast, onOpenProject, onCre
   const activeTasks = active ? (tasks[String(active.id)] ?? []) : []
   const progress = activeTasks.length ? Math.round(activeTasks.filter(task => task.done).length / activeTasks.length * 100) : 0
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
       const result = await api.projects.list()
       setProjects(result.projects)
-      if (!activeId && result.projects[0]) setActiveId(result.projects[0].id)
+      setActiveId(current => current ?? result.projects[0]?.id ?? null)
     } catch (reason) {
       setError((reason as Error).message)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { void load() }, [])
+  useEffect(() => { void load() }, [load])
 
   useEffect(() => {
     if (!active) return
@@ -52,9 +52,9 @@ export default function ProjectHubApp({ accountId, onToast, onOpenProject, onCre
       .then(result => { if (!cancelled) setCollaborators(result.collaborators) })
       .catch(() => { if (!cancelled) setCollaborators([]) })
     return () => { cancelled = true }
-  }, [active?.id])
+  }, [active])
 
-  const upcoming = useMemo(() => activeTasks.filter(task => !task.done), [activeTasks])
+  const upcoming = activeTasks.filter(task => !task.done)
 
   async function saveMeta() {
     if (!active) return

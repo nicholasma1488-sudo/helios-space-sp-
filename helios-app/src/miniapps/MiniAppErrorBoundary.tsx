@@ -8,19 +8,19 @@ interface Props {
 
 interface State {
   error: Error | null
+  resetKey?: string | null
 }
 
 export class MiniAppErrorBoundary extends Component<Props, State> {
-  state: State = { error: null }
+  state: State = { error: null, resetKey: this.props.resetKey }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error }
   }
 
-  componentDidUpdate(prevProps: Props) {
-    if (prevProps.resetKey !== this.props.resetKey && this.state.error) {
-      this.setState({ error: null })
-    }
+  static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+    if (props.resetKey !== state.resetKey) return { error: null, resetKey: props.resetKey }
+    return null
   }
 
   componentDidCatch(error: Error) {
