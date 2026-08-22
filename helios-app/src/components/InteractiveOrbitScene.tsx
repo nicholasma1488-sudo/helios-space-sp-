@@ -625,6 +625,13 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
       const stationId = hits.find(hit => hit.object.userData.stationId)?.object.userData.stationId as StageMode | undefined
       if (stationId) onSelectStationRef.current(stationId)
     }
+    const forwardWheel = (event: Event) => {
+      const wheel = event as WheelEvent
+      const scroller = host.closest('.landing-v2') as HTMLElement | null
+      if (!scroller) return
+      scroller.scrollTop += wheel.deltaY
+    }
+    STAGE_IDS.forEach(id => hosts[id].addEventListener('wheel', forwardWheel, { passive: true }))
     host.addEventListener('pointermove', onPointerMove)
     host.addEventListener('pointerdown', onPointerDown)
 
@@ -632,6 +639,7 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
     let previous = performance.now()
     let flightTime = 0
     let warmFrames = 0
+    let flyT = 0
     let cancelled = false
     let visible = !document.hidden
     let lastStation: StageMode | null = null
@@ -655,7 +663,8 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
       const scroll = THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1)
       const scrollMapped = 0.18 + scroll * 0.82
       const pathT = THREE.MathUtils.clamp(Math.max(introMapped, scroll > 0.004 ? scrollMapped : introMapped), 0, 1)
-      const shot = samplePath(pathT)
+      flyT = damp(flyT, pathT, reducedMotion ? 10 : 2.6, delta)
+      const shot = samplePath(flyT)
       const facing = (z: number, peak = 13, falloff = 12) => {
         const depth = shot.z - z
         if (depth < 1) return 0
@@ -664,13 +673,16 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
 
       pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
       pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
-      camera.position.x = shot.x + pointer.x * 0.18
-      camera.position.y = shot.y + pointer.y * -0.1
-      camera.position.z = shot.z
-      camera.fov = shot.fov
+      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.2, 5.8, delta)
+      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.12, 5.8, delta)
+      camera.position.z = damp(camera.position.z, shot.z, 6.4, delta)
+      camera.fov = damp(camera.fov, shot.fov, 4.8, delta)
       camera.updateProjectionMatrix()
-      look.set(shot.lx + pointer.x * 0.08, shot.ly - pointer.y * 0.05, shot.lz)
+      look.x = damp(look.x, shot.lx + pointer.x * 0.1, 5.4, delta)
+      look.y = damp(look.y, shot.ly - pointer.y * 0.06, 5.4, delta)
+      look.z = damp(look.z, shot.lz, 5.4, delta)
       camera.lookAt(look)
+      if (!reducedMotion) camera.rotation.z += Math.sin(flyT * Math.PI) * 0.012
 
       let nearest = LANDING_STATIONS[0]
       let nearestScore = -1
@@ -689,12 +701,12 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
       let cssNeeded = false
       STAGE_IDS.forEach(id => {
         const station = LANDING_STATIONS.find(item => item.id === id)!
-        const closeness = facing(station.z, 12, 14)
-        const live = closeness > 0.42
+        const closeness = facing(station.z, 12, 16)
+        const live = closeness > 0.28
         const object = cssObjects[id]
         object.visible = live
-        hosts[id].style.opacity = live ? closeness.toFixed(3) : '0'
-        hosts[id].style.pointerEvents = closeness > 0.62 ? 'auto' : 'none'
+        hosts[id].style.opacity = live ? Math.max(closeness, 0.35).toFixed(3) : '0'
+        hosts[id].style.pointerEvents = closeness > 0.4 ? 'auto' : 'none'
         setGroupOpacity(stationPanels[id], live ? 0 : closeness * 0.95)
         if (live) cssNeeded = true
       })
@@ -716,7 +728,8 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
 
       host.style.setProperty('--hero-scroll', scroll.toFixed(4))
       host.style.setProperty('--hero-intro', Math.max(introMapped * 5, nearestScore).toFixed(4))
-      host.dataset.flightT = pathT.toFixed(3)
+      host.style.setProperty('--station-strength', Math.max(0, nearestScore).toFixed(3))
+      host.dataset.flightT = flyT.toFixed(3)
       host.dataset.station = nearest.id
       host.dataset.stationStrength = nearestScore.toFixed(3)
       host.dataset.introReady = '1'
@@ -738,6 +751,7 @@ export function InteractiveOrbitScene({ hostRef, onInteract, onStationChange, on
       resizeObserver.disconnect()
       host.removeEventListener('pointermove', onPointerMove)
       host.removeEventListener('pointerdown', onPointerDown)
+      STAGE_IDS.forEach(id => hosts[id].removeEventListener('wheel', forwardWheel))
       delete host.dataset.webgl
       STAGE_IDS.forEach(id => cssScene.remove(cssObjects[id]))
       scene.traverse(object => {

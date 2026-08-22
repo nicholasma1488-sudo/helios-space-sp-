@@ -891,8 +891,9 @@
   text-align: left;
   overflow: visible;
   transform: none;
-  opacity: 1;
+  opacity: calc(0.42 + var(--station-strength, 0) * 0.58);
   pointer-events: none;
+  transition: opacity 280ms ease;
 }
 
 .hero-copy-layer { top: 0; right: 0; left: 0; bottom: auto; padding: 84px 28px 0; text-align: center; max-width: none; }
