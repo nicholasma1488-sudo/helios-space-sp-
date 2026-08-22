@@ -1,0 +1,76 @@
+.learn-page {
+  height: 100%;
+  overflow: auto;
+  padding: 32px clamp(18px, 3vw, 48px) 72px;
+}
+
+.learn-page > header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--helios-solar);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .14em;
+}
+
+.learn-page h1 {
+  margin: 8px 0 8px;
+  max-width: 720px;
+  font-size: clamp(28px, 4vw, 44px);
+  letter-spacing: -.04em;
+}
+
+.learn-page > header p {
+  max-width: 620px;
+  color: var(--helios-muted);
+}
+
+.learn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.learn-grid article {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--helios-border);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--learn-accent) 10%, transparent), transparent 42%),
+    var(--helios-surface);
+}
+
+.learn-grid small { color: color-mix(in srgb, var(--learn-accent) 80%, white); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.learn-grid h2 { margin: 0; font-size: 22px; }
+.learn-grid p { margin: 0; color: var(--helios-muted); font-size: 13px; }
+
+.learn-apps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.learn-apps button,
+.learn-space {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--helios-border);
+  border-radius: 10px;
+  background: var(--helios-surface2);
+  color: inherit;
+  cursor: pointer;
+}
+
+.learn-space {
+  margin-top: auto;
+  justify-content: center;
+  background: color-mix(in srgb, var(--learn-accent) 16%, transparent);
+}

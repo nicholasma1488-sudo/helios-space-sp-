@@ -778,6 +778,7 @@ function CommentsSection({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [draft, setDraft] = useState('')
+  const [replyTo, setReplyTo] = useState<Comment | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -797,9 +798,10 @@ function CommentsSection({
     setSubmitting(true)
     setError('')
     try {
-      const result = await api.posts.comments.create(postId, body)
+      const result = await api.posts.comments.create(postId, body, replyTo?.id ?? null)
       setComments(current => [...current, result.comment])
       setDraft('')
+      setReplyTo(null)
       onCountChange(1)
     } catch (reason) {
       setError((reason as Error).message)
@@ -822,11 +824,13 @@ function CommentsSection({
     <section className="comments-section" aria-label="Comments">
       {loading && <div className="comments-loading">Loading comments…</div>}
       {!loading && comments.map(comment => (
-        <article key={comment.id} className="comment-item">
+        <article key={comment.id} className={'comment-item' + (comment.parent_id ? ' is-reply' : '')}>
           <Avatar name={comment.author_name} size="sm" />
           <div>
             <span><strong>{comment.author_name}</strong><time dateTime={comment.created_at}>{relativeTime(comment.created_at)}</time></span>
+            {comment.parent_id && <small>Reply</small>}
             <p>{comment.body}</p>
+            <button type="button" onClick={() => setReplyTo(comment)}>Reply</button>
           </div>
           {comment.can_delete && (
             <button type="button" onClick={() => void remove(comment)} aria-label="Delete comment"><X size={13} /></button>
@@ -845,7 +849,7 @@ function CommentsSection({
             onKeyDown={event => {
               if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') event.currentTarget.form?.requestSubmit()
             }}
-            placeholder="Write a thoughtful comment…"
+            placeholder={replyTo ? `Reply to ${replyTo.author_name}…` : 'Write a thoughtful comment…'}
             rows={1}
           />
           <button type="submit" disabled={!draft.trim() || submitting} aria-label="Post comment"><Send size={14} /></button>

@@ -60,6 +60,7 @@ export interface Comment {
   body: string
   created_at: string
   can_delete: boolean
+  parent_id: number | null
 }
 
 export interface PostPage {
@@ -399,10 +400,10 @@ export const api = {
     comments: {
       list: (postId: number) =>
         call<{ comments: Comment[] }>('/api/posts/' + postId + '/comments'),
-      create: (postId: number, body: string) =>
+      create: (postId: number, body: string, parentId?: number | null) =>
         call<{ comment: Comment }>('/api/posts/' + postId + '/comments', {
           method: 'POST',
-          body: JSON.stringify({ body }),
+          body: JSON.stringify({ body, parent_id: parentId ?? null }),
         }),
       remove: (commentId: number) =>
         call<{ ok: boolean }>('/api/comments/' + commentId, { method: 'DELETE' }),

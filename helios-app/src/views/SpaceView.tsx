@@ -296,17 +296,19 @@ function SpacePostCard({ post, onOpenProject, onUpdate }: { post: Post; onOpenPr
 function SpaceComments({ postId, onCountChange }: { postId: number; onCountChange: (delta: number) => void }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [draft, setDraft] = useState('')
+  const [replyTo, setReplyTo] = useState<Comment | null>(null)
   useEffect(() => { void api.posts.comments.list(postId).then(result => setComments(result.comments)) }, [postId])
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     const body = draft.trim()
     if (!body) return
-    const result = await api.posts.comments.create(postId, body)
+    const result = await api.posts.comments.create(postId, body, replyTo?.id ?? null)
     setComments(current => [...current, result.comment])
     setDraft('')
+    setReplyTo(null)
     onCountChange(1)
   }
-  return <section className="space-comments">{comments.map(comment => <article key={comment.id}><span>{comment.author_name.slice(0, 1)}</span><div><strong>{comment.author_name}</strong><p>{comment.body}</p></div></article>)}<form onSubmit={submit}><input value={draft} maxLength={600} onChange={event => setDraft(event.target.value)} placeholder="Add useful feedback…" aria-label="Comment" /><button type="submit" disabled={!draft.trim()}><Send size={13} /></button></form></section>
+  return <section className="space-comments">{comments.map(comment => <article key={comment.id} className={comment.parent_id ? 'is-reply' : ''}><span>{comment.author_name.slice(0, 1)}</span><div><strong>{comment.author_name}</strong><p>{comment.body}</p><button type="button" onClick={() => setReplyTo(comment)}>Reply</button></div></article>)}<form onSubmit={submit}><input value={draft} maxLength={600} onChange={event => setDraft(event.target.value)} placeholder={replyTo ? `Reply to ${replyTo.author_name}…` : 'Add useful feedback…'} aria-label="Comment" /><button type="submit" disabled={!draft.trim()}><Send size={13} /></button></form></section>
 }
 
 function ProjectsPanel({ projects, sessions, onOpen, onNew, onChat, onLive }: {

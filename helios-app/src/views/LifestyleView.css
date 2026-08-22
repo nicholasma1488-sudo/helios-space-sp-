@@ -1114,8 +1114,20 @@
   font-size: 9px;
 }
 
-.comment-item {
-  display: grid;
+.comment-item.is-reply {
+  margin-left: 28px;
+}
+
+.comment-item > div > button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--helios-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.comment-item {  display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
   gap: 8px;

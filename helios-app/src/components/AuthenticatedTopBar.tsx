@@ -171,7 +171,9 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
       </nav>
 
       <nav className="topbar-destination-nav" aria-label="Fast destinations">
-        <button type="button" className={state.view === 'explore' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'explore' })}><Compass size={15} /><span>Explore</span></button>
+        <button type="button" className={state.view === 'explore' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'explore' })}><Compass size={15} /><span>Discover</span></button>
+        <button type="button" className={state.view === 'apps' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}><span>Apps</span></button>
+        <button type="button" className={state.view === 'learn' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'learn' })}><span>Learn</span></button>
         <button type="button" className={state.view === 'live' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'live' })}><Radio size={15} /><span>Live</span></button>
       </nav>
 

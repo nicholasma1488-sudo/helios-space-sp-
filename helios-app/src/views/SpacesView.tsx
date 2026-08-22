@@ -145,29 +145,35 @@ export function SpacesView() {
               </div>
             ) : (
               <div className="grid gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))' }}>
-                {visibleProjects.map(project => (
+                {visibleProjects.map(project => {
+                  const meta = (project.metadata ?? {}) as Record<string, string>
+                  const status = meta.status || (project.visibility === 'public' ? 'shared' : 'active')
+                  const description = meta.description || getMiniApp(project.app_kind).description
+                  const link = meta.link
+                  return (
                   <article key={project.id} className="rounded-2xl p-4 flex flex-col gap-3"
                     style={{ background: 'var(--helios-surface)', border: '1px solid var(--helios-border)' }}>
                     <div className="flex items-center gap-2">
                       <span style={{ color: 'var(--helios-accent)' }}>{TYPE_ICON[project.type] ?? <FolderOpen size={15} />}</span>
                       <span style={{ fontSize: 12, color: 'var(--helios-muted)', textTransform: 'capitalize' }}>{getMiniApp(project.app_kind).name}</span>
-                      <time className="ml-auto" dateTime={project.updated_at} style={{ fontSize: 11, color: 'var(--helios-muted)' }}>
-                        {new Date(project.updated_at).toLocaleDateString()}
-                      </time>
+                      <em style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--helios-solar)', fontStyle: 'normal' }}>{status}</em>
                     </div>
                     <div>
                       <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>{project.name}</h3>
+                      <p style={{ fontSize: 12, color: 'var(--helios-muted)', margin: '0 0 6px', lineHeight: 1.45 }}>{description}</p>
                       <div style={{ fontSize: 12, color: 'var(--helios-muted)' }}>
-                        {getSpaceDefinition(project.space_id).name} · {project.visibility} · {project.collaborator_role ? `Shared as ${project.collaborator_role}` : 'Owned by you'}
+                        {getSpaceDefinition(project.space_id).name} · {project.visibility} · {project.collaborator_role ? `Collaborator: ${project.collaborator_role}` : 'Owned by you'}
                       </div>
+                      {link && <a href={link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--helios-accent2)' }}>{link}</a>}
                     </div>
                     <button type="button" onClick={() => dispatch({ type: 'OPEN_CODE_EDITOR', projectId: project.id })}
                       className="mt-auto py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                       style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}>
-                      Open project
+                      Open workspace
                     </button>
                   </article>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  Compass, FolderGit2, Home, MessageCircle, Radio, Sparkles, User, Users, Zap,
+  Compass, FolderGit2, GraduationCap, Grid3X3, Home, MessageCircle, Radio, Sparkles, User, Users, Zap,
 } from 'lucide-react'
 import { api } from '../api'
 import { useIsMobile } from '../hooks/useMediaQuery'
@@ -12,12 +12,14 @@ interface NavItem { id: NavView; label: string; icon: React.ReactNode; shortLabe
 
 const NAV: NavItem[] = [
   { id: 'home', label: 'Home', icon: <Home size={20} /> },
-  { id: 'explore', label: 'Explore', icon: <Compass size={20} /> },
+  { id: 'explore', label: 'Discover', icon: <Compass size={20} /> },
+  { id: 'apps', label: 'Mini Apps', shortLabel: 'Apps', icon: <Grid3X3 size={20} /> },
+  { id: 'projects', label: 'Projects', icon: <FolderGit2 size={20} /> },
+  { id: 'learn', label: 'Learn', icon: <GraduationCap size={20} /> },
   { id: 'spaces', label: 'Spaces', icon: <Users size={20} /> },
-  { id: 'lifestyle', label: 'Lifestyle', icon: <Zap size={20} /> },
+  { id: 'lifestyle', label: 'Lifestyle', shortLabel: 'Feed', icon: <Zap size={20} /> },
   { id: 'live', label: 'Live', icon: <Radio size={20} /> },
   { id: 'chat', label: 'Chat Hub', shortLabel: 'Chat', icon: <MessageCircle size={20} /> },
-  { id: 'projects', label: 'Projects', icon: <FolderGit2 size={20} /> },
   { id: 'profile', label: 'Profile', icon: <User size={20} /> },
 ]
 

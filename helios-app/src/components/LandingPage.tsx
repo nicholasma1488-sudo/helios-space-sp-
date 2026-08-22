@@ -99,7 +99,8 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     const timers = [
       window.setTimeout(() => setHeroPhase('push'), 1000),
       window.setTimeout(() => setHeroPhase('flanks'), 2000),
-      window.setTimeout(() => setHeroPhase('live'), 3000),
+      window.setTimeout(() => setHeroPhase('identity'), 3500),
+      window.setTimeout(() => setHeroPhase('live'), 7000),
     ]
     return () => timers.forEach(id => window.clearTimeout(id))
   }, [])
@@ -214,7 +215,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                 The social OS
                 <span>for real work.</span>
               </h1>
-              <p>Scroll to fly into the product. Click inside to use it.</p>
+              <p>The camera flies through Helios Space. Then you can use the product.</p>
               <div className="landing-hero-actions">
                 <button
                   type="button"
