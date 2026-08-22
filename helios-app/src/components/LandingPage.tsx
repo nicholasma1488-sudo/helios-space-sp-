@@ -24,7 +24,6 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   const [scrolled, setScrolled] = useState(false)
   const [transitioning, setTransitioning] = useState<'register' | 'login' | null>(null)
   const [stageMode, setStageMode] = useState<StageMode>('feed')
-  const [stageInteracted, setStageInteracted] = useState(false)
   const [heroPhase, setHeroPhase] = useState<HeroPhase>('void')
   const [stationId, setStationId] = useState<StageMode>('feed')
   const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou')
@@ -35,26 +34,6 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   const stickyRef = useRef<HTMLDivElement>(null)
   const windowRef = useRef<HTMLDivElement>(null)
   const transitionTimer = useRef<number | null>(null)
-
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    const elements = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]'))
-    if (!('IntersectionObserver' in window)) {
-      elements.forEach(element => element.classList.add('is-visible'))
-      return
-    }
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible')
-          observer.unobserve(entry.target)
-        }
-      })
-    }, { root, threshold: 0.14, rootMargin: '0px 0px -5% 0px' })
-    elements.forEach(element => observer.observe(element))
-    return () => observer.disconnect()
-  }, [])
 
   useEffect(() => () => {
     if (transitionTimer.current !== null) window.clearTimeout(transitionTimer.current)
@@ -109,7 +88,6 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
 
 
   function selectStageMode(mode: StageMode) {
-    setStageInteracted(true)
     setStageMode(mode)
   }
 
@@ -161,10 +139,9 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               activeMode={stageMode}
               phase={heroPhase}
               hostRef={stickyRef}
-              onInteract={() => setStageInteracted(true)}
+              onInteract={() => undefined}
               onStationChange={mode => { setStageMode(mode); setStationId(mode) }}
               onSelectStation={mode => {
-                setStageInteracted(true)
                 setStageMode(mode)
                 setStationId(mode)
                 const station = LANDING_STATIONS.find(item => item.id === mode)
@@ -175,7 +152,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                   key={mode.id}
                   ref={mode.id === 'feed' ? windowRef : undefined}
                   className="hero-app-window is-css3d"
-                  onPointerDown={() => { setStageInteracted(true); selectStageMode(mode.id) }}
+                  onPointerDown={() => selectStageMode(mode.id)}
                 >
                   <div className="hero-app-titlebar">
                     <i /><i /><i />
@@ -203,14 +180,13 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                       page={mode.id}
                       compact
                       feedTab={feedTab}
-                      onFeedTab={tab => { setStageInteracted(true); setFeedTab(tab) }}
+                      onFeedTab={tab => setFeedTab(tab)}
                       likedPosts={likedPosts}
                       onLike={id => {
-                        setStageInteracted(true)
                         setLikedPosts(current => ({ ...current, [id]: !current[id] }))
                       }}
                       activeFile={activeFile}
-                      onFile={file => { setStageInteracted(true); setActiveFile(file) }}
+                      onFile={file => setActiveFile(file)}
                     />
                   </div>
                 </div>
@@ -236,32 +212,18 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                 </button>
               </div>
             </div>
-            <p className="stage-interaction-hint">
-              {stageInteracted ? 'Drag to look around · click a room · scroll slowly to fly' : 'Move the pointer to look · scroll slowly to fly through the rooms'}
-            </p>
             <button type="button" className="landing-skip-intro" onClick={skipIntro}>
               Skip approach
             </button>
-            <button type="button" className="landing-scroll-cue" onClick={() => scrollToProgress(0.28)}>
+            <button type="button" className="landing-scroll-cue" onClick={() => scrollToProgress(0.3)}>
               <span>Swipe to fly</span><i />
             </button>
           </div>
-        </section>
-
-        <section className="landing-final-cta" id="enter-helios" data-reveal>
-          <div className="final-cta-light" aria-hidden="true" />
-          <span className="landing-eyebrow"><Sparkles size={13} /> YOU ARE INSIDE THE ENVIRONMENT</span>
-          <h2>The camera just flew the product.<br />Now make it yours.</h2>
-          <p>Feed, Project, Chat, Live, and Mini Apps stay one space.</p>
-          <button type="button" onClick={() => enterAuth('register')}>
-            Start building free <ArrowRight size={16} />
-          </button>
         </section>
       </main>
 
       <footer className="landing-footer">
         <Logo size="sm" />
-        <span>Projects · Workspaces · Live work · Feed</span>
         <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
       </footer>
 
