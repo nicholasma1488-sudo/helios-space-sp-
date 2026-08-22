@@ -19,11 +19,16 @@ export default function CodePlaygroundApp({ accountId, onToast, onOpenProject }:
   const [saving, setSaving] = useState(false)
   const srcDoc = useMemo(() => {
     if (language === 'html') return files.html
+    if (language === 'css') {
+      return `<!doctype html><html><head><style>${files.css}</style></head><body>
+        <main style="padding:24px"><h1>CSS preview</h1><p>Helios playground</p><button>Run</button></main>
+      </body></html>`
+    }
     return `<!doctype html><html><head><style>${files.css}</style></head><body><pre id="out"></pre><script>
       const out = document.getElementById('out');
       const log = (...args) => { out.textContent += args.join(' ') + '\\n' };
       console.log = log; console.error = log;
-      try { ${language === 'javascript' ? files.javascript : ''} } catch (error) { log(error.message) }
+      try { ${files.javascript} } catch (error) { log(error.message) }
     </script></body></html>`
   }, [files, language])
 
@@ -51,7 +56,7 @@ export default function CodePlaygroundApp({ accountId, onToast, onOpenProject }:
         type: 'code',
         app_kind: 'web-code',
         visibility: 'private',
-        content: language === 'html' ? files.html : files.javascript,
+        content: `<!-- html -->\n${files.html}\n\n/* css */\n${files.css}\n\n// javascript\n${files.javascript}`,
       })
       onToast('Saved as a Helios project', 'success')
       onOpenProject(result.project.id)

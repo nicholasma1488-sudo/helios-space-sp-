@@ -823,21 +823,42 @@ function CommentsSection({
   return (
     <section className="comments-section" aria-label="Comments">
       {loading && <div className="comments-loading">Loading comments…</div>}
-      {!loading && comments.map(comment => (
-        <article key={comment.id} className={'comment-item' + (comment.parent_id ? ' is-reply' : '')}>
-          <Avatar name={comment.author_name} size="sm" />
-          <div>
-            <span><strong>{comment.author_name}</strong><time dateTime={comment.created_at}>{relativeTime(comment.created_at)}</time></span>
-            {comment.parent_id && <small>Reply</small>}
-            <p>{comment.body}</p>
-            <button type="button" onClick={() => setReplyTo(comment)}>Reply</button>
-          </div>
-          {comment.can_delete && (
-            <button type="button" onClick={() => void remove(comment)} aria-label="Delete comment"><X size={13} /></button>
-          )}
-        </article>
+      {!loading && comments.filter(comment => !comment.parent_id || !comments.some(item => item.id === comment.parent_id)).map(comment => (
+        <div key={comment.id}>
+          <article className="comment-item">
+            <Avatar name={comment.author_name} size="sm" />
+            <div>
+              <span><strong>{comment.author_name}</strong><time dateTime={comment.created_at}>{relativeTime(comment.created_at)}</time></span>
+              <p>{comment.body}</p>
+              <button type="button" onClick={() => setReplyTo(comment)}>Reply</button>
+            </div>
+            {comment.can_delete && (
+              <button type="button" onClick={() => void remove(comment)} aria-label="Delete comment"><X size={13} /></button>
+            )}
+          </article>
+          {comments.filter(reply => reply.parent_id === comment.id).map(reply => (
+            <article key={reply.id} className="comment-item is-reply">
+              <Avatar name={reply.author_name} size="sm" />
+              <div>
+                <span><strong>{reply.author_name}</strong><time dateTime={reply.created_at}>{relativeTime(reply.created_at)}</time></span>
+                <small>Reply to {comment.author_name}</small>
+                <p>{reply.body}</p>
+                <button type="button" onClick={() => setReplyTo(reply)}>Reply</button>
+              </div>
+              {reply.can_delete && (
+                <button type="button" onClick={() => void remove(reply)} aria-label="Delete comment"><X size={13} /></button>
+              )}
+            </article>
+          ))}
+        </div>
       ))}
       {!loading && comments.length === 0 && <div className="comments-empty">No comments yet. Add something useful or kind.</div>}
+      {replyTo && (
+        <div className="comment-replying">
+          Replying to {replyTo.author_name}
+          <button type="button" onClick={() => setReplyTo(null)}>Cancel</button>
+        </div>
+      )}
       <form onSubmit={submit} className="comment-form">
         <Avatar name={currentUser.name} size="sm" />
         <label>

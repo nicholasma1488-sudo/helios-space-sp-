@@ -1118,6 +1118,22 @@
   margin-left: 28px;
 }
 
+.comment-replying {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  color: var(--helios-muted);
+  font-size: 12px;
+}
+
+.comment-replying button {
+  border: 0;
+  background: transparent;
+  color: var(--helios-accent2);
+  cursor: pointer;
+}
+
 .comment-item > div > button {
   padding: 0;
   border: 0;

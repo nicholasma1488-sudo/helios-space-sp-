@@ -49,6 +49,9 @@ const MINI_HOME: Pose = { x: 6.8, y: 2.6, z: 74, rx: -0.1, ry: -0.28 }
 const PROJECT_HOME: Pose = { x: -9.5, y: 0.4, z: 210, rx: 0.04, ry: 0.46 }
 const DATA_HOME: Pose = { x: 10.5, y: 3.8, z: 248, rx: 0.12, ry: -0.34 }
 const BRAND_HOME: Pose = { x: 0, y: 0.35, z: 28, rx: 0, ry: 0 }
+const CLOSE_LEFT: Pose = { x: -2.6, y: 1.1, z: 186, rx: 0.12, ry: 0.55 }
+const CLOSE_RIGHT: Pose = { x: 2.9, y: -0.8, z: 142, rx: -0.08, ry: -0.48 }
+const CLOSE_LOW: Pose = { x: -1.7, y: -1.6, z: 88, rx: 0.22, ry: 0.18 }
 
 function damp(current: number, target: number, smoothing: number, delta: number) {
   return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-smoothing * delta))
@@ -432,6 +435,9 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const projectPanel = makeWorldPanel('project', 5.0, 3.1)
     const dataPanel = makeWorldPanel('data', 3.6, 2.4)
     const brandPanel = makeWorldPanel('brand', 6.4, 3.6)
+    const closeLeft = makePanel('code', 3.4, 2.1)
+    const closeRight = makeWorldPanel('mini', 3.2, 2)
+    const closeLow = makePanel('chat', 3.1, 1.9)
     applyPose(feedPanel, FEED_HOME)
     applyPose(codePanel, CODE_HOME)
     applyPose(chatPanel, CHAT_HOME)
@@ -439,8 +445,11 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     applyPose(projectPanel, PROJECT_HOME)
     applyPose(dataPanel, DATA_HOME)
     applyPose(brandPanel, BRAND_HOME)
-    ;[feedPanel, codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel].forEach(panel => setGroupOpacity(panel, 0))
-    scene.add(feedPanel, codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel)
+    applyPose(closeLeft, CLOSE_LEFT)
+    applyPose(closeRight, CLOSE_RIGHT)
+    applyPose(closeLow, CLOSE_LOW)
+    ;[feedPanel, codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel, closeLeft, closeRight, closeLow].forEach(panel => setGroupOpacity(panel, 0))
+    scene.add(feedPanel, codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel, closeLeft, closeRight, closeLow)
 
     const dustGeometry = new THREE.BufferGeometry()
     const dustCount = 180
@@ -545,19 +554,23 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       camera.lookAt(look)
       camera.rotation.z += bank
 
-      cssObject.visible = true
+      const windowReveal = reducedMotion ? 1 : THREE.MathUtils.smoothstep(pathT, 0.64, 0.94)
+      cssObject.visible = windowReveal > 0.02
       cssObject.rotation.x = damp(cssObject.rotation.x, 0.05 * (1 - enter), 3.4, delta)
       cssObject.rotation.y = damp(cssObject.rotation.y, -0.08 * (1 - enter), 3.4, delta)
-      windowHost.style.opacity = '1'
-      windowHost.style.pointerEvents = pathT > 0.18 ? 'auto' : 'none'
+      windowHost.style.opacity = windowReveal.toFixed(3)
+      windowHost.style.pointerEvents = windowReveal > 0.55 ? 'auto' : 'none'
 
       setGroupOpacity(dataPanel, near(DATA_HOME.z, 70) * 0.72)
       setGroupOpacity(projectPanel, near(PROJECT_HOME.z, 58) * 0.82)
+      setGroupOpacity(closeLeft, near(CLOSE_LEFT.z, 28) * 0.95)
       setGroupOpacity(feedPanel, near(FEED_HOME.z, 52) * 0.88)
+      setGroupOpacity(closeRight, near(CLOSE_RIGHT.z, 24) * 0.94)
       setGroupOpacity(codePanel, near(CODE_HOME.z, 48) * 0.86)
+      setGroupOpacity(closeLow, near(CLOSE_LOW.z, 20) * 0.92)
       setGroupOpacity(chatPanel, near(CHAT_HOME.z, 40) * 0.8)
       setGroupOpacity(miniPanel, near(MINI_HOME.z, 38) * 0.84)
-      setGroupOpacity(brandPanel, near(BRAND_HOME.z, 22) * (1 - enter) * 0.95)
+      setGroupOpacity(brandPanel, near(BRAND_HOME.z, 18) * (1 - windowReveal) * 0.98)
       dust.position.z = pathT * 90
       starGroup.position.z = pathT * 210
       rings.forEach((ring, index) => {

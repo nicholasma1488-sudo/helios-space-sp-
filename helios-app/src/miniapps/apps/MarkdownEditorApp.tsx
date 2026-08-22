@@ -29,7 +29,7 @@ export default function MarkdownEditorApp({ accountId, onToast }: MiniAppProps) 
     <div className="md-app">
       <header>
         <input value={doc.title} onChange={event => setDoc(current => ({ ...current, title: event.target.value }))} aria-label="Document title" />
-        <button type="button" onClick={() => onToast('Markdown saved on this account', 'success')}><Save size={14} /> Saved locally</button>
+        <button type="button" onClick={() => onToast('Markdown is autosaved on this account', 'success')}><Save size={14} /> Autosaved</button>
       </header>
       <div className="md-split">
         <textarea value={doc.body} onChange={event => setDoc(current => ({ ...current, body: event.target.value }))} aria-label="Markdown input" />

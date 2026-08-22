@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Delete, Equal } from 'lucide-react'
 import { MiniAppEmpty } from '../MiniAppStates'
 import { useAccountState } from '../persistence'
@@ -125,6 +125,9 @@ export default function CalculatorApp({ accountId }: MiniAppProps) {
     setExpr(current => current + key)
   }
 
+  const applyRef = useRef(apply)
+  applyRef.current = apply
+
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null
@@ -142,12 +145,12 @@ export default function CalculatorApp({ accountId }: MiniAppProps) {
         ')': ')',
         '^': '^',
       }
-      if (map[event.key]) { event.preventDefault(); apply(map[event.key]); return }
-      if (/^[0-9]$/.test(event.key)) apply(event.key)
+      if (map[event.key]) { event.preventDefault(); applyRef.current(map[event.key]); return }
+      if (/^[0-9]$/.test(event.key)) applyRef.current(event.key)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  })
+  }, [])
 
   return (
     <div className="calc-app">
