@@ -103,14 +103,24 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
 
   useEffect(() => {
     const sticky = stickyRef.current
+    const root = rootRef.current
     if (!sticky) return
+    root?.scrollTo({ top: 0, behavior: 'auto' })
     const timer = window.setInterval(() => {
       if (sticky.dataset.introReady === '1' || sticky.dataset.skipIntro === '1') {
         setIntroReady(true)
         window.clearInterval(timer)
       }
     }, 200)
-    return () => window.clearInterval(timer)
+    const blockWheel = (event: WheelEvent) => {
+      if (sticky.dataset.introReady === '1' || sticky.dataset.skipIntro === '1') return
+      event.preventDefault()
+    }
+    root?.addEventListener('wheel', blockWheel, { passive: false })
+    return () => {
+      window.clearInterval(timer)
+      root?.removeEventListener('wheel', blockWheel)
+    }
   }, [])
 
   function skipIntro() {
@@ -130,6 +140,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   }
 
   function scrollTo(id: string) {
+    if (!introReady) return
     rootRef.current?.querySelector(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -142,7 +153,12 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     const scroller = event.currentTarget
     const scrollTop = scroller.scrollTop
     setScrolled(scrollTop > 24)
-    const runway = Math.max(1, (sceneRef.current?.offsetHeight ?? 1) - scroller.clientHeight)
+    if (!introReady) {
+      if (scrollTop > 0) scroller.scrollTop = 0
+      if (stickyRef.current) stickyRef.current.dataset.scrollProgress = '0'
+      return
+    }
+    const runway = Math.max(240, (sceneRef.current?.offsetHeight ?? 1) - scroller.clientHeight)
     const progress = Math.min(1, Math.max(0, scrollTop / runway))
     const sticky = stickyRef.current
     if (sticky) sticky.dataset.scrollProgress = progress.toFixed(4)
@@ -152,7 +168,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   return (
     <div
       ref={rootRef}
-      className={'landing-v2' + (transitioning ? ' is-entering-auth intent-' + transitioning : '')}
+      className={'landing-v2' + (transitioning ? ' is-entering-auth intent-' + transitioning : '') + (introReady ? '' : ' is-intro-locked')}
       onScroll={handleLandingScroll}
     >
       <div className="landing-noise" aria-hidden="true" />
@@ -256,9 +272,11 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                 Skip intro
               </button>
             )}
-            <button type="button" className="landing-scroll-cue" onClick={() => scrollTo('#why-helios')}>
-              <span>{introReady ? 'Scroll to explore' : 'Hold still · camera is moving'}</span><i />
-            </button>
+            {introReady && (
+              <button type="button" className="landing-scroll-cue" onClick={() => scrollTo('#why-helios')}>
+                <span>Scroll to explore</span><i />
+              </button>
+            )}
           </div>
         </section>
 

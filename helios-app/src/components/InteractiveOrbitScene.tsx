@@ -527,20 +527,27 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
 
     let frame = 0
     let previous = performance.now()
-    const started = previous
+    let startedAt = 0
+    let cancelled = false
     let visible = !document.hidden
+    host.dataset.scrollProgress = '0'
+    host.dataset.introReady = '0'
+    if (host.dataset.skipIntro !== '1') host.dataset.skipIntro = '0'
 
     const animate = () => {
+      if (cancelled) return
       frame = window.requestAnimationFrame(animate)
       if (!visible) return
       const now = performance.now()
-      const delta = Math.min((now - previous) / 1000, 0.05)
+      const delta = THREE.MathUtils.clamp((now - previous) / 1000, 0, 0.05)
       previous = now
-      const elapsed = (now - started) / 1000
-      const scroll = THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1)
-      const ease = scroll * scroll * (3 - 2 * scroll)
+      if (!startedAt) startedAt = now
       const skipped = host.dataset.skipIntro === '1'
-      const introT = cinematicProgress(elapsed, skipped)
+      const flightTime = skipped ? 7 : (now - startedAt) / 1000
+      const introT = cinematicProgress(flightTime, skipped)
+      const introDone = skipped || introT >= 0.999
+      const scroll = introDone ? THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1) : 0
+      const ease = scroll * scroll * (3 - 2 * scroll)
       const pathT = THREE.MathUtils.clamp(Math.max(introT, ease), 0, 1)
       const shot = samplePath(pathT)
       const enter = THREE.MathUtils.smoothstep(pathT, 0.86, 1)
@@ -553,16 +560,13 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
       pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
 
-      const follow = 12.4
-      const bank = reducedMotion ? 0 : Math.sin(pathT * Math.PI) * 0.05 * (1 - enter)
-      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.22, follow, delta)
-      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.12, follow, delta)
-      camera.position.z = damp(camera.position.z, shot.z, follow + 1.6, delta)
-      camera.fov = damp(camera.fov, shot.fov, 7.2, delta)
+      const bank = reducedMotion || !introDone ? 0 : Math.sin(pathT * Math.PI) * 0.05 * (1 - enter)
+      camera.position.x = shot.x + pointer.x * (introDone ? 0.22 : 0.04)
+      camera.position.y = shot.y + pointer.y * (introDone ? -0.12 : -0.02)
+      camera.position.z = shot.z
+      camera.fov = shot.fov
       camera.updateProjectionMatrix()
-      look.x = damp(look.x, shot.lx + pointer.x * 0.08, follow, delta)
-      look.y = damp(look.y, shot.ly - pointer.y * 0.06, follow, delta)
-      look.z = damp(look.z, shot.lz, follow, delta)
+      look.set(shot.lx, shot.ly, shot.lz)
       camera.lookAt(look)
       camera.rotation.z += bank
 
@@ -595,7 +599,8 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
 
       host.style.setProperty('--hero-scroll', ease.toFixed(4))
       host.style.setProperty('--hero-intro', copyReveal.toFixed(4))
-      host.dataset.introReady = copyReveal > 0.92 ? '1' : '0'
+      host.dataset.flightT = pathT.toFixed(3)
+      host.dataset.introReady = introDone || copyReveal > 0.92 ? '1' : '0'
       renderer.render(scene, camera)
       if (windowReveal > 0.04) cssRenderer.render(cssScene, camera)
     }
@@ -608,6 +613,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     animate()
 
     return () => {
+      cancelled = true
       window.cancelAnimationFrame(frame)
       document.removeEventListener('visibilitychange', onVisibility)
       resizeObserver.disconnect()

@@ -13,6 +13,11 @@
   isolation: isolate;
 }
 
+.landing-v2.is-intro-locked {
+  overflow: hidden;
+  scroll-behavior: auto;
+}
+
 .landing-noise {
   position: fixed;
   z-index: 50;
