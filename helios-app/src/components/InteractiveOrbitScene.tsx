@@ -33,25 +33,27 @@ const WINDOW_HEIGHT = 600
 const WINDOW_SCALE = 0.008
 
 const PATH: CameraKey[] = [
-  { t: 0, x: 0.15, y: 16, z: 460, lx: 0, ly: 0.4, lz: 8, fov: 18 },
-  { t: 0.14, x: 0.8, y: 10.5, z: 310, lx: 0.18, ly: 0.22, lz: 4, fov: 17.4 },
-  { t: 0.28, x: -1.1, y: 6.2, z: 210, lx: -0.12, ly: 0.12, lz: 2, fov: 17 },
-  { t: 0.5, x: 1.4, y: 2.4, z: 118, lx: 0.22, ly: 0.04, lz: 0.8, fov: 18.2 },
-  { t: 0.71, x: -0.2, y: 0.85, z: 42, lx: 0.02, ly: 0.02, lz: 0.3, fov: 19.4 },
-  { t: 0.86, x: 0.04, y: 0.18, z: 14, lx: 0, ly: 0, lz: 0.2, fov: 20.4 },
-  { t: 1, x: 0, y: 0, z: 6.2, lx: 0, ly: 0, lz: 0.4, fov: 21 },
+  { t: 0, x: 0.28, y: 10.8, z: 410, lx: 0.2, ly: 0.55, lz: 48, fov: 30 },
+  { t: 0.16, x: 0.9, y: 7.1, z: 348, lx: 1.05, ly: 0.32, lz: 26, fov: 27 },
+  { t: 0.28, x: -0.75, y: 4.4, z: 300, lx: -1.1, ly: 0.16, lz: 16, fov: 26 },
+  { t: 0.4, x: -0.32, y: 2.6, z: 236, lx: -0.7, ly: 0.2, lz: 9, fov: 25 },
+  { t: 0.52, x: 0.92, y: 1.55, z: 178, lx: 0.82, ly: 0, lz: 5, fov: 24 },
+  { t: 0.64, x: -0.42, y: 1.08, z: 118, lx: -0.18, ly: -0.16, lz: 2.6, fov: 23 },
+  { t: 0.76, x: 0.18, y: 0.72, z: 70, lx: 0.12, ly: 0.04, lz: 1.2, fov: 24 },
+  { t: 0.88, x: 0.04, y: 0.6, z: 34, lx: 0, ly: -0.14, lz: 0.25, fov: 23 },
+  { t: 1, x: 0, y: 0.55, z: 18.4, lx: 0, ly: -0.22, lz: 0, fov: 22 },
 ]
 
-const FEED_HOME: Pose = { x: -7.4, y: 1.8, z: 168, rx: 0.08, ry: 0.38 }
-const CODE_HOME: Pose = { x: 8.2, y: -1.4, z: 132, rx: -0.06, ry: -0.42 }
-const CHAT_HOME: Pose = { x: -5.6, y: -3.2, z: 92, rx: 0.18, ry: 0.22 }
-const MINI_HOME: Pose = { x: 6.8, y: 2.6, z: 74, rx: -0.1, ry: -0.28 }
-const PROJECT_HOME: Pose = { x: -9.5, y: 0.4, z: 210, rx: 0.04, ry: 0.46 }
-const DATA_HOME: Pose = { x: 10.5, y: 3.8, z: 248, rx: 0.12, ry: -0.34 }
-const BRAND_HOME: Pose = { x: 0, y: 0.35, z: 28, rx: 0, ry: 0 }
-const CLOSE_LEFT: Pose = { x: -2.6, y: 1.1, z: 186, rx: 0.12, ry: 0.55 }
-const CLOSE_RIGHT: Pose = { x: 2.9, y: -0.8, z: 142, rx: -0.08, ry: -0.48 }
-const CLOSE_LOW: Pose = { x: -1.7, y: -1.6, z: 88, rx: 0.22, ry: 0.18 }
+const FEED_HOME: Pose = { x: -3.05, y: 1.05, z: 210, rx: 0.06, ry: 0.28 }
+const CODE_HOME: Pose = { x: 3.15, y: -0.85, z: 148, rx: -0.05, ry: -0.28 }
+const CHAT_HOME: Pose = { x: -2.75, y: -1.55, z: 92, rx: 0.14, ry: 0.2 }
+const MINI_HOME: Pose = { x: 2.85, y: 1.35, z: 66, rx: -0.08, ry: -0.22 }
+const PROJECT_HOME: Pose = { x: -3.35, y: 0.45, z: 292, rx: 0.04, ry: 0.3 }
+const DATA_HOME: Pose = { x: 3.15, y: 1.55, z: 340, rx: 0.08, ry: -0.26 }
+const BRAND_HOME: Pose = { x: 0, y: 0.12, z: 38, rx: 0, ry: 0 }
+const CLOSE_LEFT: Pose = { x: -1.65, y: 0.88, z: 248, rx: 0.1, ry: 0.4 }
+const CLOSE_RIGHT: Pose = { x: 1.78, y: -0.42, z: 176, rx: -0.06, ry: -0.36 }
+const CLOSE_LOW: Pose = { x: -1.4, y: -1.28, z: 118, rx: 0.18, ry: 0.14 }
 
 function damp(current: number, target: number, smoothing: number, delta: number) {
   return THREE.MathUtils.lerp(current, target, 1 - Math.exp(-smoothing * delta))
@@ -225,9 +227,17 @@ function setGroupOpacity(group: THREE.Group, opacity: number) {
 }
 
 function cinematicProgress(elapsed: number, reducedMotion: boolean) {
-  if (reducedMotion) return 1
+  if (reducedMotion) {
+    const t = THREE.MathUtils.clamp(elapsed / 2.2, 0, 1)
+    return 0.62 + 0.38 * t * t * (3 - 2 * t)
+  }
   const t = THREE.MathUtils.clamp(elapsed / 7, 0, 1)
-  return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2
+  if (t < 0.1) return (t / 0.1) * (t / 0.1) * 0.1
+  if (t > 0.88) {
+    const u = (t - 0.88) / 0.12
+    return 0.88 + (1 - (1 - u) * (1 - u)) * 0.12
+  }
+  return t
 }
 
 function paintWorld(kind: 'mini' | 'project' | 'data' | 'brand') {
@@ -375,7 +385,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     host.dataset.webgl = 'ready'
     try {
     renderer.setClearColor(0x04060b, 1)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.1))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.domElement.className = 'interactive-orbit-canvas'
     renderer.domElement.setAttribute('aria-hidden', 'true')
@@ -388,9 +398,10 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
 
     const scene = new THREE.Scene()
     const cssScene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(20, 1, 0.08, 800)
-    camera.position.set(PATH[0].x, PATH[0].y, PATH[0].z)
-    const look = new THREE.Vector3(PATH[0].lx, PATH[0].ly, PATH[0].lz)
+    const startShot = samplePath(cinematicProgress(0, reducedMotion))
+    const camera = new THREE.PerspectiveCamera(startShot.fov, 1, 0.08, 800)
+    camera.position.set(startShot.x, startShot.y, startShot.z)
+    const look = new THREE.Vector3(startShot.lx, startShot.ly, startShot.lz)
     camera.lookAt(look)
 
     const ambient = new THREE.AmbientLight(0xb8c4ff, 0.42)
@@ -428,16 +439,16 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     starGroup.add(makeStarfield(280, 40, 110, 0.055), makeStarfield(420, 88, 220, 0.038))
     scene.add(starGroup)
 
-    const feedPanel = makePanel('feed', 5.6, 3.5)
-    const codePanel = makePanel('code', 5.2, 3.3)
-    const chatPanel = makePanel('chat', 4.6, 2.9)
-    const miniPanel = makeWorldPanel('mini', 5.4, 3.4)
-    const projectPanel = makeWorldPanel('project', 5.0, 3.1)
-    const dataPanel = makeWorldPanel('data', 3.6, 2.4)
-    const brandPanel = makeWorldPanel('brand', 6.4, 3.6)
-    const closeLeft = makePanel('code', 3.4, 2.1)
-    const closeRight = makeWorldPanel('mini', 3.2, 2)
-    const closeLow = makePanel('chat', 3.1, 1.9)
+    const feedPanel = makePanel('feed', 6.2, 3.9)
+    const codePanel = makePanel('code', 5.8, 3.6)
+    const chatPanel = makePanel('chat', 5.2, 3.2)
+    const miniPanel = makeWorldPanel('mini', 5.6, 3.5)
+    const projectPanel = makeWorldPanel('project', 5.8, 3.6)
+    const dataPanel = makeWorldPanel('data', 4.2, 2.8)
+    const brandPanel = makeWorldPanel('brand', 7.6, 4.2)
+    const closeLeft = makePanel('code', 5.0, 3.1)
+    const closeRight = makeWorldPanel('mini', 4.8, 2.9)
+    const closeLow = makePanel('chat', 4.6, 2.8)
     applyPose(feedPanel, FEED_HOME)
     applyPose(codePanel, CODE_HOME)
     applyPose(chatPanel, CHAT_HOME)
@@ -452,11 +463,12 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     scene.add(feedPanel, codePanel, chatPanel, miniPanel, projectPanel, dataPanel, brandPanel, closeLeft, closeRight, closeLow)
 
     const dustGeometry = new THREE.BufferGeometry()
-    const dustCount = 180
+    const dustCount = 260
     const dustPositions = new Float32Array(dustCount * 3)
     for (let i = 0; i < dustCount; i += 1) {
-      dustPositions[i * 3] = (seededRandom(i + 201) - 0.5) * 28
-      dustPositions[i * 3 + 1] = (seededRandom(i + 277) - 0.5) * 16
+      const nearField = i % 5 === 0
+      dustPositions[i * 3] = (seededRandom(i + 201) - 0.5) * (nearField ? 8 : 28)
+      dustPositions[i * 3 + 1] = (seededRandom(i + 277) - 0.5) * (nearField ? 5 : 16)
       dustPositions[i * 3 + 2] = seededRandom(i + 331) * 360
     }
     dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3))
@@ -480,14 +492,14 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
         depthWrite: false,
       }),
     )
-    glow.position.set(0, 0.04, -0.2)
+    glow.position.set(0, -1.15, -0.2)
     scene.add(glow)
 
     const cssObject = new CSS3DObject(windowHost)
     cssObject.scale.setScalar(WINDOW_SCALE)
-    cssObject.position.set(0, 0.04, 0)
-    cssObject.rotation.set(0.05, -0.08, 0)
-    cssObject.visible = true
+    cssObject.position.set(0, -1.15, 0)
+    cssObject.rotation.set(0.08, -0.06, 0)
+    cssObject.visible = false
     cssScene.add(cssObject)
 
     const resize = () => {
@@ -533,49 +545,52 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       const introT = cinematicProgress(elapsed, reducedMotion)
       const pathT = THREE.MathUtils.clamp(Math.max(introT, ease), 0, 1)
       const shot = samplePath(pathT)
-      const enter = THREE.MathUtils.smoothstep(pathT, 0.82, 1)
-      const near = (z: number, width = 46) => {
+      const enter = THREE.MathUtils.smoothstep(pathT, 0.84, 1)
+      const near = (z: number, width = 36) => {
         const distance = Math.abs(shot.z - z)
-        return THREE.MathUtils.clamp(1 - distance / width, 0, 1)
+        return THREE.MathUtils.smoothstep(1 - distance / width, 0, 1)
       }
 
       pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
       pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
 
-      const bank = Math.sin(pathT * Math.PI) * 0.035 * (1 - enter)
-      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.35, 5.4, delta)
-      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.18, 5.4, delta)
-      camera.position.z = damp(camera.position.z, shot.z, 6.8, delta)
-      camera.fov = damp(camera.fov, shot.fov, 4.2, delta)
+      const follow = reducedMotion ? 7.4 : 11.2
+      const bank = reducedMotion ? 0 : Math.sin(pathT * Math.PI) * 0.06 * (1 - enter)
+      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.28, follow, delta)
+      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.16, follow, delta)
+      camera.position.z = damp(camera.position.z, shot.z, follow + 1.4, delta)
+      camera.fov = damp(camera.fov, shot.fov, 6.4, delta)
       camera.updateProjectionMatrix()
-      look.x = damp(look.x, shot.lx + pointer.x * 0.12, 5.2, delta)
-      look.y = damp(look.y, shot.ly - pointer.y * 0.08, 5.2, delta)
-      look.z = damp(look.z, shot.lz, 5.2, delta)
+      look.x = damp(look.x, shot.lx + pointer.x * 0.1, follow, delta)
+      look.y = damp(look.y, shot.ly - pointer.y * 0.07, follow, delta)
+      look.z = damp(look.z, shot.lz, follow, delta)
       camera.lookAt(look)
       camera.rotation.z += bank
 
-      const windowReveal = reducedMotion ? 1 : THREE.MathUtils.smoothstep(pathT, 0.64, 0.94)
-      cssObject.visible = windowReveal > 0.02
-      cssObject.rotation.x = damp(cssObject.rotation.x, 0.05 * (1 - enter), 3.4, delta)
-      cssObject.rotation.y = damp(cssObject.rotation.y, -0.08 * (1 - enter), 3.4, delta)
+      const windowReveal = reducedMotion
+        ? THREE.MathUtils.smoothstep(pathT, 0.86, 0.98)
+        : THREE.MathUtils.smoothstep(pathT, 0.84, 0.98)
+      cssObject.visible = windowReveal > 0.04
+      cssObject.rotation.x = damp(cssObject.rotation.x, 0.08 * (1 - enter * 0.4), 3.4, delta)
+      cssObject.rotation.y = damp(cssObject.rotation.y, -0.06 * (1 - enter * 0.4), 3.4, delta)
       windowHost.style.opacity = windowReveal.toFixed(3)
-      windowHost.style.pointerEvents = windowReveal > 0.55 ? 'auto' : 'none'
+      windowHost.style.pointerEvents = windowReveal > 0.72 ? 'auto' : 'none'
 
-      setGroupOpacity(dataPanel, near(DATA_HOME.z, 70) * 0.72)
-      setGroupOpacity(projectPanel, near(PROJECT_HOME.z, 58) * 0.82)
-      setGroupOpacity(closeLeft, near(CLOSE_LEFT.z, 28) * 0.95)
-      setGroupOpacity(feedPanel, near(FEED_HOME.z, 52) * 0.88)
-      setGroupOpacity(closeRight, near(CLOSE_RIGHT.z, 24) * 0.94)
-      setGroupOpacity(codePanel, near(CODE_HOME.z, 48) * 0.86)
-      setGroupOpacity(closeLow, near(CLOSE_LOW.z, 20) * 0.92)
-      setGroupOpacity(chatPanel, near(CHAT_HOME.z, 40) * 0.8)
-      setGroupOpacity(miniPanel, near(MINI_HOME.z, 38) * 0.84)
-      setGroupOpacity(brandPanel, near(BRAND_HOME.z, 18) * (1 - windowReveal) * 0.98)
-      dust.position.z = pathT * 90
-      starGroup.position.z = pathT * 210
+      setGroupOpacity(dataPanel, near(DATA_HOME.z, 42) * 0.86)
+      setGroupOpacity(projectPanel, near(PROJECT_HOME.z, 38) * 0.9)
+      setGroupOpacity(closeLeft, near(CLOSE_LEFT.z, 16) * 0.98)
+      setGroupOpacity(feedPanel, near(FEED_HOME.z, 32) * 0.92)
+      setGroupOpacity(closeRight, near(CLOSE_RIGHT.z, 15) * 0.98)
+      setGroupOpacity(codePanel, near(CODE_HOME.z, 30) * 0.9)
+      setGroupOpacity(closeLow, near(CLOSE_LOW.z, 14) * 0.96)
+      setGroupOpacity(chatPanel, near(CHAT_HOME.z, 26) * 0.86)
+      setGroupOpacity(miniPanel, near(MINI_HOME.z, 24) * 0.88)
+      setGroupOpacity(brandPanel, near(BRAND_HOME.z, 28) * (1 - windowReveal) * 1)
+      dust.position.z = pathT * 160
+      starGroup.position.z = pathT * 290
       rings.forEach((ring, index) => {
-        ring.rotation.z += delta * (0.035 + index * 0.012)
-        ring.position.z = pathT * (14 + index * 5)
+        ring.rotation.z += delta * (0.04 + index * 0.014)
+        ring.position.z = pathT * (18 + index * 7)
       })
       const glowMat = glow.material as THREE.MeshBasicMaterial
       glowMat.opacity = 0.04 + enter * 0.14
@@ -583,7 +598,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
 
       host.style.setProperty('--hero-scroll', ease.toFixed(4))
       renderer.render(scene, camera)
-      cssRenderer.render(cssScene, camera)
+      if (windowReveal > 0.04) cssRenderer.render(cssScene, camera)
     }
 
     const onVisibility = () => {

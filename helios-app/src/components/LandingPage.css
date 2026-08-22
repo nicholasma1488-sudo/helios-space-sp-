@@ -920,11 +920,11 @@
   animation: hero-copy-enter 700ms cubic-bezier(.16, 1, .3, 1) both !important;
 }
 
-.hero-copy-layer .landing-eyebrow { animation-delay: 5100ms; }
-.hero-copy-layer h1 { animation-delay: 5400ms; }
-.hero-copy-layer > p { animation-delay: 5750ms; }
-.hero-copy-layer .landing-hero-actions { animation-delay: 6100ms; }
-.hero-copy-layer .landing-trust-line { animation-delay: 6400ms; }
+.hero-copy-layer .landing-eyebrow { animation-delay: 5400ms; }
+.hero-copy-layer h1 { animation-delay: 5700ms; }
+.hero-copy-layer > p { animation-delay: 6050ms; }
+.hero-copy-layer .landing-hero-actions { animation-delay: 6400ms; }
+.hero-copy-layer .landing-trust-line { animation-delay: 6700ms; }
 
 .hero-occlusion {
   position: absolute;
