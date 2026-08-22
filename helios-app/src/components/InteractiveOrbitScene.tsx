@@ -227,8 +227,8 @@ function setGroupOpacity(group: THREE.Group, opacity: number) {
 
 function cinematicProgress(elapsed: number, skipped: boolean) {
   if (skipped) return 1
-  const t = THREE.MathUtils.clamp(elapsed / 7, 0, 1)
-  if (t < 0.08) return (t / 0.08) * (t / 0.08) * 0.08
+  const held = Math.max(0, elapsed - 0.55)
+  const t = THREE.MathUtils.clamp(held / 6.45, 0, 1)
   if (t > 0.9) {
     const u = (t - 0.9) / 0.1
     return 0.9 + (1 - (1 - u) * (1 - u)) * 0.1
@@ -527,11 +527,13 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
 
     let frame = 0
     let previous = performance.now()
-    let startedAt = 0
+    let flightTime = 0
+    let warmFrames = 0
     let cancelled = false
     let visible = !document.hidden
     host.dataset.scrollProgress = '0'
     host.dataset.introReady = '0'
+    host.dataset.flightT = '0'
     if (host.dataset.skipIntro !== '1') host.dataset.skipIntro = '0'
 
     const animate = () => {
@@ -539,13 +541,19 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       frame = window.requestAnimationFrame(animate)
       if (!visible) return
       const now = performance.now()
-      const delta = THREE.MathUtils.clamp((now - previous) / 1000, 0, 0.05)
+      const rawDelta = Math.max(0, (now - previous) / 1000)
       previous = now
-      if (!startedAt) startedAt = now
+      const delta = Math.min(rawDelta, 0.05)
       const skipped = host.dataset.skipIntro === '1'
-      const flightTime = skipped ? 7 : (now - startedAt) / 1000
+      if (skipped) {
+        flightTime = 7
+      } else if (warmFrames < 5) {
+        warmFrames += 1
+      } else if (flightTime < 7) {
+        flightTime += Math.min(rawDelta, 1 / 18)
+      }
       const introT = cinematicProgress(flightTime, skipped)
-      const introDone = skipped || introT >= 0.999
+      const introDone = skipped || flightTime >= 7
       const scroll = introDone ? THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1) : 0
       const ease = scroll * scroll * (3 - 2 * scroll)
       const pathT = THREE.MathUtils.clamp(Math.max(introT, ease), 0, 1)
@@ -600,7 +608,8 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       host.style.setProperty('--hero-scroll', ease.toFixed(4))
       host.style.setProperty('--hero-intro', copyReveal.toFixed(4))
       host.dataset.flightT = pathT.toFixed(3)
-      host.dataset.introReady = introDone || copyReveal > 0.92 ? '1' : '0'
+      host.dataset.flightS = flightTime.toFixed(2)
+      host.dataset.introReady = introDone ? '1' : '0'
       renderer.render(scene, camera)
       if (windowReveal > 0.04) cssRenderer.render(cssScene, camera)
     }
