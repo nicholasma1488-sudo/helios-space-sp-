@@ -161,12 +161,6 @@
   background: transparent;
   color: var(--helios-text);
   text-align: left;
-  cursor: pointer;
-}
-
-.lifestyle-profile-shortcut:hover {
-  border-color: var(--helios-border);
-  background: var(--helios-surface);
 }
 
 .lifestyle-profile-shortcut > span:last-child {
@@ -935,7 +929,6 @@
   color: var(--helios-accent);
   font: inherit;
   font-size: 9px;
-  cursor: pointer;
 }
 
 .post-project span {

@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AppWindow, Bookmark, BookOpen, ChevronDown, Code, Dumbbell, FileText, Image as ImageIcon,
+  Bookmark, BookOpen, ChevronDown, Code, Dumbbell, FileText, Image as ImageIcon,
   Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal,
   PenLine, Plus, Repeat2, Search, Send, Share, Sparkles, Sun, Trash2, Users, X, Zap,
 } from 'lucide-react'
 import type { Comment, Post, SolarSummary, User } from '../api'
-import { api, type LiveSession } from '../api'
+import { api } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
-import { getMiniApp, getSpaceDefinition } from '../product/catalog'
-import { openCreatorProfile, openLiveSession, openProjectWorkspace } from '../product/flow'
+import { openCreatorProfile } from '../product/flow'
 import './LifestyleView.css'
 
 const CATEGORIES = [
@@ -49,11 +48,8 @@ export function LifestyleView({ currentUser }: Props) {
   const [postCategory, setPostCategory] = useState('reflection')
   const [audience, setAudience] = useState<'public' | 'private'>('public')
   const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null)
-  const [postKind, setPostKind] = useState<'text' | 'project' | 'mini-app' | 'live'>('text')
   const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou')
   const [reposted, setReposted] = useState<Set<number>>(new Set())
-  const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
-  const [linkedLiveId, setLinkedLiveId] = useState<number | null>(null)
   const [mediaData, setMediaData] = useState('')
   const [mediaName, setMediaName] = useState('')
   const [solar, setSolar] = useState<SolarSummary>(EMPTY_SOLAR)
@@ -109,7 +105,6 @@ export function LifestyleView({ currentUser }: Props) {
   useEffect(() => { void loadPosts() }, [loadPosts])
 
   useEffect(() => { void api.solar().then(setSolar).catch(() => {}) }, [])
-  useEffect(() => { void api.live.list().then(result => setLiveSessions(result.sessions)).catch(() => {}) }, [])
 
   useEffect(() => {
     if (loading || targetHandled.current) return
@@ -152,7 +147,6 @@ export function LifestyleView({ currentUser }: Props) {
     if (feedTab === 'following') return posts.filter(post => post.author_id !== currentUser.id)
     return posts
   }, [posts, feedTab, currentUser.id])
-  const contextualApp = getMiniApp(getSpaceDefinition(state.activeSpaceId).miniApps[0])
   const myPostCount = posts.filter(post => post.author_id === currentUser.id).length
 
   async function submitPost(event: React.FormEvent) {
@@ -168,7 +162,7 @@ export function LifestyleView({ currentUser }: Props) {
         audience,
         project_id: linkedProjectId ?? undefined,
         space_id: state.projects.find(project => project.id === linkedProjectId)?.space_id ?? state.activeSpaceId,
-        post_type: postKind === 'live' ? 'live-watch' : postKind === 'mini-app' ? 'mini-app' : linkedProjectId ? 'project-progress' : 'meaningful-progress',
+        post_type: linkedProjectId ? 'project-progress' : 'meaningful-progress',
         media_url: mediaData,
       })
       const visibleInFilter = !savedOnly &&
@@ -217,12 +211,6 @@ export function LifestyleView({ currentUser }: Props) {
       setMediaName(file.name)
       setSubmitError('')
     } catch { setSubmitError('The selected media could not be read.') }
-  }
-
-  async function openLinkedProject(projectId: number | null) {
-    if (!projectId) return
-    try { await openProjectWorkspace(projectId, state.projects, dispatch) }
-    catch (error) { dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } }) }
   }
 
   async function react(post: Post, emoji: string) {
@@ -338,7 +326,7 @@ export function LifestyleView({ currentUser }: Props) {
       <header className="lifestyle-topbar">
         <div className="lifestyle-title">
           <span className="lifestyle-title-mark"><Zap size={17} /></span>
-          <div><strong>Home</strong><small>A Twitter-style feed for work, projects, and Live</small></div>
+          <div><strong>Lifestyle</strong><small>Your social feed</small></div>
         </div>
         <label className="lifestyle-search">
           <Search size={16} />
@@ -356,11 +344,11 @@ export function LifestyleView({ currentUser }: Props) {
       </header>
 
       <div className="lifestyle-layout">
-        <aside className="lifestyle-left" aria-label="Lifestyle shortcuts">
-          <button type="button" className="lifestyle-profile-shortcut" onClick={() => dispatch({ type: 'SET_VIEW', view: 'profile' })}>
+        <aside className="lifestyle-left" aria-label="Feed filters">
+          <div className="lifestyle-profile-shortcut">
             <Avatar name={currentUser.name} size="md" />
             <span><strong>{currentUser.name}</strong><small>{currentUser.handle}</small></span>
-          </button>
+          </div>
 
           <nav className="lifestyle-side-nav" aria-label="Feed filters">
             <button type="button" className={!savedOnly && feedTab === 'foryou' ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('foryou') }}>
@@ -371,9 +359,6 @@ export function LifestyleView({ currentUser }: Props) {
             </button>
             <button type="button" className={savedOnly ? 'is-active' : ''} onClick={() => setSavedOnly(true)}>
               <Bookmark size={17} /><span>Bookmarks</span>
-            </button>
-            <button type="button" onClick={() => dispatch({ type: 'OPEN_SPACE', spaceId: state.activeSpaceId, tab: 'apps' })}>
-              <AppWindow size={17} /><span>Mini Apps</span>
             </button>
           </nav>
 
@@ -391,22 +376,6 @@ export function LifestyleView({ currentUser }: Props) {
               </button>
             ))}
           </div>
-
-          {state.projects.length > 0 && (
-            <div className="lifestyle-side-section project-shortcuts">
-              <span>YOUR PROJECTS</span>
-              {state.projects.slice(0, 4).map(project => (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => dispatch({ type: 'OPEN_CODE_EDITOR', projectId: project.id })}
-                >
-                  <i><FolderGit2 size={14} /></i>
-                  <span>{project.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </aside>
 
         <main className="lifestyle-feed twitter-feed" aria-live="polite">
@@ -461,11 +430,6 @@ export function LifestyleView({ currentUser }: Props) {
                     </button>
                   ))}
                 </div>
-                <div className="composer-kind-row" role="group" aria-label="What you are sharing">
-                  {([['text', 'Text'], ['project', 'Project'], ['mini-app', 'Mini App'], ['live', 'Live Project']] as const).map(([id, label]) => (
-                    <button type="button" key={id} aria-pressed={postKind === id} onClick={() => setPostKind(id)}>{label}</button>
-                  ))}
-                </div>
                 <div className="composer-options">
                   <button type="button" className="composer-media-button" onClick={() => mediaRef.current?.click()}><ImageIcon size={14} /> Photo / video</button>
                   <div className="composer-audience" role="group" aria-label="Post audience">
@@ -476,29 +440,15 @@ export function LifestyleView({ currentUser }: Props) {
                       <Lock size={14} /> Only me
                     </button>
                   </div>
-                  {(state.projects.length > 0 && postKind !== 'live') && (
+                  {state.projects.length > 0 && (
                     <label className="composer-project">
                       <FolderGit2 size={14} />
-                      <span className="sr-only">Link a project</span>
+                      <span className="sr-only">Mention a project</span>
                       <select value={linkedProjectId ?? ''} onChange={event => setLinkedProjectId(event.target.value ? Number(event.target.value) : null)}>
-                        <option value="">{postKind === 'mini-app' ? 'Choose Mini App Project' : 'No linked project'}</option>
-                        {state.projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}
+                        <option value="">No linked project</option>
+                        {state.projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}
                       </select>
                       <ChevronDown size={13} />
-                    </label>
-                  )}
-                  {postKind === 'live' && (
-                    <label className="composer-project">
-                      <Globe2 size={14} />
-                      <select value={linkedLiveId ?? ''} onChange={event => {
-                        const id = event.target.value ? Number(event.target.value) : null
-                        setLinkedLiveId(id)
-                        const session = liveSessions.find(item => item.id === id)
-                        if (session) setLinkedProjectId(session.project_id)
-                      }}>
-                        <option value="">Choose a Live Project</option>
-                        {liveSessions.map(session => <option key={session.id} value={session.id}>{session.title}</option>)}
-                      </select>
                     </label>
                   )}
                 </div>
@@ -565,13 +515,6 @@ export function LifestyleView({ currentUser }: Props) {
               onToggleSave={() => void toggleSave(post)}
               onCopy={() => void copyPost(post)}
               onDelete={() => void deletePost(post)}
-              onOpenProject={() => { void openLinkedProject(post.project_id) }}
-              onOpenMiniApp={() => { void openLinkedProject(post.project_id) }}
-              onWatchLive={() => {
-                const session = liveSessions.find(item => item.project_id === post.project_id)
-                if (session) openLiveSession(session.id, dispatch)
-                else dispatch({ type: 'SET_VIEW', view: 'live' })
-              }}
               onOpenCreator={() => openCreatorProfile({ id: post.author_id || 0, name: post.author_name, handle: post.author_handle }, dispatch)}
               onCommentCountChange={delta => updateCommentCount(post.id, delta)}
             />
@@ -616,12 +559,6 @@ export function LifestyleView({ currentUser }: Props) {
             ))}
           </section>
 
-          <section className="lifestyle-app-callout">
-            <span><AppWindow size={16} /> CURRENT SPACE MINI APP</span>
-            <strong>{contextualApp.name}</strong>
-            <p>{contextualApp.description}</p>
-            <button type="button" onClick={() => dispatch({ type: 'OPEN_SPACE', spaceId: state.activeSpaceId, tab: 'apps' })}>Open Space Mini Apps</button>
-          </section>
         </aside>
       </div>
 
@@ -656,7 +593,7 @@ function relativeTime(value: string) {
 function PostCard({
   post, currentUser, busy, pickerOpen, commentsOpen, reposted,
   onTogglePicker, onReact, onLike, onRepost, onToggleComments, onToggleSave, onCopy, onDelete,
-  onOpenProject, onOpenMiniApp, onWatchLive, onOpenCreator, onCommentCountChange,
+  onOpenCreator, onCommentCountChange,
 }: {
   post: Post
   currentUser: User
@@ -672,9 +609,6 @@ function PostCard({
   onToggleSave: () => void
   onCopy: () => void
   onDelete: () => void
-  onOpenProject: () => void
-  onOpenMiniApp: () => void
-  onWatchLive: () => void
   onOpenCreator: () => void
   onCommentCountChange: (delta: number) => void
 }) {
@@ -710,11 +644,9 @@ function PostCard({
 
         {post.project_name && (
           <div className="post-project-row">
-            <button type="button" onClick={onOpenProject} className="post-project">
-              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? 'Live Project' : 'Project'}</span><strong>{post.project_name}</strong>
-            </button>
-            {post.project_app_kind && <button type="button" onClick={onOpenMiniApp} className="post-project"><AppWindow size={14} /><span>Mini App</span><strong>{getMiniApp(post.project_app_kind).name}</strong></button>}
-            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>Watch</span><strong>Live Project</strong></button>}
+            <span className="post-project">
+              <FolderGit2 size={14} /><span>Project</span><strong>{post.project_name}</strong>
+            </span>
           </div>
         )}
 
