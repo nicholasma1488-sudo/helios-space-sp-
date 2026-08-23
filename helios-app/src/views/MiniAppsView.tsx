@@ -81,6 +81,30 @@ export function MiniAppsView() {
       goBilling()
       return
     }
+    if (app.id === 'stocks') {
+      const existing = state.projects
+        .filter(project => project.app_kind === 'stocks')
+        .sort((left, right) => +new Date(right.updated_at) - +new Date(left.updated_at))[0]
+      if (existing) {
+        void openExisting(existing.id)
+        return
+      }
+      if (creating) return
+      setCreating(true)
+      void createSuiteProject({
+        name: nextSuiteFileName(app.newName, state.projects, app.id),
+        spaceId: spaceForSuiteApp(app, state.user?.audience),
+        type: app.projectType,
+        appKind: app.id,
+        content: suiteStarterWorkspace(app, state.user?.audience),
+      }, dispatch).catch(error => {
+        dispatch({
+          type: 'PUSH_TOAST',
+          toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' },
+        })
+      }).finally(() => setCreating(false))
+      return
+    }
     setActive(app)
   }
 
@@ -130,7 +154,7 @@ export function MiniAppsView() {
         <label className="suite-search">
           <Search size={16} aria-hidden="true" />
           <span className="sr-only">Search apps</span>
-          <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Word, Excel, slides…" />
+          <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Word, Excel, Stocks…" />
         </label>
       </header>
 
@@ -152,12 +176,12 @@ export function MiniAppsView() {
             <h2 id="suite-apps-title">{query ? 'Search results' : 'Apps'}</h2>
             <span>{filtered.length}</span>
           </header>
-          {['core', edition === 'adult' || edition === 'orbit' ? 'work' : 'student'].map(track => {
+          {['core', 'adult', edition === 'adult' || edition === 'orbit' ? 'work' : 'student'].map(track => {
             const group = filtered.filter(app => app.track === track)
             if (group.length === 0) return null
             return (
               <div key={track} className="suite-group">
-                <h3>{track === 'core' ? 'Word · Excel · PowerPoint · OneNote' : edition === 'adult' || edition === 'orbit' ? 'Work suite' : 'School suite'}</h3>
+                <h3>{track === 'core' ? 'Word · Excel · PowerPoint · OneNote' : track === 'adult' ? 'Anytime' : edition === 'adult' || edition === 'orbit' ? 'Work suite' : 'School suite'}</h3>
                 <div className="suite-grid">
                   {group.map(app => {
                     const unlocked = suiteAppUnlocked(app, edition)

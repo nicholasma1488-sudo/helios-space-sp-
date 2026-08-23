@@ -16,7 +16,7 @@ export function PlanPicker() {
             {audience === 'child'
               ? 'You start on the Child edition: Word, Excel, PowerPoint and OneNote for school. Alpha unlocks essays, gradebook, lessons, labs and homework — real files, not scratch pads.'
               : audience === 'adult'
-                ? 'You start on the Adult edition: Word, Excel, PowerPoint and OneNote for work. Orbit unlocks docs, budgets, pitch decks, meetings and plans you can actually run.'
+                ? 'You start on the Adult edition: Word, Excel, PowerPoint, OneNote and a Stocks watchlist you can open any time. Orbit unlocks the full work suite.'
                 : 'Stay on your free Child or Adult edition, or unlock Alpha (students) or Orbit (work).'}
           </p>
         </header>

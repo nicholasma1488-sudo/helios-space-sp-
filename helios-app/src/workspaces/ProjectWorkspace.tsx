@@ -15,6 +15,7 @@ import { CodeWorkspace } from './CodeWorkspace'
 import { DrawingWorkspace, MathWorkspace, ProjectBoardWorkspace, SurveyWorkspace } from './CreativeWorkspaces'
 import { NotebookWorkspace } from './NotebookWorkspace'
 import { PresentationWorkspace, SpreadsheetWorkspace, WritingWorkspace } from './ProductivityWorkspaces'
+import { StocksWorkspace } from './StocksWorkspace'
 import { RepoBoundWorkspace } from './RepoFrame'
 import { askHeliosWithContext, openOrCreateProjectChat, publishLiveReplay } from '../product/flow'
 import { parseWorkspace, resolveWorkspaceKind, serializeWorkspace, type WorkspacePayload } from './workspaceData'
@@ -392,6 +393,7 @@ function WorkspaceEditor({ project, payload, canEdit, onChange, onCheckpoint, on
   else if (kind === 'survey') editor = <SurveyWorkspace {...props} />
   else if (kind === 'board') editor = <ProjectBoardWorkspace {...props} />
   else if (kind === 'writing') editor = <RepoBoundWorkspace project={project} canEdit={canEdit} kind="writing" data={payload.data} onChange={props.onChange}><WritingWorkspace {...props} /></RepoBoundWorkspace>
+  else if (kind === 'stocks') editor = <StocksWorkspace data={payload.data} onChange={props.onChange} />
   else editor = <WritingWorkspace {...props} />
   return <div className={'workspace-editor-host' + (!canEdit ? ' is-readonly' : '')}>{editor}</div>
 }

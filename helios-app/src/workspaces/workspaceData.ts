@@ -31,6 +31,12 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
     }
   }
 
+  if (kind === 'stocks') {
+    return {
+      symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY', '0700.HK', 'BABA'],
+    }
+  }
+
   if (kind === 'spreadsheet') {
     const sheets: Record<string, string[][]> = {
       'budget-sheet': [
@@ -328,7 +334,8 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
   }
 }
 
-export function resolveWorkspaceKind(appKind: string): 'code' | 'spreadsheet' | 'presentation' | 'drawing' | 'math' | 'survey' | 'board' | 'reader' | 'notebook' | 'writing' {
+export function resolveWorkspaceKind(appKind: string): 'code' | 'spreadsheet' | 'presentation' | 'drawing' | 'math' | 'survey' | 'board' | 'reader' | 'notebook' | 'writing' | 'stocks' {
+  if (appKind === 'stocks') return 'stocks'
   if ([
     'web-code', 'api-playground', 'game-prototype', 'web-prototype', 'algorithm-lab', 'data-script',
   ].includes(appKind)) return 'code'

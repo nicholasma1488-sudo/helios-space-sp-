@@ -49,6 +49,16 @@ export interface BillingEvent {
   created_at: string
 }
 
+export interface MarketQuote {
+  symbol: string
+  name: string
+  price: number | null
+  change: number | null
+  change_percent: number | null
+  currency: string
+  market_state: string
+}
+
 export interface BillingSnapshot {
   plan: BillingPlanId
   audience?: AccountAudience | null
@@ -387,6 +397,13 @@ export const api = {
 
   updateMe: (data: { birthdate: string }) =>
     call<{ user: User }>('/api/me', { method: 'PUT', body: JSON.stringify(data) }),
+
+  markets: {
+    quotes: (symbols: string[]) =>
+      call<{ quotes: MarketQuote[]; updated_at: string; delayed: boolean }>(
+        '/api/markets/quotes?symbols=' + encodeURIComponent(symbols.join(',')),
+      ),
+  },
 
   billing: {
     get: () => call<BillingSnapshot>('/api/billing'),

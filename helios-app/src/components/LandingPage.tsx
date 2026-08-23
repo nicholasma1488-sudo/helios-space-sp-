@@ -346,7 +346,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               <p>The free work edition. Same 365 core, aimed at the job.</p>
               <ul>
                 <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
-                <li><Check size={13} /> Documents that stay on the account</li>
+                <li><Check size={13} /> Stocks watchlist you can open any time</li>
                 <li><Check size={13} /> Spaces, Projects, Live</li>
                 <li><Check size={13} /> Helios AI when configured</li>
                 <li><Check size={13} /> No card required</li>

@@ -1,7 +1,7 @@
 import type { AccountAudience, BillingPlanId, Project } from '../api'
 
 export type SuiteEdition = 'child' | 'alpha' | 'adult' | 'orbit'
-export type SuiteTrack = 'core' | 'student' | 'work'
+export type SuiteTrack = 'core' | 'student' | 'work' | 'adult'
 
 export interface SuiteApp {
   id: string
@@ -36,6 +36,11 @@ export const SUITE_APPS: SuiteApp[] = [
     id: 'notebook', name: 'OneNote', letter: 'N', color: '#7719AA',
     description: 'A notebook you can keep adding to for class or work.',
     projectType: 'notebook', spaceChild: 'science', spaceAdult: 'business', newName: 'Notebook', track: 'core',
+  },
+  {
+    id: 'stocks', name: 'Stocks', letter: '$', color: '#0F9D58',
+    description: 'A live watchlist you can open any time — add tickers and keep them on this account.',
+    projectType: 'doc', spaceChild: 'business', spaceAdult: 'business', newName: 'Watchlist', track: 'adult',
   },
 
   {
@@ -164,9 +169,9 @@ export function editionBlurb(edition: SuiteEdition) {
   if (edition === 'alpha')
     return 'A school 365 suite: write essays, mark grades, teach slides and keep lab work in files that save to your Projects.'
   if (edition === 'orbit')
-    return 'A work 365 suite: documents, workbooks, decks, meetings and plans you can actually run a week from.'
+    return 'A work 365 suite plus Stocks: documents, workbooks, decks, meetings and a watchlist you can open any time.'
   if (edition === 'adult')
-    return 'Word, Excel, PowerPoint and OneNote for work. Upgrade to Orbit when you need the full office.'
+    return 'Word, Excel, PowerPoint, OneNote and Stocks for work. Upgrade to Orbit when you need the full office.'
   return 'Word, Excel, PowerPoint and OneNote for school. Upgrade to Alpha for the full student suite.'
 }
 
@@ -175,12 +180,14 @@ export function paidEditionFor(edition: SuiteEdition): 'alpha' | 'orbit' {
 }
 
 export function suiteAppsForEdition(edition: SuiteEdition) {
-  const track = edition === 'adult' || edition === 'orbit' ? 'work' : 'student'
-  return SUITE_APPS.filter(app => app.track === 'core' || app.track === track)
+  if (edition === 'adult' || edition === 'orbit')
+    return SUITE_APPS.filter(app => app.track === 'core' || app.track === 'adult' || app.track === 'work')
+  return SUITE_APPS.filter(app => app.track === 'core' || app.track === 'student')
 }
 
 export function suiteAppUnlocked(app: SuiteApp, edition: SuiteEdition) {
   if (app.track === 'core') return true
+  if (app.track === 'adult') return edition === 'adult' || edition === 'orbit'
   if (app.track === 'student') return edition === 'alpha'
   return edition === 'orbit'
 }
@@ -244,6 +251,11 @@ export function suiteStarterContent(app: SuiteApp, audience?: AccountAudience | 
         { title: 'Ask', body: 'The decision or next owner.', notes: '' },
       ]
     return { slides: slides.map(slide => ({ id: crypto.randomUUID(), ...slide })), activeSlide: 0 }
+  }
+  if (app.id === 'stocks') {
+    return {
+      symbols: ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'SPY', '0700.HK', 'BABA'],
+    }
   }
   if (app.id === 'notebook') {
     return {

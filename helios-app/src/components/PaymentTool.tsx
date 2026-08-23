@@ -22,7 +22,7 @@ const FALLBACK_PLANS: BillingPlan[] = [
     description: 'Child or Adult edition from your date of birth. Word, Excel, PowerPoint and OneNote included.',
     features: [
       'Create a Helios account for free',
-      'Word, Excel, PowerPoint and OneNote workspaces',
+      'Word, Excel, PowerPoint, OneNote, and Stocks for adults',
       'Projects that stay connected to your feed',
       'Lifestyle, Chat Hub, and Live work',
     ],

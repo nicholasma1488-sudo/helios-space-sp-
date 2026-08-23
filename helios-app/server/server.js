@@ -517,6 +517,9 @@ const authRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, key: 'auth'
 const aiRateLimit = rateLimit({ windowMs: 5 * 60 * 1000, max: 20, key: 'ai' })
 const socialRateLimit = rateLimit({ windowMs: 5 * 60 * 1000, max: 120, key: 'social' })
 const billingRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, key: 'billing' })
+const marketsRateLimit = rateLimit({ windowMs: 60 * 1000, max: 30, key: 'markets' })
+const MARKETS_MOCK = process.env.HELIOS_MARKETS_MOCK === '1' || process.env.NODE_ENV === 'test'
+const marketQuoteCache = new Map()
 const liveCursorRateLimit = rateLimit({ windowMs: 60 * 1000, max: 900, key: 'live-cursor' })
 const liveEventRateLimit = (req, res, next) => req.body?.kind === 'cursor'
   ? liveCursorRateLimit(req, res, next)
@@ -537,11 +540,12 @@ const BILLING_PLANS = {
     interval: 'month',
     audience: 'all',
     description: 'Child or Adult edition is chosen from your date of birth. Both include Word, Excel, PowerPoint and OneNote workspaces you can actually work in.',
-    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
+    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote', 'Stocks'],
     features: [
       'Create an account in under a minute — no card',
       'Child edition if you are under 18, Adult edition if you are 18+',
       'Word, Excel, PowerPoint and OneNote — real files, not scratch pads',
+      'Adult edition includes a Stocks watchlist you can open any time',
       'Work saves to Projects and stays in your Spaces',
       'Every Subject and Hobby Space',
       'Lifestyle, Chat Hub and Live',
@@ -582,9 +586,9 @@ const BILLING_PLANS = {
     interval: 'month',
     audience: 'adult',
     description: 'The work upgrade. A Microsoft 365-style office for documents, workbooks, decks, meetings and plans you can run a week from.',
-    mini_apps: ['Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals', 'Product Spec', 'OKRs', 'Planner', 'Business Plan', 'Reports'],
+    mini_apps: ['Stocks', 'Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals', 'Product Spec', 'OKRs', 'Planner', 'Reports'],
     features: [
-      'Everything in the Adult edition, plus the full work suite',
+      'Everything in the Adult edition, including the Stocks watchlist',
       'Docs, proposals, specs and reports in Word-class editors',
       'Budget and OKR workbooks with formulas',
       'Pitch decks you can present from the same file',
@@ -1371,6 +1375,64 @@ app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (re
     res.json({ ok: true, user, billing: getBillingSnapshot(user) })
   } catch (error) {
     res.status(error.status || 502).json({ error: error.message || 'Stripe confirmation failed' })
+  }
+})
+
+function normalizeMarketSymbol(value) {
+  const symbol = String(value || '').trim().toUpperCase()
+  if (!/^[A-Z0-9][A-Z0-9.^/-]{0,14}$/.test(symbol)) return null
+  return symbol
+}
+
+function mockMarketQuotes(symbols) {
+  return symbols.map((symbol, index) => ({
+    symbol,
+    name: symbol === 'AAPL' ? 'Apple Inc.' : symbol === 'MSFT' ? 'Microsoft Corporation' : symbol,
+    price: 100 + index * 3.25,
+    change: index % 2 === 0 ? 1.25 : -0.8,
+    change_percent: index % 2 === 0 ? 1.1 : -0.6,
+    currency: 'USD',
+    market_state: 'REGULAR',
+  }))
+}
+
+async function fetchYahooQuotes(symbols) {
+  const cacheKey = symbols.join(',')
+  const cached = marketQuoteCache.get(cacheKey)
+  if (cached && Date.now() - cached.at < 20_000) return cached.quotes
+  const response = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(cacheKey)}`, {
+    headers: { 'User-Agent': 'HeliosSpace/1.0' },
+  })
+  if (!response.ok) throw new Error('Market data is unavailable')
+  const body = await response.json()
+  const rows = body?.quoteResponse?.result
+  if (!Array.isArray(rows)) throw new Error('Market data is unavailable')
+  const quotes = symbols.map(symbol => {
+    const row = rows.find(item => String(item.symbol || '').toUpperCase() === symbol)
+    return {
+      symbol,
+      name: row?.shortName || row?.longName || symbol,
+      price: Number.isFinite(row?.regularMarketPrice) ? row.regularMarketPrice : null,
+      change: Number.isFinite(row?.regularMarketChange) ? row.regularMarketChange : null,
+      change_percent: Number.isFinite(row?.regularMarketChangePercent) ? row.regularMarketChangePercent : null,
+      currency: row?.currency || 'USD',
+      market_state: row?.marketState || '',
+    }
+  })
+  marketQuoteCache.set(cacheKey, { at: Date.now(), quotes })
+  return quotes
+}
+
+app.get('/api/markets/quotes', requireUser, marketsRateLimit, async (req, res) => {
+  if (req.user.audience !== 'adult')
+    return res.status(403).json({ error: 'Stocks is for the Adult and Orbit editions' })
+  const unique = [...new Set(String(req.query.symbols || '').split(',').map(normalizeMarketSymbol).filter(Boolean))].slice(0, 20)
+  if (unique.length === 0) return res.status(400).json({ error: 'Add at least one ticker' })
+  try {
+    const quotes = MARKETS_MOCK ? mockMarketQuotes(unique) : await fetchYahooQuotes(unique)
+    res.json({ quotes, updated_at: new Date().toISOString(), delayed: true })
+  } catch (error) {
+    res.status(502).json({ error: error.message || 'Market data is unavailable' })
   }
 })
 

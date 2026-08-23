@@ -554,7 +554,33 @@ async function run() {
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'alpha').features.length >= 10, true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Meeting Notes'), true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Word'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Stocks'), true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'alpha').mini_apps.includes('Gradebook'), true)
+
+  const stocksProject = await alice.post('/api/projects', {
+    name: 'Watchlist',
+    type: 'doc',
+    space_id: 'business',
+    app_kind: 'stocks',
+    visibility: 'private',
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'stocks',
+      data: { symbols: ['AAPL', 'MSFT'] },
+    }),
+  })
+  expectStatus(stocksProject, 200, 'create Stocks watchlist')
+  assert.equal(stocksProject.body.project.app_kind, 'stocks')
+
+  const aliceQuotes = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
+  expectStatus(aliceQuotes, 200, 'adult can read stock quotes')
+  assert.equal(aliceQuotes.body.quotes.some(quote => quote.symbol === 'AAPL' && quote.price > 0), true)
+
+  const bobQuotes = await bob.get('/api/markets/quotes?symbols=AAPL')
+  expectStatus(bobQuotes, 403, 'child cannot read stock quotes')
+
+  const missingSymbols = await alice.get('/api/markets/quotes')
+  expectStatus(missingSymbols, 400, 'quotes require tickers')
 
   const adultCannotAlpha = await alice.post('/api/billing/checkout', {
     plan: 'alpha',
