@@ -316,11 +316,13 @@ function openingProgress(elapsed: number, skipped: boolean) {
 }
 
 function mapFlight(openT: number, scroll: number, skipped: boolean) {
-  if (skipped) return THREE.MathUtils.clamp(OPEN_END + Math.max(0, scroll - SCROLL_DEADZONE) * (1 - OPEN_END), 0, 1)
-  const opening = openT * OPEN_END
-  if (scroll <= SCROLL_DEADZONE) return opening
-  const usable = (scroll - SCROLL_DEADZONE) / (1 - SCROLL_DEADZONE)
-  return THREE.MathUtils.clamp(Math.max(opening, usable), 0, 1)
+  const opening = skipped ? OPEN_END : openT * OPEN_END
+  const roomScroll = Math.max(0, scroll - SCROLL_DEADZONE) / (1 - SCROLL_DEADZONE)
+  const rooms = OPEN_END + roomScroll * (1 - OPEN_END)
+  if (opening < OPEN_END - 0.001 && roomScroll < 0.08) {
+    return THREE.MathUtils.clamp(opening + roomScroll * OPEN_END, 0, 1)
+  }
+  return THREE.MathUtils.clamp(Math.max(opening, rooms), 0, 1)
 }
 
 function stationScore(camera: THREE.Vector3, station: LandingStation) {
