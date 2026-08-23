@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Code2, Compass, Grid3X3, Heart, Layers3,
+  ArrowRight, Bookmark, Check, Code2, Compass, CreditCard, Gift, Grid3X3, Heart, Layers3,
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
@@ -149,6 +149,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
           <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
           <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Mini Apps</button>
+          <button type="button" onClick={() => scrollTo('#pricing')}>Pricing</button>
         </nav>
         <div className="landing-nav-actions">
           <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
@@ -296,6 +297,44 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
             <span><Layers3 size={15} /> Notebook</span>
             <span><Compass size={15} /> Data Viz</span>
             <span><MessageCircle size={15} /> Writing</span>
+          </div>
+        </section>
+
+        <section className="landing-pricing" id="pricing">
+          <div className="pricing-intro" data-reveal>
+            <div className="landing-section-label"><span>03</span> PAYMENT</div>
+            <h2>Pay with card.<br />Or stay free.</h2>
+            <p>Everyone can start on the free option. Orbit is the card-paid plan for people who want to keep a payment method on file.</p>
+          </div>
+          <div className="pricing-grid">
+            <article className="pricing-card" data-reveal>
+              <span><Gift size={15} /> FREE OPTION</span>
+              <h3>Free</h3>
+              <b> $0 <small>forever</small></b>
+              <p>Build, share, and collaborate without entering a card.</p>
+              <ul>
+                <li><Check size={13} /> Subjects, Hobbies, and Mini Apps</li>
+                <li><Check size={13} /> Projects, feed, Chat, and Live</li>
+                <li><Check size={13} /> No card required</li>
+              </ul>
+              <button type="button" onClick={() => enterAuth('register')}>
+                Start free <ArrowRight size={15} />
+              </button>
+            </article>
+            <article className="pricing-card is-orbit" data-reveal>
+              <span><CreditCard size={15} /> PAY WITH CARD</span>
+              <h3>Orbit</h3>
+              <b>$9 <small>/ month</small></b>
+              <p>Enter a card after you create an account. Helios keeps only the brand and last four digits.</p>
+              <ul>
+                <li><Check size={13} /> Everything in Free</li>
+                <li><Check size={13} /> Saved card checkout</li>
+                <li><Check size={13} /> Switch back to free any time</li>
+              </ul>
+              <button type="button" onClick={() => enterAuth('register')}>
+                Pay with card <ArrowRight size={15} />
+              </button>
+            </article>
           </div>
         </section>
 

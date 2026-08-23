@@ -1,10 +1,57 @@
 // Typed API client for Helios Space backend
 
+export type BillingPlanId = 'free' | 'orbit'
+
 export interface User {
   id: number
   name: string
   handle: string
   email: string
+  plan?: BillingPlanId
+}
+
+export interface BillingPlan {
+  id: BillingPlanId
+  name: string
+  price_cents: number
+  currency: string
+  interval: 'month' | string
+  description: string
+  features: string[]
+}
+
+export interface PaymentMethod {
+  brand: string
+  last4: string
+  exp_month: number
+  exp_year: number
+  cardholder: string
+  updated_at: string
+}
+
+export interface BillingEvent {
+  id: number
+  kind: string
+  plan: BillingPlanId | string
+  amount_cents: number
+  currency: string
+  detail: string
+  created_at: string
+}
+
+export interface BillingSnapshot {
+  plan: BillingPlanId
+  plans: BillingPlan[]
+  payment_method: PaymentMethod | null
+  events: BillingEvent[]
+}
+
+export interface CardCheckout {
+  number: string
+  exp_month: number
+  exp_year: number
+  cvc: string
+  name: string
 }
 
 export interface Project {
@@ -248,6 +295,7 @@ export interface UserExport {
   solar_events?: Array<Record<string, unknown>>
   notifications?: Array<Record<string, unknown>>
   follows?: Array<Record<string, unknown>>
+  billing?: BillingSnapshot
 }
 
 export interface SiteInfo {
@@ -256,6 +304,7 @@ export interface SiteInfo {
   announcement: string
   signup_open: boolean
   ai_enabled: boolean
+  plans?: BillingPlan[]
 }
 
 export class ApiError extends Error {
@@ -321,6 +370,15 @@ export const api = {
   session: () => call<{ user: User | null }>('/api/session'),
 
   me: () => call<{ user: User }>('/api/me'),
+
+  billing: {
+    get: () => call<BillingSnapshot>('/api/billing'),
+    checkout: (data: { plan: BillingPlanId; card?: CardCheckout }) =>
+      call<{ ok: boolean; user: User; billing: BillingSnapshot }>('/api/billing/checkout', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
 
   projects: {
     list: () => call<{ projects: Project[] }>('/api/projects'),

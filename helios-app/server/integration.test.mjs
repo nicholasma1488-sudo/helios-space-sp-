@@ -157,6 +157,9 @@ async function run() {
     password: 'correct-horse',
   })
   expectStatus(aliceSignup, 200, 'alice signup')
+  assert.equal(aliceSignup.body.user.plan, 'free')
+  assert.equal(site.body.plans.some(plan => plan.id === 'free'), true)
+  assert.equal(site.body.plans.some(plan => plan.id === 'orbit'), true)
   const bobSignup = await bob.post('/api/signup', {
     name: 'Bob Solar',
     handle: 'bob.solar',
@@ -481,6 +484,63 @@ async function run() {
   })
   expectStatus(aiNotConfigured, 503, 'AI not configured')
   assert.equal(aiNotConfigured.body.code, 'AI_NOT_CONFIGURED')
+
+  const billingDenied = await anonymous.get('/api/billing')
+  expectStatus(billingDenied, 401, 'billing requires a session')
+
+  const aliceBilling = await alice.get('/api/billing')
+  expectStatus(aliceBilling, 200, 'default billing snapshot')
+  assert.equal(aliceBilling.body.plan, 'free')
+  assert.equal(aliceBilling.body.payment_method, null)
+  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'orbit' && plan.price_cents === 900), true)
+
+  const stayFree = await alice.post('/api/billing/checkout', { plan: 'free' })
+  expectStatus(stayFree, 200, 'stay on free option')
+  assert.equal(stayFree.body.user.plan, 'free')
+  assert.equal(stayFree.body.billing.plan, 'free')
+
+  const missingCard = await alice.post('/api/billing/checkout', { plan: 'orbit' })
+  expectStatus(missingCard, 400, 'orbit requires a card')
+
+  const badCard = await alice.post('/api/billing/checkout', {
+    plan: 'orbit',
+    card: { number: '4242424242424241', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Alice Orbit' },
+  })
+  expectStatus(badCard, 400, 'reject invalid card number')
+
+  const expiredCard = await alice.post('/api/billing/checkout', {
+    plan: 'orbit',
+    card: { number: '4242424242424242', exp_month: 1, exp_year: 2020, cvc: '123', name: 'Alice Orbit' },
+  })
+  expectStatus(expiredCard, 400, 'reject expired card')
+
+  const paid = await alice.post('/api/billing/checkout', {
+    plan: 'orbit',
+    card: { number: '4242 4242 4242 4242', exp_month: 12, exp_year: 30, cvc: '123', name: 'Alice Orbit' },
+  })
+  expectStatus(paid, 200, 'pay with card')
+  assert.equal(paid.body.user.plan, 'orbit')
+  assert.equal(paid.body.billing.plan, 'orbit')
+  assert.equal(paid.body.billing.payment_method.brand, 'visa')
+  assert.equal(paid.body.billing.payment_method.last4, '4242')
+  assert.equal('number' in paid.body.billing.payment_method, false)
+  assert.equal('cvc' in paid.body.billing.payment_method, false)
+  assert.equal(JSON.stringify(paid.body).includes('4242424242424242'), false)
+
+  const sessionAfterPay = await alice.get('/api/session')
+  expectStatus(sessionAfterPay, 200, 'session includes paid plan')
+  assert.equal(sessionAfterPay.body.user.plan, 'orbit')
+
+  const exportAfterPay = await alice.get('/api/export')
+  expectStatus(exportAfterPay, 200, 'export includes billing metadata')
+  assert.equal(exportAfterPay.body.account.plan, 'orbit')
+  assert.equal(exportAfterPay.body.billing.payment_method.last4, '4242')
+  assert.equal(JSON.stringify(exportAfterPay.body).includes('4242424242424242'), false)
+
+  const backToFree = await alice.post('/api/billing/checkout', { plan: 'free' })
+  expectStatus(backToFree, 200, 'switch back to free option')
+  assert.equal(backToFree.body.user.plan, 'free')
+  assert.equal(backToFree.body.billing.payment_method.last4, '4242')
 
   const unknownApi = await alice.get('/api/does-not-exist')
   expectStatus(unknownApi, 404, 'unknown API')

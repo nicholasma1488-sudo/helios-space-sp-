@@ -1890,6 +1890,7 @@
 .landing-principles,
 .landing-connected,
 .landing-mini-app-band,
+.landing-pricing,
 .landing-final-cta {
   position: relative;
   width: min(1260px, calc(100% - 48px));
@@ -1926,6 +1927,7 @@
 .principles-heading h2,
 .connected-intro h2,
 .landing-mini-app-band h2,
+.landing-pricing h2,
 .landing-final-cta h2 {
   margin: 0;
   font-size: clamp(38px, 5.5vw, 72px);
@@ -2350,6 +2352,127 @@
   color: #bdb7ff;
 }
 
+.landing-pricing {
+  padding: 90px 0 40px;
+}
+
+.pricing-intro {
+  max-width: 720px;
+  margin-bottom: 36px;
+}
+
+.pricing-intro p {
+  margin: 16px 0 0;
+  max-width: 560px;
+  color: rgba(247, 246, 242, .5);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.pricing-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 420px;
+  padding: 28px;
+  border: 1px solid var(--landing-line);
+  border-radius: 28px;
+  background: #10141c;
+}
+
+.pricing-card.is-orbit {
+  border-color: rgba(242, 184, 75, .28);
+  background:
+    radial-gradient(circle at 90% 0, rgba(242, 184, 75, .14), transparent 36%),
+    #131018;
+}
+
+.pricing-card > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #bdb7ff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.pricing-card.is-orbit > span {
+  color: #f2bd58;
+}
+
+.pricing-card h3 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.pricing-card b {
+  font-size: 42px;
+  letter-spacing: -.04em;
+}
+
+.pricing-card b small {
+  color: rgba(247, 246, 242, .42);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pricing-card p {
+  margin: 0;
+  color: rgba(247, 246, 242, .52);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.pricing-card ul {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pricing-card li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(247, 246, 242, .78);
+  font-size: 13px;
+}
+
+.pricing-card li svg {
+  color: #6ed69a;
+}
+
+.pricing-card button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  margin-top: auto;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .08);
+  color: #f7f6f2;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pricing-card.is-orbit button {
+  background: #f2b84b;
+  color: #17140d;
+}
+
 .landing-final-cta {
   display: flex;
   min-height: 700px;
@@ -2717,6 +2840,7 @@
   .landing-principles,
   .landing-connected,
   .landing-mini-app-band,
+  .landing-pricing,
   .landing-final-cta {
     width: calc(100% - 28px);
   }
@@ -2753,6 +2877,8 @@
     grid-column: auto;
     grid-template-columns: 1fr;
   }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-card { min-height: 0; }
   .landing-final-cta { min-height: 580px; }
   .landing-footer {
     grid-template-columns: 1fr auto;

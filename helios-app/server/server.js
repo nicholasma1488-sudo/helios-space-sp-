@@ -345,6 +345,28 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_project_files_project ON project_files(project_id, path);
   CREATE INDEX IF NOT EXISTS idx_project_commits_project ON project_commits(project_id, id DESC);
+  CREATE TABLE IF NOT EXISTS billing_methods (
+    user_id     INTEGER PRIMARY KEY,
+    brand       TEXT NOT NULL,
+    last4       TEXT NOT NULL,
+    exp_month   INTEGER NOT NULL,
+    exp_year    INTEGER NOT NULL,
+    cardholder  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE TABLE IF NOT EXISTS billing_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    kind        TEXT NOT NULL,
+    plan        TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL DEFAULT 0,
+    currency    TEXT NOT NULL DEFAULT 'usd',
+    detail      TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_billing_events_user ON billing_events(user_id, id DESC);
 `)
 
 function ensureColumn(table, column, definition) {
@@ -361,6 +383,8 @@ ensureColumn('posts', 'space_id', "TEXT NOT NULL DEFAULT 'lifestyle'")
 ensureColumn('posts', 'post_type', "TEXT NOT NULL DEFAULT 'progress'")
 ensureColumn('posts', 'media_url', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('chat_messages', 'attachment_json', "TEXT NOT NULL DEFAULT '{}'")
+ensureColumn('users', 'plan', "TEXT NOT NULL DEFAULT 'free'")
+ensureColumn('users', 'plan_updated_at', "TEXT NOT NULL DEFAULT ''")
 
 // Seed / reconcile the single owner admin from environment-provided credentials
 if (ADMIN_EMAIL && ADMIN_PASSWORD) {
@@ -480,10 +504,145 @@ function rateLimit({ windowMs, max, key }) {
 const authRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, key: 'auth' })
 const aiRateLimit = rateLimit({ windowMs: 5 * 60 * 1000, max: 20, key: 'ai' })
 const socialRateLimit = rateLimit({ windowMs: 5 * 60 * 1000, max: 120, key: 'social' })
+const billingRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, key: 'billing' })
 const liveCursorRateLimit = rateLimit({ windowMs: 60 * 1000, max: 900, key: 'live-cursor' })
 const liveEventRateLimit = (req, res, next) => req.body?.kind === 'cursor'
   ? liveCursorRateLimit(req, res, next)
   : socialRateLimit(req, res, next)
+
+const BILLING_PLANS = {
+  free: {
+    id: 'free',
+    name: 'Free',
+    price_cents: 0,
+    currency: 'usd',
+    interval: 'month',
+    description: 'Start building without a card.',
+    features: [
+      'Subjects and Hobby Spaces',
+      'Projects, Mini Apps, and workspaces',
+      'Lifestyle feed, Chat, and Live',
+      'No card required',
+    ],
+  },
+  orbit: {
+    id: 'orbit',
+    name: 'Orbit',
+    price_cents: 900,
+    currency: 'usd',
+    interval: 'month',
+    description: 'Pay with card to support Helios and keep a payment method on file.',
+    features: [
+      'Everything in Free',
+      'Priority Helios capacity when AI is configured',
+      'Saved card on file',
+      'Help keep the Space running',
+    ],
+  },
+}
+
+function publicUser(user) {
+  if (!user) return null
+  return {
+    id: Number(user.id),
+    name: user.name,
+    handle: user.handle,
+    email: user.email,
+    plan: user.plan === 'orbit' ? 'orbit' : 'free',
+  }
+}
+
+function billingCatalog() {
+  return Object.values(BILLING_PLANS)
+}
+
+function digitsOnly(value) {
+  return String(value ?? '').replace(/\D/g, '')
+}
+
+function luhnValid(number) {
+  if (!/^\d{13,19}$/.test(number)) return false
+  let sum = 0
+  let doubleDigit = false
+  for (let index = number.length - 1; index >= 0; index -= 1) {
+    let digit = Number(number[index])
+    if (doubleDigit) {
+      digit *= 2
+      if (digit > 9) digit -= 9
+    }
+    sum += digit
+    doubleDigit = !doubleDigit
+  }
+  return sum % 10 === 0
+}
+
+function cardBrand(number) {
+  if (/^4/.test(number)) return 'visa'
+  if (/^3[47]/.test(number)) return 'amex'
+  if (/^(5[1-5]|2(?:2[2-9]|[3-6]\d|7[01]|720))/.test(number)) return 'mastercard'
+  if (/^(6011|65|64[4-9])/.test(number)) return 'discover'
+  return 'card'
+}
+
+function tokenizeCard(card) {
+  if (!card || typeof card !== 'object') return { error: 'Card details are required to pay' }
+  const number = digitsOnly(card.number)
+  const cvc = digitsOnly(card.cvc)
+  const name = checkedString(card.name, 'Cardholder name', 80, { required: true, trim: true })
+  if (name.error) return { error: name.error }
+  if (!luhnValid(number)) return { error: 'Enter a valid card number' }
+  const brand = cardBrand(number)
+  const expectedCvc = brand === 'amex' ? 4 : 3
+  if (cvc.length !== expectedCvc) return { error: 'Enter a valid security code' }
+  const month = Number(card.exp_month)
+  let year = Number(card.exp_year)
+  if (!Number.isInteger(month) || month < 1 || month > 12)
+    return { error: 'Enter a valid expiry month' }
+  if (!Number.isInteger(year)) return { error: 'Enter a valid expiry year' }
+  if (year < 100) year += 2000
+  if (year < 2000 || year > 2100) return { error: 'Enter a valid expiry year' }
+  const now = new Date()
+  if (year < now.getUTCFullYear() || (year === now.getUTCFullYear() && month < now.getUTCMonth() + 1))
+    return { error: 'This card has expired' }
+  return {
+    brand,
+    last4: number.slice(-4),
+    exp_month: month,
+    exp_year: year,
+    cardholder: name.value,
+  }
+}
+
+function serializePaymentMethod(row) {
+  if (!row) return null
+  return {
+    brand: row.brand,
+    last4: row.last4,
+    exp_month: Number(row.exp_month),
+    exp_year: Number(row.exp_year),
+    cardholder: row.cardholder,
+    updated_at: row.updated_at,
+  }
+}
+
+function getBillingSnapshot(userId, plan) {
+  const method = db.prepare('SELECT brand,last4,exp_month,exp_year,cardholder,updated_at FROM billing_methods WHERE user_id = ?').get(userId)
+  const events = db.prepare(
+    'SELECT id,kind,plan,amount_cents,currency,detail,created_at FROM billing_events WHERE user_id = ? ORDER BY id DESC LIMIT 8'
+  ).all(userId)
+  return {
+    plan: plan === 'orbit' ? 'orbit' : 'free',
+    plans: billingCatalog(),
+    payment_method: serializePaymentMethod(method),
+    events,
+  }
+}
+
+function recordBillingEvent(userId, kind, plan, amountCents, detail) {
+  db.prepare(
+    'INSERT INTO billing_events (user_id,kind,plan,amount_cents,currency,detail,created_at) VALUES (?,?,?,?,?,?,?)'
+  ).run(userId, kind, plan, amountCents, 'usd', detail || '', new Date().toISOString())
+}
 
 function requireAdmin(req, res, next) {
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return res.status(503).json({ error: 'Admin access is not configured' })
@@ -498,9 +657,9 @@ function requireUser(req, res, next) {
   const token = req.cookies.helios_user
   const s = getFreshSession(token, 'user', USER_SESSION_MS)
   if (!s) return res.status(401).json({ error: 'Not authenticated' })
-  const user = db.prepare('SELECT id,name,handle,email,status FROM users WHERE id = ?').get(s.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan FROM users WHERE id = ?').get(s.subject_id)
   if (!user || user.status !== 'active') return res.status(403).json({ error: 'Account unavailable' })
-  req.user = user
+  req.user = publicUser(user)
   next()
 }
 
@@ -804,6 +963,7 @@ app.get('/api/site', (_req, res) => res.json({
   announcement: getSetting('announcement'),
   signup_open: getSetting('signup_open') === 'true',
   ai_enabled: !!getSetting('openai_api_key'),
+  plans: billingCatalog(),
 }))
 
 // ── User auth ──
@@ -836,7 +996,16 @@ app.post('/api/signup', authRateLimit, (req, res) => {
           bcrypt.hashSync(checkedPassword.value, 10), new Date().toISOString())
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
-    res.json({ ok: true, user: { id: info.lastInsertRowid, name: checkedName.value, handle: '@' + h, email: normalizedEmail } })
+    res.json({
+      ok: true,
+      user: publicUser({
+        id: info.lastInsertRowid,
+        name: checkedName.value,
+        handle: '@' + h,
+        email: normalizedEmail,
+        plan: 'free',
+      }),
+    })
   } catch (e) {
     if (String(e.message).includes('UNIQUE'))
       return res.status(409).json({ error: 'That handle or email is already registered' })
@@ -853,7 +1022,7 @@ app.post('/api/login', authRateLimit, (req, res) => {
     return res.status(403).json({ error: 'This account has been suspended' })
   const token = newSession('user', user.id)
   res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
-  res.json({ ok: true, user: { id: user.id, name: user.name, handle: user.handle, email: user.email } })
+  res.json({ ok: true, user: publicUser(user) })
 })
 
 app.post('/api/logout', (req, res) => {
@@ -866,15 +1035,62 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/session', (req, res) => {
   const session = getFreshSession(req.cookies.helios_user, 'user', USER_SESSION_MS)
   if (!session) return res.json({ user: null })
-  const user = db.prepare('SELECT id,name,handle,email,status FROM users WHERE id = ?').get(session.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan FROM users WHERE id = ?').get(session.subject_id)
   if (!user || user.status !== 'active') return res.json({ user: null })
-  res.json({ user: { id: user.id, name: user.name, handle: user.handle, email: user.email } })
+  res.json({ user: publicUser(user) })
 })
 
 app.get('/api/me', requireUser, (req, res) => res.json({ user: req.user }))
 
+app.get('/api/billing', requireUser, (req, res) => {
+  res.json(getBillingSnapshot(req.user.id, req.user.plan))
+})
+
+app.post('/api/billing/checkout', requireUser, billingRateLimit, (req, res) => {
+  const planId = String(req.body?.plan || '').trim().toLowerCase()
+  const catalog = BILLING_PLANS[planId]
+  if (!catalog) return res.status(400).json({ error: 'Choose the free plan or pay with card' })
+
+  const now = new Date().toISOString()
+  if (planId === 'free') {
+    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ? WHERE id = ?').run('free', now, req.user.id)
+    if (req.user.plan !== 'free')
+      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the free option')
+    const user = publicUser({ ...req.user, plan: 'free' })
+    return res.json({ ok: true, user, billing: getBillingSnapshot(req.user.id, 'free') })
+  }
+
+  const tokenized = tokenizeCard(req.body?.card)
+  if (tokenized.error) return res.status(400).json({ error: tokenized.error })
+
+  inTransaction(() => {
+    db.prepare(`
+      INSERT INTO billing_methods (user_id,brand,last4,exp_month,exp_year,cardholder,updated_at)
+      VALUES (?,?,?,?,?,?,?)
+      ON CONFLICT(user_id) DO UPDATE SET
+        brand = excluded.brand,
+        last4 = excluded.last4,
+        exp_month = excluded.exp_month,
+        exp_year = excluded.exp_year,
+        cardholder = excluded.cardholder,
+        updated_at = excluded.updated_at
+    `).run(req.user.id, tokenized.brand, tokenized.last4, tokenized.exp_month, tokenized.exp_year, tokenized.cardholder, now)
+    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ? WHERE id = ?').run('orbit', now, req.user.id)
+    recordBillingEvent(
+      req.user.id,
+      req.user.plan === 'orbit' ? 'card_updated' : 'paid',
+      'orbit',
+      catalog.price_cents,
+      `Paid with ${tokenized.brand} •••• ${tokenized.last4}`,
+    )
+  })
+
+  const user = publicUser({ ...req.user, plan: 'orbit' })
+  res.json({ ok: true, user, billing: getBillingSnapshot(req.user.id, 'orbit') })
+})
+
 app.get('/api/export', requireUser, (req, res) => {
-  const account = db.prepare('SELECT id,name,handle,email,created_at,status FROM users WHERE id = ?').get(req.user.id)
+  const account = db.prepare('SELECT id,name,handle,email,created_at,status,plan,plan_updated_at FROM users WHERE id = ?').get(req.user.id)
   const projects = db.prepare('SELECT * FROM projects WHERE user_id = ? ORDER BY id').all(req.user.id)
   const collaborativeProjects = db.prepare(
     "SELECT p.*,pc.role AS collaborator_role FROM projects p JOIN project_collaborators pc ON pc.project_id = p.id WHERE pc.user_id = ? AND pc.status = 'accepted' ORDER BY p.id"
@@ -897,12 +1113,13 @@ app.get('/api/export', requireUser, (req, res) => {
   const conversationIds = db.prepare('SELECT conversation_id FROM conversation_members WHERE user_id = ? ORDER BY conversation_id').all(req.user.id).map(row => row.conversation_id)
   const conversations = conversationIds.length ? db.prepare(`SELECT * FROM conversations WHERE id IN (${conversationIds.map(() => '?').join(',')}) ORDER BY id`).all(...conversationIds) : []
   const chatMessages = conversationIds.length ? db.prepare(`SELECT * FROM chat_messages WHERE conversation_id IN (${conversationIds.map(() => '?').join(',')}) ORDER BY id`).all(...conversationIds) : []
+  const billing = getBillingSnapshot(req.user.id, account.plan)
   res.set('Content-Disposition', 'attachment; filename="helios-data-export.json"')
   res.json({
     exported_at: new Date().toISOString(), account, projects, collaborative_projects: collaborativeProjects,
     posts, reactions, comments, project_comments: projectComments, project_versions: projectVersions,
     spaces, live_sessions: liveSessions, live_events: liveEvents, conversations, chat_messages: chatMessages,
-    solar_events: solarEvents, notifications, follows,
+    solar_events: solarEvents, notifications, follows, billing,
   })
 })
 
