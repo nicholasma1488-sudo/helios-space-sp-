@@ -928,10 +928,10 @@
 }
 
 .hero-station-copy > p {
-  max-width: 440px;
-  color: rgba(247, 246, 242, .82);
-  font-size: 22px;
-  line-height: 1.55;
+  max-width: 460px;
+  color: rgba(247, 246, 242, .84);
+  font-size: 24px;
+  line-height: 1.5;
 }
 
 .hero-station-copy .landing-hero-actions {
@@ -2635,7 +2635,7 @@
     right: 20px;
     max-width: min(520px, calc(100vw - 40px));
   }
-  .hero-station-copy > p { font-size: 20px; }
+  .hero-station-copy > p { font-size: 22px; }
   .hero-copy-layer h1 { font-size: clamp(36px, 9vw, 52px); }
   .hero-copy-layer > p { font-size: 18px; }
   .hero-app-window {
