@@ -157,42 +157,36 @@ async function run() {
     handle: 'alice.orbit',
     email: 'alice@example.test',
     password: 'correct-horse',
-    birthdate: '1995-04-12',
   })
   expectStatus(aliceSignup, 200, 'alice signup')
   assert.equal(aliceSignup.body.user.plan, 'free')
   assert.equal(aliceSignup.body.user.plan_selected, false)
-  assert.equal(aliceSignup.body.user.audience, 'adult')
-  assert.equal(aliceSignup.body.user.edition, 'adult')
+  assert.equal(aliceSignup.body.user.edition, 'free')
   assert.equal(site.body.plans.some(plan => plan.id === 'free'), true)
-  assert.equal(site.body.plans.some(plan => plan.id === 'alpha'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'orbit'), true)
+  assert.equal(site.body.plans.some(plan => plan.id === 'alpha'), false)
 
-  const missingBirthdate = await anonymous.post('/api/signup', {
-    name: 'No Birthday',
-    handle: 'no.birthday',
-    email: 'nobirth@example.test',
-    password: 'correct-horse',
+  const missingPassword = await anonymous.post('/api/signup', {
+    name: 'No Password',
+    handle: 'no.password',
+    email: 'nopass@example.test',
   })
-  expectStatus(missingBirthdate, 400, 'signup requires birthdate')
+  expectStatus(missingPassword, 400, 'signup requires password')
 
   const bobSignup = await bob.post('/api/signup', {
     name: 'Bob Solar',
     handle: 'bob.solar',
     email: 'bob@example.test',
     password: 'correct-battery',
-    birthdate: '2015-08-20',
   })
   expectStatus(bobSignup, 200, 'bob signup')
-  assert.equal(bobSignup.body.user.audience, 'child')
-  assert.equal(bobSignup.body.user.edition, 'child')
+  assert.equal(bobSignup.body.user.edition, 'free')
 
   const duplicate = await anonymous.post('/api/signup', {
     name: 'Duplicate',
     handle: 'alice.orbit',
     email: 'other@example.test',
     password: 'correct-staple',
-    birthdate: '2001-01-01',
   })
   expectStatus(duplicate, 409, 'duplicate account')
 
@@ -511,16 +505,17 @@ async function run() {
   const aliceBilling = await alice.get('/api/billing')
   expectStatus(aliceBilling, 200, 'default billing snapshot')
   assert.equal(aliceBilling.body.plan, 'free')
-  assert.equal(aliceBilling.body.audience, 'adult')
+  assert.equal(aliceBilling.body.edition, 'free')
   assert.equal(aliceBilling.body.payment_method, null)
   assert.equal(aliceBilling.body.stripe.enabled, true)
+  assert.deepEqual(aliceBilling.body.pay_methods, ['card', 'wechat', 'alipay'])
   assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'orbit' && plan.eligible === true && plan.price_cents === 900), true)
-  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'alpha' && plan.eligible === false), true)
+  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'alpha'), false)
 
   const stayFree = await alice.post('/api/billing/checkout', { plan: 'free' })
   expectStatus(stayFree, 200, 'stay on free option')
   assert.equal(stayFree.body.user.plan, 'free')
-  assert.equal(stayFree.body.user.edition, 'adult')
+  assert.equal(stayFree.body.user.edition, 'free')
   assert.equal(stayFree.body.user.plan_selected, true)
 
   const wordDoc = await alice.post('/api/projects', {
@@ -551,11 +546,12 @@ async function run() {
   assert.equal(workbook.body.project.app_kind, 'spreadsheet')
   assert.equal(workbook.body.project.type, 'spreadsheet')
   assert.equal(stayFree.body.billing.plan, 'free')
-  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'alpha').features.length >= 10, true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').features.length >= 10, true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Meeting Notes'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Gradebook'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Stocks'), true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Word'), true)
-  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Stocks'), true)
-  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'alpha').mini_apps.includes('Gradebook'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Stocks'), false)
 
   const stocksProject = await alice.post('/api/projects', {
     name: 'Watchlist',
@@ -572,27 +568,27 @@ async function run() {
   expectStatus(stocksProject, 200, 'create Stocks watchlist')
   assert.equal(stocksProject.body.project.app_kind, 'stocks')
 
-  const aliceQuotes = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
-  expectStatus(aliceQuotes, 200, 'adult can read stock quotes')
-  assert.equal(aliceQuotes.body.quotes.some(quote => quote.symbol === 'AAPL' && quote.price > 0), true)
+  const aliceQuotesDenied = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
+  expectStatus(aliceQuotesDenied, 403, 'free cannot read stock quotes')
 
   const bobQuotes = await bob.get('/api/markets/quotes?symbols=AAPL')
-  expectStatus(bobQuotes, 403, 'child cannot read stock quotes')
+  expectStatus(bobQuotes, 403, 'free cannot read stock quotes')
 
   const missingSymbols = await alice.get('/api/markets/quotes')
-  expectStatus(missingSymbols, 400, 'quotes require tickers')
+  expectStatus(missingSymbols, 403, 'quotes require orbit before tickers are checked')
 
-  const adultCannotAlpha = await alice.post('/api/billing/checkout', {
+  const unknownPlan = await alice.post('/api/billing/checkout', {
     plan: 'alpha',
     card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Alice Orbit' },
   })
-  expectStatus(adultCannotAlpha, 403, 'adult cannot subscribe to alpha')
+  expectStatus(unknownPlan, 400, 'alpha is no longer a plan')
 
-  const childCannotOrbit = await bob.post('/api/billing/checkout', {
+  const bobOrbitCard = await bob.post('/api/billing/checkout', {
     plan: 'orbit',
-    card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Parent Solar' },
+    card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Bob Solar' },
   })
-  expectStatus(childCannotOrbit, 403, 'child cannot subscribe to orbit')
+  expectStatus(bobOrbitCard, 200, 'anyone can subscribe to orbit')
+  assert.equal(bobOrbitCard.body.user.plan, 'orbit')
 
   const missingCard = await alice.post('/api/billing/checkout', { plan: 'orbit' })
   expectStatus(missingCard, 400, 'orbit requires a card')
@@ -633,30 +629,37 @@ async function run() {
   assert.equal(exportAfterPay.body.billing.payment_method.last4, '4242')
   assert.equal(JSON.stringify(exportAfterPay.body).includes('4242424242424242'), false)
 
+  const aliceQuotes = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
+  expectStatus(aliceQuotes, 200, 'orbit can read stock quotes')
+  assert.equal(aliceQuotes.body.quotes.some(quote => quote.symbol === 'AAPL' && quote.price > 0), true)
+
+  const tickerRequired = await alice.get('/api/markets/quotes')
+  expectStatus(tickerRequired, 400, 'quotes require tickers')
+
   const backToFree = await alice.post('/api/billing/checkout', { plan: 'free' })
   expectStatus(backToFree, 200, 'switch back to free option')
   assert.equal(backToFree.body.user.plan, 'free')
   assert.equal(backToFree.body.billing.payment_method.last4, '4242')
 
-  const bobAlpha = await bob.post('/api/billing/checkout', {
-    plan: 'alpha',
-    card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Parent Solar' },
-  })
-  expectStatus(bobAlpha, 200, 'child pays for alpha')
-  assert.equal(bobAlpha.body.user.plan, 'alpha')
-  assert.equal(bobAlpha.body.user.edition, 'alpha')
-  assert.equal(bobAlpha.body.billing.plan, 'alpha')
+  const wechatSession = await bob.post('/api/billing/stripe', { plan: 'orbit', method: 'wechat' })
+  expectStatus(wechatSession, 200, 'create wechat checkout')
+  assert.equal(wechatSession.body.method, 'wechat')
+  assert.match(wechatSession.body.session_id, /^cs_test_/)
+  const wechatConfirm = await bob.post('/api/billing/stripe/confirm', { session_id: wechatSession.body.session_id })
+  expectStatus(wechatConfirm, 200, 'confirm wechat payment')
+  assert.equal(wechatConfirm.body.user.plan, 'orbit')
+  assert.equal(wechatConfirm.body.billing.payment_method.source, 'wechat')
 
-  const stripeSession = await alice.post('/api/billing/stripe', { plan: 'orbit' })
-  expectStatus(stripeSession, 200, 'create stripe checkout')
-  assert.match(stripeSession.body.session_id, /^cs_test_/)
+  const stripeSession = await alice.post('/api/billing/stripe', { plan: 'orbit', method: 'alipay' })
+  expectStatus(stripeSession, 200, 'create alipay checkout')
+  assert.equal(stripeSession.body.method, 'alipay')
   const stripeConfirm = await alice.post('/api/billing/stripe/confirm', { session_id: stripeSession.body.session_id })
-  expectStatus(stripeConfirm, 200, 'confirm stripe payment')
+  expectStatus(stripeConfirm, 200, 'confirm alipay payment')
   assert.equal(stripeConfirm.body.user.plan, 'orbit')
-  assert.equal(stripeConfirm.body.billing.payment_method.source, 'stripe')
+  assert.equal(stripeConfirm.body.billing.payment_method.source, 'alipay')
 
-  const childStripeOrbit = await bob.post('/api/billing/stripe', { plan: 'orbit' })
-  expectStatus(childStripeOrbit, 403, 'child cannot start orbit stripe checkout')
+  const badMethod = await alice.post('/api/billing/stripe', { plan: 'orbit', method: 'paypal' })
+  expectStatus(badMethod, 400, 'reject unknown pay method')
 
   const unknownApi = await alice.get('/api/does-not-exist')
   expectStatus(unknownApi, 404, 'unknown API')

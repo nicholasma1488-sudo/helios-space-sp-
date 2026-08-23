@@ -20,6 +20,7 @@ import { ProfileView } from './views/ProfileView'
 import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
 import { PlanPicker } from './components/PlanPicker'
+import { UpgradeModal } from './components/UpgradeModal'
 import './App.css'
 
 function MainContent() {
@@ -226,6 +227,7 @@ function AppInner() {
   return (
     <>
       {state.user.plan_selected === false && <PlanPicker />}
+      {state.user.plan_selected !== false && state.upgradeOpen && state.user.plan !== 'orbit' && <UpgradeModal />}
       <GlobalShell>
         <MainContent />
         {state.heliosPanelOpen && (

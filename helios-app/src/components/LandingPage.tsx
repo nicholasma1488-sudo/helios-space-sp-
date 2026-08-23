@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Briefcase, Check, Code2, Compass, CreditCard, GraduationCap, Grid3X3, Heart, Layers3,
+  ArrowRight, Bookmark, Check, Code2, Compass, CreditCard, Gift, Grid3X3, Heart, Layers3,
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
@@ -303,69 +303,37 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <section className="landing-pricing" id="pricing">
           <div className="pricing-intro" data-reveal>
             <div className="landing-section-label"><span>03</span> PAYMENT</div>
-            <h2>Four editions.<br />Child, Adult, Alpha, Orbit.</h2>
-            <p>Your date of birth picks Child or Adult for free. Alpha is the student upgrade. Orbit is the work upgrade. Both open real Word, Excel, PowerPoint and OneNote files — not lightweight scratch pads.</p>
+            <h2>One Helios.<br />Free or Orbit.</h2>
+            <p>Create an account, then pick Free or Orbit. Orbit unlocks every Mini App and can be paid with card, WeChat or Alipay. You can upgrade later from the top-left banner.</p>
           </div>
-          <div className="pricing-grid is-four">
+          <div className="pricing-grid">
             <article className="pricing-card is-child" data-reveal>
-              <span><GraduationCap size={15} /> UNDER 18</span>
-              <h3>Child</h3>
+              <span><Gift size={15} /> INCLUDED</span>
+              <h3>Free</h3>
               <b>$0 <small>forever</small></b>
-              <p>The free school edition. No card required.</p>
+              <p>The included edition. No card required.</p>
               <ul>
                 <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
                 <li><Check size={13} /> Real files saved to Projects</li>
                 <li><Check size={13} /> Subjects, Hobbies, Live</li>
                 <li><Check size={13} /> Helios AI when configured</li>
-                <li><Check size={13} /> No card required</li>
+                <li><Check size={13} /> Upgrade any time</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                Start as a student <ArrowRight size={15} />
-              </button>
-            </article>
-            <article className="pricing-card is-alpha" data-reveal>
-              <span><Sparkles size={15} /> STUDENT UPGRADE</span>
-              <h3>Alpha</h3>
-              <b>$3.99 <small>/ month</small></b>
-              <p>The school 365 suite. A parent or guardian can pay.</p>
-              <ul>
-                <li><Check size={13} /> Essays, gradebook, lesson slides</li>
-                <li><Check size={13} /> Lab notebook, quizzes, homework board</li>
-                <li><Check size={13} /> Reader, Maths Lab, study guides</li>
-                <li><Check size={13} /> 2× Solar on school work</li>
-                <li><Check size={13} /> Exam-week Helios prompts</li>
-              </ul>
-              <button type="button" onClick={() => enterAuth('register')}>
-                Unlock Alpha <ArrowRight size={15} />
-              </button>
-            </article>
-            <article className="pricing-card is-adult" data-reveal>
-              <span><Briefcase size={15} /> 18+</span>
-              <h3>Adult</h3>
-              <b>$0 <small>forever</small></b>
-              <p>The free work edition. Same 365 core, aimed at the job.</p>
-              <ul>
-                <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
-                <li><Check size={13} /> Stocks watchlist you can open any time</li>
-                <li><Check size={13} /> Spaces, Projects, Live</li>
-                <li><Check size={13} /> Helios AI when configured</li>
-                <li><Check size={13} /> No card required</li>
-              </ul>
-              <button type="button" onClick={() => enterAuth('register')}>
-                Start for work <ArrowRight size={15} />
+                Start free <ArrowRight size={15} />
               </button>
             </article>
             <article className="pricing-card is-orbit" data-reveal>
-              <span><CreditCard size={15} /> WORK UPGRADE</span>
+              <span><CreditCard size={15} /> FULL SUITE</span>
               <h3>Orbit</h3>
               <b>$9 <small>/ month</small></b>
-              <p>The office suite. Pay after your date of birth confirms 18+.</p>
+              <p>Every Mini App. Pay with card, WeChat or Alipay.</p>
               <ul>
-                <li><Check size={13} /> Docs, budgets, pitch decks</li>
-                <li><Check size={13} /> Meeting notes, proposals, specs</li>
-                <li><Check size={13} /> OKRs, planner, reports</li>
+                <li><Check size={13} /> Everything in Free</li>
+                <li><Check size={13} /> Stocks, docs, budgets, decks</li>
+                <li><Check size={13} /> School and work Mini Apps</li>
                 <li><Check size={13} /> Priority Helios and 3× Live</li>
-                <li><Check size={13} /> Card or Stripe on file</li>
+                <li><Check size={13} /> 银行卡 / 微信 / 支付宝</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
                 Subscribe to Orbit <ArrowRight size={15} />

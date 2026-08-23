@@ -169,6 +169,10 @@
   gap: 8px;
 }
 
+.payment-methods.is-three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .payment-methods button,
 .payment-select-btn {
   min-height: 34px;

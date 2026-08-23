@@ -9,7 +9,6 @@ import {
   editionKicker,
   editionLabel,
   nextSuiteFileName,
-  paidEditionFor,
   spaceForSuiteApp,
   suiteAppUnlocked,
   suiteAppsForEdition,
@@ -34,7 +33,7 @@ function relativeTime(value: string) {
 
 export function MiniAppsView() {
   const { state, dispatch } = useApp()
-  const edition = editionFor(state.user?.audience, state.user?.plan)
+  const edition = editionFor(state.user?.plan)
   const apps = suiteAppsForEdition(edition)
   const [query, setQuery] = useState('')
   const [active, setActive] = useState<SuiteApp | null>(null)
@@ -72,8 +71,7 @@ export function MiniAppsView() {
   )
 
   function goBilling() {
-    try { sessionStorage.setItem('helios-open-settings', 'billing') } catch {}
-    dispatch({ type: 'SET_VIEW', view: 'profile' })
+    dispatch({ type: 'OPEN_UPGRADE' })
   }
 
   function openApp(app: SuiteApp) {
@@ -93,10 +91,10 @@ export function MiniAppsView() {
       setCreating(true)
       void createSuiteProject({
         name: nextSuiteFileName(app.newName, state.projects, app.id),
-        spaceId: spaceForSuiteApp(app, state.user?.audience),
+        spaceId: spaceForSuiteApp(app),
         type: app.projectType,
         appKind: app.id,
-        content: suiteStarterWorkspace(app, state.user?.audience),
+        content: suiteStarterWorkspace(app),
       }, dispatch).catch(error => {
         dispatch({
           type: 'PUSH_TOAST',
@@ -125,10 +123,10 @@ export function MiniAppsView() {
     try {
       await createSuiteProject({
         name: nextSuiteFileName(active.newName, state.projects, active.id),
-        spaceId: spaceForSuiteApp(active, state.user?.audience),
+        spaceId: spaceForSuiteApp(active),
         type: active.projectType,
         appKind: active.id,
-        content: suiteStarterWorkspace(active, state.user?.audience),
+        content: suiteStarterWorkspace(active),
       }, dispatch)
     } catch (error) {
       dispatch({
@@ -140,8 +138,7 @@ export function MiniAppsView() {
     }
   }
 
-  const paid = paidEditionFor(edition)
-  const canUpgrade = edition === 'child' || edition === 'adult'
+  const canUpgrade = edition === 'free'
 
   return (
     <div className="suite-view">
@@ -165,7 +162,7 @@ export function MiniAppsView() {
         </div>
         {canUpgrade && (
           <button type="button" onClick={goBilling}>
-            Upgrade to {paid === 'alpha' ? 'Alpha' : 'Orbit'}
+            Upgrade to Orbit
           </button>
         )}
       </div>
@@ -176,12 +173,12 @@ export function MiniAppsView() {
             <h2 id="suite-apps-title">{query ? 'Search results' : 'Apps'}</h2>
             <span>{filtered.length}</span>
           </header>
-          {['core', 'adult', edition === 'adult' || edition === 'orbit' ? 'work' : 'student'].map(track => {
+          {['core', 'orbit'].map(track => {
             const group = filtered.filter(app => app.track === track)
             if (group.length === 0) return null
             return (
               <div key={track} className="suite-group">
-                <h3>{track === 'core' ? 'Word · Excel · PowerPoint · OneNote' : track === 'adult' ? 'Anytime' : edition === 'adult' || edition === 'orbit' ? 'Work suite' : 'School suite'}</h3>
+                <h3>{track === 'core' ? 'Included' : 'Orbit suite'}</h3>
                 <div className="suite-grid">
                   {group.map(app => {
                     const unlocked = suiteAppUnlocked(app, edition)

@@ -1,8 +1,8 @@
 // Typed API client for Helios Space backend
 
-export type BillingPlanId = 'free' | 'alpha' | 'orbit'
-export type AccountAudience = 'adult' | 'child'
-export type SuiteEdition = 'child' | 'alpha' | 'adult' | 'orbit'
+export type BillingPlanId = 'free' | 'orbit'
+export type PayMethod = 'card' | 'wechat' | 'alipay'
+export type SuiteEdition = 'free' | 'orbit'
 
 export interface User {
   id: number
@@ -10,8 +10,6 @@ export interface User {
   handle: string
   email: string
   plan?: BillingPlanId
-  audience?: AccountAudience | null
-  birthdate?: string
   plan_selected?: boolean
   edition?: SuiteEdition
 }
@@ -22,7 +20,6 @@ export interface BillingPlan {
   price_cents: number
   currency: string
   interval: 'month' | string
-  audience?: 'all' | AccountAudience | string
   description: string
   features: string[]
   mini_apps?: string[]
@@ -35,7 +32,7 @@ export interface PaymentMethod {
   exp_month: number
   exp_year: number
   cardholder: string
-  source?: 'card' | 'stripe' | string
+  source?: 'card' | 'stripe' | 'wechat' | 'alipay' | string
   updated_at: string
 }
 
@@ -61,13 +58,12 @@ export interface MarketQuote {
 
 export interface BillingSnapshot {
   plan: BillingPlanId
-  audience?: AccountAudience | null
   edition?: SuiteEdition
-  birthdate?: string
   plans: BillingPlan[]
   payment_method: PaymentMethod | null
   events: BillingEvent[]
   stripe?: { enabled: boolean; publishable_key: string | null }
+  pay_methods?: PayMethod[]
 }
 
 export interface CardCheckout {
@@ -383,7 +379,7 @@ function postQuery(filters: PostFilters = {}) {
 export const api = {
   site: () => call<SiteInfo>('/api/site'),
 
-  signup: (data: { name: string; handle: string; email: string; password: string; birthdate: string }) =>
+  signup: (data: { name: string; handle: string; email: string; password: string }) =>
     call<{ ok: boolean; user: User }>('/api/signup', { method: 'POST', body: JSON.stringify(data) }),
 
   login: (data: { email: string; password: string }) =>
@@ -395,7 +391,7 @@ export const api = {
 
   me: () => call<{ user: User }>('/api/me'),
 
-  updateMe: (data: { birthdate: string }) =>
+  updateMe: (data: Record<string, unknown> = {}) =>
     call<{ user: User }>('/api/me', { method: 'PUT', body: JSON.stringify(data) }),
 
   markets: {
@@ -412,10 +408,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    stripe: (plan: BillingPlanId) =>
-      call<{ ok: boolean; session_id: string; url: string }>('/api/billing/stripe', {
+    stripe: (plan: BillingPlanId, method: PayMethod = 'card') =>
+      call<{ ok: boolean; session_id: string; url: string; method?: PayMethod; mock?: boolean }>('/api/billing/stripe', {
         method: 'POST',
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, method }),
       }),
     confirmStripe: (session_id: string) =>
       call<{ ok: boolean; user: User; billing: BillingSnapshot }>('/api/billing/stripe/confirm', {

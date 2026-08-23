@@ -525,11 +525,11 @@ const liveEventRateLimit = (req, res, next) => req.body?.kind === 'cursor'
   ? liveCursorRateLimit(req, res, next)
   : socialRateLimit(req, res, next)
 
-const ADULT_AGE = 18
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY?.trim() || ''
 const STRIPE_PUBLISHABLE = process.env.STRIPE_PUBLISHABLE_KEY?.trim() || ''
 const STRIPE_MOCK = process.env.HELIOS_STRIPE_MOCK === '1'
 const mockStripeSessions = new Map()
+const PAY_METHODS = ['card', 'wechat', 'alipay']
 
 const BILLING_PLANS = {
   free: {
@@ -538,44 +538,17 @@ const BILLING_PLANS = {
     price_cents: 0,
     currency: 'usd',
     interval: 'month',
-    audience: 'all',
-    description: 'Child or Adult edition is chosen from your date of birth. Both include Word, Excel, PowerPoint and OneNote workspaces you can actually work in.',
-    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote', 'Stocks'],
+    description: 'The included Helios edition. Word, Excel, PowerPoint and OneNote open real files you can keep working in.',
+    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
     features: [
       'Create an account in under a minute — no card',
-      'Child edition if you are under 18, Adult edition if you are 18+',
       'Word, Excel, PowerPoint and OneNote — real files, not scratch pads',
-      'Adult edition includes a Stocks watchlist you can open any time',
       'Work saves to Projects and stays in your Spaces',
       'Every Subject and Hobby Space',
       'Lifestyle, Chat Hub and Live',
       'Helios AI when an administrator enables it',
       'Public or private progress posts',
-      'Daily tasks and JSON export',
-    ],
-  },
-  alpha: {
-    id: 'alpha',
-    name: 'Alpha',
-    price_cents: 399,
-    currency: 'usd',
-    interval: 'month',
-    audience: 'child',
-    description: 'The student upgrade. A school 365 suite for essays, grades, lessons, labs and homework — built to do the work, not jot it down.',
-    mini_apps: ['Essay', 'Gradebook', 'Lesson Slides', 'Lab Notebook', 'Forms', 'Flashcards', 'Reader', 'Maths Lab', 'Homework Board', 'Study Guide'],
-    features: [
-      'Everything in the Child edition, plus the full school suite',
-      'Essay Studio with thesis, evidence and conclusion',
-      'Gradebook spreadsheet you can actually mark in',
-      'Lesson slides and science posters',
-      'Lab notebook, quizzes and flashcard documents',
-      'Homework board: due, doing, stuck, handed in',
-      'Reader, Maths Lab and study guides',
-      'Cheaper than Orbit — built for under 18',
-      '2× Solar on published school work',
-      'Exam-week Helios prompts',
-      'Parent or guardian pays with card or Stripe',
-      'Switch back to Free any time',
+      'Upgrade to Orbit any time from the top-left banner',
     ],
   },
   orbit: {
@@ -584,21 +557,26 @@ const BILLING_PLANS = {
     price_cents: 900,
     currency: 'usd',
     interval: 'month',
-    audience: 'adult',
-    description: 'The work upgrade. A Microsoft 365-style office for documents, workbooks, decks, meetings and plans you can run a week from.',
-    mini_apps: ['Stocks', 'Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals', 'Product Spec', 'OKRs', 'Planner', 'Reports'],
+    description: 'The full Helios suite. Pay with card, WeChat or Alipay and unlock every Mini App.',
+    mini_apps: [
+      'Word', 'Excel', 'PowerPoint', 'OneNote', 'Stocks',
+      'Essay', 'Gradebook', 'Lesson Slides', 'Lab Notebook', 'Forms',
+      'Flashcards', 'Reader', 'Maths Lab', 'Homework Board', 'Study Guide',
+      'Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals',
+      'Product Spec', 'OKRs', 'Planner', 'Reports',
+    ],
     features: [
-      'Everything in the Adult edition, including the Stocks watchlist',
-      'Docs, proposals, specs and reports in Word-class editors',
+      'Everything in Free, plus the complete Mini App suite',
+      'Stocks watchlist you can open any time',
+      'School and work apps in the same account',
+      'Docs, proposals, specs and reports',
       'Budget and OKR workbooks with formulas',
-      'Pitch decks you can present from the same file',
-      'Meeting notes with agenda, decisions and owners',
-      'Project planner for work that has to finish',
-      'Business plan and market research sheets',
-      'Orbit badge for the paid work edition',
+      'Pitch decks, meetings, planner and homework board',
+      'Essay studio, gradebook, labs and study tools',
+      'Orbit badge on the paid edition',
       'Priority Helios capacity when AI is configured',
       '3× Live session visibility for collaborators',
-      'Saved card or Stripe on file',
+      'Pay with card, WeChat or Alipay',
       'Richer export history and billing receipts',
       'Switch back to Free any time',
     ],
@@ -606,13 +584,11 @@ const BILLING_PLANS = {
 }
 
 function normalizePlan(plan) {
-  return plan === 'orbit' || plan === 'alpha' ? plan : 'free'
+  return plan === 'orbit' || plan === 'alpha' ? 'orbit' : 'free'
 }
 
 function userEdition(user) {
-  const plan = normalizePlan(user?.plan)
-  if (user?.audience === 'adult') return plan === 'orbit' ? 'orbit' : 'adult'
-  return plan === 'alpha' ? 'alpha' : 'child'
+  return normalizePlan(user?.plan)
 }
 
 function publicUser(user) {
@@ -623,8 +599,6 @@ function publicUser(user) {
     handle: user.handle,
     email: user.email,
     plan: normalizePlan(user.plan),
-    audience: user.audience === 'adult' || user.audience === 'child' ? user.audience : null,
-    birthdate: user.birthdate || '',
     plan_selected: Boolean(user.plan_selected),
     edition: userEdition(user),
   }
@@ -645,31 +619,16 @@ function stripePublicConfig() {
   }
 }
 
-function parseBirthdate(value) {
-  const raw = String(value ?? '').trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { error: 'Enter your date of birth' }
-  const [year, month, day] = raw.split('-').map(Number)
-  const birth = new Date(Date.UTC(year, month - 1, day))
-  if (birth.getUTCFullYear() !== year || birth.getUTCMonth() !== month - 1 || birth.getUTCDate() !== day)
-    return { error: 'Enter a valid date of birth' }
-  const now = new Date()
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  if (birth.getTime() > today) return { error: 'Date of birth cannot be in the future' }
-  let age = now.getUTCFullYear() - year
-  if (now.getUTCMonth() < month - 1 || (now.getUTCMonth() === month - 1 && now.getUTCDate() < day)) age -= 1
-  if (age < 6) return { error: 'You must be at least 6 years old to create an account' }
-  if (age > 120) return { error: 'Enter a valid date of birth' }
-  return { value: raw, age, audience: age >= ADULT_AGE ? 'adult' : 'child' }
+function planEligibilityError(planId) {
+  if (planId === 'free' || planId === 'orbit') return null
+  return 'Choose Free or Orbit'
 }
 
-function planEligibilityError(planId, audience) {
-  if (planId === 'free') return null
-  if (!audience) return 'Add your date of birth so Helios can offer Alpha or Orbit'
-  if (planId === 'orbit' && audience !== 'adult')
-    return 'Orbit is the work upgrade for adults 18 and over. Choose Alpha or stay on Child'
-  if (planId === 'alpha' && audience !== 'child')
-    return 'Alpha is the student upgrade for people under 18. Choose Orbit or stay on Adult'
-  if (!BILLING_PLANS[planId]) return 'Choose Free, Alpha, or Orbit'
+function normalizePayMethod(value) {
+  const method = String(value || 'card').trim().toLowerCase()
+  if (method === 'wechat' || method === 'wechat_pay') return 'wechat'
+  if (method === 'alipay') return 'alipay'
+  if (method === 'card' || method === 'stripe') return 'card'
   return null
 }
 
@@ -732,13 +691,14 @@ function tokenizeCard(card) {
 
 function serializePaymentMethod(row) {
   if (!row) return null
+  const source = PAY_METHODS.includes(row.source) || row.source === 'stripe' ? row.source : 'card'
   return {
     brand: row.brand,
     last4: row.last4,
     exp_month: Number(row.exp_month),
     exp_year: Number(row.exp_year),
     cardholder: row.cardholder,
-    source: row.source === 'stripe' ? 'stripe' : 'card',
+    source,
     updated_at: row.updated_at,
   }
 }
@@ -754,19 +714,17 @@ function getBillingSnapshot(userLike) {
   const events = db.prepare(
     'SELECT id,kind,plan,amount_cents,currency,detail,created_at FROM billing_events WHERE user_id = ? ORDER BY id DESC LIMIT 8'
   ).all(userId)
-  const audience = user.audience === 'adult' || user.audience === 'child' ? user.audience : null
   return {
     plan: normalizePlan(user.plan),
-    audience,
     edition: userEdition(user),
-    birthdate: user.birthdate || '',
     plans: billingCatalog().map(plan => ({
       ...plan,
-      eligible: plan.id === 'free' || plan.audience === audience,
+      eligible: true,
     })),
     payment_method: serializePaymentMethod(method),
     events,
     stripe: stripePublicConfig(),
+    pay_methods: PAY_METHODS,
   }
 }
 
@@ -844,32 +802,43 @@ async function stripeForm(path, params, method = 'POST') {
   return json
 }
 
-async function createStripeCheckout(user, planId, origin) {
+async function createStripeCheckout(user, planId, origin, payMethod = 'card') {
   const catalog = BILLING_PLANS[planId]
+  const method = normalizePayMethod(payMethod) || 'card'
   if (STRIPE_MOCK) {
     const sessionId = 'cs_test_' + crypto.randomBytes(8).toString('hex')
     mockStripeSessions.set(sessionId, {
       id: sessionId,
       payment_status: 'paid',
-      metadata: { user_id: String(user.id), plan: planId },
-      payment_method: { brand: 'visa', last4: '4242' },
+      metadata: { user_id: String(user.id), plan: planId, method },
+      payment_method: method === 'card'
+        ? { brand: 'visa', last4: '4242' }
+        : { brand: method, last4: '0000' },
     })
     db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
       .run(sessionId, user.id, planId, 'pending', new Date().toISOString())
-    return { session_id: sessionId, url: origin + '/?billing=success&session_id=' + encodeURIComponent(sessionId) }
+    return {
+      session_id: sessionId,
+      url: origin + '/?billing=success&session_id=' + encodeURIComponent(sessionId),
+      mock: true,
+    }
   }
-  const session = await stripeForm('checkout/sessions', {
+  const params = {
     mode: 'payment',
     success_url: origin + '/?billing=success&session_id={CHECKOUT_SESSION_ID}',
     cancel_url: origin + '/?billing=cancel',
     client_reference_id: String(user.id),
     'metadata[user_id]': String(user.id),
     'metadata[plan]': planId,
+    'metadata[method]': method,
     'line_items[0][quantity]': '1',
     'line_items[0][price_data][currency]': catalog.currency,
     'line_items[0][price_data][unit_amount]': String(catalog.price_cents),
     'line_items[0][price_data][product_data][name]': 'Helios ' + catalog.name,
-  })
+    'payment_method_types[0]': method === 'wechat' ? 'wechat_pay' : method === 'alipay' ? 'alipay' : 'card',
+  }
+  if (method === 'wechat') params['payment_method_options[wechat_pay][client]'] = 'web'
+  const session = await stripeForm('checkout/sessions', params)
   db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
     .run(session.id, user.id, planId, 'pending', new Date().toISOString())
   return { session_id: session.id, url: session.url }
@@ -1206,17 +1175,15 @@ app.get('/api/site', (_req, res) => res.json({
 app.post('/api/signup', authRateLimit, (req, res) => {
   if (getSetting('signup_open') !== 'true')
     return res.status(403).json({ error: 'Signups are currently closed' })
-  const { name, handle, email, password, birthdate } = req.body || {}
-  if (!name || !handle || !email || !password || !birthdate)
-    return res.status(400).json({ error: 'All fields are required, including date of birth' })
+  const { name, handle, email, password } = req.body || {}
+  if (!name || !handle || !email || !password)
+    return res.status(400).json({ error: 'Name, username, email and password are required' })
   const checkedName = checkedString(name, 'Name', MAX_USER_NAME_LENGTH, { required: true, trim: true })
   if (checkedName.error) return res.status(400).json({ error: checkedName.error })
   const checkedEmail = checkedString(email, 'Email', MAX_EMAIL_LENGTH, { required: true, trim: true })
   if (checkedEmail.error) return res.status(400).json({ error: checkedEmail.error })
   const checkedPassword = checkedString(password, 'Password', MAX_PASSWORD_LENGTH, { required: true })
   if (checkedPassword.error) return res.status(400).json({ error: checkedPassword.error })
-  const parsedBirth = parseBirthdate(birthdate)
-  if (parsedBirth.error) return res.status(400).json({ error: parsedBirth.error })
   const normalizedEmail = checkedEmail.value.toLowerCase()
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalizedEmail))
     return res.status(400).json({ error: 'Invalid email address' })
@@ -1230,9 +1197,9 @@ app.post('/api/signup', authRateLimit, (req, res) => {
     if (duplicateHandle) return res.status(409).json({ error: 'That handle or email is already registered' })
     const now = new Date().toISOString()
     const info = db.prepare(
-      'INSERT INTO users (name, handle, email, password_hash, created_at, plan, birthdate, audience, plan_updated_at, plan_selected) VALUES (?,?,?,?,?,?,?,?,?,?)'
+      'INSERT INTO users (name, handle, email, password_hash, created_at, plan, plan_updated_at, plan_selected) VALUES (?,?,?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', parsedBirth.value, parsedBirth.audience, now, 0)
+          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', now, 0)
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
     res.json({
@@ -1243,8 +1210,6 @@ app.post('/api/signup', authRateLimit, (req, res) => {
         handle: '@' + h,
         email: normalizedEmail,
         plan: 'free',
-        birthdate: parsedBirth.value,
-        audience: parsedBirth.audience,
         plan_selected: 0,
       }),
     })
@@ -1285,13 +1250,7 @@ app.get('/api/session', (req, res) => {
 app.get('/api/me', requireUser, (req, res) => res.json({ user: req.user }))
 
 app.put('/api/me', requireUser, (req, res) => {
-  if (req.user.birthdate) return res.status(400).json({ error: 'Date of birth can only be set once' })
-  const parsedBirth = parseBirthdate(req.body?.birthdate)
-  if (parsedBirth.error) return res.status(400).json({ error: parsedBirth.error })
-  db.prepare('UPDATE users SET birthdate = ?, audience = ? WHERE id = ?')
-    .run(parsedBirth.value, parsedBirth.audience, req.user.id)
-  const user = publicUser({ ...req.user, birthdate: parsedBirth.value, audience: parsedBirth.audience })
-  res.json({ user })
+  res.json({ user: req.user })
 })
 
 app.get('/api/billing', requireUser, (req, res) => {
@@ -1301,15 +1260,15 @@ app.get('/api/billing', requireUser, (req, res) => {
 app.post('/api/billing/checkout', requireUser, billingRateLimit, (req, res) => {
   const planId = String(req.body?.plan || '').trim().toLowerCase()
   const catalog = BILLING_PLANS[planId]
-  if (!catalog) return res.status(400).json({ error: 'Choose Free, Alpha, or Orbit' })
-  const blocked = planEligibilityError(planId, req.user.audience)
+  if (!catalog) return res.status(400).json({ error: 'Choose Free or Orbit' })
+  const blocked = planEligibilityError(planId)
   if (blocked) return res.status(403).json({ error: blocked })
 
   const now = new Date().toISOString()
   if (planId === 'free') {
     db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
     if (req.user.plan !== 'free')
-      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, req.user.audience === 'adult' ? 'Switched to the Adult edition' : 'Switched to the Child edition')
+      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the Free edition')
     const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
     return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
   }
@@ -1329,52 +1288,55 @@ app.post('/api/billing/checkout', requireUser, billingRateLimit, (req, res) => {
 app.post('/api/billing/stripe', requireUser, billingRateLimit, async (req, res) => {
   const planId = String(req.body?.plan || '').trim().toLowerCase()
   if (!BILLING_PLANS[planId] || planId === 'free')
-    return res.status(400).json({ error: 'Stripe checkout is for Alpha or Orbit' })
-  const blocked = planEligibilityError(planId, req.user.audience)
+    return res.status(400).json({ error: 'Checkout is for Orbit' })
+  const blocked = planEligibilityError(planId)
   if (blocked) return res.status(403).json({ error: blocked })
+  const payMethod = normalizePayMethod(req.body?.method)
+  if (!payMethod) return res.status(400).json({ error: 'Choose card, WeChat or Alipay' })
   if (!stripeConfigured())
     return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
   try {
-    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
-    res.json({ ok: true, ...session })
+    const session = await createStripeCheckout(req.user, planId, requestOrigin(req), payMethod)
+    res.json({ ok: true, method: payMethod, ...session })
   } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Stripe checkout failed' })
+    res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
   }
 })
 
 app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (req, res) => {
   const sessionId = String(req.body?.session_id || '').trim()
-  if (!sessionId) return res.status(400).json({ error: 'Stripe session is required' })
+  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
   const pending = db.prepare('SELECT * FROM stripe_checkouts WHERE session_id = ? AND user_id = ?').get(sessionId, req.user.id)
-  if (!pending) return res.status(404).json({ error: 'Stripe session not found' })
+  if (!pending) return res.status(404).json({ error: 'Payment session not found' })
   try {
     const session = await retrieveStripeSession(sessionId)
     if (!session || session.payment_status !== 'paid')
-      return res.status(402).json({ error: 'Stripe payment is not complete' })
+      return res.status(402).json({ error: 'Payment is not complete' })
     if (String(session.metadata?.user_id || '') !== String(req.user.id))
-      return res.status(403).json({ error: 'Stripe session does not match this account' })
+      return res.status(403).json({ error: 'Payment session does not match this account' })
     const planId = pending.plan
-    const blocked = planEligibilityError(planId, req.user.audience)
+    const blocked = planEligibilityError(planId)
     if (blocked) return res.status(403).json({ error: blocked })
     const now = new Date().toISOString()
+    const payMethod = normalizePayMethod(session.metadata?.method) || 'card'
     db.prepare('UPDATE stripe_checkouts SET status = ? WHERE session_id = ?').run('paid', sessionId)
     const user = activatePlan(
       req.user,
       planId,
       {
-        brand: session.payment_method?.brand || 'stripe',
+        brand: session.payment_method?.brand || payMethod,
         last4: session.payment_method?.last4 || '0000',
         exp_month: 12,
         exp_year: new Date().getUTCFullYear() + 3,
         cardholder: req.user.name,
-        source: 'stripe',
+        source: payMethod === 'card' ? 'stripe' : payMethod,
       },
-      `Paid with Stripe · ${planId}`,
+      `Paid with ${payMethod === 'wechat' ? 'WeChat' : payMethod === 'alipay' ? 'Alipay' : 'card'} · ${planId}`,
       now,
     )
     res.json({ ok: true, user, billing: getBillingSnapshot(user) })
   } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Stripe confirmation failed' })
+    res.status(error.status || 502).json({ error: error.message || 'Payment confirmation failed' })
   }
 })
 
@@ -1424,8 +1386,8 @@ async function fetchYahooQuotes(symbols) {
 }
 
 app.get('/api/markets/quotes', requireUser, marketsRateLimit, async (req, res) => {
-  if (req.user.audience !== 'adult')
-    return res.status(403).json({ error: 'Stocks is for the Adult and Orbit editions' })
+  if (normalizePlan(req.user.plan) !== 'orbit')
+    return res.status(403).json({ error: 'Stocks is included with Orbit' })
   const unique = [...new Set(String(req.query.symbols || '').split(',').map(normalizeMarketSymbol).filter(Boolean))].slice(0, 20)
   if (unique.length === 0) return res.status(400).json({ error: 'Add at least one ticker' })
   try {

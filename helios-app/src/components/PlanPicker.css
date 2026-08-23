@@ -47,3 +47,22 @@
   font-size: 14px;
   line-height: 1.55;
 }
+
+.plan-picker-panel > header {
+  position: relative;
+}
+
+.upgrade-modal-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--helios-border);
+  border-radius: 10px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  cursor: pointer;
+}

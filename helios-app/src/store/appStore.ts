@@ -64,6 +64,7 @@ export interface AppState {
   activeSpaceTab: SpaceTab
   activeLiveSessionId: number | null
   heliosPanelOpen: boolean
+  upgradeOpen: boolean
   notificationsOpen: boolean
   commandPaletteOpen: boolean
   shortcutsOpen: boolean
@@ -101,6 +102,8 @@ type Action =
   | { type: 'TOGGLE_HELIOS_PANEL' }
   | { type: 'OPEN_HELIOS_PANEL' }
   | { type: 'CLOSE_HELIOS_PANEL' }
+  | { type: 'OPEN_UPGRADE' }
+  | { type: 'CLOSE_UPGRADE' }
   | { type: 'TOGGLE_NOTIFICATIONS' }
   | { type: 'MARK_NOTIFICATIONS_READ' }
   | { type: 'ADD_NOTIFICATION'; item: NotificationItem }
@@ -135,6 +138,7 @@ export const INITIAL_STATE: AppState = {
   activeSpaceTab: 'feed',
   activeLiveSessionId: null,
   heliosPanelOpen: false,
+  upgradeOpen: false,
   notificationsOpen: false,
   commandPaletteOpen: false,
   shortcutsOpen: false,
@@ -161,6 +165,7 @@ export function reducer(state: AppState, action: Action): AppState {
           activeProjectId: null,
           codeEditorOpen: false,
           heliosPanelOpen: false,
+          upgradeOpen: false,
           notificationsOpen: false,
           commandPaletteOpen: false,
           shortcutsOpen: false,
@@ -222,6 +227,10 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, heliosPanelOpen: true }
     case 'CLOSE_HELIOS_PANEL':
       return { ...state, heliosPanelOpen: false }
+    case 'OPEN_UPGRADE':
+      return { ...state, upgradeOpen: true }
+    case 'CLOSE_UPGRADE':
+      return { ...state, upgradeOpen: false }
     case 'TOGGLE_NOTIFICATIONS':
       return { ...state, notificationsOpen: !state.notificationsOpen }
     case 'MARK_NOTIFICATIONS_READ':
