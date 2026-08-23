@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Check, Flame, Plus, Trash2 } from 'lucide-react'
 
-export function useAccountState<T>(accountId: number, name: string, initial: T) {
+function useAccountState<T>(accountId: number, name: string, initial: T) {
   const key = 'helios-mini-v1-' + accountId + '-' + name
   const [value, setValue] = useState<T>(() => {
     try {
