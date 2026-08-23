@@ -155,13 +155,17 @@ async function run() {
     handle: 'alice.orbit',
     email: 'alice@example.test',
     password: 'correct-horse',
+    date_of_birth: '1998-03-20',
   })
   expectStatus(aliceSignup, 200, 'alice signup')
+  assert.equal(aliceSignup.body.user.account_kind, 'adult')
+  assert.equal(aliceSignup.body.user.plan_id, 'free')
   const bobSignup = await bob.post('/api/signup', {
     name: 'Bob Solar',
     handle: 'bob.solar',
     email: 'bob@example.test',
     password: 'correct-battery',
+    date_of_birth: '1999-11-02',
   })
   expectStatus(bobSignup, 200, 'bob signup')
 
@@ -492,16 +496,26 @@ async function run() {
   expectStatus(feedAfterProjectDelete, 200, 'feed after project deletion')
   assert.equal(feedAfterProjectDelete.body.posts[0].project_id, null)
 
+  const tooYoung = await anonymous.post('/api/signup', {
+    name: 'Too Young',
+    handle: 'too.young',
+    email: 'young@example.test',
+    password: 'correct-school',
+    date_of_birth: '2020-01-01',
+  })
+  expectStatus(tooYoung, 400, 'under 13 signup')
+
   const studentSignup = await anonymous.post('/api/signup', {
     name: 'Cara Student',
     handle: 'cara.student',
     email: 'cara@example.test',
     password: 'correct-school',
-    account_kind: 'student',
+    date_of_birth: '2010-06-15',
   })
-  expectStatus(studentSignup, 200, 'student signup')
+  expectStatus(studentSignup, 200, 'student signup from date of birth')
   assert.equal(studentSignup.body.user.account_kind, 'student')
-  assert.equal(studentSignup.body.user.adult_plan_active, false)
+  assert.equal(studentSignup.body.user.plan_id, 'free')
+  assert.deepEqual(studentSignup.body.user.available_plans, ['free', 'alpha'])
 
   const adult = new ApiClient()
   const adultSignup = await adult.post('/api/signup', {
@@ -509,12 +523,17 @@ async function run() {
     handle: 'drew.adult',
     email: 'drew@example.test',
     password: 'correct-workdesk',
-    account_kind: 'adult',
+    date_of_birth: '1998-03-20',
   })
-  expectStatus(adultSignup, 200, 'adult signup')
+  expectStatus(adultSignup, 200, 'adult signup from date of birth')
   assert.equal(adultSignup.body.user.account_kind, 'adult')
-  assert.equal(adultSignup.body.user.adult_plan_active, false)
-  assert.equal(adultSignup.body.user.adult_plan_price_rmb, 20)
+  assert.equal(adultSignup.body.user.plan_id, 'free')
+  assert.deepEqual(adultSignup.body.user.available_plans, ['free', 'orbit'])
+  assert.equal(adultSignup.body.user.plan_price_rmb, 20)
+
+  const stayFree = await adult.post('/api/account/plan', { plan: 'free' })
+  expectStatus(stayFree, 200, 'adult stays on free')
+  assert.equal(stayFree.body.user.plan_id, 'free')
 
   const lockedProject = await adult.post('/api/projects', {
     name: 'Standup notes',
@@ -522,12 +541,16 @@ async function run() {
     space_id: 'workplace',
     app_kind: 'standup-notes',
   })
-  expectStatus(lockedProject, 402, 'adult workspace locked without plan')
-  assert.equal(lockedProject.body.code, 'ADULT_PLAN_REQUIRED')
+  expectStatus(lockedProject, 402, 'orbit workspace locked on free')
+  assert.equal(lockedProject.body.code, 'ORBIT_PLAN_REQUIRED')
 
-  const subscribe = await adult.post('/api/account/adult-plan', { method: 'wechat' })
-  expectStatus(subscribe, 200, 'adult plan subscribe')
-  assert.equal(subscribe.body.user.adult_plan_active, true)
+  const wrongPlan = await adult.post('/api/account/plan', { plan: 'alpha', method: 'wechat' })
+  expectStatus(wrongPlan, 400, 'adult cannot buy alpha')
+
+  const subscribe = await adult.post('/api/account/plan', { plan: 'orbit', method: 'wechat' })
+  expectStatus(subscribe, 200, 'orbit plan subscribe')
+  assert.equal(subscribe.body.user.plan_id, 'orbit')
+  assert.equal(subscribe.body.user.plan_active, true)
 
   const workProject = await adult.post('/api/projects', {
     name: 'Standup notes',
@@ -535,16 +558,36 @@ async function run() {
     space_id: 'workplace',
     app_kind: 'standup-notes',
   })
-  expectStatus(workProject, 200, 'adult workspace after plan')
+  expectStatus(workProject, 200, 'orbit workspace after plan')
   assert.equal(workProject.body.project.space_id, 'workplace')
 
-  const switchKind = await adult.post('/api/account/kind', { account_kind: 'student' })
-  expectStatus(switchKind, 200, 'switch to student')
-  assert.equal(switchKind.body.user.account_kind, 'student')
-  assert.equal(switchKind.body.user.adult_plan_active, false)
+  const studentClient = new ApiClient()
+  const studentLogin = await studentClient.post('/api/login', {
+    email: 'cara@example.test',
+    password: 'correct-school',
+  })
+  expectStatus(studentLogin, 200, 'student login')
+  const alphaLocked = await studentClient.post('/api/projects', {
+    name: 'Exam week',
+    type: 'board',
+    space_id: 'alpha',
+    app_kind: 'exam-planner',
+  })
+  expectStatus(alphaLocked, 402, 'alpha workspace locked on free')
+  assert.equal(alphaLocked.body.code, 'ALPHA_PLAN_REQUIRED')
+  const alphaSubscribe = await studentClient.post('/api/account/plan', { plan: 'alpha', method: 'alipay' })
+  expectStatus(alphaSubscribe, 200, 'alpha plan subscribe')
+  assert.equal(alphaSubscribe.body.user.plan_id, 'alpha')
+  const alphaProject = await studentClient.post('/api/projects', {
+    name: 'Exam week',
+    type: 'board',
+    space_id: 'alpha',
+    app_kind: 'exam-planner',
+  })
+  expectStatus(alphaProject, 200, 'alpha workspace after plan')
 
-  const invalidKind = await alice.post('/api/account/kind', { account_kind: 'robot' })
-  expectStatus(invalidKind, 400, 'invalid account kind')
+  const invalidBirthday = await alice.post('/api/account/birthday', { date_of_birth: 'not-a-date' })
+  expectStatus(invalidBirthday, 400, 'invalid date of birth')
 
   const logout = await bob.post('/api/logout')
   expectStatus(logout, 200, 'logout')

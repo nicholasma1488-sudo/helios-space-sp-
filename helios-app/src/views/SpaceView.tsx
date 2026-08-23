@@ -6,7 +6,7 @@ import {
 import { api, type Comment, type Conversation, type LiveSession, type Post, type Project } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
 import { getMiniApp, getSpaceDefinition, type MiniAppDefinition } from '../product/catalog'
-import { ADULT_PLAN_PRICE_RMB, appsForUser, hasAdultPlan } from '../product/audience'
+import { PLAN_PRICE_RMB, appsForUser, hasAlphaPlan, hasOrbitPlan, planLabel } from '../product/audience'
 import { categoryForSpace, openCreatorProfile, openOrCreateProjectChat, openProjectWorkspace } from '../product/flow'
 import { useApp, type SpaceTab } from '../store/appStore'
 import './SpaceView.css'
@@ -26,10 +26,16 @@ const TABS: Array<{ id: SpaceTab; label: string }> = [
 export function SpaceView() {
   const { state, dispatch } = useApp()
   const space = getSpaceDefinition(state.activeSpaceId)
-  const adultUnlocked = hasAdultPlan(state.user)
-  const spaceLocked = space.audience === 'adult' && !adultUnlocked
+  const orbitUnlocked = hasOrbitPlan(state.user)
+  const alphaUnlocked = hasAlphaPlan(state.user)
+  const spaceLocked = (space.audience === 'adult' && !orbitUnlocked) || (space.audience === 'alpha' && !alphaUnlocked)
   const visibleCatalog = appsForUser(state.user)
-  const miniApps = space.miniApps.map(getMiniApp).filter(app => spaceLocked || app.audience !== 'adult' || adultUnlocked)
+  const miniApps = space.miniApps.map(getMiniApp).filter(app => {
+    if (app.audience === 'adult') return orbitUnlocked || spaceLocked
+    if (app.audience === 'alpha') return alphaUnlocked || spaceLocked
+    return true
+  })
+  const requiredPlanLabel = space.audience === 'alpha' ? planLabel('alpha') : planLabel('orbit')
   const projects = state.projects.filter(project => project.space_id === space.id)
   const [posts, setPosts] = useState<Post[]>([])
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
@@ -125,7 +131,7 @@ export function SpaceView() {
       <header className="space-hero">
         <div className="space-hero-orbit" aria-hidden="true"><i /><i /><span>{space.name.slice(0, 1)}</span></div>
         <div className="space-hero-copy">
-          <span>{space.kind === 'subject' ? 'SUBJECT SPACE' : space.kind === 'work' ? 'WORK SPACE' : 'HOBBY SPACE'}</span>
+          <span>{space.audience === 'alpha' ? 'ALPHA SPACE' : space.kind === 'subject' ? 'SUBJECT SPACE' : space.kind === 'work' ? 'WORK SPACE' : 'HOBBY SPACE'}</span>
           <h1>{space.name}</h1>
           <p>{space.description}</p>
         </div>
@@ -136,8 +142,8 @@ export function SpaceView() {
         </div>
         <div className="space-hero-actions">
           <button type="button" onClick={() => {
-            if (spaceLocked || (miniApps[0]?.audience === 'adult' && !adultUnlocked)) {
-              dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+            if (spaceLocked || ((miniApps[0]?.audience === 'adult' && !orbitUnlocked) || (miniApps[0]?.audience === 'alpha' && !alphaUnlocked))) {
+              dispatch({ type: 'SET_PLAN_OPEN', open: true })
               return
             }
             dispatch({ type: 'SET_SPACE_TAB', tab: 'apps' })
@@ -151,10 +157,10 @@ export function SpaceView() {
       {spaceLocked && (
         <div className="audience-lock-banner">
           <div>
-            <strong>Adult Work Plan required</strong>
-            <small>Workplace tools and more mature content cost ¥{ADULT_PLAN_PRICE_RMB} per month.</small>
+            <strong>{requiredPlanLabel} required</strong>
+            <small>Stay on Free, or unlock this Space for ¥{PLAN_PRICE_RMB} per month.</small>
           </div>
-          <button type="button" onClick={() => dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })}>Subscribe ¥{ADULT_PLAN_PRICE_RMB}/mo</button>
+          <button type="button" onClick={() => dispatch({ type: 'SET_PLAN_OPEN', open: true })}>Choose {requiredPlanLabel}</button>
         </div>
       )}
 
@@ -180,8 +186,8 @@ export function SpaceView() {
             posting={posting}
             onSubmit={submitPost}
             onLaunch={app => {
-              if ((spaceLocked || app.audience === 'adult') && !adultUnlocked) {
-                dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+              if (spaceLocked || (app.audience === 'adult' && !orbitUnlocked) || (app.audience === 'alpha' && !alphaUnlocked)) {
+                dispatch({ type: 'SET_PLAN_OPEN', open: true })
                 return
               }
               setLaunchApp(app)
@@ -193,8 +199,8 @@ export function SpaceView() {
         )}
         {state.activeSpaceTab === 'projects' && <ProjectsPanel projects={projects} sessions={liveSessions} onOpen={openProject} onNew={() => setShowNewProject(true)} onChat={project => void openOrCreateProjectChat(project, dispatch)} onLive={startLive} />}
         {state.activeSpaceTab === 'apps' && <MiniAppsPanel apps={miniApps} catalog={visibleCatalog} projects={projects} sessions={liveSessions} onLaunch={app => {
-          if ((spaceLocked || app.audience === 'adult') && !adultUnlocked) {
-            dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+          if (spaceLocked || (app.audience === 'adult' && !orbitUnlocked) || (app.audience === 'alpha' && !alphaUnlocked)) {
+            dispatch({ type: 'SET_PLAN_OPEN', open: true })
             return
           }
           setLaunchApp(app)
@@ -203,8 +209,8 @@ export function SpaceView() {
         {state.activeSpaceTab === 'live' && <LivePanel sessions={liveSessions} projects={projects} onOpen={id => dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: id })} onStart={startLive} />}
         {state.activeSpaceTab === 'members' && <MembersPanel members={members} currentUserId={state.user?.id ?? 0} />}
         {state.activeSpaceTab === 'challenges' && <ChallengesPanel spaceName={space.name} apps={miniApps} onStart={app => {
-          if ((spaceLocked || app.audience === 'adult') && !adultUnlocked) {
-            dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+          if (spaceLocked || (app.audience === 'adult' && !orbitUnlocked) || (app.audience === 'alpha' && !alphaUnlocked)) {
+            dispatch({ type: 'SET_PLAN_OPEN', open: true })
             return
           }
           setLaunchApp(app)

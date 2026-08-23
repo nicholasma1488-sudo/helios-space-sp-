@@ -45,6 +45,35 @@
   line-height: 1.55;
 }
 
+.audience-date-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--helios-border);
+  border-radius: 12px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+}
+
+.audience-date-field input {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--helios-text);
+  font: inherit;
+}
+
+.audience-hint {
+  display: block;
+  margin: 0 0 14px;
+  color: var(--helios-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .audience-choice-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

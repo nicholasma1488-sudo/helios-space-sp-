@@ -9,7 +9,7 @@ import { api, type LiveSession } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
-import { hasAdultPlan } from '../product/audience'
+import { hasOrbitPlan } from '../product/audience'
 import { openCreatorProfile, openLiveSession, openProjectWorkspace } from '../product/flow'
 import './LifestyleView.css'
 
@@ -37,7 +37,7 @@ const EMPTY_SOLAR: SolarSummary = { total: 0, identity: 'Dawn', next_threshold: 
 
 export function LifestyleView({ currentUser }: Props) {
   const { state, dispatch } = useApp()
-  const categories = hasAdultPlan(currentUser) ? [...BASE_CATEGORIES, WORK_CATEGORY] : BASE_CATEGORIES
+  const categories = hasOrbitPlan(currentUser) ? [...BASE_CATEGORIES, WORK_CATEGORY] : BASE_CATEGORIES
   const [posts, setPosts] = useState<Post[]>([])
   const [nextCursor, setNextCursor] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)

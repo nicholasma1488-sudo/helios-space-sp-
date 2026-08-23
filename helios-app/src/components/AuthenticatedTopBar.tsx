@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   Bell, BookOpen, Briefcase, ChevronDown, Compass, Dumbbell, FolderGit2, MessageCircle,
-  Plus, Radio, Search, Sparkles, User, Users, X,
+  GraduationCap, Plus, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults, type SpaceSummary } from '../api'
-import { HOBBIES, SUBJECTS, WORK_SPACES, getSpaceDefinition } from '../product/catalog'
-import { ADULT_PLAN_PRICE_RMB, hasAdultPlan } from '../product/audience'
+import { ALPHA_SPACES, HOBBIES, SUBJECTS, WORK_SPACES, getSpaceDefinition } from '../product/catalog'
+import { PLAN_PRICE_RMB, hasAlphaPlan, hasOrbitPlan } from '../product/audience'
 import { useApp } from '../store/appStore'
 import './AuthenticatedTopBar.css'
 
-type OpenMenu = 'subjects' | 'hobbies' | 'work' | 'search' | 'notifications' | 'profile' | null
+type OpenMenu = 'subjects' | 'hobbies' | 'work' | 'alpha' | 'search' | 'notifications' | 'profile' | null
 
 const EMPTY_RESULTS: SearchResults = { projects: [], people: [], posts: [], live: [], spaces: [] }
 
@@ -84,8 +84,9 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
 
   function openSpace(spaceId: string) {
     const space = getSpaceDefinition(spaceId)
-    if (space.audience === 'adult' && !hasAdultPlan(state.user)) {
-      dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+    if ((space.audience === 'adult' && !hasOrbitPlan(state.user))
+      || (space.audience === 'alpha' && !hasAlphaPlan(state.user))) {
+      dispatch({ type: 'SET_PLAN_OPEN', open: true })
       setOpenMenu(null)
       return
     }
@@ -172,9 +173,16 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         <button type="button" className={openMenu === 'hobbies' ? 'is-open' : ''} onClick={() => toggle('hobbies')} aria-expanded={openMenu === 'hobbies'}>
           <Dumbbell size={15} /><span>Hobbies</span><ChevronDown size={13} />
         </button>
-        <button type="button" className={openMenu === 'work' ? 'is-open' : ''} onClick={() => toggle('work')} aria-expanded={openMenu === 'work'}>
-          <Briefcase size={15} /><span>Work</span><ChevronDown size={13} />
-        </button>
+        {state.user?.account_kind !== 'student' && (
+          <button type="button" className={openMenu === 'work' ? 'is-open' : ''} onClick={() => toggle('work')} aria-expanded={openMenu === 'work'}>
+            <Briefcase size={15} /><span>Work</span><ChevronDown size={13} />
+          </button>
+        )}
+        {state.user?.account_kind === 'student' && (
+          <button type="button" className={openMenu === 'alpha' ? 'is-open' : ''} onClick={() => toggle('alpha')} aria-expanded={openMenu === 'alpha'}>
+            <GraduationCap size={15} /><span>Alpha</span><ChevronDown size={13} />
+          </button>
+        )}
         <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
           <i />{activeSpace.name}
         </span>
@@ -213,9 +221,9 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
           <div className="mega-menu-heading">
             <span><Briefcase size={16} /> Work & mature Spaces</span>
             <small>
-              {hasAdultPlan(state.user)
-                ? 'Workplace tools and more mature independent-living content are unlocked.'
-                : `Adults unlock these Spaces for ¥${ADULT_PLAN_PRICE_RMB} per month.`}
+              {hasOrbitPlan(state.user)
+                ? 'Orbit Plan is active. Workplace tools and more mature content are unlocked.'
+                : `Stay on Free, or unlock these Spaces with Orbit Plan for ¥${PLAN_PRICE_RMB}/month.`}
             </small>
           </div>
           <div className="mega-space-grid">
@@ -223,18 +231,50 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
               <button type="button" role="menuitem" key={space.id} onClick={() => openSpace(space.id)} className={state.activeSpaceId === space.id ? 'is-active' : ''} style={{ '--space-accent': space.accent } as React.CSSProperties}>
                 <i>{space.name.slice(0, 1)}</i>
                 <span>
-                  <strong>{space.name}{!hasAdultPlan(state.user) ? ' · ¥20' : ''}</strong>
+                  <strong>{space.name}{!hasOrbitPlan(state.user) ? ' · Orbit' : ''}</strong>
                   <small>{space.description}</small>
                 </span>
               </button>
             ))}
           </div>
-          {!hasAdultPlan(state.user) && (
-            <form className="custom-hobby-form" onSubmit={event => { event.preventDefault(); dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true }); setOpenMenu(null) }}>
+          {!hasOrbitPlan(state.user) && (
+            <form className="custom-hobby-form" onSubmit={event => { event.preventDefault(); dispatch({ type: 'SET_PLAN_OPEN', open: true }); setOpenMenu(null) }}>
               <Briefcase size={15} />
-              <label htmlFor="adult-plan-cta">Adult Work Plan</label>
-              <input id="adult-plan-cta" readOnly value={`¥${ADULT_PLAN_PRICE_RMB} / month for work functions`} />
-              <button type="submit">Subscribe</button>
+              <label htmlFor="orbit-plan-cta">Orbit Plan</label>
+              <input id="orbit-plan-cta" readOnly value={`Free or Orbit · ¥${PLAN_PRICE_RMB}/month`} />
+              <button type="submit">Choose plan</button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {openMenu === 'alpha' && (
+        <div className="topbar-mega-menu" role="menu" aria-label="Alpha">
+          <div className="mega-menu-heading">
+            <span><GraduationCap size={16} /> Alpha</span>
+            <small>
+              {hasAlphaPlan(state.user)
+                ? 'Alpha is active. Exam, revision and application tools are unlocked.'
+                : `Stay on Free, or unlock Alpha for ¥${PLAN_PRICE_RMB}/month.`}
+            </small>
+          </div>
+          <div className="mega-space-grid">
+            {ALPHA_SPACES.map(space => (
+              <button type="button" role="menuitem" key={space.id} onClick={() => openSpace(space.id)} className={state.activeSpaceId === space.id ? 'is-active' : ''} style={{ '--space-accent': space.accent } as React.CSSProperties}>
+                <i>{space.name.slice(0, 1)}</i>
+                <span>
+                  <strong>{space.name}{!hasAlphaPlan(state.user) ? ' · paid' : ''}</strong>
+                  <small>{space.description}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+          {!hasAlphaPlan(state.user) && (
+            <form className="custom-hobby-form" onSubmit={event => { event.preventDefault(); dispatch({ type: 'SET_PLAN_OPEN', open: true }); setOpenMenu(null) }}>
+              <GraduationCap size={15} />
+              <label htmlFor="alpha-plan-cta">Alpha</label>
+              <input id="alpha-plan-cta" readOnly value={`Free or Alpha · ¥${PLAN_PRICE_RMB}/month`} />
+              <button type="submit">Choose plan</button>
             </form>
           )}
         </div>

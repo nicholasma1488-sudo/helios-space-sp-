@@ -1,13 +1,20 @@
 // Typed API client for Helios Space backend
 
 export type AccountKind = 'student' | 'adult' | ''
+export type PlanId = 'free' | 'orbit' | 'alpha'
 
 export interface User {
   id: number
   name: string
   handle: string
   email: string
+  date_of_birth?: string
   account_kind?: AccountKind
+  plan_id?: PlanId
+  plan_active?: boolean
+  plan_expires_at?: string | null
+  plan_price_rmb?: number
+  available_plans?: PlanId[]
   adult_plan_active?: boolean
   adult_plan_expires_at?: string | null
   adult_plan_price_rmb?: number
@@ -316,14 +323,14 @@ function postQuery(filters: PostFilters = {}) {
 export const api = {
   site: () => call<SiteInfo>('/api/site'),
 
-  signup: (data: { name: string; handle: string; email: string; password: string; account_kind?: AccountKind }) =>
+  signup: (data: { name: string; handle: string; email: string; password: string; date_of_birth?: string }) =>
     call<{ ok: boolean; user: User }>('/api/signup', { method: 'POST', body: JSON.stringify(data) }),
 
-  setAccountKind: (account_kind: Exclude<AccountKind, ''>) =>
-    call<{ ok: boolean; user: User }>('/api/account/kind', { method: 'POST', body: JSON.stringify({ account_kind }) }),
+  setBirthday: (date_of_birth: string) =>
+    call<{ ok: boolean; user: User }>('/api/account/birthday', { method: 'POST', body: JSON.stringify({ date_of_birth }) }),
 
-  subscribeAdultPlan: (method: 'wechat' | 'alipay') =>
-    call<{ ok: boolean; user: User }>('/api/account/adult-plan', { method: 'POST', body: JSON.stringify({ method }) }),
+  setPlan: (plan: PlanId, method?: 'wechat' | 'alipay') =>
+    call<{ ok: boolean; user: User }>('/api/account/plan', { method: 'POST', body: JSON.stringify({ plan, method }) }),
 
   login: (data: { email: string; password: string }) =>
     call<{ ok: boolean; user: User }>('/api/login', { method: 'POST', body: JSON.stringify(data) }),

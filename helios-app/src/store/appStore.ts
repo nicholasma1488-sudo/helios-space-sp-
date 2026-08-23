@@ -1,8 +1,8 @@
 import { createContext, useContext } from 'react'
 import type { Dispatch } from 'react'
 import type { User, Project, SiteInfo } from '../api'
-import { hasAdultPlan } from '../product/audience'
-import { isAdultSpace } from '../product/catalog'
+import { hasAlphaPlan, hasOrbitPlan } from '../product/audience'
+import { isAlphaSpace, isAdultSpace } from '../product/catalog'
 
 // ── Preference persistence ────────────────────────────────────────────────────
 // Only safe, non-sensitive UI prefs are persisted — never auth or project data.
@@ -69,7 +69,7 @@ export interface AppState {
   notificationsOpen: boolean
   commandPaletteOpen: boolean
   shortcutsOpen: boolean
-  adultPlanOpen: boolean
+  planOpen: boolean
 
   // Projects (real data from API)
   projects: Project[]
@@ -123,7 +123,7 @@ type Action =
   | { type: 'SET_REDUCED_MOTION'; val: boolean }
   | { type: 'RESET_SESSION' }
   | { type: 'SET_CHAT_UNREAD'; count: number }
-  | { type: 'SET_ADULT_PLAN_OPEN'; open: boolean }
+  | { type: 'SET_PLAN_OPEN'; open: boolean }
 
 // Boot with persisted prefs so theme / motion / last subject survive reload
 const _prefs = loadPrefs()
@@ -151,7 +151,7 @@ export const INITIAL_STATE: AppState = {
   theme: _prefs.theme ?? 'dark',
   reducedMotion: _prefs.reducedMotion ?? false,
   chatUnreadCount: 0,
-  adultPlanOpen: false,
+  planOpen: false,
 }
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -169,7 +169,7 @@ export function reducer(state: AppState, action: Action): AppState {
           notificationsOpen: false,
           commandPaletteOpen: false,
           shortcutsOpen: false,
-          adultPlanOpen: false,
+          planOpen: false,
           notifications: [],
           toasts: [],
           view: 'home',
@@ -203,8 +203,9 @@ export function reducer(state: AppState, action: Action): AppState {
     savePrefs({ activeSpaceId: action.subjectId })
     return { ...state, activeSpaceId: action.subjectId }
   case 'OPEN_SPACE':
-    if (isAdultSpace(action.spaceId) && !hasAdultPlan(state.user)) {
-      return { ...state, adultPlanOpen: true, commandPaletteOpen: false }
+    if ((isAdultSpace(action.spaceId) && !hasOrbitPlan(state.user))
+      || (isAlphaSpace(action.spaceId) && !hasAlphaPlan(state.user))) {
+      return { ...state, planOpen: true, commandPaletteOpen: false }
     }
     savePrefs({ activeSpaceId: action.spaceId })
     return {
@@ -225,8 +226,8 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, activeLiveSessionId: null }
     case 'SET_CHAT_UNREAD':
       return { ...state, chatUnreadCount: action.count }
-    case 'SET_ADULT_PLAN_OPEN':
-      return { ...state, adultPlanOpen: action.open }
+    case 'SET_PLAN_OPEN':
+      return { ...state, planOpen: action.open }
   case 'TOGGLE_HELIOS_PANEL':
       return { ...state, heliosPanelOpen: !state.heliosPanelOpen }
     case 'OPEN_HELIOS_PANEL':

@@ -2,9 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 import type { User, SiteInfo } from '../api'
 import { Logo } from './Logo'
-import { Mail, Lock, User as UserIcon, AtSign, Eye, EyeOff, Loader, AlertCircle, Briefcase, GraduationCap } from 'lucide-react'
-import type { AccountKind } from '../api'
-import { ADULT_PLAN_PRICE_RMB } from '../product/audience'
+import { Mail, Lock, User as UserIcon, AtSign, Eye, EyeOff, Loader, AlertCircle, Calendar } from 'lucide-react'
+import { ADULT_AGE, PLAN_PRICE_RMB } from '../product/audience'
 import './AuthScreen.css'
 
 interface Props { onAuth: (user: User) => void; defaultMode?: 'login' | 'register'; onBack?: () => void }
@@ -16,7 +15,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [handle, setHandle] = useState('')
-  const [accountKind, setAccountKind] = useState<Exclude<AccountKind, ''> | ''>('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -48,7 +47,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
       if (!handle.trim()) errs.handle = 'Username is required'
       else if (!/^[a-zA-Z0-9_.]{3,30}$/.test(handle.replace(/^@/, '')))
         errs.handle = '3–30 chars, letters, numbers, _ or .'
-      if (!accountKind) errs.account_kind = 'Choose student or adult'
+      if (!dateOfBirth) errs.date_of_birth = 'Date of birth is required'
     }
     if (!email.trim()) errs.email = 'Email is required'
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errs.email = 'Enter a valid email'
@@ -74,7 +73,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
           handle: handle.trim(),
           email: email.trim(),
           password,
-          account_kind: accountKind || undefined,
+          date_of_birth: dateOfBirth,
         })
         onAuth(r.user)
       }
@@ -238,22 +237,28 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
                 {field('auth-handle', 'Username', <AtSign size={15} />, handle, setHandle,
                   { placeholder: 'janesmith', autoComplete: 'username' })}
                 <div>
-                  <div id="auth-account-kind-label" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--helios-muted)', marginBottom: 8, letterSpacing: '0.02em' }}>
-                    Are you a student or an adult?
+                  <label htmlFor="auth-dob" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--helios-muted)', marginBottom: 6, letterSpacing: '0.02em' }}>
+                    Date of birth
+                  </label>
+                  <div className="flex items-center rounded-xl px-3.5" style={{ background: 'var(--helios-surface2)', border: `1px solid ${fieldErrors.date_of_birth ? 'var(--helios-danger)' : 'var(--helios-border)'}` }}>
+                    <span style={{ color: 'var(--helios-muted)', flexShrink: 0 }}><Calendar size={15} /></span>
+                    <input
+                      id="auth-dob"
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={event => { setDateOfBirth(event.target.value); if (fieldErrors.date_of_birth) setFieldErrors(prev => { const next = { ...prev }; delete next.date_of_birth; return next }) }}
+                      required
+                      className="flex-1 bg-transparent outline-none px-3 py-3"
+                      style={{ border: 'none', color: 'var(--helios-text)', fontSize: 14, minWidth: 0 }}
+                      aria-invalid={!!fieldErrors.date_of_birth}
+                    />
                   </div>
-                  <div className="auth-audience-grid" role="radiogroup" aria-labelledby="auth-account-kind-label">
-                    <button type="button" role="radio" aria-checked={accountKind === 'student'} className={accountKind === 'student' ? 'is-selected' : ''} onClick={() => { setAccountKind('student'); setFieldErrors(prev => { const next = { ...prev }; delete next.account_kind; return next }) }}>
-                      <GraduationCap size={16} />
-                      <span><strong>Student</strong><small>Free school and hobby Spaces</small></span>
-                    </button>
-                    <button type="button" role="radio" aria-checked={accountKind === 'adult'} className={accountKind === 'adult' ? 'is-selected' : ''} onClick={() => { setAccountKind('adult'); setFieldErrors(prev => { const next = { ...prev }; delete next.account_kind; return next }) }}>
-                      <Briefcase size={16} />
-                      <span><strong>Adult</strong><small>¥{ADULT_PLAN_PRICE_RMB}/month for work tools</small></span>
-                    </button>
+                  <div style={{ marginTop: 6, fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.4 }}>
+                    {ADULT_AGE}+ can use Free or Orbit Plan. Under {ADULT_AGE} can use Free or Alpha. Paid plans are ¥{PLAN_PRICE_RMB}/month.
                   </div>
-                  {fieldErrors.account_kind && (
+                  {fieldErrors.date_of_birth && (
                     <div role="alert" className="flex items-center gap-1 mt-1" style={{ fontSize: 11, color: 'var(--helios-danger)' }}>
-                      <AlertCircle size={10} /> {fieldErrors.account_kind}
+                      <AlertCircle size={10} /> {fieldErrors.date_of_birth}
                     </div>
                   )}
                 </div>

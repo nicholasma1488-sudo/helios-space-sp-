@@ -1,7 +1,7 @@
 import type { Project } from '../api'
 
 export type SpaceKind = 'subject' | 'hobby' | 'work'
-export type ContentAudience = 'all' | 'adult'
+export type ContentAudience = 'all' | 'adult' | 'alpha'
 
 export interface SpaceDefinition {
   id: string
@@ -162,6 +162,10 @@ export const MINI_APP_CATALOG: MiniAppDefinition[] = [
   { id: 'contract-notes', name: 'Contract Notes', shortName: 'Contracts', projectType: 'writing', description: 'Clauses, risks, negotiation points and signed-version notes.', accent: '#9aa8d8', icon: 'writing', live: true, category: 'Work & Career', audience: 'adult' },
   { id: 'networking-crm', name: 'Networking CRM', shortName: 'Network', projectType: 'board', description: 'People, introductions, follow-ups and professional relationships.', accent: '#8576f5', icon: 'board', live: true, category: 'Work & Career', audience: 'adult' },
   { id: 'housing-search', name: 'Housing Search', shortName: 'Housing', projectType: 'spreadsheet', description: 'Rent, commute, deposits and neighbourhood notes for independent living.', accent: '#68b7ff', icon: 'sheet', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'exam-planner', name: 'Exam Planner', shortName: 'Exams', projectType: 'board', description: 'Alpha study calendar for papers, topics and revision blocks.', accent: '#8576f5', icon: 'board', live: true, category: 'Alpha Study', audience: 'alpha' },
+  { id: 'revision-coach', name: 'Revision Coach', shortName: 'Revise', projectType: 'doc', description: 'Alpha guided revision notes, weak spots and next practice.', accent: '#b794ff', icon: 'notes', live: true, category: 'Alpha Study', audience: 'alpha' },
+  { id: 'scholarship-board', name: 'Scholarship Board', shortName: 'Scholarships', projectType: 'board', description: 'Track deadlines, essays and documents for student awards.', accent: '#f2b84b', icon: 'board', live: true, category: 'Alpha Study', audience: 'alpha' },
+  { id: 'college-apps', name: 'College Applications', shortName: 'College', projectType: 'writing', description: 'Personal statements, checklists and school-by-school drafts.', accent: '#68b7ff', icon: 'writing', live: true, category: 'Alpha Study', audience: 'alpha' },
 ]
 
 export const SUBJECTS: SpaceDefinition[] = [
@@ -198,7 +202,11 @@ export const WORK_SPACES: SpaceDefinition[] = [
   { id: 'city-life', name: 'City Life', kind: 'work', audience: 'adult', description: 'Housing, commuting and independent living — more mature than school life.', accent: '#ff9b6a', icon: 'travel', miniApps: ['housing-search', 'budget-sheet', 'travel-planner', 'checklist', 'journal', 'notes'], prompts: ['Compare rentals', 'Plan the commute', 'List move-in costs'] },
 ]
 
-export const ALL_SPACES = [...SUBJECTS, ...HOBBIES, ...WORK_SPACES]
+export const ALPHA_SPACES: SpaceDefinition[] = [
+  { id: 'alpha', name: 'Alpha', kind: 'subject', audience: 'alpha', description: 'A paid student studio for exams, revision, scholarships and applications.', accent: '#8576f5', icon: 'sparkles', miniApps: ['exam-planner', 'revision-coach', 'scholarship-board', 'college-apps', 'study-guide', 'flashcard-maker', 'essay-studio'], prompts: ['Build an exam week', 'Find a weak topic', 'Draft a scholarship answer'] },
+]
+
+export const ALL_SPACES = [...SUBJECTS, ...HOBBIES, ...WORK_SPACES, ...ALPHA_SPACES]
 export const DEFAULT_SPACE_ID = 'coding'
 
 export function getSpaceDefinition(id: string): SpaceDefinition {
@@ -236,11 +244,25 @@ export function isAdultMiniApp(id: string) {
   return MINI_APP_CATALOG.some(app => app.id === id && app.audience === 'adult')
 }
 
+export function isAlphaSpace(id: string) {
+  return ALL_SPACES.some(space => space.id === id && space.audience === 'alpha')
+}
+
+export function isAlphaMiniApp(id: string) {
+  return MINI_APP_CATALOG.some(app => app.id === id && app.audience === 'alpha')
+}
+
 export function visibleWorkSpaces() {
   return WORK_SPACES
 }
 
-export function catalogForAudience(includeAdult: boolean) {
-  return includeAdult ? MINI_APP_CATALOG : MINI_APP_CATALOG.filter(app => app.audience !== 'adult')
+export function catalogForAudience(access: { orbit?: boolean; alpha?: boolean } | boolean) {
+  const orbit = typeof access === 'boolean' ? access : Boolean(access.orbit)
+  const alpha = typeof access === 'boolean' ? false : Boolean(access.alpha)
+  return MINI_APP_CATALOG.filter(app => {
+    if (app.audience === 'adult') return orbit
+    if (app.audience === 'alpha') return alpha
+    return true
+  })
 }
 

@@ -30,16 +30,22 @@ const PROJECT_TYPES = new Set([
   'drawing', 'survey', 'board', 'notebook', 'book', 'math',
 ])
 const POST_CATEGORIES = new Set(['code', 'study', 'activity', 'reading', 'reflection', 'work'])
-const ACCOUNT_KINDS = new Set(['student', 'adult'])
-const ADULT_PLAN_PRICE_RMB = 20
-const ADULT_PLAN_DAYS = 30
-const ADULT_PAYMENT_METHODS = new Set(['wechat', 'alipay'])
+const PAID_PLANS = new Set(['orbit', 'alpha'])
+const PLAN_PRICE_RMB = 20
+const PLAN_DAYS = 30
+const PAYMENT_METHODS = new Set(['wechat', 'alipay'])
+const MIN_SIGNUP_AGE = 13
+const ADULT_AGE = 18
 const ADULT_SPACE_IDS = new Set(['workplace', 'career', 'finance', 'city-life'])
+const ALPHA_SPACE_IDS = new Set(['alpha'])
 const ADULT_APP_KINDS = new Set([
   'standup-notes', 'one-on-one', 'performance-review', 'job-search',
   'salary-planner', 'invoice-tracker', 'tax-notes', 'housing-search',
   'networking-crm', 'contract-notes', 'expense-report', 'interview-prep',
   'offer-compare',
+])
+const ALPHA_APP_KINDS = new Set([
+  'exam-planner', 'revision-coach', 'scholarship-board', 'college-apps',
 ])
 const POST_AUDIENCES = new Set(['public', 'private'])
 const REACTION_EMOJIS = new Set(['👍', '❤️', '🙌', '💡', '✨', '🔥'])
@@ -56,6 +62,7 @@ const SPACE_CATALOG = [
   ['cooking', 'Cooking', 'hobby'], ['robotics', 'Robotics', 'hobby'], ['travel', 'Travel', 'hobby'],
   ['workplace', 'Workplace', 'work'], ['career', 'Career', 'work'],
   ['finance', 'Finance', 'work'], ['city-life', 'City Life', 'work'],
+  ['alpha', 'Alpha', 'subject'],
 ]
 
 const MAX_USER_NAME_LENGTH = 100
@@ -375,6 +382,8 @@ ensureColumn('posts', 'post_type', "TEXT NOT NULL DEFAULT 'progress'")
 ensureColumn('posts', 'media_url', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('chat_messages', 'attachment_json', "TEXT NOT NULL DEFAULT '{}'")
 ensureColumn('users', 'account_kind', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'date_of_birth', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'plan_id', "TEXT NOT NULL DEFAULT 'free'")
 ensureColumn('users', 'adult_plan_status', "TEXT NOT NULL DEFAULT 'inactive'")
 ensureColumn('users', 'adult_plan_expires_at', "TEXT NOT NULL DEFAULT ''")
 db.exec(`
@@ -389,6 +398,7 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `)
+ensureColumn('adult_plan_payments', 'plan_id', "TEXT NOT NULL DEFAULT 'orbit'")
 
 // Seed / reconcile the single owner admin from environment-provided credentials
 if (ADMIN_EMAIL && ADMIN_PASSWORD) {
@@ -522,47 +532,97 @@ function requireAdmin(req, res, next) {
   next()
 }
 
-const USER_PUBLIC_COLUMNS = 'id,name,handle,email,status,account_kind,adult_plan_status,adult_plan_expires_at'
+const USER_PUBLIC_COLUMNS = 'id,name,handle,email,status,account_kind,date_of_birth,plan_id,adult_plan_status,adult_plan_expires_at'
+
+function parseDateOfBirth(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return { error: 'Enter a valid date of birth' }
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day)
+    return { error: 'Enter a valid date of birth' }
+  const today = new Date()
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
+  if (date.getTime() > todayUtc) return { error: 'Date of birth cannot be in the future' }
+  const age = ageFromDob(value, today)
+  if (age > 120) return { error: 'Enter a valid date of birth' }
+  if (age < MIN_SIGNUP_AGE) return { error: `You must be at least ${MIN_SIGNUP_AGE} to create an account` }
+  return { value, age, kind: age >= ADULT_AGE ? 'adult' : 'student' }
+}
+
+function ageFromDob(dob, now = new Date()) {
+  const [year, month, day] = dob.split('-').map(Number)
+  let age = now.getFullYear() - year
+  if (now.getMonth() + 1 < month || (now.getMonth() + 1 === month && now.getDate() < day)) age -= 1
+  return age
+}
+
+function paidPlanForKind(kind) {
+  return kind === 'adult' ? 'orbit' : kind === 'student' ? 'alpha' : ''
+}
 
 function serializeUser(user) {
   if (!user) return null
+  const kind = user.account_kind === 'adult' || user.account_kind === 'student'
+    ? user.account_kind
+    : (user.date_of_birth ? parseDateOfBirth(user.date_of_birth).kind : '')
   const expiresAt = user.adult_plan_expires_at || ''
   const expiryMs = Date.parse(expiresAt)
-  const planActive = user.account_kind === 'adult'
+  const requestedPlan = user.plan_id === 'orbit' || user.plan_id === 'alpha' ? user.plan_id : 'free'
+  const expectedPaid = paidPlanForKind(kind)
+  const planActive = requestedPlan === expectedPaid
     && user.adult_plan_status === 'active'
     && Number.isFinite(expiryMs)
     && expiryMs > Date.now()
+  const planId = planActive ? requestedPlan : 'free'
   return {
     id: Number(user.id),
     name: user.name,
     handle: user.handle,
     email: user.email,
-    account_kind: user.account_kind === 'adult' ? 'adult' : user.account_kind === 'student' ? 'student' : '',
-    adult_plan_active: planActive,
-    adult_plan_expires_at: planActive ? expiresAt : null,
-    adult_plan_price_rmb: ADULT_PLAN_PRICE_RMB,
+    date_of_birth: user.date_of_birth || '',
+    account_kind: kind || '',
+    plan_id: planId,
+    plan_active: planActive,
+    plan_expires_at: planActive ? expiresAt : null,
+    plan_price_rmb: PLAN_PRICE_RMB,
+    available_plans: kind === 'adult' ? ['free', 'orbit'] : kind === 'student' ? ['free', 'alpha'] : ['free'],
+    adult_plan_active: planId === 'orbit',
+    adult_plan_expires_at: planId === 'orbit' ? expiresAt : null,
+    adult_plan_price_rmb: PLAN_PRICE_RMB,
   }
 }
 
-function hasAdultAccess(user) {
-  return Boolean(serializeUser(user)?.adult_plan_active)
+function hasOrbitAccess(user) {
+  return serializeUser(user)?.plan_id === 'orbit'
 }
 
-function isAdultLockedResource(spaceId, appKind) {
-  return ADULT_SPACE_IDS.has(spaceId) || ADULT_APP_KINDS.has(appKind)
+function hasAlphaAccess(user) {
+  return serializeUser(user)?.plan_id === 'alpha'
 }
 
-function rejectWithoutAdultPlan(res) {
+function lockedPlanForResource(spaceId, appKind) {
+  if (ADULT_SPACE_IDS.has(spaceId) || ADULT_APP_KINDS.has(appKind)) return 'orbit'
+  if (ALPHA_SPACE_IDS.has(spaceId) || ALPHA_APP_KINDS.has(appKind)) return 'alpha'
+  return ''
+}
+
+function rejectWithoutPlan(res, plan) {
+  const name = plan === 'alpha' ? 'Alpha' : 'Orbit Plan'
   return res.status(402).json({
-    error: 'Adult Work Plan is required for workplace tools and more mature content. It costs ¥20 per month.',
-    code: 'ADULT_PLAN_REQUIRED',
-    price_rmb: ADULT_PLAN_PRICE_RMB,
+    error: `${name} is required for this content. It costs ¥${PLAN_PRICE_RMB} per month.`,
+    code: plan === 'alpha' ? 'ALPHA_PLAN_REQUIRED' : 'ORBIT_PLAN_REQUIRED',
+    price_rmb: PLAN_PRICE_RMB,
+    plan,
   })
 }
 
-function excludeAdultSpaces(where, params, column = 'p.space_id') {
-  where.push(`${column} NOT IN (${[...ADULT_SPACE_IDS].map(() => '?').join(',')})`)
-  params.push(...ADULT_SPACE_IDS)
+function excludeLockedSpaces(user, where, params, column = 'p.space_id') {
+  const hidden = []
+  if (!hasOrbitAccess(user)) hidden.push(...ADULT_SPACE_IDS)
+  if (!hasAlphaAccess(user)) hidden.push(...ALPHA_SPACE_IDS)
+  if (!hidden.length) return
+  where.push(`${column} NOT IN (${hidden.map(() => '?').join(',')})`)
+  params.push(...hidden)
 }
 
 function requireUser(req, res, next) {
@@ -881,7 +941,7 @@ app.get('/api/site', (_req, res) => res.json({
 app.post('/api/signup', authRateLimit, (req, res) => {
   if (getSetting('signup_open') !== 'true')
     return res.status(403).json({ error: 'Signups are currently closed' })
-  const { name, handle, email, password, account_kind } = req.body || {}
+  const { name, handle, email, password, date_of_birth } = req.body || {}
   if (!name || !handle || !email || !password)
     return res.status(400).json({ error: 'All fields are required' })
   const checkedName = checkedString(name, 'Name', MAX_USER_NAME_LENGTH, { required: true, trim: true })
@@ -898,16 +958,16 @@ app.post('/api/signup', authRateLimit, (req, res) => {
   const h = String(handle).trim().replace(/^@/, '').toLowerCase()
   if (!/^[a-zA-Z0-9_.]{3,30}$/.test(h))
     return res.status(400).json({ error: 'Handle must be 3-30 chars: letters, numbers, _ or .' })
-  if (account_kind !== undefined && account_kind !== '' && !ACCOUNT_KINDS.has(account_kind))
-    return res.status(400).json({ error: 'Choose student or adult' })
-  const accountKind = ACCOUNT_KINDS.has(account_kind) ? account_kind : ''
+  const birth = date_of_birth ? parseDateOfBirth(date_of_birth) : { value: '', kind: '' }
+  if (birth.error) return res.status(400).json({ error: birth.error })
   try {
     const duplicateHandle = db.prepare('SELECT 1 FROM users WHERE lower(handle) = lower(?)').get('@' + h)
     if (duplicateHandle) return res.status(409).json({ error: 'That handle or email is already registered' })
     const info = db.prepare(
-      'INSERT INTO users (name, handle, email, password_hash, created_at, account_kind) VALUES (?,?,?,?,?,?)'
+      'INSERT INTO users (name, handle, email, password_hash, created_at, account_kind, date_of_birth, plan_id) VALUES (?,?,?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), new Date().toISOString(), accountKind)
+          bcrypt.hashSync(checkedPassword.value, 10), new Date().toISOString(),
+          birth.kind || '', birth.value || '', 'free')
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
     const created = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(info.lastInsertRowid)
@@ -948,40 +1008,53 @@ app.get('/api/session', (req, res) => {
 
 app.get('/api/me', requireUser, (req, res) => res.json({ user: serializeUser(req.user) }))
 
-app.post('/api/account/kind', requireUser, (req, res) => {
-  const { account_kind } = req.body || {}
-  if (!ACCOUNT_KINDS.has(account_kind))
-    return res.status(400).json({ error: 'Choose student or adult' })
-  db.prepare('UPDATE users SET account_kind = ? WHERE id = ?').run(account_kind, req.user.id)
+app.post('/api/account/birthday', requireUser, (req, res) => {
+  const birth = parseDateOfBirth(req.body?.date_of_birth)
+  if (birth.error) return res.status(400).json({ error: birth.error })
+  const paidPlan = req.user.plan_id === 'orbit' || req.user.plan_id === 'alpha' ? req.user.plan_id : 'free'
+  const planId = paidPlan === paidPlanForKind(birth.kind) ? paidPlan : 'free'
+  const planStatus = planId === 'free' ? 'inactive' : req.user.adult_plan_status
+  db.prepare('UPDATE users SET date_of_birth = ?, account_kind = ?, plan_id = ?, adult_plan_status = ? WHERE id = ?')
+    .run(birth.value, birth.kind, planId, planStatus, req.user.id)
   const user = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(req.user.id)
   res.json({ ok: true, user: serializeUser(user) })
 })
 
-app.post('/api/account/adult-plan', requireUser, authRateLimit, (req, res) => {
-  const { method } = req.body || {}
-  if (req.user.account_kind !== 'adult')
-    return res.status(400).json({ error: 'Switch to an adult account before subscribing' })
-  if (!ADULT_PAYMENT_METHODS.has(method))
+app.post('/api/account/plan', requireUser, authRateLimit, (req, res) => {
+  const { plan, method } = req.body || {}
+  const publicUser = serializeUser(req.user)
+  if (!publicUser.account_kind)
+    return res.status(400).json({ error: 'Add your date of birth first' })
+  if (plan === 'free') {
+    db.prepare("UPDATE users SET plan_id = 'free', adult_plan_status = 'inactive' WHERE id = ?").run(req.user.id)
+    const user = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(req.user.id)
+    return res.json({ ok: true, user: serializeUser(user) })
+  }
+  if (!PAID_PLANS.has(plan))
+    return res.status(400).json({ error: 'Choose Free, Orbit Plan, or Alpha' })
+  if (plan !== paidPlanForKind(publicUser.account_kind))
+    return res.status(400).json({ error: publicUser.account_kind === 'adult' ? 'Adults can choose Free or Orbit Plan' : 'Students can choose Free or Alpha' })
+  if (!PAYMENT_METHODS.has(method))
     return res.status(400).json({ error: 'Choose WeChat Pay or Alipay' })
   const now = Date.now()
   const currentExpiry = Date.parse(req.user.adult_plan_expires_at || '')
-  const startMs = Number.isFinite(currentExpiry) && currentExpiry > now ? currentExpiry : now
+  const startMs = Number.isFinite(currentExpiry) && currentExpiry > now && req.user.plan_id === plan ? currentExpiry : now
   const periodStart = new Date(startMs).toISOString()
-  const periodEnd = new Date(startMs + ADULT_PLAN_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  const periodEnd = new Date(startMs + PLAN_DAYS * 24 * 60 * 60 * 1000).toISOString()
   inTransaction(() => {
     db.prepare(
-      'UPDATE users SET adult_plan_status = ?, adult_plan_expires_at = ? WHERE id = ?'
-    ).run('active', periodEnd, req.user.id)
+      'UPDATE users SET plan_id = ?, adult_plan_status = ?, adult_plan_expires_at = ? WHERE id = ?'
+    ).run(plan, 'active', periodEnd, req.user.id)
     db.prepare(
-      'INSERT INTO adult_plan_payments (user_id, amount_rmb, method, period_start, period_end, created_at) VALUES (?,?,?,?,?,?)'
-    ).run(req.user.id, ADULT_PLAN_PRICE_RMB, method, periodStart, periodEnd, new Date().toISOString())
+      'INSERT INTO adult_plan_payments (user_id, amount_rmb, method, period_start, period_end, created_at, plan_id) VALUES (?,?,?,?,?,?,?)'
+    ).run(req.user.id, PLAN_PRICE_RMB, method, periodStart, periodEnd, new Date().toISOString(), plan)
   })
   const user = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(req.user.id)
   res.json({ ok: true, user: serializeUser(user) })
 })
 
 app.get('/api/export', requireUser, (req, res) => {
-  const account = db.prepare('SELECT id,name,handle,email,created_at,status,account_kind,adult_plan_status,adult_plan_expires_at FROM users WHERE id = ?').get(req.user.id)
+  const account = db.prepare('SELECT id,name,handle,email,created_at,status,account_kind,date_of_birth,plan_id,adult_plan_status,adult_plan_expires_at FROM users WHERE id = ?').get(req.user.id)
   const projects = db.prepare('SELECT * FROM projects WHERE user_id = ? ORDER BY id').all(req.user.id)
   const collaborativeProjects = db.prepare(
     "SELECT p.*,pc.role AS collaborator_role FROM projects p JOIN project_collaborators pc ON pc.project_id = p.id WHERE pc.user_id = ? AND pc.status = 'accepted' ORDER BY p.id"
@@ -1052,8 +1125,9 @@ app.post('/api/projects', requireUser, (req, res) => {
   if (typeof projectVisibility !== 'string' || !PROJECT_VISIBILITIES.has(projectVisibility))
     return res.status(400).json({ error: 'Invalid project visibility' })
   const projectSpaceId = normalizeSpaceId(space_id ?? checkedSpace.value, 'coding')
-  if (isAdultLockedResource(projectSpaceId, checkedAppKind.value) && !hasAdultAccess(req.user))
-    return rejectWithoutAdultPlan(res)
+  const requiredPlan = lockedPlanForResource(projectSpaceId, checkedAppKind.value)
+  if (requiredPlan === 'orbit' && !hasOrbitAccess(req.user)) return rejectWithoutPlan(res, 'orbit')
+  if (requiredPlan === 'alpha' && !hasAlphaAccess(req.user)) return rejectWithoutPlan(res, 'alpha')
   const metadataString = metadata === undefined
     ? '{}'
     : typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
@@ -1611,10 +1685,13 @@ app.get('/api/posts', requireUser, (req, res) => {
   if (spaceId) {
     where.push('p.space_id = ?')
     params.push(spaceId)
-    if (ADULT_SPACE_IDS.has(spaceId) && !hasAdultAccess(req.user))
+    const spacePlan = lockedPlanForResource(spaceId, '')
+    if (spacePlan === 'orbit' && !hasOrbitAccess(req.user))
       return res.json({ posts: [], next_cursor: null })
-  } else if (!hasAdultAccess(req.user)) {
-    excludeAdultSpaces(where, params)
+    if (spacePlan === 'alpha' && !hasAlphaAccess(req.user))
+      return res.json({ posts: [], next_cursor: null })
+  } else {
+    excludeLockedSpaces(req.user, where, params)
   }
   if (checkedSearch.value) {
     const like = '%' + checkedSearch.value.toLowerCase() + '%'
@@ -1676,8 +1753,9 @@ app.post('/api/posts', requireUser, socialRateLimit, (req, res) => {
     } catch { return res.status(400).json({ error: 'Media URL must be a valid HTTPS URL' }) }
   }
   const postSpaceId = normalizeSpaceId(space_id ?? linkedProject?.space_id, 'lifestyle')
-  if (isAdultLockedResource(postSpaceId, linkedProject?.app_kind) && !hasAdultAccess(req.user))
-    return rejectWithoutAdultPlan(res)
+  const postPlan = lockedPlanForResource(postSpaceId, linkedProject?.app_kind)
+  if (postPlan === 'orbit' && !hasOrbitAccess(req.user)) return rejectWithoutPlan(res, 'orbit')
+  if (postPlan === 'alpha' && !hasAlphaAccess(req.user)) return rejectWithoutPlan(res, 'alpha')
 
   const info = db.prepare(
     'INSERT INTO posts (user_id,category,body,project_id,audience,space_id,post_type,media_url,created_at) VALUES (?,?,?,?,?,?,?,?,?)'
@@ -1921,7 +1999,7 @@ app.get('/api/search', requireUser, (req, res) => {
   ).all(req.user.id, like, like)
   const postWhere = ["(p.audience = 'public' OR p.user_id = ?)", '(lower(p.body) LIKE ? OR lower(pr.name) LIKE ?)']
   const postParams = [req.user.id, req.user.id, like, like]
-  if (!hasAdultAccess(req.user)) excludeAdultSpaces(postWhere, postParams)
+  excludeLockedSpaces(req.user, postWhere, postParams)
   const posts = db.prepare(
     POST_SELECT + ' WHERE ' + postWhere.join(' AND ') + ' ORDER BY p.id DESC LIMIT 12'
   ).all(...postParams)
@@ -1950,7 +2028,7 @@ app.get('/api/explore', requireUser, (req, res) => {
     })
   const explorePostWhere = ["(p.audience = 'public' OR p.user_id = ?)"]
   const explorePostParams = [req.user.id, req.user.id]
-  if (!hasAdultAccess(req.user)) excludeAdultSpaces(explorePostWhere, explorePostParams)
+  excludeLockedSpaces(req.user, explorePostWhere, explorePostParams)
   const postRows = db.prepare(
     POST_SELECT + ' WHERE ' + explorePostWhere.join(' AND ') + ' ORDER BY p.id DESC LIMIT 36'
   ).all(...explorePostParams)

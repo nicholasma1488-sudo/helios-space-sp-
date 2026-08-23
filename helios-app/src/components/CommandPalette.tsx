@@ -4,8 +4,8 @@ import { Search, Home, Compass, Users, Zap, MessageCircle, User, Code, FileText,
 import type { NavView } from '../store/appStore'
 import { NewProjectModal } from './NewProjectModal'
 import { useFocusTrap } from '../hooks/useFocusTrap'
-import { HOBBIES, SUBJECTS, WORK_SPACES, getMiniApp, getSpaceDefinition } from '../product/catalog'
-import { hasAdultPlan } from '../product/audience'
+import { ALPHA_SPACES, HOBBIES, SUBJECTS, WORK_SPACES, getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { hasAlphaPlan, hasOrbitPlan } from '../product/audience'
 
 interface Cmd {
   id: string; label: string; subtitle?: string
@@ -58,17 +58,20 @@ export function CommandPalette() {
     action: () => { dispatch({ type: 'OPEN_CODE_EDITOR', projectId: p.id }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) },
   }))
 
-  const SPACES: Cmd[] = [...SUBJECTS, ...HOBBIES, ...WORK_SPACES].map(space => ({
+  const SPACES: Cmd[] = [...SUBJECTS, ...HOBBIES, ...WORK_SPACES, ...ALPHA_SPACES].map(space => ({
     id: `space-${space.id}`,
     label: `Open ${space.name} Space`,
-    subtitle: space.kind === 'work'
-      ? (hasAdultPlan(state.user) ? 'Work · unlocked Adult Work Plan' : 'Work · ¥20/month Adult Work Plan')
-      : `${space.kind === 'subject' ? 'Subject' : 'Hobby'} · Feed, Projects, Mini Apps and Live`,
+    subtitle: space.audience === 'adult'
+      ? (hasOrbitPlan(state.user) ? 'Work · Orbit Plan unlocked' : 'Work · Free or Orbit Plan')
+      : space.audience === 'alpha'
+        ? (hasAlphaPlan(state.user) ? 'Student · Alpha unlocked' : 'Student · Free or Alpha')
+        : `${space.kind === 'subject' ? 'Subject' : 'Hobby'} · Feed, Projects, Mini Apps and Live`,
     icon: <BookOpen size={15} />,
     group: 'Spaces',
     action: () => {
-      if (space.audience === 'adult' && !hasAdultPlan(state.user)) {
-        dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+      if ((space.audience === 'adult' && !hasOrbitPlan(state.user))
+        || (space.audience === 'alpha' && !hasAlphaPlan(state.user))) {
+        dispatch({ type: 'SET_PLAN_OPEN', open: true })
         dispatch({ type: 'SET_COMMAND_PALETTE', open: false })
         return
       }
