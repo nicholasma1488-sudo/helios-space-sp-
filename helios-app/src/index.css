@@ -7,32 +7,31 @@
 */
 
 :root {
-  /* ── Raw graphite neutral scale (P359) ── */
-  --graphite-950: #111213;
-  --graphite-900: #171819;
-  --graphite-800: #1e2022;
-  --graphite-700: #242628;
-  --graphite-600: #2f3134;
+  /* ── Deep-space foundation ── */
+  --graphite-950: #05060a;
+  --graphite-900: #0a0c12;
+  --graphite-800: #10131a;
+  --graphite-700: #161a22;
+  --graphite-600: #1e2430;
 
   /* ── Raw text ── */
-  --white: #f6f5f2;
-  --text-secondary: #a7a5a0;
-  /* Muted copy is still body text in many surfaces, so it must clear 4.5:1. */
-  --text-tertiary: #989590;
-  --divider: #3b3e41;
+  --white: #f4f6fb;
+  --text-secondary: #9aa3b8;
+  --text-tertiary: #7d879c;
+  --divider: rgba(160, 190, 255, 0.12);
 
-  /* ── Raw solar-gold accent (P332, P359) ── */
-  --solar-300: #ffd681;
-  --solar-400: #f2b84b;
+  /* ── Controlled cyan / ice highlights (not neon gold) ── */
+  --solar-300: #c9e7ff;
+  --solar-400: #9ecbff;
 
-  /* ── Raw status (P333, P359) ── */
+  /* ── Raw status ── */
   --s-success: #6ed69a;
-  --s-info: #68b7ff;
+  --s-info: #5ee7ff;
   --s-warning: #ff9b6a;
   --s-danger: #ff6b6b;
-  --s-collab: #b794ff;
+  --s-collab: #8b9cff;
 
-  /* ── Semantic tokens — dark theme default ── */
+  /* ── Semantic tokens — dark space OS ── */
   --helios-bg:       var(--graphite-950);
   --helios-surface:  var(--graphite-900);
   --helios-surface2: var(--graphite-800);
@@ -43,9 +42,9 @@
   --helios-text2: var(--text-secondary);
   --helios-muted: var(--text-tertiary);
 
-  /* Primary accent (violet) and info accent (blue) */
-  --helios-accent:  #8576f5;
-  --helios-accent2: #4fc3f7;
+  /* Violet-blue primary, cyan secondary, ice XP */
+  --helios-accent:  #6d7cff;
+  --helios-accent2: #5ee7ff;
 
   /* Foregrounds for filled semantic colours. */
   --helios-on-accent:  #0f1012;
@@ -76,10 +75,17 @@
   --ease-move:   cubic-bezier(.4, 0, .2, 1);
 
   /* ── Typography scale (P360) ── */
-  --type-display-lg: 600 40px/44px 'Inter', system-ui, sans-serif;
-  --type-display-md: 600 32px/38px 'Inter', system-ui, sans-serif;
-  --type-title-lg:   600 28px/34px 'Inter', system-ui, sans-serif;
-  --type-title-md:   600 24px/30px 'Inter', system-ui, sans-serif;
+  --font-display: 'Syne', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --glow-cyan: 0 0 32px rgba(94, 231, 255, .12);
+  --glow-violet: 0 0 40px rgba(109, 124, 255, .16);
+  --atmosphere: radial-gradient(1200px 700px at 78% -10%, rgba(109, 124, 255, .14), transparent 42%),
+                radial-gradient(900px 540px at 8% 110%, rgba(94, 231, 255, .07), transparent 46%);
+
+  --type-display-lg: 700 40px/44px var(--font-display);
+  --type-display-md: 700 32px/38px var(--font-display);
+  --type-title-lg:   700 28px/34px var(--font-display);
+  --type-title-md:   700 24px/30px var(--font-display);
   --type-heading-lg: 600 20px/26px 'Inter', system-ui, sans-serif;
   --type-heading-md: 600 17px/23px 'Inter', system-ui, sans-serif;
   --type-heading-sm: 600 15px/20px 'Inter', system-ui, sans-serif;
@@ -137,7 +143,7 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   font: var(--type-body-md);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-body);
   background: var(--helios-bg);
   color: var(--helios-text);
   overflow: hidden;
@@ -436,9 +442,7 @@ button, [role="button"], a, input, select, textarea {
 
 /* ── Authenticated shell additions ── */
 .helios-internal-frame {
-  background:
-    radial-gradient(circle at 78% -20%, rgba(133, 118, 245, .055), transparent 36%),
-    var(--helios-bg);
+  background: var(--atmosphere), var(--helios-bg);
 }
 
 .helios-rail-space-context {
@@ -472,25 +476,27 @@ button, [role="button"], a, input, select, textarea {
   right: 20px;
   bottom: 20px;
   display: grid;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   place-items: center;
-  border: 1px solid rgba(189, 183, 255, .28);
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(133, 118, 245, .92), rgba(79, 195, 247, .72));
+  border: 1px solid rgba(94, 231, 255, .28);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), transparent 28%),
+    radial-gradient(circle at 50% 50%, #8ea0ff 0%, #4a5cff 48%, #1b2248 100%);
   color: #fff;
-  box-shadow: 0 16px 45px rgba(0, 0, 0, .42), 0 0 28px rgba(133, 118, 245, .18);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, .42), 0 0 28px rgba(94, 231, 255, .18);
   cursor: pointer;
   transition: right var(--dur-deliberate) var(--ease-enter), transform var(--dur-quick) var(--ease-enter), box-shadow var(--dur-quick);
 }
 
-.helios-floating-agent:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 20px 55px rgba(0, 0, 0, .48), 0 0 36px rgba(133, 118, 245, .25); }
+.helios-floating-agent:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 20px 55px rgba(0, 0, 0, .48), 0 0 36px rgba(94, 231, 255, .28); }
 .helios-floating-agent:active { transform: scale(.94); }
 .helios-floating-agent.is-open { right: 380px; }
 .helios-floating-agent > span { display: grid; place-items: center; }
-.helios-floating-agent > i { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border: 2px solid var(--helios-bg); border-radius: 50%; background: var(--helios-success); }
+.helios-floating-agent > i { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border: 2px solid var(--helios-bg); border-radius: 50%; background: var(--helios-accent2); box-shadow: 0 0 10px var(--helios-accent2); }
 
 @media (max-width: 720px) {
   .helios-floating-agent,
-  .helios-floating-agent.is-open { right: 14px; bottom: 14px; width: 45px; height: 45px; border-radius: 15px; }
+  .helios-floating-agent.is-open { right: 14px; bottom: 78px; width: 48px; height: 48px; border-radius: 50%; }
 }

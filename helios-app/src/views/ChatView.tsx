@@ -15,7 +15,7 @@ type PendingAttachment =
   | { type: 'file'; file: { name: string; mime: string; size: number; data: string }; label: string }
 
 const TAB_COPY: Array<{ id: Conversation['kind']; label: string; icon: React.ReactNode }> = [
-  { id: 'project', label: 'Project Chats', icon: <FolderGit2 size={15} /> },
+  { id: 'project', label: 'Channels', icon: <Hash size={15} /> },
   { id: 'group', label: 'Groups', icon: <Users size={15} /> },
   { id: 'private', label: 'Private Chat', icon: <AtSign size={15} /> },
 ]
@@ -83,7 +83,12 @@ export function ChatView() {
   useEffect(() => {
     if (!activeId) { setMessages([]); return }
     void loadMessages(activeId)
-    const poll = window.setInterval(() => { void loadMessages(activeId, true); void loadConversations() }, 4500)
+    const tick = () => {
+      if (document.visibilityState === 'hidden') return
+      void loadMessages(activeId, true)
+      void loadConversations()
+    }
+    const poll = window.setInterval(tick, 4500)
     return () => window.clearInterval(poll)
   }, [activeId, loadConversations, loadMessages])
 

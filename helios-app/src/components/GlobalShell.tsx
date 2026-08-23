@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  Compass, FolderGit2, Home, MessageCircle, Radio, Sparkles, User, Users, Zap,
+  Compass, FolderGit2, Home, MessageCircle, Sparkles, User, GraduationCap, LayoutGrid, Plus,
 } from 'lucide-react'
 import { api } from '../api'
 import { useIsMobile } from '../hooks/useMediaQuery'
@@ -13,11 +13,11 @@ interface NavItem { id: NavView; label: string; icon: React.ReactNode; shortLabe
 const NAV: NavItem[] = [
   { id: 'home', label: 'Home', icon: <Home size={20} /> },
   { id: 'explore', label: 'Explore', icon: <Compass size={20} /> },
-  { id: 'spaces', label: 'Spaces', icon: <Users size={20} /> },
-  { id: 'lifestyle', label: 'Lifestyle', icon: <Zap size={20} /> },
-  { id: 'live', label: 'Live', icon: <Radio size={20} /> },
-  { id: 'chat', label: 'Chat Hub', shortLabel: 'Chat', icon: <MessageCircle size={20} /> },
+  { id: 'create', label: 'Create', icon: <Plus size={20} /> },
   { id: 'projects', label: 'Projects', icon: <FolderGit2 size={20} /> },
+  { id: 'miniapps', label: 'Mini Apps', shortLabel: 'Apps', icon: <LayoutGrid size={20} /> },
+  { id: 'chat', label: 'Chat', icon: <MessageCircle size={20} /> },
+  { id: 'learn', label: 'Learn', icon: <GraduationCap size={20} /> },
   { id: 'profile', label: 'Profile', icon: <User size={20} /> },
 ]
 
@@ -97,6 +97,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
     if (!state.user) return
     let mounted = true
     const poll = () => {
+      if (document.visibilityState === 'hidden') return
       api.chat.list().then(result => {
         if (!mounted) return
         const unread = result.conversations.reduce((sum, c) => sum + (c.unread || 0), 0)
@@ -124,7 +125,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
       return (
         <div className="helios-shell helios-mobile-workspace-shell flex flex-col h-screen w-screen overflow-hidden" style={{ background: 'var(--helios-bg)', color: 'var(--helios-text)' }}>
           <div id="main-content" className="helios-main flex flex-1 min-h-0 overflow-hidden relative" role="main" tabIndex={-1}>
-            {children}
+            <ErrorBoundary key="editor">{children}</ErrorBoundary>
             <HeliosFloatingButton />
           </div>
         </div>
@@ -135,7 +136,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <AuthenticatedTopBar compact />
         <div id="main-content" className="helios-main flex flex-1 overflow-hidden relative" role="main" tabIndex={-1}>
-          {children}
+          <ErrorBoundary key={state.view}>{children}</ErrorBoundary>
           <HeliosFloatingButton />
         </div>
         <nav className="helios-mobile-nav flex items-stretch overflow-x-auto border-t" style={{ flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)', paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Main navigation">
@@ -161,7 +162,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="helios-shell flex h-screen w-screen overflow-hidden" style={{ background: 'var(--helios-bg)', color: 'var(--helios-text)' }}>
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <nav className="flex flex-col items-center gap-0.5 py-3 px-2 border-r" style={{ width: 72, flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)' }} aria-label="Main navigation">
+      <nav className="helios-rail flex flex-col items-center gap-0.5 py-3 px-2 border-r" style={{ width: 72, flexShrink: 0, borderColor: 'var(--helios-border)' }} aria-label="Main navigation">
         <div className="flex flex-col gap-0.5 w-full items-center">
           {NAV.map(item => (
             // desktop rail
@@ -174,7 +175,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
       <div className="helios-internal-frame flex flex-col flex-1 min-w-0 overflow-hidden">
         <AuthenticatedTopBar />
         <div id="main-content" className="helios-main flex flex-1 min-h-0 overflow-hidden relative" role="main" tabIndex={-1}>
-          <ErrorBoundary>{children}</ErrorBoundary>
+          <ErrorBoundary key={state.codeEditorOpen ? 'editor' : state.view}>{children}</ErrorBoundary>
           <HeliosFloatingButton />
         </div>
       </div>

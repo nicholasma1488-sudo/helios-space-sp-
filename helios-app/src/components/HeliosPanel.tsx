@@ -264,8 +264,8 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const safetyColor = (s: string) => s === 'safe' ? '#fff' : 'var(--helios-surface)'
 
   return (
-    <div className="flex flex-col border-l overflow-hidden"
-      style={{ width: 360, flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)' }}
+    <div
+      className="flex flex-col overflow-hidden helios-agent-panel"
       role="complementary" aria-label="Helios AI assistant">
 
       {/* Header */}

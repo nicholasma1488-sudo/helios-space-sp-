@@ -1,8 +1,8 @@
 # Helios Space
 
-Helios Space is a React application for creating projects and sharing progress. Accounts, projects, posts, audiences, and reactions are persisted in SQLite by the included Express server.
+Helios Space is a spatial social OS for students and creators: discover, create, learn, build, share, and collaborate. Accounts, projects, posts, follows, live sessions, chat, and Solar XP are persisted in SQLite by the included Express server.
 
-The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, Lifestyle uses a familiar social-feed information architecture while retaining the Helios graphite, solar, violet, and sky visual language. Chat Hub shows unread badges in navigation, Home has loading states, and error boundaries protect against unexpected crashes.
+The logged-out experience is a time-based cinematic fly-through (Three.js + CSS3D, paused when the tab is hidden, reduced when `prefers-reduced-motion` is set). After sign-in, the shell is Home, Explore, Create, Projects, Mini Apps, Chat, Learn, and Profile, with Studio, Spaces, Lifestyle, and Live still reachable from the top bar and command palette.
 
 ## Run locally
 
@@ -43,11 +43,10 @@ dedicated persistent directory.
 - Explore search, category filters, real sorting, and post deletion for authors
 - Spaces derived from the real space labels on the user’s projects
 - Account-scoped daily task list stored in the browser
-- Helios Mini Apps with account-isolated browser storage:
-  - Focus Orbit timer with refresh-safe timing
-  - Quick Notes
-  - Habit Pulse
-  - Decision Flip
+- Helios Mini Apps: working local tools (calculator, scientific calculator, unit converter, timers, notes, markdown, document editor, code playground, flashcards, whiteboard, spreadsheet, physics helpers) plus project-bound workspaces that can Go Live
+- Public profiles with follow counts and a Following feed (`GET /api/posts?following=true`)
+- Live collaboration presence over Server-Sent Events (`GET /api/live/:id/events`) — not a fake WebSocket
+- Solar XP, identities, notifications, search, and project files/commits/collaborators
 - Direction-aware primary-view transitions, active navigation motion, dialog focus trapping, and keyboard shortcuts
 - Theme, reduced-motion preference, and JSON account-data export
 - Optional Helios AI using an administrator-configured OpenAI-compatible endpoint
@@ -58,9 +57,12 @@ dedicated persistent directory.
 - Global React error boundary protecting against unexpected view crashes
 - Helios AI self-negation correction: upstream model replies claiming inability are replaced with a Helios-scoped boundary explanation
 
-## Deliberately not represented as available
+## Honest limits
 
-This build does not claim to provide live broadcasting, replay/transcript generation, multi-user project collaboration, WorkBuddy/Space membership privacy, GitHub sync, persistent project versions, or Solar rewards. Those features need dedicated server models and integrations before they should appear in the UI.
+- Chat Hub polls over HTTP. It is not a WebSocket transport.
+- Mini App tool data (notes, drawings, sheets) is account-scoped `localStorage`, not server files.
+- Helios AI requires an administrator-configured provider key. Without it, the app still runs and `/api/helios/chat` returns `AI_NOT_CONFIGURED`.
+- There is no GitHub sync. Project versions, collaborators, and live presence are native to this server.
 
 ## Admin setup
 
@@ -89,9 +91,7 @@ Or run all three gates:
 npm run check
 ```
 
-The API suite starts the Express server against a temporary isolated SQLite database and verifies authentication, projects, public/private visibility, cursor pagination, search/category filters, reactions, comments, saved posts, malformed input, unknown routes, logout, and the unconfigured-AI response.
-
-Browser QA artifacts are generated under `output/playwright/`. The upgrade specification and acceptance checklist live in `HELIOS_UPGRADE_MASTER_PROMPT.md` and `HELIOS_UPGRADE_TODO.md`.
+The API suite starts the Express server against a temporary isolated SQLite database and verifies authentication, projects, public/private visibility, cursor pagination, search/category filters, reactions, comments, saved posts, follows, public profiles, malformed input, unknown routes, logout, and the unconfigured-AI response.
 
 ## Helios AI without a key
 

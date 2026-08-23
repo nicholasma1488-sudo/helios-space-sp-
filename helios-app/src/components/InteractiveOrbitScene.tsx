@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { CSS3DObject, CSS3DRenderer } from 'three/examples/jsm/renderers/CSS3DRenderer.js'
 
 export type StageMode = 'feed' | 'project' | 'chat' | 'live' | 'apps'
-export type HeroPhase = 'void' | 'push' | 'flanks' | 'live'
+export type HeroPhase = 'void' | 'push' | 'flanks' | 'assemble' | 'live'
 
 interface Props {
   activeMode: StageMode
@@ -217,9 +217,52 @@ function setGroupOpacity(group: THREE.Group, opacity: number) {
   group.visible = opacity > 0.02
 }
 
-function introProgress(elapsed: number, _phase: HeroPhase, reducedMotion: boolean) {
-  if (reducedMotion) return 0
-  return THREE.MathUtils.smoothstep(elapsed, 0, 1.15) * 0.04
+function cinematicT(elapsed: number, reducedMotion: boolean) {
+  if (reducedMotion) return 1
+  const keys = [
+    [0, 0],
+    [0.8, 0.06],
+    [1.6, 0.22],
+    [2.5, 0.52],
+    [3.5, 0.82],
+    [5.0, 1],
+  ] as const
+  if (elapsed >= 5) return 1
+  let index = 0
+  while (index < keys.length - 2 && keys[index + 1][0] < elapsed) index += 1
+  const [t0, p0] = keys[index]
+  const [t1, p1] = keys[index + 1]
+  const local = (elapsed - t0) / Math.max(t1 - t0, 0.0001)
+  const eased = local * local * (3 - 2 * local)
+  return THREE.MathUtils.lerp(p0, p1, eased)
+}
+
+function makeFragment(label: string, accent: string) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 288
+  const ctx = canvas.getContext('2d')
+  if (ctx) {
+    ctx.fillStyle = '#0c1018'
+    ctx.fillRect(0, 0, 512, 288)
+    ctx.strokeStyle = accent
+    ctx.lineWidth = 2
+    ctx.strokeRect(8, 8, 496, 272)
+    ctx.fillStyle = accent
+    ctx.font = '700 28px Inter, sans-serif'
+    ctx.fillText(label, 28, 58)
+    ctx.fillStyle = 'rgba(244,246,251,.55)'
+    ctx.font = '400 18px Inter, sans-serif'
+    ctx.fillText('Helios Space', 28, 92)
+    ctx.fillStyle = 'rgba(255,255,255,.06)'
+    for (let i = 0; i < 4; i += 1) ctx.fillRect(28, 120 + i * 34, 360 - i * 28, 16)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, toneMapped: false })
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.8), material)
+  mesh.userData.fadeMaterial = material
+  return mesh
 }
 
 export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, children }: Props) {
@@ -252,6 +295,9 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const showFallbackWindow = () => {
       windowHost.classList.add('is-fallback')
       if (windowHost.parentElement !== mount) mount.appendChild(windowHost)
+      host.style.setProperty('--cinematic-t', '1')
+      windowHost.style.opacity = '1'
+      windowHost.style.pointerEvents = 'auto'
     }
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -259,7 +305,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     try {
       renderer = new THREE.WebGLRenderer({ alpha: false, antialias: true, powerPreference: 'high-performance' })
     } catch (error) {
-      console.error('[Helios hero] WebGL unavailable', error)
+      console.warn('[Helios hero] WebGL unavailable', error)
       host.dataset.webgl = 'unavailable'
       showFallbackWindow()
       return () => {
@@ -339,7 +385,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const glow = new THREE.Mesh(
       new THREE.PlaneGeometry(8.4, 5.6),
       new THREE.MeshBasicMaterial({
-        color: 0x4fc3f7,
+        color: 0x5ee7ff,
         transparent: true,
         opacity: 0,
         blending: THREE.AdditiveBlending,
@@ -348,6 +394,19 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     )
     glow.position.set(0, 0.04, -0.2)
     scene.add(glow)
+
+    const fragments = [
+      { mesh: makeFragment('Projects', '#5ee7ff'), x: -7.2, y: 3.4, z: -42, rush: 86 },
+      { mesh: makeFragment('Social', '#6d7cff'), x: 8.1, y: -2.4, z: -58, rush: 94 },
+      { mesh: makeFragment('Mini Apps', '#8ea0ff'), x: -4.6, y: -4.8, z: -34, rush: 78 },
+      { mesh: makeFragment('Chat', '#5ee7ff'), x: 5.8, y: 4.6, z: -70, rush: 102 },
+      { mesh: makeFragment('XP / Profile', '#9ecbff'), x: -9.4, y: 0.6, z: -48, rush: 88 },
+      { mesh: makeFragment('Learn', '#6d7cff'), x: 3.2, y: -5.5, z: -26, rush: 72 },
+    ]
+    fragments.forEach(item => {
+      item.mesh.position.set(item.x, item.y, item.z)
+      scene.add(item.mesh)
+    })
 
     const cssObject = new CSS3DObject(windowHost)
     cssObject.scale.setScalar(WINDOW_SCALE)
@@ -394,20 +453,19 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       const delta = Math.min((now - previous) / 1000, 0.05)
       previous = now
       const elapsed = (now - started) / 1000
-      const scroll = THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1)
-      const ease = scroll * scroll * (3 - 2 * scroll)
-      const introT = introProgress(elapsed, phaseRef.current, reducedMotion)
-      const pathT = THREE.MathUtils.clamp(introT + ease * (1 - introT), 0, 1)
+      const pathT = cinematicT(elapsed, reducedMotion)
+      const idle = reducedMotion || elapsed < 5 ? 0 : Math.sin((elapsed - 5) * 0.22) * 0.12
       const shot = samplePath(pathT)
-      const enter = THREE.MathUtils.smoothstep(pathT, 0.82, 1)
-      const glimpse = THREE.MathUtils.smoothstep(pathT, 0.08, 0.28) * (1 - THREE.MathUtils.smoothstep(pathT, 0.48, 0.74))
+      const enter = THREE.MathUtils.smoothstep(pathT, 0.78, 1)
+      const assemble = THREE.MathUtils.smoothstep(pathT, 0.5, 0.82)
+      const rush = THREE.MathUtils.smoothstep(pathT, 0.22, 0.55) * (1 - THREE.MathUtils.smoothstep(pathT, 0.62, 0.86))
 
       pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
       pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
 
-      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.35, 5.4, delta)
+      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.35 + idle * 0.08, 5.4, delta)
       camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.18, 5.4, delta)
-      camera.position.z = damp(camera.position.z, shot.z, 6.8, delta)
+      camera.position.z = damp(camera.position.z, shot.z + idle * -0.35, 6.8, delta)
       camera.fov = damp(camera.fov, shot.fov, 4.2, delta)
       camera.updateProjectionMatrix()
       look.x = damp(look.x, shot.lx + pointer.x * 0.12, 5.2, delta)
@@ -416,14 +474,26 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       camera.lookAt(look)
 
       cssObject.visible = true
-      cssObject.rotation.x = damp(cssObject.rotation.x, 0.05 * (1 - enter), 3.4, delta)
-      cssObject.rotation.y = damp(cssObject.rotation.y, -0.08 * (1 - enter), 3.4, delta)
-      windowHost.style.opacity = '1'
-      windowHost.style.pointerEvents = pathT > 0.18 ? 'auto' : 'none'
+      cssObject.rotation.x = damp(cssObject.rotation.x, 0.08 * (1 - enter), 3.4, delta)
+      cssObject.rotation.y = damp(cssObject.rotation.y, -0.12 * (1 - enter), 3.4, delta)
+      const windowOpacity = THREE.MathUtils.smoothstep(pathT, 0.04, 0.2)
+      windowHost.style.opacity = String(windowOpacity)
+      windowHost.style.pointerEvents = pathT > 0.72 ? 'auto' : 'none'
 
-      setGroupOpacity(feedPanel, glimpse * 0.5)
-      setGroupOpacity(codePanel, glimpse * 0.5)
-      setGroupOpacity(chatPanel, glimpse * 0.42)
+      setGroupOpacity(feedPanel, assemble * 0.72)
+      setGroupOpacity(codePanel, assemble * 0.68)
+      setGroupOpacity(chatPanel, assemble * 0.6)
+      feedPanel.position.x = THREE.MathUtils.lerp(FEED_HOME.x - 18, FEED_HOME.x, assemble)
+      codePanel.position.x = THREE.MathUtils.lerp(CODE_HOME.x + 18, CODE_HOME.x, assemble)
+      chatPanel.position.y = THREE.MathUtils.lerp(CHAT_HOME.y - 12, CHAT_HOME.y, assemble)
+
+      fragments.forEach((item, index) => {
+        const material = item.mesh.userData.fadeMaterial as THREE.MeshBasicMaterial
+        material.opacity = rush * (0.35 + (index % 3) * 0.12)
+        item.mesh.visible = material.opacity > 0.02
+        item.mesh.position.z = item.z + rush * item.rush
+        item.mesh.rotation.y = (index % 2 === 0 ? 0.35 : -0.35) * (1 - enter)
+      })
 
       starGroup.position.z = pathT * 150
       rings.forEach((ring, index) => {
@@ -431,10 +501,11 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
         ring.position.z = pathT * (14 + index * 5)
       })
       const glowMat = glow.material as THREE.MeshBasicMaterial
-      glowMat.opacity = 0.04 + enter * 0.14
+      glowMat.opacity = 0.02 + enter * 0.12
       keyLight.intensity = 18 + (1 - pathT) * 22
 
-      host.style.setProperty('--hero-scroll', ease.toFixed(4))
+      host.style.setProperty('--cinematic-t', pathT.toFixed(4))
+      host.dataset.cinematicT = pathT.toFixed(4)
       renderer.render(scene, camera)
       cssRenderer.render(cssScene, camera)
     }
@@ -470,7 +541,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       if (windowHost.parentElement) windowHost.remove()
     }
     } catch (error) {
-      console.error('[Helios hero] scene init failed', error)
+      console.warn('[Helios hero] scene init failed', error)
       renderer.dispose()
       renderer.domElement.remove()
       host.dataset.webgl = 'unavailable'

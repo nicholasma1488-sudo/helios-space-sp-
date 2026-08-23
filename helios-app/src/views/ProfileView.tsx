@@ -22,6 +22,8 @@ export function ProfileView() {
   const [showNewProject, setShowNewProject] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [following, setFollowing] = useState(false)
+  const [socialCounts, setSocialCounts] = useState({ followers: 0, following: 0 })
 
   useEffect(() => {
     try {
@@ -33,12 +35,21 @@ export function ProfileView() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([api.solar(), api.posts.list({ limit: 100 }), api.spaces.list()]).then(([solarResult, postResult, spaceResult]) => {
+    const targetId = creator?.id && creator.id !== state.user?.id ? creator.id : state.user?.id
+    Promise.all([
+      api.solar(),
+      api.posts.list({ limit: 100 }),
+      api.spaces.list(),
+      targetId ? api.profile(targetId).catch(() => null) : Promise.resolve(null),
+    ]).then(([solarResult, postResult, spaceResult, profileResult]) => {
       if (cancelled) return
       setSolar(solarResult)
-      const authorId = creator?.id && creator.id !== state.user?.id ? creator.id : state.user?.id
-      setPosts(postResult.posts.filter(post => post.author_id === authorId))
+      setPosts(postResult.posts.filter(post => post.author_id === targetId))
       setSpaces(spaceResult.spaces)
+      if (profileResult?.profile) {
+        setFollowing(profileResult.profile.following)
+        setSocialCounts({ followers: profileResult.profile.follower_count, following: profileResult.profile.following_count })
+      }
     }).catch(() => {})
     return () => { cancelled = true }
   }, [creator?.id, state.user?.id])
@@ -47,7 +58,6 @@ export function ProfileView() {
   const joinedSpaces = spaces.filter(space => joinedSpaceIds.has(space.id) || space.custom)
   const ownedProjects = state.projects.filter(project => project.user_id === state.user?.id)
   const contributions = state.projects.filter(project => project.user_id !== state.user?.id)
-  const helpEvents = solar.events.filter(event => event.source_type === 'help')
   const previousThreshold = solar.identity === 'Dawn' ? 0 : solar.identity === 'Orbit' ? 100 : solar.identity === 'Radiant' ? 280 : solar.identity === 'Nova' ? 600 : solar.identity === 'Stellar' ? 1200 : 2400
   const progress = solar.next_threshold ? Math.max(0, Math.min(100, ((solar.total - previousThreshold) / (solar.next_threshold - previousThreshold)) * 100)) : 100
 
@@ -84,7 +94,7 @@ export function ProfileView() {
       {creator && creator.id !== state.user.id && <div className="space-readonly-banner" style={{ padding: 10, textAlign: 'center' }}>Viewing {creator.name}'s public work. <button type="button" onClick={() => setCreator(null)}>Back to your profile</button></div>}
       <header className="profile-hero">
         <div className="profile-avatar"><span>{user.name.slice(0, 1).toUpperCase()}</span><i /></div>
-        <div className="profile-identity"><span>CREATOR · STUDENT · COLLABORATOR</span><h1>{user.name}</h1><p>{user.handle} · Building across {joinedSpaces.length || 1} Space{joinedSpaces.length === 1 ? '' : 's'}</p><div><b>{ownedProjects.length}<small>Projects</small></b><b>{posts.length}<small>Progress posts</small></b><b>{contributions.length + helpEvents.length}<small>Contributions</small></b></div></div>
+        <div className="profile-identity"><span>CREATOR · STUDENT · COLLABORATOR</span><h1>{user.name}</h1><p>{user.handle} · Building across {joinedSpaces.length} Space{joinedSpaces.length === 1 ? '' : 's'}</p><div><b>{ownedProjects.length}<small>Projects</small></b><b>{posts.length}<small>Progress posts</small></b><b>{socialCounts.followers}<small>Followers</small></b><b>{socialCounts.following}<small>Following</small></b></div>{creator && creator.id !== state.user.id && <button type="button" className="os-btn is-primary" style={{ marginTop: 14 }} onClick={() => void api.follow(creator.id).then(result => setFollowing(result.following))}>{following ? 'Following' : 'Follow'}</button>}</div>
         <div className="profile-solar-card"><div className="profile-solar-orbit" style={{ '--solar-progress': `${progress * 3.6}deg` } as React.CSSProperties}><span><Sun size={20} /><strong>{solar.total}</strong><small>Solar</small></span></div><div><span>CURRENT IDENTITY</span><strong>{solar.identity}</strong><small>{solar.next_threshold ? `${solar.next_threshold - solar.total} Solar until the next identity` : 'Highest Solar identity reached'}</small></div></div>
       </header>
       <nav className="profile-tabs" aria-label="Profile sections">{(['Journey', 'Projects', 'Posts', 'Spaces', 'Settings'] as const).map(item => <button type="button" key={item} className={tab === item ? 'is-active' : ''} onClick={() => setTab(item)}>{item}</button>)}</nav>
