@@ -125,7 +125,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
       return (
         <div className="helios-shell helios-mobile-workspace-shell flex flex-col h-screen w-screen overflow-hidden" style={{ background: 'var(--helios-bg)', color: 'var(--helios-text)' }}>
           <div id="main-content" className="helios-main flex flex-1 min-h-0 overflow-hidden relative" role="main" tabIndex={-1}>
-            {children}
+            <ErrorBoundary key="editor">{children}</ErrorBoundary>
             <HeliosFloatingButton />
           </div>
         </div>
@@ -136,7 +136,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
         <a href="#main-content" className="skip-link">Skip to main content</a>
         <AuthenticatedTopBar compact />
         <div id="main-content" className="helios-main flex flex-1 overflow-hidden relative" role="main" tabIndex={-1}>
-          {children}
+          <ErrorBoundary key={state.view}>{children}</ErrorBoundary>
           <HeliosFloatingButton />
         </div>
         <nav className="helios-mobile-nav flex items-stretch overflow-x-auto border-t" style={{ flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)', paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Main navigation">
@@ -175,7 +175,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
       <div className="helios-internal-frame flex flex-col flex-1 min-w-0 overflow-hidden">
         <AuthenticatedTopBar />
         <div id="main-content" className="helios-main flex flex-1 min-h-0 overflow-hidden relative" role="main" tabIndex={-1}>
-          <ErrorBoundary>{children}</ErrorBoundary>
+          <ErrorBoundary key={state.codeEditorOpen ? 'editor' : state.view}>{children}</ErrorBoundary>
           <HeliosFloatingButton />
         </div>
       </div>

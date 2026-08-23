@@ -32,7 +32,7 @@ const MODES = [
     icon: <Grid3X3 size={20} />,
     title: 'Workspaces, not toys',
     body: 'Code Editor, Notebook, Data Viz, and Writing stay bound to the Project you are actually making.',
-    accent: '#f2b84b',
+    accent: '#5ee7ff',
   },
 ]
 

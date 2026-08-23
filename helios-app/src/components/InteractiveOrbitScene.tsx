@@ -305,7 +305,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     try {
       renderer = new THREE.WebGLRenderer({ alpha: false, antialias: true, powerPreference: 'high-performance' })
     } catch (error) {
-      console.error('[Helios hero] WebGL unavailable', error)
+      console.warn('[Helios hero] WebGL unavailable', error)
       host.dataset.webgl = 'unavailable'
       showFallbackWindow()
       return () => {
@@ -541,7 +541,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
       if (windowHost.parentElement) windowHost.remove()
     }
     } catch (error) {
-      console.error('[Helios hero] scene init failed', error)
+      console.warn('[Helios hero] scene init failed', error)
       renderer.dispose()
       renderer.domElement.remove()
       host.dataset.webgl = 'unavailable'

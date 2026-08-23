@@ -1124,6 +1124,8 @@
 @media (max-width: 800px) {
   .tool-split { grid-template-columns: 1fr; }
 }
+
+@media (prefers-reduced-motion: reduce) {
   .mini-app-card,
   .mini-app-workspace,
   .focus-orbit,

@@ -885,6 +885,15 @@
   transition: opacity 400ms ease;
 }
 
+.hero-scene-sticky[data-webgl='unavailable'] .hero-copy-layer,
+.hero-scene.phase-live .hero-copy-layer {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-copy-layer { opacity: 1 !important; }
+}
+
 .hero-copy-layer h1 {
   margin: 10px 0 12px;
   font-family: var(--font-display), Syne, sans-serif;
@@ -1098,7 +1107,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #f2b84b;
+  color: #5ee7ff;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: .16em;
@@ -1151,13 +1160,13 @@
   padding: 0 19px 0 22px;
   border: 0;
   border-radius: 14px;
-  background: #f4bd52;
-  color: #17140d;
+  background: linear-gradient(180deg, #e8f7ff, #5ee7ff);
+  color: #071018;
   font: inherit;
   font-size: 15px;
   font-weight: 760;
   cursor: pointer;
-  box-shadow: 0 16px 42px rgba(242, 184, 75, .15);
+  box-shadow: 0 16px 42px rgba(94, 231, 255, .16);
 }
 
 .landing-primary-cta::before {
@@ -1171,7 +1180,7 @@
 
 .landing-primary-cta:hover {
   transform: translateY(-2px);
-  box-shadow: 0 20px 52px rgba(242, 184, 75, .23);
+  box-shadow: 0 20px 52px rgba(94, 231, 255, .28);
 }
 
 .landing-primary-cta:hover::before {
@@ -1742,7 +1751,7 @@
 }
 
 .stage-status-pill svg {
-  color: #f2b84b;
+  color: #5ee7ff;
 }
 
 .stage-active-project .stage-status-pill {
@@ -1882,7 +1891,7 @@
   left: 0;
   width: 1px;
   height: 8px;
-  background: #f2b84b;
+  background: #5ee7ff;
   content: '';
   animation: landing-scroll-line 1.8s ease-in-out infinite;
 }
@@ -1912,7 +1921,7 @@
 }
 
 .landing-section-label span {
-  color: #f2b84b;
+  color: #5ee7ff;
 }
 
 .principles-heading {
@@ -1961,7 +1970,7 @@
 }
 
 .principles-grid article > span {
-  color: #f2b84b;
+  color: #5ee7ff;
   font-size: 8px;
   font-weight: 800;
 }
@@ -2395,13 +2404,13 @@
   padding: 0 21px;
   border: 0;
   border-radius: 14px;
-  background: #f2b84b;
-  color: #17140d;
+  background: linear-gradient(180deg, #e8f7ff, #5ee7ff);
+  color: #071018;
   font: inherit;
   font-size: 11px;
   font-weight: 760;
   cursor: pointer;
-  box-shadow: 0 18px 48px rgba(242, 184, 75, .15);
+  box-shadow: 0 18px 48px rgba(94, 231, 255, .16);
 }
 
 .landing-footer {
@@ -2446,7 +2455,7 @@
   place-items: center;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 35% 30%, #fff7dc, #f2b84b 24%, #8576f5 58%, #0d0f16 74%);
+    radial-gradient(circle at 35% 30%, #e8f7ff, #5ee7ff 24%, #6d7cff 58%, #0d0f16 74%);
   color: #fff;
   opacity: 0;
   pointer-events: none;
