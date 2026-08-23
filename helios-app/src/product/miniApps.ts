@@ -200,3 +200,74 @@ export function nextSuiteFileName(base: string, existing: Array<{ name: string; 
   while (used.has(`${base} ${index}`)) index += 1
   return `${base} ${index}`
 }
+
+export function getSuiteApp(id: string) {
+  return SUITE_APPS.find(app => app.id === id) ?? null
+}
+
+export function suiteHomeTitle(edition: SuiteEdition) {
+  if (edition === 'alpha') return 'Student apps'
+  if (edition === 'orbit') return 'Office apps'
+  if (edition === 'adult') return 'Work apps'
+  return 'School apps'
+}
+
+function writingData(html: string) {
+  return { html, progress: 0, bookmarks: [], notes: [], readerMode: false }
+}
+
+export function suiteStarterContent(app: SuiteApp, audience?: AccountAudience | null) {
+  const school = audience !== 'adult'
+  if (app.id === 'word-docs') {
+    return writingData(school
+      ? '<h1>School document</h1><h2>Title</h2><p></p><h2>What I need to say</h2><p></p><h2>Evidence</h2><p></p>'
+      : '<h1>Work document</h1><h2>Purpose</h2><p></p><h2>Decision</h2><p></p><h2>Next steps</h2><p></p>')
+  }
+  if (app.id === 'spreadsheet') {
+    const header = school
+      ? [['Task', 'Due', 'Score', 'Notes', '', '', '', ''], ['Homework 1', '', '', '', '', '', '', '']]
+      : [['Item', 'Owner', 'Status', 'Amount', '', '', '', ''], ['Kickoff', '', 'Open', '', '', '', '', '']]
+    const cells = header.map(row => [...row])
+    while (cells.length < 24) cells.push(Array(8).fill(''))
+    return { cells, selected: 'A2', chartColumn: 1 }
+  }
+  if (app.id === 'presentation') {
+    const slides = school
+      ? [
+        { title: 'Learning goal', body: 'By the end, I will be able to…', notes: '' },
+        { title: 'Key idea', body: 'One clear point with an example.', notes: '' },
+        { title: 'Practice', body: 'Show the work, then check it.', notes: '' },
+      ]
+      : [
+        { title: 'Agenda', body: 'What this meeting needs to decide.', notes: '' },
+        { title: 'Update', body: 'What changed, and what is blocked.', notes: '' },
+        { title: 'Ask', body: 'The decision or next owner.', notes: '' },
+      ]
+    return { slides: slides.map(slide => ({ id: crypto.randomUUID(), ...slide })), activeSlide: 0 }
+  }
+  if (app.id === 'notebook') {
+    return {
+      title: school ? 'Class notebook' : 'Work notebook',
+      cells: school
+        ? [
+          { id: 'class', kind: 'markdown', body: '# Class notes\nWhat did we cover?' },
+          { id: 'todo', kind: 'markdown', body: '## Homework\n' },
+        ]
+        : [
+          { id: 'today', kind: 'markdown', body: '# Today\nWhat needs to move?' },
+          { id: 'actions', kind: 'markdown', body: '## Actions\n' },
+        ],
+    }
+  }
+  return null
+}
+
+export function suiteStarterWorkspace(app: SuiteApp, audience?: AccountAudience | null) {
+  const data = suiteStarterContent(app, audience)
+  if (!data) return ''
+  return JSON.stringify({
+    schema: 'helios-workspace-v1',
+    appKind: app.id,
+    data,
+  })
+}

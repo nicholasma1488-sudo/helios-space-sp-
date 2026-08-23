@@ -522,6 +522,34 @@ async function run() {
   assert.equal(stayFree.body.user.plan, 'free')
   assert.equal(stayFree.body.user.edition, 'adult')
   assert.equal(stayFree.body.user.plan_selected, true)
+
+  const wordDoc = await alice.post('/api/projects', {
+    name: 'Document',
+    type: 'writing',
+    space_id: 'business',
+    app_kind: 'word-docs',
+    visibility: 'private',
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'word-docs',
+      data: { html: '<h1>Work document</h1><h2>Purpose</h2><p></p>' },
+    }),
+  })
+  expectStatus(wordDoc, 200, 'create Word workspace')
+  assert.equal(wordDoc.body.project.app_kind, 'word-docs')
+  assert.equal(wordDoc.body.project.type, 'writing')
+  assert.equal(wordDoc.body.project.content.includes('Work document'), true)
+
+  const workbook = await alice.post('/api/projects', {
+    name: 'Workbook',
+    type: 'spreadsheet',
+    space_id: 'business',
+    app_kind: 'spreadsheet',
+    visibility: 'private',
+  })
+  expectStatus(workbook, 200, 'create Excel workspace')
+  assert.equal(workbook.body.project.app_kind, 'spreadsheet')
+  assert.equal(workbook.body.project.type, 'spreadsheet')
   assert.equal(stayFree.body.billing.plan, 'free')
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'alpha').features.length >= 10, true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Meeting Notes'), true)

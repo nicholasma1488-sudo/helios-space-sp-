@@ -32,6 +32,7 @@ export async function createSuiteProject(input: {
   spaceId: string
   type: Project['type']
   appKind: string
+  content?: string
 }, dispatch: Dispatch<AppAction>) {
   const result = await api.projects.create({
     name: input.name,
@@ -40,7 +41,7 @@ export async function createSuiteProject(input: {
     type: input.type,
     app_kind: input.appKind,
     visibility: 'private',
-    content: '',
+    content: input.content || '',
     metadata: {},
   })
   dispatch({ type: 'ADD_PROJECT', project: result.project })

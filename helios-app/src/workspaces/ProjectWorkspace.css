@@ -35,6 +35,26 @@
   cursor: pointer;
 }
 
+.project-workspace.is-suite .project-shell-header {
+  border-bottom-color: color-mix(in srgb, var(--workspace-accent) 38%, var(--helios-border));
+}
+
+.project-workspace.is-suite .project-shell-identity > i {
+  background: var(--workspace-accent);
+  color: #fff;
+  font-size: 15px;
+}
+
+.project-workspace.is-suite .project-shell-identity small {
+  font-size: 10px;
+  letter-spacing: .04em;
+}
+
+.project-workspace.is-suite .project-shell-identity strong {
+  max-width: 280px;
+  font-size: 14px;
+}
+
 .project-shell-identity { display: flex; min-width: 185px; align-items: center; gap: 9px; }
 .project-shell-identity > i { display: grid; width: 34px; height: 34px; flex-shrink: 0; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--workspace-accent) 16%, transparent); color: var(--workspace-accent); font-size: 11px; font-style: normal; font-weight: 850; }
 .project-shell-identity > span { min-width: 0; }

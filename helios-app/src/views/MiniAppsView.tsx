@@ -13,6 +13,8 @@ import {
   spaceForSuiteApp,
   suiteAppUnlocked,
   suiteAppsForEdition,
+  suiteHomeTitle,
+  suiteStarterWorkspace,
   unlockLabel,
   type SuiteApp,
 } from '../product/miniApps'
@@ -102,6 +104,7 @@ export function MiniAppsView() {
         spaceId: spaceForSuiteApp(active, state.user?.audience),
         type: active.projectType,
         appKind: active.id,
+        content: suiteStarterWorkspace(active, state.user?.audience),
       }, dispatch)
     } catch (error) {
       dispatch({
@@ -120,8 +123,8 @@ export function MiniAppsView() {
     <div className="suite-view">
       <header className="suite-top">
         <div>
-          <div className="suite-kicker"><Sparkles size={13} /> APPS</div>
-          <h1>Microsoft 365-style workspaces.</h1>
+          <div className="suite-kicker"><Sparkles size={13} /> {editionKicker(edition)}</div>
+          <h1>{suiteHomeTitle(edition)}</h1>
           <p>{editionBlurb(edition)}</p>
         </div>
         <label className="suite-search">
@@ -149,26 +152,35 @@ export function MiniAppsView() {
             <h2 id="suite-apps-title">{query ? 'Search results' : 'Apps'}</h2>
             <span>{filtered.length}</span>
           </header>
-          <div className="suite-grid">
-            {filtered.map(app => {
-              const unlocked = suiteAppUnlocked(app, edition)
-              return (
-                <button
-                  key={app.id}
-                  type="button"
-                  className={'suite-tile' + (unlocked ? '' : ' is-locked')}
-                  onClick={() => openApp(app)}
-                  aria-label={unlocked ? `Open ${app.name}` : unlockLabel(edition)}
-                >
-                  <span className="suite-tile-icon" style={{ background: app.color }}>
-                    {unlocked ? app.letter : <Lock size={18} />}
-                  </span>
-                  <strong>{app.name}</strong>
-                  <small>{unlocked ? app.description : unlockLabel(edition)}</small>
-                </button>
-              )
-            })}
-          </div>
+          {['core', edition === 'adult' || edition === 'orbit' ? 'work' : 'student'].map(track => {
+            const group = filtered.filter(app => app.track === track)
+            if (group.length === 0) return null
+            return (
+              <div key={track} className="suite-group">
+                <h3>{track === 'core' ? 'Word · Excel · PowerPoint · OneNote' : edition === 'adult' || edition === 'orbit' ? 'Work suite' : 'School suite'}</h3>
+                <div className="suite-grid">
+                  {group.map(app => {
+                    const unlocked = suiteAppUnlocked(app, edition)
+                    return (
+                      <button
+                        key={app.id}
+                        type="button"
+                        className={'suite-tile' + (unlocked ? '' : ' is-locked')}
+                        title={unlocked ? app.description : unlockLabel(edition)}
+                        onClick={() => openApp(app)}
+                        aria-label={unlocked ? `Open ${app.name}` : unlockLabel(edition)}
+                      >
+                        <span className="suite-tile-icon" style={{ background: app.color }}>
+                          {unlocked ? app.letter : <Lock size={18} />}
+                        </span>
+                        <strong>{app.name}</strong>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
           {filtered.length === 0 && (
             <div className="suite-empty">
               <Search size={22} />
