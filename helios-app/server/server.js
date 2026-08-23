@@ -395,6 +395,7 @@ ensureColumn('users', 'plan', "TEXT NOT NULL DEFAULT 'free'")
 ensureColumn('users', 'plan_updated_at', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'birthdate', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'audience', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'plan_selected', 'INTEGER NOT NULL DEFAULT 0')
 ensureColumn('billing_methods', 'source', "TEXT NOT NULL DEFAULT 'card'")
 
 // Seed / reconcile the single owner admin from environment-provided credentials
@@ -535,17 +536,16 @@ const BILLING_PLANS = {
     currency: 'usd',
     interval: 'month',
     audience: 'all',
-    description: 'The student edition. Create an account for free — no card needed.',
+    description: 'Start instantly. The student edition is free and already includes a useful Mini App shelf.',
+    mini_apps: ['Focus Orbit', 'Quick Notes', 'Habit Pulse', 'Decision Flip', 'Mood Check', 'Countdown'],
     features: [
-      'Create a Helios account for free',
-      'Subjects, Hobbies, and Mini App workspaces',
-      'Projects that stay connected to your feed',
-      'Lifestyle, Chat Hub, and Live work',
+      'Create an account in under a minute — no card',
+      '6 starter Mini Apps: Focus, Notes, Habits, Decision, Mood, Countdown',
+      'Every Subject and Hobby Space',
+      'Projects, Lifestyle, Chat Hub and Live',
       'Helios AI when an administrator enables it',
       'Public or private progress posts',
-      'Saved posts, comments, and reactions',
-      'Daily tasks and account-scoped Mini Apps',
-      'JSON export of your own data',
+      'Daily tasks and JSON export',
     ],
   },
   alpha: {
@@ -555,17 +555,20 @@ const BILLING_PLANS = {
     currency: 'usd',
     interval: 'month',
     audience: 'child',
-    description: 'A cheaper student plan for people under 18, packed with classroom extras.',
+    description: 'The cheaper student plan. Unlock a revision lab of Mini Apps that feel like a secret school OS.',
+    mini_apps: ['Flash Cards', 'Homework Radar', 'Vocab Spark', 'Streak Arena'],
     features: [
-      'Everything in the free student edition',
-      'Student price — less than half of Orbit',
-      'Alpha profile badge and classroom sticker pack',
-      'Weekly study-streak rewards and Solar boosts',
-      'Extra project checkpoints for school work',
-      'Priority student Helios study prompts',
-      'Homework focus timer themes',
-      'Classroom challenge board access',
-      'Parent or guardian card / Stripe checkout',
+      'Everything in Free, plus a student Mini App lab',
+      'Unlock Flash Cards, Homework Radar, Vocab Spark and Streak Arena',
+      'Cheaper than Orbit — built for under 18',
+      'Alpha badge, sticker pack and classroom glow',
+      '2× Solar on published school work',
+      'Exam-week Helios prompts and revision drops',
+      'Unlimited flashcard decks that stay on this account',
+      'Homework due-radar with overdue glow',
+      'Protected daily streak that survives refresh',
+      'Parent or guardian pays with card or Stripe',
+      'Skip the queue for student Helios when AI is on',
       'Switch back to Free any time',
     ],
   },
@@ -576,17 +579,21 @@ const BILLING_PLANS = {
     currency: 'usd',
     interval: 'month',
     audience: 'adult',
-    description: 'The adult plan: pay with card or Stripe and unlock a fuller work orbit.',
+    description: 'The adult plan. Unlock every Mini App and the tools that make finished work feel inevitable.',
+    mini_apps: ['Idea Vault', 'Meeting Pulse', 'Deep Work', 'Win Log', 'Flash Cards', 'Homework Radar', 'Vocab Spark', 'Streak Arena'],
     features: [
-      'Everything in the free student edition',
-      'Orbit identity badge on your profile',
+      'Unlock every Mini App — student lab and adult tools',
+      'Idea Vault, Meeting Pulse, Deep Work and Win Log',
+      'Orbit badge that shows you are in the paid work orbit',
       'Priority Helios capacity when AI is configured',
-      'Career, portfolio, and workplace extras',
+      '3× Live session visibility for collaborators',
+      'Extra collaborator invitations on Projects',
+      'Win Log that becomes a private portfolio',
+      'Meeting Pulse: decisions, owners, next move',
+      'Deep Work blocks with a written intention',
       'Saved card or Stripe on file',
-      'Higher Live session visibility',
-      'Extra collaborator invitations',
       'Richer export history and billing receipts',
-      'Early access to adult workspace tools',
+      'Early access to new adult Mini Apps',
       'Switch back to Free any time',
     ],
   },
@@ -606,6 +613,7 @@ function publicUser(user) {
     plan: normalizePlan(user.plan),
     audience: user.audience === 'adult' || user.audience === 'child' ? user.audience : null,
     birthdate: user.birthdate || '',
+    plan_selected: Boolean(user.plan_selected),
   }
 }
 
@@ -723,7 +731,7 @@ function serializePaymentMethod(row) {
 }
 
 function billingUserRow(userId) {
-  return db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience FROM users WHERE id = ?').get(userId)
+  return db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(userId)
 }
 
 function getBillingSnapshot(userLike) {
@@ -782,7 +790,7 @@ function activatePlan(user, planId, method, detail, now = new Date().toISOString
   const catalog = BILLING_PLANS[planId]
   inTransaction(() => {
     if (method) savePaymentMethod(user.id, method, now)
-    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ? WHERE id = ?').run(planId, now, user.id)
+    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run(planId, now, user.id)
     recordBillingEvent(
       user.id,
       user.plan === planId ? 'card_updated' : 'paid',
@@ -791,7 +799,7 @@ function activatePlan(user, planId, method, detail, now = new Date().toISOString
       detail,
     )
   })
-  return publicUser({ ...user, plan: planId })
+  return publicUser({ ...user, plan: planId, plan_selected: 1 })
 }
 
 function requestOrigin(req) {
@@ -871,7 +879,7 @@ function requireUser(req, res, next) {
   const token = req.cookies.helios_user
   const s = getFreshSession(token, 'user', USER_SESSION_MS)
   if (!s) return res.status(401).json({ error: 'Not authenticated' })
-  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience FROM users WHERE id = ?').get(s.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(s.subject_id)
   if (!user || user.status !== 'active') return res.status(403).json({ error: 'Account unavailable' })
   req.user = publicUser(user)
   next()
@@ -1208,9 +1216,9 @@ app.post('/api/signup', authRateLimit, (req, res) => {
     if (duplicateHandle) return res.status(409).json({ error: 'That handle or email is already registered' })
     const now = new Date().toISOString()
     const info = db.prepare(
-      'INSERT INTO users (name, handle, email, password_hash, created_at, plan, birthdate, audience, plan_updated_at) VALUES (?,?,?,?,?,?,?,?,?)'
+      'INSERT INTO users (name, handle, email, password_hash, created_at, plan, birthdate, audience, plan_updated_at, plan_selected) VALUES (?,?,?,?,?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', parsedBirth.value, parsedBirth.audience, now)
+          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', parsedBirth.value, parsedBirth.audience, now, 0)
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
     res.json({
@@ -1223,6 +1231,7 @@ app.post('/api/signup', authRateLimit, (req, res) => {
         plan: 'free',
         birthdate: parsedBirth.value,
         audience: parsedBirth.audience,
+        plan_selected: 0,
       }),
     })
   } catch (e) {
@@ -1254,7 +1263,7 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/session', (req, res) => {
   const session = getFreshSession(req.cookies.helios_user, 'user', USER_SESSION_MS)
   if (!session) return res.json({ user: null })
-  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience FROM users WHERE id = ?').get(session.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(session.subject_id)
   if (!user || user.status !== 'active') return res.json({ user: null })
   res.json({ user: publicUser(user) })
 })
@@ -1284,10 +1293,10 @@ app.post('/api/billing/checkout', requireUser, billingRateLimit, (req, res) => {
 
   const now = new Date().toISOString()
   if (planId === 'free') {
-    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ? WHERE id = ?').run('free', now, req.user.id)
+    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
     if (req.user.plan !== 'free')
       recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the free student edition')
-    const user = publicUser({ ...req.user, plan: 'free' })
+    const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
     return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
   }
 

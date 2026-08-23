@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useApp } from '../store/appStore'
-import { Search, Home, Compass, Users, Zap, MessageCircle, User, Code, FileText, Sparkles, Plus, Radio, FolderGit2, BookOpen, CreditCard } from 'lucide-react'
+import { Search, Home, Compass, Users, Zap, MessageCircle, User, Code, FileText, Sparkles, Plus, Radio, FolderGit2, BookOpen, CreditCard, Grid3X3 } from 'lucide-react'
 import type { NavView } from '../store/appStore'
 import { NewProjectModal } from './NewProjectModal'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -42,6 +42,7 @@ export function CommandPalette() {
     ['explore', 'Go to Explore', <Compass key="explore" size={15} />],
     ['spaces', 'Go to Spaces', <Users key="spaces" size={15} />],
     ['lifestyle', 'Go to Lifestyle', <Zap key="lifestyle" size={15} />],
+    ['apps', 'Go to Mini Apps', <Grid3X3 key="apps" size={15} />],
     ['live', 'Go to Live work', <Radio key="live" size={15} />],
     ['chat', 'Go to Chat Hub', <MessageCircle key="chat" size={15} />],
     ['projects', 'Go to Projects', <FolderGit2 key="projects" size={15} />],

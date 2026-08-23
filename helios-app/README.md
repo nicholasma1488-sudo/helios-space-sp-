@@ -57,7 +57,7 @@ dedicated persistent directory.
 - Projects view pre-selects the active Space when navigated from a Space context
 - Global React error boundary protecting against unexpected view crashes
 - Helios AI self-negation correction: upstream model replies claiming inability are replaced with a Helios-scoped boundary explanation
-- Account billing with a free student edition, cheaper Alpha for people under 18, and Orbit for adults 18+. Signup collects a date of birth to choose the eligible plan. Card checkout and Stripe Checkout are supported; only brand and last four digits are stored.
+- After signup, a required plan picker offers Free, Alpha, or Orbit. Paid plans unlock extra Mini Apps (Flash Cards, Homework Radar, Vocab Spark, Streak Arena, Idea Vault, Meeting Pulse, Deep Work, Win Log) plus card or Stripe checkout.
 
 ## Deliberately not represented as available
 

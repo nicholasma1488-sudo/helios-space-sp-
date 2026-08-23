@@ -1,57 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Activity, ArrowLeft, Check, Clock3, Flame, Heart, Pause, Play, Plus,
-  RotateCcw, Search, Shuffle, Sparkles, Star, StickyNote, TimerReset, Trash2,
+  Activity, ArrowLeft, Award, BookOpen, CalendarDays, Check, Clock3, Flame, Heart, Lightbulb,
+  ListChecks, Lock, Pause, Play, Plus, RotateCcw, Search, Shuffle, Sparkles, Star, StickyNote,
+  Target, TimerReset, Trash2, Users,
 } from 'lucide-react'
 import { useApp } from '../store/appStore'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { HELIOS_MINI_APPS, miniAppUnlocked, unlockLabel, type MiniAppId, type MiniAppMeta } from '../product/miniApps'
+import {
+  CountdownApp, DeepWork, FlashCards, HomeworkRadar, IdeaVault, MeetingPulse, MoodCheck, StreakArena, VocabSpark, WinLog,
+} from './miniAppTools'
 import './MiniAppsView.css'
 
-type AppId = 'focus' | 'notes' | 'habits' | 'decision'
-
-interface MiniAppDefinition {
-  id: AppId
-  name: string
-  eyebrow: string
-  description: string
-  color: string
-  icon: React.ReactNode
+const ICONS: Record<MiniAppMeta['icon'], React.ReactNode> = {
+  timer: <TimerReset size={25} />,
+  note: <StickyNote size={25} />,
+  habit: <Activity size={25} />,
+  shuffle: <Shuffle size={25} />,
+  heart: <Heart size={25} />,
+  calendar: <CalendarDays size={25} />,
+  cards: <Sparkles size={25} />,
+  list: <ListChecks size={25} />,
+  book: <BookOpen size={25} />,
+  flame: <Flame size={25} />,
+  bulb: <Lightbulb size={25} />,
+  users: <Users size={25} />,
+  target: <Target size={25} />,
+  award: <Award size={25} />,
 }
-
-const MINI_APPS: MiniAppDefinition[] = [
-  {
-    id: 'focus',
-    name: 'Focus Orbit',
-    eyebrow: 'TIME',
-    description: 'A quiet focus timer that survives refreshes.',
-    color: '#8576f5',
-    icon: <TimerReset size={25} />,
-  },
-  {
-    id: 'notes',
-    name: 'Quick Notes',
-    eyebrow: 'CAPTURE',
-    description: 'Catch the thought before it leaves your orbit.',
-    color: '#4fc3f7',
-    icon: <StickyNote size={25} />,
-  },
-  {
-    id: 'habits',
-    name: 'Habit Pulse',
-    eyebrow: 'RHYTHM',
-    description: 'Small daily signals, visible over time.',
-    color: '#6ed69a',
-    icon: <Activity size={25} />,
-  },
-  {
-    id: 'decision',
-    name: 'Decision Flip',
-    eyebrow: 'CLARITY',
-    description: 'Choose between good options without the spiral.',
-    color: '#f2b84b',
-    icon: <Shuffle size={25} />,
-  },
-]
 
 function useAccountState<T>(accountId: number, name: string, initial: T) {
   const key = 'helios-mini-v1-' + accountId + '-' + name
@@ -80,12 +56,13 @@ function useAccountState<T>(accountId: number, name: string, initial: T) {
 }
 
 export function MiniAppsView() {
-  const { state } = useApp()
+  const { state, dispatch } = useApp()
   const accountId = state.user?.id ?? 0
-  const [activeApp, setActiveApp] = useState<AppId | null>(null)
+  const plan = state.user?.plan ?? 'free'
+  const [activeApp, setActiveApp] = useState<MiniAppId | null>(null)
   const [query, setQuery] = useState('')
-  const [favorites, setFavorites] = useAccountState<AppId[]>(accountId, 'favorites', ['focus'])
-  const [recent, setRecent] = useAccountState<AppId[]>(accountId, 'recent', [])
+  const [favorites, setFavorites] = useAccountState<MiniAppId[]>(accountId, 'favorites', ['focus'])
+  const [recent, setRecent] = useAccountState<MiniAppId[]>(accountId, 'recent', [])
   const workspaceRef = useFocusTrap<HTMLDivElement>(Boolean(activeApp))
 
   useEffect(() => {
@@ -99,25 +76,31 @@ export function MiniAppsView() {
 
   const filteredApps = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized) return MINI_APPS
-    return MINI_APPS.filter(app =>
+    if (!normalized) return HELIOS_MINI_APPS
+    return HELIOS_MINI_APPS.filter(app =>
       app.name.toLowerCase().includes(normalized) ||
       app.description.toLowerCase().includes(normalized),
     )
   }, [query])
 
-  function openApp(id: AppId) {
+  function openApp(id: MiniAppId) {
+    const app = HELIOS_MINI_APPS.find(item => item.id === id)
+    if (app && !miniAppUnlocked(app.tier, plan)) {
+      try { sessionStorage.setItem('helios-open-settings', 'billing') } catch {}
+      dispatch({ type: 'SET_VIEW', view: 'profile' })
+      return
+    }
     setActiveApp(id)
     setRecent(current => [id, ...current.filter(item => item !== id)].slice(0, 4))
   }
 
-  function toggleFavorite(id: AppId) {
+  function toggleFavorite(id: MiniAppId) {
     setFavorites(current =>
       current.includes(id) ? current.filter(item => item !== id) : [...current, id],
     )
   }
 
-  const activeDefinition = MINI_APPS.find(app => app.id === activeApp)
+  const activeDefinition = HELIOS_MINI_APPS.find(app => app.id === activeApp)
 
   return (
     <div className="mini-apps-view">
@@ -125,7 +108,7 @@ export function MiniAppsView() {
         <div>
           <div className="mini-apps-kicker"><Sparkles size={13} /> HELIOS MINI APPS</div>
           <h1>Small tools for real momentum.</h1>
-          <p>Open a focused tool without leaving the space where your work lives.</p>
+          <p>Fourteen Mini Apps. Free keeps the starter six. Alpha and Orbit unlock the ones that feel unfairly good.</p>
         </div>
         <label className="mini-app-search">
           <Search size={16} aria-hidden="true" />
@@ -147,11 +130,11 @@ export function MiniAppsView() {
             </div>
             <div className="mini-app-recent-row">
               {recent.map(id => {
-                const app = MINI_APPS.find(item => item.id === id)
+                const app = HELIOS_MINI_APPS.find(item => item.id === id)
                 if (!app) return null
                 return (
                   <button key={id} type="button" onClick={() => openApp(id)} className="mini-app-recent">
-                    <span style={{ background: app.color + '22', color: app.color }}>{app.icon}</span>
+                    <span style={{ background: app.color + '22', color: app.color }}>{ICONS[app.icon]}</span>
                     <span>{app.name}</span>
                   </button>
                 )
@@ -168,25 +151,26 @@ export function MiniAppsView() {
           <div className="mini-app-grid">
             {filteredApps.map((app, index) => {
               const favorite = favorites.includes(app.id)
+              const unlocked = miniAppUnlocked(app.tier, plan)
               return (
                 <article
                   key={app.id}
-                  className="mini-app-card"
+                  className={'mini-app-card' + (unlocked ? '' : ' is-locked')}
                   style={{ '--app-color': app.color, '--app-delay': String(index * 55) + 'ms' } as React.CSSProperties}
                 >
                   <button
                     type="button"
                     className="mini-app-card-main"
                     onClick={() => openApp(app.id)}
-                    aria-label={'Open ' + app.name}
+                    aria-label={unlocked ? 'Open ' + app.name : unlockLabel(app.tier)}
                   >
                     <span className="mini-app-icon" style={{ background: app.color + '20', color: app.color }}>
-                      {app.icon}
+                      {unlocked ? ICONS[app.icon] : <Lock size={22} />}
                     </span>
-                    <span className="mini-app-eyebrow">{app.eyebrow}</span>
+                    <span className="mini-app-eyebrow">{app.eyebrow}{app.tier !== 'free' ? ' · ' + app.tier.toUpperCase() : ''}</span>
                     <strong>{app.name}</strong>
                     <span className="mini-app-description">{app.description}</span>
-                    <span className="mini-app-open">Open app <span aria-hidden="true">↗</span></span>
+                    <span className="mini-app-open">{unlocked ? 'Open app' : unlockLabel(app.tier)} <span aria-hidden="true">↗</span></span>
                   </button>
                   <button
                     type="button"
@@ -205,7 +189,7 @@ export function MiniAppsView() {
             <div className="mini-app-empty">
               <Search size={24} />
               <strong>No app found</strong>
-              <span>Try “focus”, “notes”, or “habit”.</span>
+              <span>Try “focus”, “flash”, “vocab”, or “win”.</span>
             </div>
           )}
         </section>
@@ -229,7 +213,7 @@ export function MiniAppsView() {
             </button>
             <div className="mini-app-workspace-title">
               <span style={{ background: activeDefinition.color + '20', color: activeDefinition.color }}>
-                {activeDefinition.icon}
+                {ICONS[activeDefinition.icon]}
               </span>
               <div>
                 <small>{activeDefinition.eyebrow}</small>
@@ -251,6 +235,16 @@ export function MiniAppsView() {
             {activeApp === 'notes' && <QuickNotes accountId={accountId} />}
             {activeApp === 'habits' && <HabitPulse accountId={accountId} />}
             {activeApp === 'decision' && <DecisionFlip accountId={accountId} />}
+            {activeApp === 'mood' && <MoodCheck accountId={accountId} />}
+            {activeApp === 'countdown' && <CountdownApp accountId={accountId} />}
+            {activeApp === 'flashcards' && <FlashCards accountId={accountId} />}
+            {activeApp === 'homework' && <HomeworkRadar accountId={accountId} />}
+            {activeApp === 'vocab' && <VocabSpark accountId={accountId} />}
+            {activeApp === 'streaks' && <StreakArena accountId={accountId} />}
+            {activeApp === 'ideas' && <IdeaVault accountId={accountId} />}
+            {activeApp === 'meetings' && <MeetingPulse accountId={accountId} />}
+            {activeApp === 'deepwork' && <DeepWork accountId={accountId} />}
+            {activeApp === 'wins' && <WinLog accountId={accountId} />}
           </main>
         </div>
       )}

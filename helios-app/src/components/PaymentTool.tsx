@@ -90,7 +90,7 @@ function planLabel(id: BillingPlanId | string) {
   return 'Free'
 }
 
-export function PaymentTool() {
+export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboarding' }) {
   const { state, dispatch } = useApp()
   const [billing, setBilling] = useState<BillingSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
@@ -203,8 +203,8 @@ export function PaymentTool() {
   return (
     <section className="payment-tool" aria-labelledby="payment-tool-title">
       <header>
-        <span><CreditCard size={13} /> PAYMENT</span>
-        <h3 id="payment-tool-title">Free student edition, or subscribe</h3>
+        <span><CreditCard size={13} /> {mode === 'onboarding' ? 'PICK A PLAN' : 'PAYMENT'}</span>
+        <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Stay free, or unlock the Mini Apps people actually want.' : 'Free student edition, or subscribe'}</h3>
         <p>
           {audience === 'child'
             ? 'You are under 18, so Alpha is the paid plan. A parent or guardian should complete card or Stripe checkout.'
@@ -246,6 +246,11 @@ export function PaymentTool() {
                   <li key={feature}><Check size={12} /> {feature}</li>
                 ))}
               </ul>
+              {plan.mini_apps && plan.mini_apps.length > 0 && (
+                <div className="payment-mini-apps">
+                  {plan.mini_apps.map(app => <span key={app}>{app}</span>)}
+                </div>
+              )}
               {plan.id === 'free' ? (
                 <button
                   type="button"

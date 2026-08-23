@@ -17,7 +17,9 @@ import { LifestyleView } from './views/LifestyleView'
 import { LiveView } from './views/LiveView'
 import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
+import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
+import { PlanPicker } from './components/PlanPicker'
 import './App.css'
 
 function MainContent() {
@@ -41,6 +43,7 @@ function MainContent() {
     case 'explore':   content = <ExploreView />; break
     case 'spaces':    content = <SpaceView />; break
     case 'lifestyle': content = <LifestyleView currentUser={state.user} />; break
+    case 'apps':      content = <MiniAppsView />; break
     case 'live':      content = <LiveView />; break
     case 'chat':      content = <ChatView />; break
     case 'projects':  content = <SpacesView />; break
@@ -82,6 +85,7 @@ function AppInner() {
       explore: 'Explore',
       spaces: 'Spaces',
       lifestyle: 'Lifestyle',
+      apps: 'Mini Apps',
       live: 'Live',
       chat: 'Chat Hub',
       projects: 'Projects',
@@ -221,6 +225,7 @@ function AppInner() {
 
   return (
     <>
+      {state.user.plan_selected === false && <PlanPicker />}
       <GlobalShell>
         <MainContent />
         {state.heliosPanelOpen && (

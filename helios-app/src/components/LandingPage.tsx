@@ -304,7 +304,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <div className="pricing-intro" data-reveal>
             <div className="landing-section-label"><span>03</span> PAYMENT</div>
             <h2>Student edition is free.<br />Alpha or Orbit when you want more.</h2>
-            <p>Create an account with your date of birth. Under 18 can subscribe to cheaper Alpha. Adults 18+ can subscribe to Orbit. Both paid plans include a long list of extras, and you can pay with card or Stripe.</p>
+            <p>Create an account, then pick a plan. Free already includes six Mini Apps. Alpha and Orbit unlock the ones people upgrade for — Flash Cards, Homework Radar, Idea Vault, Deep Work, Win Log and more.</p>
           </div>
           <div className="pricing-grid is-three">
             <article className="pricing-card" data-reveal>
@@ -313,10 +313,10 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               <b>$0 <small>forever</small></b>
               <p>Everyone starts here. No card required.</p>
               <ul>
-                <li><Check size={13} /> Subjects, Hobbies, and Mini Apps</li>
-                <li><Check size={13} /> Projects, feed, Chat, and Live</li>
+                <li><Check size={13} /> 6 starter Mini Apps</li>
+                <li><Check size={13} /> Focus, Notes, Habits, Mood, Countdown</li>
+                <li><Check size={13} /> Subjects, Hobbies, Projects, Live</li>
                 <li><Check size={13} /> Helios AI when configured</li>
-                <li><Check size={13} /> Public or private updates</li>
                 <li><Check size={13} /> No card required</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
@@ -329,11 +329,11 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               <b>$3.99 <small>/ month</small></b>
               <p>The cheaper student plan. A parent or guardian can pay with card or Stripe.</p>
               <ul>
-                <li><Check size={13} /> Everything in Free</li>
+                <li><Check size={13} /> Unlock Flash Cards and Vocab Spark</li>
+                <li><Check size={13} /> Homework Radar and Streak Arena</li>
+                <li><Check size={13} /> 2× Solar on school work</li>
+                <li><Check size={13} /> Exam-week Helios prompts</li>
                 <li><Check size={13} /> Alpha badge and sticker pack</li>
-                <li><Check size={13} /> Study streaks and Solar boosts</li>
-                <li><Check size={13} /> Extra school checkpoints</li>
-                <li><Check size={13} /> Classroom challenge board</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
                 Join as a student <ArrowRight size={15} />
@@ -345,10 +345,10 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               <b>$9 <small>/ month</small></b>
               <p>The adult plan. Pay with card or Stripe after your date of birth confirms you are 18+.</p>
               <ul>
-                <li><Check size={13} /> Everything in Free</li>
-                <li><Check size={13} /> Orbit badge and workplace extras</li>
-                <li><Check size={13} /> Priority Helios capacity</li>
-                <li><Check size={13} /> Extra collaborator invites</li>
+                <li><Check size={13} /> Every Mini App, including adult tools</li>
+                <li><Check size={13} /> Idea Vault, Meeting Pulse, Deep Work</li>
+                <li><Check size={13} /> Win Log portfolio of finished work</li>
+                <li><Check size={13} /> Priority Helios and 3× Live visibility</li>
                 <li><Check size={13} /> Card or Stripe on file</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>

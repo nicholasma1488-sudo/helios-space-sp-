@@ -151,6 +151,10 @@
   gap: 14px;
 }
 
+.mini-app-card.is-locked {
+  opacity: .72;
+}
+
 .mini-app-card {
   --app-color: var(--helios-accent);
   --app-delay: 0ms;

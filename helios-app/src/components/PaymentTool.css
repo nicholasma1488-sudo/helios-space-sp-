@@ -148,6 +148,21 @@
   color: #6ed69a;
 }
 
+.payment-mini-apps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.payment-mini-apps span {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(133, 118, 245, .12);
+  color: #d1c5f8;
+  font-size: 7px;
+  font-weight: 700;
+}
+
 .payment-methods {
   display: grid;
   grid-template-columns: 1fr 1fr;

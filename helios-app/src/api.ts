@@ -11,6 +11,7 @@ export interface User {
   plan?: BillingPlanId
   audience?: AccountAudience | null
   birthdate?: string
+  plan_selected?: boolean
 }
 
 export interface BillingPlan {
@@ -22,6 +23,7 @@ export interface BillingPlan {
   audience?: 'all' | AccountAudience | string
   description: string
   features: string[]
+  mini_apps?: string[]
   eligible?: boolean
 }
 

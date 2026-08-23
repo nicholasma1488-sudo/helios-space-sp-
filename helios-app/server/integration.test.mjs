@@ -161,6 +161,7 @@ async function run() {
   })
   expectStatus(aliceSignup, 200, 'alice signup')
   assert.equal(aliceSignup.body.user.plan, 'free')
+  assert.equal(aliceSignup.body.user.plan_selected, false)
   assert.equal(aliceSignup.body.user.audience, 'adult')
   assert.equal(site.body.plans.some(plan => plan.id === 'free'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'alpha'), true)
@@ -517,7 +518,10 @@ async function run() {
   const stayFree = await alice.post('/api/billing/checkout', { plan: 'free' })
   expectStatus(stayFree, 200, 'stay on free option')
   assert.equal(stayFree.body.user.plan, 'free')
+  assert.equal(stayFree.body.user.plan_selected, true)
   assert.equal(stayFree.body.billing.plan, 'free')
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'alpha').features.length >= 10, true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Idea Vault'), true)
 
   const adultCannotAlpha = await alice.post('/api/billing/checkout', {
     plan: 'alpha',
