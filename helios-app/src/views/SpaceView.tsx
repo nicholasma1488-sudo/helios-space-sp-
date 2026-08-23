@@ -5,7 +5,8 @@ import {
 } from 'lucide-react'
 import { api, type Comment, type Conversation, type LiveSession, type Post, type Project } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
-import { MINI_APP_CATALOG, getMiniApp, getSpaceDefinition, type MiniAppDefinition } from '../product/catalog'
+import { getMiniApp, getSpaceDefinition, type MiniAppDefinition } from '../product/catalog'
+import { ADULT_PLAN_PRICE_RMB, appsForUser, hasAdultPlan } from '../product/audience'
 import { categoryForSpace, openCreatorProfile, openOrCreateProjectChat, openProjectWorkspace } from '../product/flow'
 import { useApp, type SpaceTab } from '../store/appStore'
 import './SpaceView.css'
@@ -25,7 +26,10 @@ const TABS: Array<{ id: SpaceTab; label: string }> = [
 export function SpaceView() {
   const { state, dispatch } = useApp()
   const space = getSpaceDefinition(state.activeSpaceId)
-  const miniApps = space.miniApps.map(getMiniApp)
+  const adultUnlocked = hasAdultPlan(state.user)
+  const spaceLocked = space.audience === 'adult' && !adultUnlocked
+  const visibleCatalog = appsForUser(state.user)
+  const miniApps = space.miniApps.map(getMiniApp).filter(app => spaceLocked || app.audience !== 'adult' || adultUnlocked)
   const projects = state.projects.filter(project => project.space_id === space.id)
   const [posts, setPosts] = useState<Post[]>([])
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
@@ -121,7 +125,7 @@ export function SpaceView() {
       <header className="space-hero">
         <div className="space-hero-orbit" aria-hidden="true"><i /><i /><span>{space.name.slice(0, 1)}</span></div>
         <div className="space-hero-copy">
-          <span>{space.kind === 'subject' ? 'SUBJECT SPACE' : 'HOBBY SPACE'}</span>
+          <span>{space.kind === 'subject' ? 'SUBJECT SPACE' : space.kind === 'work' ? 'WORK SPACE' : 'HOBBY SPACE'}</span>
           <h1>{space.name}</h1>
           <p>{space.description}</p>
         </div>
@@ -131,11 +135,28 @@ export function SpaceView() {
           <span><strong>{members.length}</strong> Active people</span>
         </div>
         <div className="space-hero-actions">
-          <button type="button" onClick={() => { dispatch({ type: 'SET_SPACE_TAB', tab: 'apps' }); setLaunchApp(miniApps[0]) }}><Plus size={15} /> Open {miniApps[0]?.shortName}</button>
+          <button type="button" onClick={() => {
+            if (spaceLocked || (miniApps[0]?.audience === 'adult' && !adultUnlocked)) {
+              dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+              return
+            }
+            dispatch({ type: 'SET_SPACE_TAB', tab: 'apps' })
+            if (miniApps[0]) setLaunchApp(miniApps[0])
+          }}><Plus size={15} /> Open {miniApps[0]?.shortName}</button>
           <button type="button" onClick={() => dispatch({ type: 'SET_SPACE_TAB', tab: 'chat' })}><MessageCircle size={15} /> Chat Hub</button>
           <button type="button" onClick={() => dispatch({ type: 'SET_SPACE_TAB', tab: 'live' })}><Radio size={15} /> View Live</button>
         </div>
       </header>
+
+      {spaceLocked && (
+        <div className="audience-lock-banner">
+          <div>
+            <strong>Adult Work Plan required</strong>
+            <small>Workplace tools and more mature content cost ¥{ADULT_PLAN_PRICE_RMB} per month.</small>
+          </div>
+          <button type="button" onClick={() => dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })}>Subscribe ¥{ADULT_PLAN_PRICE_RMB}/mo</button>
+        </div>
+      )}
 
       <nav className="space-tabs" aria-label={`${space.name} sections`}>
         {TABS.map(tab => (
@@ -158,18 +179,36 @@ export function SpaceView() {
             setLinkedProjectId={setLinkedProjectId}
             posting={posting}
             onSubmit={submitPost}
-            onLaunch={setLaunchApp}
+            onLaunch={app => {
+              if ((spaceLocked || app.audience === 'adult') && !adultUnlocked) {
+                dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+                return
+              }
+              setLaunchApp(app)
+            }}
             onOpenProject={openProject}
             onOpenLive={sessionId => dispatch({ type: 'OPEN_LIVE_SESSION', sessionId })}
             onPostUpdate={updated => setPosts(current => current.map(post => post.id === updated.id ? updated : post))}
           />
         )}
         {state.activeSpaceTab === 'projects' && <ProjectsPanel projects={projects} sessions={liveSessions} onOpen={openProject} onNew={() => setShowNewProject(true)} onChat={project => void openOrCreateProjectChat(project, dispatch)} onLive={startLive} />}
-        {state.activeSpaceTab === 'apps' && <MiniAppsPanel apps={miniApps} catalog={MINI_APP_CATALOG} projects={projects} sessions={liveSessions} onLaunch={setLaunchApp} onOpen={openProject} onLive={startLive} />}
+        {state.activeSpaceTab === 'apps' && <MiniAppsPanel apps={miniApps} catalog={visibleCatalog} projects={projects} sessions={liveSessions} onLaunch={app => {
+          if ((spaceLocked || app.audience === 'adult') && !adultUnlocked) {
+            dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+            return
+          }
+          setLaunchApp(app)
+        }} onOpen={openProject} onLive={startLive} />}
         {state.activeSpaceTab === 'chat' && <SpaceChatPanel spaceId={space.id} projects={projects} onOpenProject={openProject} />}
         {state.activeSpaceTab === 'live' && <LivePanel sessions={liveSessions} projects={projects} onOpen={id => dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: id })} onStart={startLive} />}
         {state.activeSpaceTab === 'members' && <MembersPanel members={members} currentUserId={state.user?.id ?? 0} />}
-        {state.activeSpaceTab === 'challenges' && <ChallengesPanel spaceName={space.name} apps={miniApps} onStart={setLaunchApp} />}
+        {state.activeSpaceTab === 'challenges' && <ChallengesPanel spaceName={space.name} apps={miniApps} onStart={app => {
+          if ((spaceLocked || app.audience === 'adult') && !adultUnlocked) {
+            dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+            return
+          }
+          setLaunchApp(app)
+        }} />}
         {state.activeSpaceTab === 'resources' && <ResourcesPanel spaceName={space.name} />}
         {state.activeSpaceTab === 'helios' && <HeliosSpacePanel prompts={space.prompts} spaceName={space.name} onOpen={() => dispatch({ type: 'OPEN_HELIOS_PANEL' })} />}
       </main>

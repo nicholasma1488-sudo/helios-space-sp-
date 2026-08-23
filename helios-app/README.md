@@ -33,6 +33,7 @@ dedicated persistent directory.
 ## Implemented functionality
 
 - Account signup, login, logout, and per-user sessions
+- Student or adult account choice at signup; adults subscribe for ¥20/month to unlock Workplace, Career, Finance and City Life tools
 - Persistent code, document, design, and research projects
 - Monaco editor with autosave, explicit save, safe close, and publish flow
 - Cinematic responsive landing page with a Three.js/WebGL orbit scene, pointer parallax, drag inertia, clickable/keyboard product-mode switching, reduced-motion fallbacks, and a portal transition into authentication

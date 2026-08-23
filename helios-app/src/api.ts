@@ -1,10 +1,16 @@
 // Typed API client for Helios Space backend
 
+export type AccountKind = 'student' | 'adult' | ''
+
 export interface User {
   id: number
   name: string
   handle: string
   email: string
+  account_kind?: AccountKind
+  adult_plan_active?: boolean
+  adult_plan_expires_at?: string | null
+  adult_plan_price_rmb?: number
 }
 
 export interface Project {
@@ -310,8 +316,14 @@ function postQuery(filters: PostFilters = {}) {
 export const api = {
   site: () => call<SiteInfo>('/api/site'),
 
-  signup: (data: { name: string; handle: string; email: string; password: string }) =>
+  signup: (data: { name: string; handle: string; email: string; password: string; account_kind?: AccountKind }) =>
     call<{ ok: boolean; user: User }>('/api/signup', { method: 'POST', body: JSON.stringify(data) }),
+
+  setAccountKind: (account_kind: Exclude<AccountKind, ''>) =>
+    call<{ ok: boolean; user: User }>('/api/account/kind', { method: 'POST', body: JSON.stringify({ account_kind }) }),
+
+  subscribeAdultPlan: (method: 'wechat' | 'alipay') =>
+    call<{ ok: boolean; user: User }>('/api/account/adult-plan', { method: 'POST', body: JSON.stringify({ method }) }),
 
   login: (data: { email: string; password: string }) =>
     call<{ ok: boolean; user: User }>('/api/login', { method: 'POST', body: JSON.stringify(data) }),

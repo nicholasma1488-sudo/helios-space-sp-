@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 import type { User, SiteInfo } from '../api'
 import { Logo } from './Logo'
-import { Mail, Lock, User as UserIcon, AtSign, Eye, EyeOff, Loader, AlertCircle } from 'lucide-react'
+import { Mail, Lock, User as UserIcon, AtSign, Eye, EyeOff, Loader, AlertCircle, Briefcase, GraduationCap } from 'lucide-react'
+import type { AccountKind } from '../api'
+import { ADULT_PLAN_PRICE_RMB } from '../product/audience'
 import './AuthScreen.css'
 
 interface Props { onAuth: (user: User) => void; defaultMode?: 'login' | 'register'; onBack?: () => void }
@@ -14,6 +16,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [handle, setHandle] = useState('')
+  const [accountKind, setAccountKind] = useState<Exclude<AccountKind, ''> | ''>('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -45,6 +48,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
       if (!handle.trim()) errs.handle = 'Username is required'
       else if (!/^[a-zA-Z0-9_.]{3,30}$/.test(handle.replace(/^@/, '')))
         errs.handle = '3–30 chars, letters, numbers, _ or .'
+      if (!accountKind) errs.account_kind = 'Choose student or adult'
     }
     if (!email.trim()) errs.email = 'Email is required'
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errs.email = 'Enter a valid email'
@@ -65,7 +69,13 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
         const r = await api.login({ email: email.trim(), password })
         onAuth(r.user)
       } else {
-        const r = await api.signup({ name: name.trim(), handle: handle.trim(), email: email.trim(), password })
+        const r = await api.signup({
+          name: name.trim(),
+          handle: handle.trim(),
+          email: email.trim(),
+          password,
+          account_kind: accountKind || undefined,
+        })
         onAuth(r.user)
       }
     } catch (err) {
@@ -227,6 +237,26 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
                   { placeholder: 'Jane Smith', autoComplete: 'name', ref: nameRef })}
                 {field('auth-handle', 'Username', <AtSign size={15} />, handle, setHandle,
                   { placeholder: 'janesmith', autoComplete: 'username' })}
+                <div>
+                  <div id="auth-account-kind-label" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--helios-muted)', marginBottom: 8, letterSpacing: '0.02em' }}>
+                    Are you a student or an adult?
+                  </div>
+                  <div className="auth-audience-grid" role="radiogroup" aria-labelledby="auth-account-kind-label">
+                    <button type="button" role="radio" aria-checked={accountKind === 'student'} className={accountKind === 'student' ? 'is-selected' : ''} onClick={() => { setAccountKind('student'); setFieldErrors(prev => { const next = { ...prev }; delete next.account_kind; return next }) }}>
+                      <GraduationCap size={16} />
+                      <span><strong>Student</strong><small>Free school and hobby Spaces</small></span>
+                    </button>
+                    <button type="button" role="radio" aria-checked={accountKind === 'adult'} className={accountKind === 'adult' ? 'is-selected' : ''} onClick={() => { setAccountKind('adult'); setFieldErrors(prev => { const next = { ...prev }; delete next.account_kind; return next }) }}>
+                      <Briefcase size={16} />
+                      <span><strong>Adult</strong><small>¥{ADULT_PLAN_PRICE_RMB}/month for work tools</small></span>
+                    </button>
+                  </div>
+                  {fieldErrors.account_kind && (
+                    <div role="alert" className="flex items-center gap-1 mt-1" style={{ fontSize: 11, color: 'var(--helios-danger)' }}>
+                      <AlertCircle size={10} /> {fieldErrors.account_kind}
+                    </div>
+                  )}
+                </div>
               </>
             )}
             {field('auth-email', 'Email', <Mail size={15} />, email, setEmail,

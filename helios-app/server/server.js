@@ -29,7 +29,18 @@ const PROJECT_TYPES = new Set([
   'code', 'doc', 'design', 'research', 'writing', 'spreadsheet', 'presentation',
   'drawing', 'survey', 'board', 'notebook', 'book', 'math',
 ])
-const POST_CATEGORIES = new Set(['code', 'study', 'activity', 'reading', 'reflection'])
+const POST_CATEGORIES = new Set(['code', 'study', 'activity', 'reading', 'reflection', 'work'])
+const ACCOUNT_KINDS = new Set(['student', 'adult'])
+const ADULT_PLAN_PRICE_RMB = 20
+const ADULT_PLAN_DAYS = 30
+const ADULT_PAYMENT_METHODS = new Set(['wechat', 'alipay'])
+const ADULT_SPACE_IDS = new Set(['workplace', 'career', 'finance', 'city-life'])
+const ADULT_APP_KINDS = new Set([
+  'standup-notes', 'one-on-one', 'performance-review', 'job-search',
+  'salary-planner', 'invoice-tracker', 'tax-notes', 'housing-search',
+  'networking-crm', 'contract-notes', 'expense-report', 'interview-prep',
+  'offer-compare',
+])
 const POST_AUDIENCES = new Set(['public', 'private'])
 const REACTION_EMOJIS = new Set(['👍', '❤️', '🙌', '💡', '✨', '🔥'])
 const PROJECT_VISIBILITIES = new Set(['private', 'space', 'public'])
@@ -43,6 +54,8 @@ const SPACE_CATALOG = [
   ['basketball', 'Basketball', 'hobby'], ['running', 'Running', 'hobby'], ['reading', 'Reading', 'hobby'],
   ['music', 'Music', 'hobby'], ['photography', 'Photography', 'hobby'], ['gaming', 'Gaming', 'hobby'],
   ['cooking', 'Cooking', 'hobby'], ['robotics', 'Robotics', 'hobby'], ['travel', 'Travel', 'hobby'],
+  ['workplace', 'Workplace', 'work'], ['career', 'Career', 'work'],
+  ['finance', 'Finance', 'work'], ['city-life', 'City Life', 'work'],
 ]
 
 const MAX_USER_NAME_LENGTH = 100
@@ -361,6 +374,21 @@ ensureColumn('posts', 'space_id', "TEXT NOT NULL DEFAULT 'lifestyle'")
 ensureColumn('posts', 'post_type', "TEXT NOT NULL DEFAULT 'progress'")
 ensureColumn('posts', 'media_url', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('chat_messages', 'attachment_json', "TEXT NOT NULL DEFAULT '{}'")
+ensureColumn('users', 'account_kind', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'adult_plan_status', "TEXT NOT NULL DEFAULT 'inactive'")
+ensureColumn('users', 'adult_plan_expires_at', "TEXT NOT NULL DEFAULT ''")
+db.exec(`
+  CREATE TABLE IF NOT EXISTS adult_plan_payments (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id      INTEGER NOT NULL,
+    amount_rmb   INTEGER NOT NULL,
+    method       TEXT NOT NULL,
+    period_start TEXT NOT NULL,
+    period_end   TEXT NOT NULL,
+    created_at   TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+`)
 
 // Seed / reconcile the single owner admin from environment-provided credentials
 if (ADMIN_EMAIL && ADMIN_PASSWORD) {
@@ -494,11 +522,54 @@ function requireAdmin(req, res, next) {
   next()
 }
 
+const USER_PUBLIC_COLUMNS = 'id,name,handle,email,status,account_kind,adult_plan_status,adult_plan_expires_at'
+
+function serializeUser(user) {
+  if (!user) return null
+  const expiresAt = user.adult_plan_expires_at || ''
+  const expiryMs = Date.parse(expiresAt)
+  const planActive = user.account_kind === 'adult'
+    && user.adult_plan_status === 'active'
+    && Number.isFinite(expiryMs)
+    && expiryMs > Date.now()
+  return {
+    id: Number(user.id),
+    name: user.name,
+    handle: user.handle,
+    email: user.email,
+    account_kind: user.account_kind === 'adult' ? 'adult' : user.account_kind === 'student' ? 'student' : '',
+    adult_plan_active: planActive,
+    adult_plan_expires_at: planActive ? expiresAt : null,
+    adult_plan_price_rmb: ADULT_PLAN_PRICE_RMB,
+  }
+}
+
+function hasAdultAccess(user) {
+  return Boolean(serializeUser(user)?.adult_plan_active)
+}
+
+function isAdultLockedResource(spaceId, appKind) {
+  return ADULT_SPACE_IDS.has(spaceId) || ADULT_APP_KINDS.has(appKind)
+}
+
+function rejectWithoutAdultPlan(res) {
+  return res.status(402).json({
+    error: 'Adult Work Plan is required for workplace tools and more mature content. It costs ¥20 per month.',
+    code: 'ADULT_PLAN_REQUIRED',
+    price_rmb: ADULT_PLAN_PRICE_RMB,
+  })
+}
+
+function excludeAdultSpaces(where, params, column = 'p.space_id') {
+  where.push(`${column} NOT IN (${[...ADULT_SPACE_IDS].map(() => '?').join(',')})`)
+  params.push(...ADULT_SPACE_IDS)
+}
+
 function requireUser(req, res, next) {
   const token = req.cookies.helios_user
   const s = getFreshSession(token, 'user', USER_SESSION_MS)
   if (!s) return res.status(401).json({ error: 'Not authenticated' })
-  const user = db.prepare('SELECT id,name,handle,email,status FROM users WHERE id = ?').get(s.subject_id)
+  const user = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(s.subject_id)
   if (!user || user.status !== 'active') return res.status(403).json({ error: 'Account unavailable' })
   req.user = user
   next()
@@ -810,7 +881,7 @@ app.get('/api/site', (_req, res) => res.json({
 app.post('/api/signup', authRateLimit, (req, res) => {
   if (getSetting('signup_open') !== 'true')
     return res.status(403).json({ error: 'Signups are currently closed' })
-  const { name, handle, email, password } = req.body || {}
+  const { name, handle, email, password, account_kind } = req.body || {}
   if (!name || !handle || !email || !password)
     return res.status(400).json({ error: 'All fields are required' })
   const checkedName = checkedString(name, 'Name', MAX_USER_NAME_LENGTH, { required: true, trim: true })
@@ -827,16 +898,20 @@ app.post('/api/signup', authRateLimit, (req, res) => {
   const h = String(handle).trim().replace(/^@/, '').toLowerCase()
   if (!/^[a-zA-Z0-9_.]{3,30}$/.test(h))
     return res.status(400).json({ error: 'Handle must be 3-30 chars: letters, numbers, _ or .' })
+  if (account_kind !== undefined && account_kind !== '' && !ACCOUNT_KINDS.has(account_kind))
+    return res.status(400).json({ error: 'Choose student or adult' })
+  const accountKind = ACCOUNT_KINDS.has(account_kind) ? account_kind : ''
   try {
     const duplicateHandle = db.prepare('SELECT 1 FROM users WHERE lower(handle) = lower(?)').get('@' + h)
     if (duplicateHandle) return res.status(409).json({ error: 'That handle or email is already registered' })
     const info = db.prepare(
-      'INSERT INTO users (name, handle, email, password_hash, created_at) VALUES (?,?,?,?,?)'
+      'INSERT INTO users (name, handle, email, password_hash, created_at, account_kind) VALUES (?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), new Date().toISOString())
+          bcrypt.hashSync(checkedPassword.value, 10), new Date().toISOString(), accountKind)
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
-    res.json({ ok: true, user: { id: info.lastInsertRowid, name: checkedName.value, handle: '@' + h, email: normalizedEmail } })
+    const created = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(info.lastInsertRowid)
+    res.json({ ok: true, user: serializeUser(created) })
   } catch (e) {
     if (String(e.message).includes('UNIQUE'))
       return res.status(409).json({ error: 'That handle or email is already registered' })
@@ -853,7 +928,7 @@ app.post('/api/login', authRateLimit, (req, res) => {
     return res.status(403).json({ error: 'This account has been suspended' })
   const token = newSession('user', user.id)
   res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
-  res.json({ ok: true, user: { id: user.id, name: user.name, handle: user.handle, email: user.email } })
+  res.json({ ok: true, user: serializeUser(user) })
 })
 
 app.post('/api/logout', (req, res) => {
@@ -866,15 +941,47 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/session', (req, res) => {
   const session = getFreshSession(req.cookies.helios_user, 'user', USER_SESSION_MS)
   if (!session) return res.json({ user: null })
-  const user = db.prepare('SELECT id,name,handle,email,status FROM users WHERE id = ?').get(session.subject_id)
+  const user = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(session.subject_id)
   if (!user || user.status !== 'active') return res.json({ user: null })
-  res.json({ user: { id: user.id, name: user.name, handle: user.handle, email: user.email } })
+  res.json({ user: serializeUser(user) })
 })
 
-app.get('/api/me', requireUser, (req, res) => res.json({ user: req.user }))
+app.get('/api/me', requireUser, (req, res) => res.json({ user: serializeUser(req.user) }))
+
+app.post('/api/account/kind', requireUser, (req, res) => {
+  const { account_kind } = req.body || {}
+  if (!ACCOUNT_KINDS.has(account_kind))
+    return res.status(400).json({ error: 'Choose student or adult' })
+  db.prepare('UPDATE users SET account_kind = ? WHERE id = ?').run(account_kind, req.user.id)
+  const user = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(req.user.id)
+  res.json({ ok: true, user: serializeUser(user) })
+})
+
+app.post('/api/account/adult-plan', requireUser, authRateLimit, (req, res) => {
+  const { method } = req.body || {}
+  if (req.user.account_kind !== 'adult')
+    return res.status(400).json({ error: 'Switch to an adult account before subscribing' })
+  if (!ADULT_PAYMENT_METHODS.has(method))
+    return res.status(400).json({ error: 'Choose WeChat Pay or Alipay' })
+  const now = Date.now()
+  const currentExpiry = Date.parse(req.user.adult_plan_expires_at || '')
+  const startMs = Number.isFinite(currentExpiry) && currentExpiry > now ? currentExpiry : now
+  const periodStart = new Date(startMs).toISOString()
+  const periodEnd = new Date(startMs + ADULT_PLAN_DAYS * 24 * 60 * 60 * 1000).toISOString()
+  inTransaction(() => {
+    db.prepare(
+      'UPDATE users SET adult_plan_status = ?, adult_plan_expires_at = ? WHERE id = ?'
+    ).run('active', periodEnd, req.user.id)
+    db.prepare(
+      'INSERT INTO adult_plan_payments (user_id, amount_rmb, method, period_start, period_end, created_at) VALUES (?,?,?,?,?,?)'
+    ).run(req.user.id, ADULT_PLAN_PRICE_RMB, method, periodStart, periodEnd, new Date().toISOString())
+  })
+  const user = db.prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(req.user.id)
+  res.json({ ok: true, user: serializeUser(user) })
+})
 
 app.get('/api/export', requireUser, (req, res) => {
-  const account = db.prepare('SELECT id,name,handle,email,created_at,status FROM users WHERE id = ?').get(req.user.id)
+  const account = db.prepare('SELECT id,name,handle,email,created_at,status,account_kind,adult_plan_status,adult_plan_expires_at FROM users WHERE id = ?').get(req.user.id)
   const projects = db.prepare('SELECT * FROM projects WHERE user_id = ? ORDER BY id').all(req.user.id)
   const collaborativeProjects = db.prepare(
     "SELECT p.*,pc.role AS collaborator_role FROM projects p JOIN project_collaborators pc ON pc.project_id = p.id WHERE pc.user_id = ? AND pc.status = 'accepted' ORDER BY p.id"
@@ -945,6 +1052,8 @@ app.post('/api/projects', requireUser, (req, res) => {
   if (typeof projectVisibility !== 'string' || !PROJECT_VISIBILITIES.has(projectVisibility))
     return res.status(400).json({ error: 'Invalid project visibility' })
   const projectSpaceId = normalizeSpaceId(space_id ?? checkedSpace.value, 'coding')
+  if (isAdultLockedResource(projectSpaceId, checkedAppKind.value) && !hasAdultAccess(req.user))
+    return rejectWithoutAdultPlan(res)
   const metadataString = metadata === undefined
     ? '{}'
     : typeof metadata === 'string' ? metadata : JSON.stringify(metadata)
@@ -1502,6 +1611,10 @@ app.get('/api/posts', requireUser, (req, res) => {
   if (spaceId) {
     where.push('p.space_id = ?')
     params.push(spaceId)
+    if (ADULT_SPACE_IDS.has(spaceId) && !hasAdultAccess(req.user))
+      return res.json({ posts: [], next_cursor: null })
+  } else if (!hasAdultAccess(req.user)) {
+    excludeAdultSpaces(where, params)
   }
   if (checkedSearch.value) {
     const like = '%' + checkedSearch.value.toLowerCase() + '%'
@@ -1563,6 +1676,8 @@ app.post('/api/posts', requireUser, socialRateLimit, (req, res) => {
     } catch { return res.status(400).json({ error: 'Media URL must be a valid HTTPS URL' }) }
   }
   const postSpaceId = normalizeSpaceId(space_id ?? linkedProject?.space_id, 'lifestyle')
+  if (isAdultLockedResource(postSpaceId, linkedProject?.app_kind) && !hasAdultAccess(req.user))
+    return rejectWithoutAdultPlan(res)
 
   const info = db.prepare(
     'INSERT INTO posts (user_id,category,body,project_id,audience,space_id,post_type,media_url,created_at) VALUES (?,?,?,?,?,?,?,?,?)'
@@ -1804,9 +1919,12 @@ app.get('/api/search', requireUser, (req, res) => {
     "WHERE u.status = 'active' AND (u.id = ? OR p.id IS NOT NULL OR pr.id IS NOT NULL) " +
     "AND (lower(u.name) LIKE ? OR lower(u.handle) LIKE ?) ORDER BY u.name LIMIT 10"
   ).all(req.user.id, like, like)
+  const postWhere = ["(p.audience = 'public' OR p.user_id = ?)", '(lower(p.body) LIKE ? OR lower(pr.name) LIKE ?)']
+  const postParams = [req.user.id, req.user.id, like, like]
+  if (!hasAdultAccess(req.user)) excludeAdultSpaces(postWhere, postParams)
   const posts = db.prepare(
-    POST_SELECT + " WHERE (p.audience = 'public' OR p.user_id = ?) AND (lower(p.body) LIKE ? OR lower(pr.name) LIKE ?) ORDER BY p.id DESC LIMIT 12"
-  ).all(req.user.id, req.user.id, like, like)
+    POST_SELECT + ' WHERE ' + postWhere.join(' AND ') + ' ORDER BY p.id DESC LIMIT 12'
+  ).all(...postParams)
   const liveRows = db.prepare(
     'SELECT ls.*,u.name AS owner_name,u.handle AS owner_handle,p.name AS project_name,p.app_kind ' +
     "FROM live_sessions ls JOIN users u ON u.id = ls.owner_id JOIN projects p ON p.id = ls.project_id " +
@@ -1830,9 +1948,12 @@ app.get('/api/explore', requireUser, (req, res) => {
       const project = serializeProject(row, req.user.id)
       return { ...project, content: undefined }
     })
+  const explorePostWhere = ["(p.audience = 'public' OR p.user_id = ?)"]
+  const explorePostParams = [req.user.id, req.user.id]
+  if (!hasAdultAccess(req.user)) excludeAdultSpaces(explorePostWhere, explorePostParams)
   const postRows = db.prepare(
-    POST_SELECT + " WHERE p.audience = 'public' OR p.user_id = ? ORDER BY p.id DESC LIMIT 36"
-  ).all(req.user.id, req.user.id)
+    POST_SELECT + ' WHERE ' + explorePostWhere.join(' AND ') + ' ORDER BY p.id DESC LIMIT 36'
+  ).all(...explorePostParams)
   const liveRows = db.prepare(
     'SELECT ls.*,u.name AS owner_name,u.handle AS owner_handle,p.name AS project_name,p.app_kind ' +
     "FROM live_sessions ls JOIN users u ON u.id = ls.owner_id JOIN projects p ON p.id = ls.project_id " +

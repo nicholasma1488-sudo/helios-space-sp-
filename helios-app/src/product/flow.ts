@@ -80,7 +80,8 @@ export function askHeliosWithContext(context: Record<string, unknown>, prompt: s
 
 export function categoryForSpace(spaceId: string) {
   if (['coding', 'ai', 'engineering', 'robotics', 'gaming'].includes(spaceId)) return 'code'
-  if (['running', 'basketball', 'music', 'photography', 'cooking', 'travel'].includes(spaceId)) return 'activity'
+  if (['running', 'basketball', 'music', 'photography', 'cooking', 'travel', 'city-life'].includes(spaceId)) return 'activity'
   if (['reading', 'english', 'languages', 'history'].includes(spaceId)) return 'reading'
+  if (['workplace', 'career', 'finance'].includes(spaceId)) return 'work'
   return 'study'
 }

@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, BookOpen, ChevronDown, Compass, Dumbbell, FolderGit2, MessageCircle,
+  Bell, BookOpen, Briefcase, ChevronDown, Compass, Dumbbell, FolderGit2, MessageCircle,
   Plus, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults, type SpaceSummary } from '../api'
-import { HOBBIES, SUBJECTS, getSpaceDefinition } from '../product/catalog'
+import { HOBBIES, SUBJECTS, WORK_SPACES, getSpaceDefinition } from '../product/catalog'
+import { ADULT_PLAN_PRICE_RMB, hasAdultPlan } from '../product/audience'
 import { useApp } from '../store/appStore'
 import './AuthenticatedTopBar.css'
 
-type OpenMenu = 'subjects' | 'hobbies' | 'search' | 'notifications' | 'profile' | null
+type OpenMenu = 'subjects' | 'hobbies' | 'work' | 'search' | 'notifications' | 'profile' | null
 
 const EMPTY_RESULTS: SearchResults = { projects: [], people: [], posts: [], live: [], spaces: [] }
 
@@ -82,6 +83,12 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   }
 
   function openSpace(spaceId: string) {
+    const space = getSpaceDefinition(spaceId)
+    if (space.audience === 'adult' && !hasAdultPlan(state.user)) {
+      dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+      setOpenMenu(null)
+      return
+    }
     dispatch({ type: 'OPEN_SPACE', spaceId })
     setOpenMenu(null)
   }
@@ -165,6 +172,9 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         <button type="button" className={openMenu === 'hobbies' ? 'is-open' : ''} onClick={() => toggle('hobbies')} aria-expanded={openMenu === 'hobbies'}>
           <Dumbbell size={15} /><span>Hobbies</span><ChevronDown size={13} />
         </button>
+        <button type="button" className={openMenu === 'work' ? 'is-open' : ''} onClick={() => toggle('work')} aria-expanded={openMenu === 'work'}>
+          <Briefcase size={15} /><span>Work</span><ChevronDown size={13} />
+        </button>
         <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
           <i />{activeSpace.name}
         </span>
@@ -195,6 +205,38 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {openMenu === 'work' && (
+        <div className="topbar-mega-menu" role="menu" aria-label="Work">
+          <div className="mega-menu-heading">
+            <span><Briefcase size={16} /> Work & mature Spaces</span>
+            <small>
+              {hasAdultPlan(state.user)
+                ? 'Workplace tools and more mature independent-living content are unlocked.'
+                : `Adults unlock these Spaces for ¥${ADULT_PLAN_PRICE_RMB} per month.`}
+            </small>
+          </div>
+          <div className="mega-space-grid">
+            {WORK_SPACES.map(space => (
+              <button type="button" role="menuitem" key={space.id} onClick={() => openSpace(space.id)} className={state.activeSpaceId === space.id ? 'is-active' : ''} style={{ '--space-accent': space.accent } as React.CSSProperties}>
+                <i>{space.name.slice(0, 1)}</i>
+                <span>
+                  <strong>{space.name}{!hasAdultPlan(state.user) ? ' · ¥20' : ''}</strong>
+                  <small>{space.description}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+          {!hasAdultPlan(state.user) && (
+            <form className="custom-hobby-form" onSubmit={event => { event.preventDefault(); dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true }); setOpenMenu(null) }}>
+              <Briefcase size={15} />
+              <label htmlFor="adult-plan-cta">Adult Work Plan</label>
+              <input id="adult-plan-cta" readOnly value={`¥${ADULT_PLAN_PRICE_RMB} / month for work functions`} />
+              <button type="submit">Subscribe</button>
+            </form>
+          )}
         </div>
       )}
 

@@ -9,10 +9,11 @@ import { api, type LiveSession } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { hasAdultPlan } from '../product/audience'
 import { openCreatorProfile, openLiveSession, openProjectWorkspace } from '../product/flow'
 import './LifestyleView.css'
 
-const CATEGORIES = [
+const BASE_CATEGORIES = [
   { id: 'all', label: 'Everything', icon: <Sparkles size={14} />, color: '#8576f5' },
   { id: 'code', label: 'Coding', icon: <Code size={14} />, color: '#4fc3f7' },
   { id: 'study', label: 'Study', icon: <BookOpen size={14} />, color: '#b794ff' },
@@ -20,6 +21,7 @@ const CATEGORIES = [
   { id: 'reading', label: 'Reading', icon: <BookOpen size={14} />, color: '#f2b84b' },
   { id: 'reflection', label: 'Reflection', icon: <PenLine size={14} />, color: '#ff9b6a' },
 ]
+const WORK_CATEGORY = { id: 'work', label: 'Work', icon: <Users size={14} />, color: '#6fb8e8' }
 
 const REACTIONS = [
   { emoji: '👍', label: 'Like', color: '#68b7ff' },
@@ -35,6 +37,7 @@ const EMPTY_SOLAR: SolarSummary = { total: 0, identity: 'Dawn', next_threshold: 
 
 export function LifestyleView({ currentUser }: Props) {
   const { state, dispatch } = useApp()
+  const categories = hasAdultPlan(currentUser) ? [...BASE_CATEGORIES, WORK_CATEGORY] : BASE_CATEGORIES
   const [posts, setPosts] = useState<Post[]>([])
   const [nextCursor, setNextCursor] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -379,7 +382,7 @@ export function LifestyleView({ currentUser }: Props) {
 
           <div className="lifestyle-side-section">
             <span>EXPLORE BY MOMENT</span>
-            {CATEGORIES.slice(1).map(item => (
+            {categories.slice(1).map(item => (
               <button
                 key={item.id}
                 type="button"
@@ -449,7 +452,7 @@ export function LifestyleView({ currentUser }: Props) {
                   aria-label="Progress update"
                 />
                 <div className="composer-category-row" role="group" aria-label="Update category">
-                  {CATEGORIES.slice(1).map(item => (
+                  {categories.slice(1).map(item => (
                     <button
                       type="button"
                       key={item.id}
@@ -516,7 +519,7 @@ export function LifestyleView({ currentUser }: Props) {
 
           <section className="feed-filter-bar" aria-label="Feed controls">
             <div className="feed-filter-scroll">
-              {CATEGORIES.map(item => (
+              {categories.map(item => (
                 <button
                   type="button"
                   key={item.id}
@@ -607,7 +610,7 @@ export function LifestyleView({ currentUser }: Props) {
 
           <section className="lifestyle-right-card">
             <header><strong>Explore a different rhythm</strong><small>Switch the feed moment</small></header>
-            {CATEGORIES.slice(1, 5).map(item => (
+            {categories.slice(1, 5).map(item => (
               <button type="button" key={item.id} onClick={() => setCategoryFilter(item.id)}>
                 <i style={{ background: item.color + '1a', color: item.color }}>{item.icon}</i>
                 <span><strong>{item.label}</strong><small>See recent {item.label.toLowerCase()} updates</small></span>
@@ -636,7 +639,7 @@ function Avatar({ name, size }: { name: string; size: 'sm' | 'md' }) {
 }
 
 function categoryLabel(category: string) {
-  return CATEGORIES.find(item => item.id === category)?.label ?? category
+  return [...BASE_CATEGORIES, WORK_CATEGORY].find(item => item.id === category)?.label ?? category
 }
 
 function relativeTime(value: string) {

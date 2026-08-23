@@ -4,7 +4,8 @@ import { Search, Home, Compass, Users, Zap, MessageCircle, User, Code, FileText,
 import type { NavView } from '../store/appStore'
 import { NewProjectModal } from './NewProjectModal'
 import { useFocusTrap } from '../hooks/useFocusTrap'
-import { HOBBIES, SUBJECTS, getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { HOBBIES, SUBJECTS, WORK_SPACES, getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { hasAdultPlan } from '../product/audience'
 
 interface Cmd {
   id: string; label: string; subtitle?: string
@@ -57,13 +58,23 @@ export function CommandPalette() {
     action: () => { dispatch({ type: 'OPEN_CODE_EDITOR', projectId: p.id }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) },
   }))
 
-  const SPACES: Cmd[] = [...SUBJECTS, ...HOBBIES].map(space => ({
+  const SPACES: Cmd[] = [...SUBJECTS, ...HOBBIES, ...WORK_SPACES].map(space => ({
     id: `space-${space.id}`,
     label: `Open ${space.name} Space`,
-    subtitle: `${space.kind === 'subject' ? 'Subject' : 'Hobby'} · Feed, Projects, Mini Apps and Live`,
+    subtitle: space.kind === 'work'
+      ? (hasAdultPlan(state.user) ? 'Work · unlocked Adult Work Plan' : 'Work · ¥20/month Adult Work Plan')
+      : `${space.kind === 'subject' ? 'Subject' : 'Hobby'} · Feed, Projects, Mini Apps and Live`,
     icon: <BookOpen size={15} />,
     group: 'Spaces',
-    action: () => { dispatch({ type: 'OPEN_SPACE', spaceId: space.id }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) },
+    action: () => {
+      if (space.audience === 'adult' && !hasAdultPlan(state.user)) {
+        dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
+        dispatch({ type: 'SET_COMMAND_PALETTE', open: false })
+        return
+      }
+      dispatch({ type: 'OPEN_SPACE', spaceId: space.id })
+      dispatch({ type: 'SET_COMMAND_PALETTE', open: false })
+    },
   }))
 
   const ACTIONS: Cmd[] = [

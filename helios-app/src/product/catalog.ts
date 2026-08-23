@@ -1,6 +1,7 @@
 import type { Project } from '../api'
 
-export type SpaceKind = 'subject' | 'hobby'
+export type SpaceKind = 'subject' | 'hobby' | 'work'
+export type ContentAudience = 'all' | 'adult'
 
 export interface SpaceDefinition {
   id: string
@@ -11,6 +12,7 @@ export interface SpaceDefinition {
   icon: string
   miniApps: string[]
   prompts: string[]
+  audience?: ContentAudience
 }
 
 export interface MiniAppDefinition {
@@ -23,6 +25,7 @@ export interface MiniAppDefinition {
   icon: string
   live: boolean
   category: string
+  audience?: ContentAudience
 }
 
 export const MINI_APP_CATALOG: MiniAppDefinition[] = [
@@ -146,6 +149,19 @@ export const MINI_APP_CATALOG: MiniAppDefinition[] = [
   { id: 'resume-builder', name: 'Resume Builder', shortName: 'Resume', projectType: 'writing', description: 'Profile, experience, skills and project highlights in one doc.', accent: '#b0b7ff', icon: 'writing', live: true, category: 'Docs & Writing' },
   { id: 'letter-writer', name: 'Letter Writer', shortName: 'Letters', projectType: 'writing', description: 'Formal and personal letters with salutations and sign-off.', accent: '#c0b5ff', icon: 'writing', live: true, category: 'Docs & Writing' },
   { id: 'blog-draft', name: 'Blog Draft', shortName: 'Blog', projectType: 'writing', description: 'Headline, lead, sections and publish-ready draft structure.', accent: '#d1a8ff', icon: 'writing', live: true, category: 'Docs & Writing' },
+  { id: 'standup-notes', name: 'Standup Notes', shortName: 'Standup', projectType: 'doc', description: 'Yesterday, today, blockers and owners for the working week.', accent: '#6fb8e8', icon: 'notes', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'one-on-one', name: '1:1 Notes', shortName: '1:1', projectType: 'doc', description: 'Recurring manager or peer conversations, decisions and follow-ups.', accent: '#8ea8ff', icon: 'notes', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'performance-review', name: 'Performance Review', shortName: 'Review', projectType: 'writing', description: 'Goals, evidence, feedback and next-cycle commitments.', accent: '#b0b7ff', icon: 'writing', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'job-search', name: 'Job Search Board', shortName: 'Jobs', projectType: 'board', description: 'Roles, applications, interviews and offer status in one board.', accent: '#f2b84b', icon: 'board', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'interview-prep', name: 'Interview Prep', shortName: 'Interviews', projectType: 'doc', description: 'Stories, questions, company notes and debriefs for adult job search.', accent: '#d7a86e', icon: 'notes', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'offer-compare', name: 'Offer Compare', shortName: 'Offers', projectType: 'spreadsheet', description: 'Salary, equity, benefits and trade-offs across job offers.', accent: '#f0a95a', icon: 'sheet', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'salary-planner', name: 'Salary Planner', shortName: 'Salary', projectType: 'spreadsheet', description: 'Compensation, tax withholding and take-home planning.', accent: '#62d2a0', icon: 'sheet', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'invoice-tracker', name: 'Invoice Tracker', shortName: 'Invoices', projectType: 'spreadsheet', description: 'Clients, amounts, due dates and paid status for freelance work.', accent: '#4fc3a1', icon: 'sheet', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'expense-report', name: 'Expense Report', shortName: 'Expenses', projectType: 'spreadsheet', description: 'Receipts, categories and reimbursement totals.', accent: '#50c2a0', icon: 'sheet', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'tax-notes', name: 'Tax Notes', shortName: 'Tax', projectType: 'doc', description: 'Deduction notes, filing checklist and year-end reminders.', accent: '#6ed69a', icon: 'notes', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'contract-notes', name: 'Contract Notes', shortName: 'Contracts', projectType: 'writing', description: 'Clauses, risks, negotiation points and signed-version notes.', accent: '#9aa8d8', icon: 'writing', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'networking-crm', name: 'Networking CRM', shortName: 'Network', projectType: 'board', description: 'People, introductions, follow-ups and professional relationships.', accent: '#8576f5', icon: 'board', live: true, category: 'Work & Career', audience: 'adult' },
+  { id: 'housing-search', name: 'Housing Search', shortName: 'Housing', projectType: 'spreadsheet', description: 'Rent, commute, deposits and neighbourhood notes for independent living.', accent: '#68b7ff', icon: 'sheet', live: true, category: 'Work & Career', audience: 'adult' },
 ]
 
 export const SUBJECTS: SpaceDefinition[] = [
@@ -175,7 +191,14 @@ export const HOBBIES: SpaceDefinition[] = [
   { id: 'travel', name: 'Travel', kind: 'hobby', description: 'Research, plan and document meaningful journeys.', accent: '#6ed69a', icon: 'travel', miniApps: ['travel-planner', 'notes', 'spreadsheet', 'budget-sheet', 'presentation', 'reader', 'checklist', 'map-notes', 'journal', 'project-board'], prompts: ['Build an itinerary', 'Check the budget', 'Summarize the research'] },
 ]
 
-export const ALL_SPACES = [...SUBJECTS, ...HOBBIES]
+export const WORK_SPACES: SpaceDefinition[] = [
+  { id: 'workplace', name: 'Workplace', kind: 'work', audience: 'adult', description: 'Standups, 1:1s, reviews and the work that happens after school.', accent: '#6fb8e8', icon: 'business', miniApps: ['standup-notes', 'one-on-one', 'meeting-notes', 'performance-review', 'project-board', 'okrs', 'sprint-board', 'expense-report', 'documentation'], prompts: ['Prep this 1:1', 'Turn notes into actions', 'Draft a status update'] },
+  { id: 'career', name: 'Career', kind: 'work', audience: 'adult', description: 'Job search, interviews, offers and professional growth.', accent: '#f2b84b', icon: 'business', miniApps: ['job-search', 'interview-prep', 'resume-builder', 'offer-compare', 'networking-crm', 'pitch-deck', 'proposal-writer', 'letter-writer'], prompts: ['Tighten this resume', 'Prep interview stories', 'Compare these offers'] },
+  { id: 'finance', name: 'Finance', kind: 'work', audience: 'adult', description: 'Salary, invoices, tax notes and adult money decisions.', accent: '#62d2a0', icon: 'sheet', miniApps: ['salary-planner', 'invoice-tracker', 'tax-notes', 'budget-sheet', 'expense-report', 'decision-matrix', 'spreadsheet'], prompts: ['Plan take-home pay', 'Chase unpaid invoices', 'List tax reminders'] },
+  { id: 'city-life', name: 'City Life', kind: 'work', audience: 'adult', description: 'Housing, commuting and independent living — more mature than school life.', accent: '#ff9b6a', icon: 'travel', miniApps: ['housing-search', 'budget-sheet', 'travel-planner', 'checklist', 'journal', 'notes'], prompts: ['Compare rentals', 'Plan the commute', 'List move-in costs'] },
+]
+
+export const ALL_SPACES = [...SUBJECTS, ...HOBBIES, ...WORK_SPACES]
 export const DEFAULT_SPACE_ID = 'coding'
 
 export function getSpaceDefinition(id: string): SpaceDefinition {
@@ -203,5 +226,21 @@ export function listMiniAppsByCategory() {
     groups.set(app.category, list)
   }
   return [...groups.entries()].map(([category, apps]) => ({ category, apps }))
+}
+
+export function isAdultSpace(id: string) {
+  return ALL_SPACES.some(space => space.id === id && space.audience === 'adult')
+}
+
+export function isAdultMiniApp(id: string) {
+  return MINI_APP_CATALOG.some(app => app.id === id && app.audience === 'adult')
+}
+
+export function visibleWorkSpaces() {
+  return WORK_SPACES
+}
+
+export function catalogForAudience(includeAdult: boolean) {
+  return includeAdult ? MINI_APP_CATALOG : MINI_APP_CATALOG.filter(app => app.audience !== 'adult')
 }
 

@@ -492,6 +492,60 @@ async function run() {
   expectStatus(feedAfterProjectDelete, 200, 'feed after project deletion')
   assert.equal(feedAfterProjectDelete.body.posts[0].project_id, null)
 
+  const studentSignup = await anonymous.post('/api/signup', {
+    name: 'Cara Student',
+    handle: 'cara.student',
+    email: 'cara@example.test',
+    password: 'correct-school',
+    account_kind: 'student',
+  })
+  expectStatus(studentSignup, 200, 'student signup')
+  assert.equal(studentSignup.body.user.account_kind, 'student')
+  assert.equal(studentSignup.body.user.adult_plan_active, false)
+
+  const adult = new ApiClient()
+  const adultSignup = await adult.post('/api/signup', {
+    name: 'Drew Adult',
+    handle: 'drew.adult',
+    email: 'drew@example.test',
+    password: 'correct-workdesk',
+    account_kind: 'adult',
+  })
+  expectStatus(adultSignup, 200, 'adult signup')
+  assert.equal(adultSignup.body.user.account_kind, 'adult')
+  assert.equal(adultSignup.body.user.adult_plan_active, false)
+  assert.equal(adultSignup.body.user.adult_plan_price_rmb, 20)
+
+  const lockedProject = await adult.post('/api/projects', {
+    name: 'Standup notes',
+    type: 'doc',
+    space_id: 'workplace',
+    app_kind: 'standup-notes',
+  })
+  expectStatus(lockedProject, 402, 'adult workspace locked without plan')
+  assert.equal(lockedProject.body.code, 'ADULT_PLAN_REQUIRED')
+
+  const subscribe = await adult.post('/api/account/adult-plan', { method: 'wechat' })
+  expectStatus(subscribe, 200, 'adult plan subscribe')
+  assert.equal(subscribe.body.user.adult_plan_active, true)
+
+  const workProject = await adult.post('/api/projects', {
+    name: 'Standup notes',
+    type: 'doc',
+    space_id: 'workplace',
+    app_kind: 'standup-notes',
+  })
+  expectStatus(workProject, 200, 'adult workspace after plan')
+  assert.equal(workProject.body.project.space_id, 'workplace')
+
+  const switchKind = await adult.post('/api/account/kind', { account_kind: 'student' })
+  expectStatus(switchKind, 200, 'switch to student')
+  assert.equal(switchKind.body.user.account_kind, 'student')
+  assert.equal(switchKind.body.user.adult_plan_active, false)
+
+  const invalidKind = await alice.post('/api/account/kind', { account_kind: 'robot' })
+  expectStatus(invalidKind, 400, 'invalid account kind')
+
   const logout = await bob.post('/api/logout')
   expectStatus(logout, 200, 'logout')
   const afterLogout = await bob.get('/api/me')

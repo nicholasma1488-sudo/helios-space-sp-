@@ -3,7 +3,10 @@ import { AppContext, reducer, INITIAL_STATE, useApp } from './store/appStore'
 import type { User } from './api'
 import { api } from './api'
 import { AuthScreen } from './components/AuthScreen'
+import { AccountKindGate } from './components/AccountKindGate'
+import { AdultPlanModal } from './components/AdultPlanModal'
 import { LandingPage } from './components/LandingPage'
+import { needsAccountKind, needsAdultPlan } from './product/audience'
 import { GlobalShell } from './components/GlobalShell'
 import { HeliosPanel } from './components/HeliosPanel'
 import { CommandPalette } from './components/CommandPalette'
@@ -19,6 +22,7 @@ import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
 import './App.css'
+import './components/AudienceModals.css'
 
 function MainContent() {
   const { state, dispatch } = useApp()
@@ -115,6 +119,8 @@ function AppInner() {
           return
         }
         dispatch({ type: 'SET_USER', user: r.user })
+        if (needsAdultPlan(r.user) && !sessionStorage.getItem('helios-adult-plan-seen'))
+          dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
         api.projects.list()
           .then(projects => { if (!cancelled) dispatch({ type: 'SET_PROJECTS', projects: projects.projects }) })
           .catch(err => {
@@ -178,6 +184,7 @@ function AppInner() {
         onBack={() => setAuthMode('landing')}
         onAuth={(user: User) => {
           dispatch({ type: 'SET_USER', user })
+          if (needsAdultPlan(user)) dispatch({ type: 'SET_ADULT_PLAN_OPEN', open: true })
           api.projects.list()
             .then(r => dispatch({ type: 'SET_PROJECTS', projects: r.projects }))
             .catch(err => dispatch({
@@ -213,6 +220,8 @@ function AppInner() {
       <CommandPalette />
       <ToastLayer />
       <ShortcutsHelp />
+      {needsAccountKind(state.user) && <AccountKindGate />}
+      {state.adultPlanOpen && <AdultPlanModal />}
     </>
   )
 }
