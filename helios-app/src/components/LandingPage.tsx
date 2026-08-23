@@ -97,9 +97,10 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
       return
     }
     const timers = [
-      window.setTimeout(() => setHeroPhase('push'), 1000),
-      window.setTimeout(() => setHeroPhase('flanks'), 2000),
-      window.setTimeout(() => setHeroPhase('live'), 3000),
+      window.setTimeout(() => setHeroPhase('push'), 800),
+      window.setTimeout(() => setHeroPhase('flanks'), 1600),
+      window.setTimeout(() => setHeroPhase('assemble'), 2500),
+      window.setTimeout(() => setHeroPhase('live'), 3500),
     ]
     return () => timers.forEach(id => window.clearTimeout(id))
   }, [])
@@ -211,10 +212,10 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
             <div className="hero-copy-layer">
               <span className="landing-eyebrow"><Sparkles size={14} /> HELIOS SPACE</span>
               <h1>
-                The social OS
-                <span>for real work.</span>
+                Enter the student
+                <span>internet.</span>
               </h1>
-              <p>Scroll to fly into the product. Click inside to use it.</p>
+              <p>A camera flies through a living workspace. Then you stay to discover, create, learn, and share.</p>
               <div className="landing-hero-actions">
                 <button
                   type="button"
@@ -230,10 +231,10 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               </div>
             </div>
             <p className="stage-interaction-hint">
-              {stageInteracted ? 'You’re inside Helios' : 'Scroll forward · the camera enters Helios'}
+              {heroPhase === 'live' ? (stageInteracted ? 'You’re inside Helios' : 'Click the window · orbit continues quietly') : 'Camera traveling through Helios Space'}
             </p>
             <button type="button" className="landing-scroll-cue" onClick={() => scrollTo('#why-helios')}>
-              <span>Scroll to enter</span><i />
+              <span>Continue below</span><i />
             </button>
           </div>
         </section>
@@ -241,8 +242,8 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <section className="landing-principles" id="why-helios" data-reveal>
           <div className="landing-section-label"><span>01</span> WHY HELIOS</div>
           <div className="principles-heading">
-            <h2>Social should move the work forward.</h2>
-            <p>A familiar feed, rebuilt around progress instead of endless consumption.</p>
+            <h2>Discover. Create. Learn. Build. Share.</h2>
+            <p>A spatial network for students and creators — not another dashboard of cards.</p>
           </div>
           <div className="principles-grid">
             {PRINCIPLES.map((principle, index) => (
@@ -302,8 +303,8 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <section className="landing-final-cta" data-reveal>
           <div className="final-cta-light" aria-hidden="true" />
           <span className="landing-eyebrow"><Sparkles size={13} /> YOUR SPACE STARTS QUIET</span>
-          <h2>Make one thing.<br />Share one honest update.</h2>
-          <p>That is enough to begin an orbit.</p>
+          <h2>Make one thing.<br />Share it into the orbit.</h2>
+          <p>Helios Space is a place to stay, not a page to bounce off.</p>
           <button type="button" onClick={() => enterAuth('register')}>
             Start building free <ArrowRight size={16} />
           </button>

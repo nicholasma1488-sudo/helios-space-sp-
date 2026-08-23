@@ -1378,6 +1378,34 @@ app.post('/api/users/:id/follow', requireUser, socialRateLimit, (req, res) => {
   res.json({ following: !existing })
 })
 
+app.get('/api/users/:id', requireUser, (req, res) => {
+  const userId = positiveInt(req.params.id)
+  if (!userId) return res.status(400).json({ error: 'Invalid user id' })
+  const user = db.prepare("SELECT id, name, handle FROM users WHERE id = ? AND status = 'active'").get(userId)
+  if (!user) return res.status(404).json({ error: 'User not found' })
+  const following = Boolean(db.prepare(
+    'SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?'
+  ).get(req.user.id, userId))
+  const followerCount = Number(db.prepare('SELECT COUNT(*) AS n FROM follows WHERE followed_id = ?').get(userId).n)
+  const followingCount = Number(db.prepare('SELECT COUNT(*) AS n FROM follows WHERE follower_id = ?').get(userId).n)
+  const projectCount = Number(db.prepare(
+    "SELECT COUNT(*) AS n FROM projects WHERE user_id = ? AND visibility = 'public'"
+  ).get(userId).n)
+  const postCount = Number(db.prepare(
+    "SELECT COUNT(*) AS n FROM posts WHERE user_id = ? AND audience = 'public'"
+  ).get(userId).n)
+  res.json({
+    profile: {
+      user,
+      following,
+      follower_count: followerCount,
+      following_count: followingCount,
+      project_count: projectCount,
+      post_count: postCount,
+    },
+  })
+})
+
 // ── Posts, comments, reactions, and saves (Lifestyle) ──
 const POST_SELECT = [
   'SELECT p.*, u.id AS author_id, u.name AS author_name, u.handle AS author_handle,',
@@ -1489,6 +1517,11 @@ app.get('/api/posts', requireUser, (req, res) => {
     return res.status(400).json({ error: 'saved must be true or false', code: 'INVALID_SAVED_FILTER' })
   const savedOnly = savedValue === '1' || savedValue === 'true'
 
+  const followingValue = req.query.following
+  if (followingValue !== undefined && !['', '0', '1', 'false', 'true'].includes(followingValue))
+    return res.status(400).json({ error: 'following must be true or false', code: 'INVALID_FOLLOWING_FILTER' })
+  const followingOnly = followingValue === '1' || followingValue === 'true'
+
   const where = ["(p.audience = 'public' OR p.user_id = ?)"]
   const params = [req.user.id, req.user.id]
   if (cursor) {
@@ -1509,6 +1542,10 @@ app.get('/api/posts', requireUser, (req, res) => {
     params.push(like, like, like, like)
   }
   if (savedOnly) where.push('sp.post_id IS NOT NULL')
+  if (followingOnly) {
+    where.push('p.user_id IN (SELECT followed_id FROM follows WHERE follower_id = ?)')
+    params.push(req.user.id)
+  }
 
   const rows = db.prepare(
     POST_SELECT + ' WHERE ' + where.join(' AND ') + ' ORDER BY p.id DESC LIMIT ?'

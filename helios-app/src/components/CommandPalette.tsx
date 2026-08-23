@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useApp } from '../store/appStore'
-import { Search, Home, Compass, Users, Zap, MessageCircle, User, Code, FileText, Sparkles, Plus, Radio, FolderGit2, BookOpen } from 'lucide-react'
+import { Search, Home, Compass, Zap, MessageCircle, User, Code, FileText, Sparkles, Plus, Radio, FolderGit2, BookOpen } from 'lucide-react'
 import type { NavView } from '../store/appStore'
 import { NewProjectModal } from './NewProjectModal'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -40,11 +40,14 @@ export function CommandPalette() {
   const NAV: Cmd[] = ([
     ['home', 'Go to Home', <Home key="home" size={15} />],
     ['explore', 'Go to Explore', <Compass key="explore" size={15} />],
-    ['spaces', 'Go to Spaces', <Users key="spaces" size={15} />],
-    ['lifestyle', 'Go to Lifestyle', <Zap key="lifestyle" size={15} />],
-    ['live', 'Go to Live work', <Radio key="live" size={15} />],
-    ['chat', 'Go to Chat Hub', <MessageCircle key="chat" size={15} />],
+    ['create', 'Go to Create', <Plus key="create" size={15} />],
     ['projects', 'Go to Projects', <FolderGit2 key="projects" size={15} />],
+    ['miniapps', 'Go to Mini Apps', <Code key="apps" size={15} />],
+    ['chat', 'Go to Chat', <MessageCircle key="chat" size={15} />],
+    ['learn', 'Go to Learn', <BookOpen key="learn" size={15} />],
+    ['creative', 'Go to Studio', <Sparkles key="studio" size={15} />],
+    ['lifestyle', 'Go to Feed', <Zap key="feed" size={15} />],
+    ['live', 'Go to Live work', <Radio key="live" size={15} />],
     ['profile', 'Go to Profile', <User key="profile" size={15} />],
   ] as [NavView, string, React.ReactNode][]).map(([view, label, icon]) => ({
     id: `nav-${view}`, label, icon, group: 'Navigate',

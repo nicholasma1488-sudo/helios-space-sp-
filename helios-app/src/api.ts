@@ -73,7 +73,17 @@ export interface PostFilters {
   category?: string
   q?: string
   saved?: boolean
+  following?: boolean
   space_id?: string
+}
+
+export interface PublicProfile {
+  user: { id: number; name: string; handle: string }
+  following: boolean
+  follower_count: number
+  following_count: number
+  project_count: number
+  post_count: number
 }
 
 export interface SpaceSummary {
@@ -302,6 +312,7 @@ function postQuery(filters: PostFilters = {}) {
   if (filters.category && filters.category !== 'all') params.set('category', filters.category)
   if (filters.q?.trim()) params.set('q', filters.q.trim())
   if (filters.saved) params.set('saved', 'true')
+  if (filters.following) params.set('following', 'true')
   if (filters.space_id) params.set('space_id', filters.space_id)
   const query = params.toString()
   return query ? '/api/posts?' + query : '/api/posts'
@@ -375,6 +386,7 @@ export const api = {
   },
 
   follow: (userId: number) => call<{ following: boolean }>(`/api/users/${userId}/follow`, { method: 'POST' }),
+  profile: (userId: number) => call<{ profile: PublicProfile }>(`/api/users/${userId}`),
 
   spaces: {
     list: () => call<{ spaces: SpaceSummary[] }>('/api/spaces'),

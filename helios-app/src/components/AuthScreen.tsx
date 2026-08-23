@@ -149,7 +149,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
 
       <aside className="auth-context" aria-hidden="true">
         <span>YOUR HELIOS SPACE</span>
-        <h1>A calmer place for everything you are moving forward.</h1>
+        <h1>Enter a digital universe built for students and creators.</h1>
         <p>Projects, progress, people, and useful little tools — connected without becoming noise.</p>
         <div>
           <i /><span>One account, one continuous context</span>

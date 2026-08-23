@@ -370,6 +370,21 @@ async function run() {
   })
   expectStatus(publicPost, 201, 'create public post')
   const publicPostId = publicPost.body.post.id
+
+  const aliceId = aliceSignup.body.user.id
+  const bobProfile = await bob.get('/api/users/' + aliceId)
+  expectStatus(bobProfile, 200, 'public profile')
+  assert.equal(bobProfile.body.profile.user.handle, '@alice.orbit')
+  assert.equal(bobProfile.body.profile.following, false)
+  const followAlice = await bob.post('/api/users/' + aliceId + '/follow')
+  expectStatus(followAlice, 200, 'follow creator')
+  assert.equal(followAlice.body.following, true)
+  const followingFeed = await bob.get('/api/posts?following=true')
+  expectStatus(followingFeed, 200, 'following feed')
+  assert.equal(followingFeed.body.posts.some(post => post.id === publicPostId), true)
+  const followedProfile = await bob.get('/api/users/' + aliceId)
+  assert.equal(followedProfile.body.profile.following, true)
+  assert.equal(followedProfile.body.profile.follower_count, 1)
   assert.equal(publicPost.body.post.comment_count, 0)
   assert.equal(publicPost.body.post.is_saved, false)
 

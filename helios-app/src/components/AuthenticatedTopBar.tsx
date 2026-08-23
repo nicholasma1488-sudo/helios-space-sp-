@@ -172,7 +172,8 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
 
       <nav className="topbar-destination-nav" aria-label="Fast destinations">
         <button type="button" className={state.view === 'explore' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'explore' })}><Compass size={15} /><span>Explore</span></button>
-        <button type="button" className={state.view === 'live' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'live' })}><Radio size={15} /><span>Live</span></button>
+        <button type="button" className={state.view === 'create' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'create' })}><Plus size={15} /><span>Create</span></button>
+        <button type="button" className={state.view === 'creative' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'creative' })}><Sparkles size={15} /><span>Studio</span></button>
       </nav>
 
       <div className="topbar-actions">
@@ -226,7 +227,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
             {results.spaces.length > 0 && <ResultGroup title="Spaces">{results.spaces.map(space => <button key={space.id} onClick={() => openSpace(space.id)}><Users size={14} /><span><strong>{space.name}</strong><small>{space.kind}</small></span></button>)}</ResultGroup>}
             {results.projects.length > 0 && <ResultGroup title="Projects">{results.projects.map(project => <button key={project.id} onClick={() => void openProject(project.id)}><FolderGit2 size={14} /><span><strong>{project.name}</strong><small>{project.space_id} · {project.app_kind}</small></span></button>)}</ResultGroup>}
             {results.live.length > 0 && <ResultGroup title="Live now">{results.live.map(session => <button key={session.id} onClick={() => { dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: session.id }); setOpenMenu(null) }}><Radio size={14} /><span><strong>{session.title}</strong><small>{session.owner_name} · {session.viewer_count} watching</small></span></button>)}</ResultGroup>}
-            {results.people.length > 0 && <ResultGroup title="People">{results.people.map(person => <button key={person.id} onClick={() => { dispatch({ type: 'SET_VIEW', view: 'explore' }); setOpenMenu(null) }}><User size={14} /><span><strong>{person.name}</strong><small>{person.handle}</small></span></button>)}</ResultGroup>}
+            {results.people.length > 0 && <ResultGroup title="People">{results.people.map(person => <button key={person.id} onClick={() => { sessionStorage.setItem('helios-open-creator', JSON.stringify(person)); dispatch({ type: 'SET_VIEW', view: 'profile' }); setOpenMenu(null) }}><User size={14} /><span><strong>{person.name}</strong><small>{person.handle}</small></span></button>)}</ResultGroup>}
             {results.posts.length > 0 && <ResultGroup title="Progress">{results.posts.map(post => <button key={post.id} onClick={() => { sessionStorage.setItem('helios-open-post', String(post.id)); dispatch({ type: 'SET_VIEW', view: 'lifestyle' }); setOpenMenu(null) }}><MessageCircle size={14} /><span><strong>{post.author_name}</strong><small>{post.body.slice(0, 90)}</small></span></button>)}</ResultGroup>}
           </div>
         </div>
