@@ -536,13 +536,15 @@ const BILLING_PLANS = {
     currency: 'usd',
     interval: 'month',
     audience: 'all',
-    description: 'Start instantly. The student edition is free and already includes a useful Mini App shelf.',
-    mini_apps: ['Focus Orbit', 'Quick Notes', 'Habit Pulse', 'Decision Flip', 'Mood Check', 'Countdown'],
+    description: 'Child or Adult edition is chosen from your date of birth. Both include Word, Excel, PowerPoint and OneNote workspaces you can actually work in.',
+    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
     features: [
       'Create an account in under a minute — no card',
-      '6 starter Mini Apps: Focus, Notes, Habits, Decision, Mood, Countdown',
+      'Child edition if you are under 18, Adult edition if you are 18+',
+      'Word, Excel, PowerPoint and OneNote — real files, not scratch pads',
+      'Work saves to Projects and stays in your Spaces',
       'Every Subject and Hobby Space',
-      'Projects, Lifestyle, Chat Hub and Live',
+      'Lifestyle, Chat Hub and Live',
       'Helios AI when an administrator enables it',
       'Public or private progress posts',
       'Daily tasks and JSON export',
@@ -555,20 +557,20 @@ const BILLING_PLANS = {
     currency: 'usd',
     interval: 'month',
     audience: 'child',
-    description: 'The cheaper student plan. Unlock a revision lab of Mini Apps that feel like a secret school OS.',
-    mini_apps: ['Flash Cards', 'Homework Radar', 'Vocab Spark', 'Streak Arena'],
+    description: 'The student upgrade. A school 365 suite for essays, grades, lessons, labs and homework — built to do the work, not jot it down.',
+    mini_apps: ['Essay', 'Gradebook', 'Lesson Slides', 'Lab Notebook', 'Forms', 'Flashcards', 'Reader', 'Maths Lab', 'Homework Board', 'Study Guide'],
     features: [
-      'Everything in Free, plus a student Mini App lab',
-      'Unlock Flash Cards, Homework Radar, Vocab Spark and Streak Arena',
+      'Everything in the Child edition, plus the full school suite',
+      'Essay Studio with thesis, evidence and conclusion',
+      'Gradebook spreadsheet you can actually mark in',
+      'Lesson slides and science posters',
+      'Lab notebook, quizzes and flashcard documents',
+      'Homework board: due, doing, stuck, handed in',
+      'Reader, Maths Lab and study guides',
       'Cheaper than Orbit — built for under 18',
-      'Alpha badge, sticker pack and classroom glow',
       '2× Solar on published school work',
-      'Exam-week Helios prompts and revision drops',
-      'Unlimited flashcard decks that stay on this account',
-      'Homework due-radar with overdue glow',
-      'Protected daily streak that survives refresh',
+      'Exam-week Helios prompts',
       'Parent or guardian pays with card or Stripe',
-      'Skip the queue for student Helios when AI is on',
       'Switch back to Free any time',
     ],
   },
@@ -579,21 +581,21 @@ const BILLING_PLANS = {
     currency: 'usd',
     interval: 'month',
     audience: 'adult',
-    description: 'The adult plan. Unlock every Mini App and the tools that make finished work feel inevitable.',
-    mini_apps: ['Idea Vault', 'Meeting Pulse', 'Deep Work', 'Win Log', 'Flash Cards', 'Homework Radar', 'Vocab Spark', 'Streak Arena'],
+    description: 'The work upgrade. A Microsoft 365-style office for documents, workbooks, decks, meetings and plans you can run a week from.',
+    mini_apps: ['Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals', 'Product Spec', 'OKRs', 'Planner', 'Business Plan', 'Reports'],
     features: [
-      'Unlock every Mini App — student lab and adult tools',
-      'Idea Vault, Meeting Pulse, Deep Work and Win Log',
-      'Orbit badge that shows you are in the paid work orbit',
+      'Everything in the Adult edition, plus the full work suite',
+      'Docs, proposals, specs and reports in Word-class editors',
+      'Budget and OKR workbooks with formulas',
+      'Pitch decks you can present from the same file',
+      'Meeting notes with agenda, decisions and owners',
+      'Project planner for work that has to finish',
+      'Business plan and market research sheets',
+      'Orbit badge for the paid work edition',
       'Priority Helios capacity when AI is configured',
       '3× Live session visibility for collaborators',
-      'Extra collaborator invitations on Projects',
-      'Win Log that becomes a private portfolio',
-      'Meeting Pulse: decisions, owners, next move',
-      'Deep Work blocks with a written intention',
       'Saved card or Stripe on file',
       'Richer export history and billing receipts',
-      'Early access to new adult Mini Apps',
       'Switch back to Free any time',
     ],
   },
@@ -601,6 +603,12 @@ const BILLING_PLANS = {
 
 function normalizePlan(plan) {
   return plan === 'orbit' || plan === 'alpha' ? plan : 'free'
+}
+
+function userEdition(user) {
+  const plan = normalizePlan(user?.plan)
+  if (user?.audience === 'adult') return plan === 'orbit' ? 'orbit' : 'adult'
+  return plan === 'alpha' ? 'alpha' : 'child'
 }
 
 function publicUser(user) {
@@ -614,6 +622,7 @@ function publicUser(user) {
     audience: user.audience === 'adult' || user.audience === 'child' ? user.audience : null,
     birthdate: user.birthdate || '',
     plan_selected: Boolean(user.plan_selected),
+    edition: userEdition(user),
   }
 }
 
@@ -653,9 +662,9 @@ function planEligibilityError(planId, audience) {
   if (planId === 'free') return null
   if (!audience) return 'Add your date of birth so Helios can offer Alpha or Orbit'
   if (planId === 'orbit' && audience !== 'adult')
-    return 'Orbit is for adults 18 and over. Choose Alpha or stay on the free student edition'
+    return 'Orbit is the work upgrade for adults 18 and over. Choose Alpha or stay on Child'
   if (planId === 'alpha' && audience !== 'child')
-    return 'Alpha is the cheaper student plan for people under 18. Choose Orbit or stay free'
+    return 'Alpha is the student upgrade for people under 18. Choose Orbit or stay on Adult'
   if (!BILLING_PLANS[planId]) return 'Choose Free, Alpha, or Orbit'
   return null
 }
@@ -745,6 +754,7 @@ function getBillingSnapshot(userLike) {
   return {
     plan: normalizePlan(user.plan),
     audience,
+    edition: userEdition(user),
     birthdate: user.birthdate || '',
     plans: billingCatalog().map(plan => ({
       ...plan,
@@ -1295,7 +1305,7 @@ app.post('/api/billing/checkout', requireUser, billingRateLimit, (req, res) => {
   if (planId === 'free') {
     db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
     if (req.user.plan !== 'free')
-      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the free student edition')
+      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, req.user.audience === 'adult' ? 'Switched to the Adult edition' : 'Switched to the Child edition')
     const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
     return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
   }

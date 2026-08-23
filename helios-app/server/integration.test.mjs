@@ -163,6 +163,7 @@ async function run() {
   assert.equal(aliceSignup.body.user.plan, 'free')
   assert.equal(aliceSignup.body.user.plan_selected, false)
   assert.equal(aliceSignup.body.user.audience, 'adult')
+  assert.equal(aliceSignup.body.user.edition, 'adult')
   assert.equal(site.body.plans.some(plan => plan.id === 'free'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'alpha'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'orbit'), true)
@@ -184,6 +185,7 @@ async function run() {
   })
   expectStatus(bobSignup, 200, 'bob signup')
   assert.equal(bobSignup.body.user.audience, 'child')
+  assert.equal(bobSignup.body.user.edition, 'child')
 
   const duplicate = await anonymous.post('/api/signup', {
     name: 'Duplicate',
@@ -518,10 +520,13 @@ async function run() {
   const stayFree = await alice.post('/api/billing/checkout', { plan: 'free' })
   expectStatus(stayFree, 200, 'stay on free option')
   assert.equal(stayFree.body.user.plan, 'free')
+  assert.equal(stayFree.body.user.edition, 'adult')
   assert.equal(stayFree.body.user.plan_selected, true)
   assert.equal(stayFree.body.billing.plan, 'free')
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'alpha').features.length >= 10, true)
-  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Idea Vault'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Meeting Notes'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Word'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'alpha').mini_apps.includes('Gradebook'), true)
 
   const adultCannotAlpha = await alice.post('/api/billing/checkout', {
     plan: 'alpha',
@@ -556,6 +561,7 @@ async function run() {
   })
   expectStatus(paid, 200, 'pay with card')
   assert.equal(paid.body.user.plan, 'orbit')
+  assert.equal(paid.body.user.edition, 'orbit')
   assert.equal(paid.body.billing.plan, 'orbit')
   assert.equal(paid.body.billing.payment_method.brand, 'visa')
   assert.equal(paid.body.billing.payment_method.last4, '4242')
@@ -584,6 +590,7 @@ async function run() {
   })
   expectStatus(bobAlpha, 200, 'child pays for alpha')
   assert.equal(bobAlpha.body.user.plan, 'alpha')
+  assert.equal(bobAlpha.body.user.edition, 'alpha')
   assert.equal(bobAlpha.body.billing.plan, 'alpha')
 
   const stripeSession = await alice.post('/api/billing/stripe', { plan: 'orbit' })

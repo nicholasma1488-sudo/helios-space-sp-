@@ -211,6 +211,7 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
       'swot-board': ['Strengths', 'Weaknesses', 'Opportunities', 'Threats'],
       'practice-routine': ['Warmup', 'Focus', 'Cooldown'],
       'goal-tracker': ['This week', 'In progress', 'Won'],
+      'homework-board': ['Due', 'Doing', 'Need help', 'Handed in'],
       'club-planner': ['Ideas', 'Planning', 'Running', 'Done'],
     }
     const names = boards[appKind] || ['To do', 'Doing', 'Done']
@@ -233,8 +234,20 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
     }
   }
 
+  if (kind === 'notebook' && appKind === 'notebook') {
+    return {
+      title: 'Notebook',
+      cells: [
+        { id: 'today', kind: 'markdown', body: '# Today\nWhat are you working on?' },
+        { id: 'open', kind: 'markdown', body: '## Open threads\n' },
+        { id: 'next', kind: 'markdown', body: '## Next\n' },
+      ],
+    }
+  }
+
   const starters: Record<string, string> = {
     'word-docs': '<h1>Untitled document</h1><p>Start a clean document with headings, lists and evidence.</p>',
+    notebook: '<h1>Notebook</h1><h2>Today</h2><p>Capture the work in sections you can keep adding to.</p><h2>Open threads</h2><p></p><h2>Next</h2><p></p>',
     'lab-notebook': '<h1>Experiment title</h1><h2>Question</h2><p>What are you trying to find out?</p><h2>Method</h2><p>Record a reproducible method.</p><h2>Observations</h2><p>Add evidence as the work develops.</p><h2>Findings</h2><p>Explain what the evidence supports.</p>',
     'lab-report': '<h1>Lab report</h1><h2>Aim</h2><p></p><h2>Method</h2><p></p><h2>Results</h2><p></p><h2>Discussion</h2><p></p><h2>Conclusion</h2><p></p>',
     'business-planner': '<h1>Business idea</h1><h2>Problem</h2><p>What real problem are you solving?</p><h2>People</h2><p>Who experiences it?</p><h2>Evidence</h2><p>What have you learned so far?</p><h2>Model</h2><p>How could this become sustainable?</p><h2>Next milestone</h2><p>Choose one testable next move.</p>',
@@ -353,7 +366,7 @@ export function resolveWorkspaceKind(appKind: string): 'code' | 'spreadsheet' | 
   if (['reader', 'book-creator'].includes(appKind)) return 'reader'
 
   if ([
-    'lab-notebook', 'chemistry-lab', 'biology-lab', 'physics-lab', 'earth-science', 'fieldwork-log',
+    'notebook', 'lab-notebook', 'chemistry-lab', 'biology-lab', 'physics-lab', 'earth-science', 'fieldwork-log',
     'engineering-notebook', 'circuit-lab', 'robotics-log', 'ai-eval-notebook', 'ml-notebook-doc',
     'hypothesis-builder', 'observation-journal', 'science-fair', 'map-notes',
   ].includes(appKind) || appKind.endsWith('-notebook') || appKind.endsWith('-lab')) return 'notebook'

@@ -2379,6 +2379,16 @@
   grid-template-columns: 1fr 1fr 1fr;
 }
 
+.pricing-grid.is-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1200px) {
+  .pricing-grid.is-four {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .pricing-card {
   display: flex;
   flex-direction: column;
@@ -2402,6 +2412,20 @@
   background:
     radial-gradient(circle at 90% 0, rgba(79, 195, 247, .14), transparent 36%),
     #10161d;
+}
+
+.pricing-card.is-child {
+  border-color: rgba(110, 214, 154, .22);
+  background:
+    radial-gradient(circle at 90% 0, rgba(110, 214, 154, .12), transparent 36%),
+    #10161a;
+}
+
+.pricing-card.is-adult {
+  border-color: rgba(154, 164, 178, .24);
+  background:
+    radial-gradient(circle at 90% 0, rgba(154, 164, 178, .12), transparent 36%),
+    #12151b;
 }
 
 .pricing-card > span {
@@ -2893,7 +2917,8 @@
     grid-template-columns: 1fr;
   }
   .pricing-grid,
-  .pricing-grid.is-three { grid-template-columns: 1fr; }
+  .pricing-grid.is-three,
+  .pricing-grid.is-four { grid-template-columns: 1fr; }
   .pricing-card { min-height: 0; }
   .landing-final-cta { min-height: 580px; }
   .landing-footer {

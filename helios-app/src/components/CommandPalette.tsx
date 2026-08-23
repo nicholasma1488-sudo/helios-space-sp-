@@ -42,7 +42,7 @@ export function CommandPalette() {
     ['explore', 'Go to Explore', <Compass key="explore" size={15} />],
     ['spaces', 'Go to Spaces', <Users key="spaces" size={15} />],
     ['lifestyle', 'Go to Lifestyle', <Zap key="lifestyle" size={15} />],
-    ['apps', 'Go to Mini Apps', <Grid3X3 key="apps" size={15} />],
+    ['apps', 'Go to Apps', <Grid3X3 key="apps" size={15} />],
     ['live', 'Go to Live work', <Radio key="live" size={15} />],
     ['chat', 'Go to Chat Hub', <MessageCircle key="chat" size={15} />],
     ['projects', 'Go to Projects', <FolderGit2 key="projects" size={15} />],
@@ -61,7 +61,7 @@ export function CommandPalette() {
   const SPACES: Cmd[] = [...SUBJECTS, ...HOBBIES].map(space => ({
     id: `space-${space.id}`,
     label: `Open ${space.name} Space`,
-    subtitle: `${space.kind === 'subject' ? 'Subject' : 'Hobby'} · Feed, Projects, Mini Apps and Live`,
+    subtitle: `${space.kind === 'subject' ? 'Subject' : 'Hobby'} · Feed, Projects, Apps and Live`,
     icon: <BookOpen size={15} />,
     group: 'Spaces',
     action: () => { dispatch({ type: 'OPEN_SPACE', spaceId: space.id }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) },
@@ -71,7 +71,7 @@ export function CommandPalette() {
     { id: 'new-project', label: 'Create new project', subtitle: 'Choose a type and name', icon: <Plus size={15} />, group: 'Actions', action: () => { dispatch({ type: 'SET_COMMAND_PALETTE', open: false }); setShowNewProject(true) } },
     { id: 'helios', label: 'Ask Helios', subtitle: 'Open AI assistant', icon: <Sparkles size={15} />, group: 'Actions', shortcut: '⌘J', action: () => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
     { id: 'profile', label: 'My profile', icon: <User size={15} />, group: 'Actions', action: () => { dispatch({ type: 'SET_VIEW', view: 'profile' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
-    { id: 'billing', label: 'Payment and billing', subtitle: 'Free student edition, Alpha, Orbit, or Stripe', icon: <CreditCard size={15} />, group: 'Actions', action: () => { try { sessionStorage.setItem('helios-open-settings', 'billing') } catch {} dispatch({ type: 'SET_VIEW', view: 'profile' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
+    { id: 'billing', label: 'Payment and billing', subtitle: 'Child, Adult, Alpha, Orbit, or Stripe', icon: <CreditCard size={15} />, group: 'Actions', action: () => { try { sessionStorage.setItem('helios-open-settings', 'billing') } catch {} dispatch({ type: 'SET_VIEW', view: 'profile' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
   ]
 
   const all = [...ACTIONS, ...NAV, ...SPACES, ...PROJECTS]

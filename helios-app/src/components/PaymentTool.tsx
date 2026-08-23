@@ -19,10 +19,10 @@ const FALLBACK_PLANS: BillingPlan[] = [
     interval: 'month',
     audience: 'all',
     eligible: true,
-    description: 'The student edition. Create an account for free — no card needed.',
+    description: 'Child or Adult edition from your date of birth. Word, Excel, PowerPoint and OneNote included.',
     features: [
       'Create a Helios account for free',
-      'Subjects, Hobbies, and Mini App workspaces',
+      'Word, Excel, PowerPoint and OneNote workspaces',
       'Projects that stay connected to your feed',
       'Lifestyle, Chat Hub, and Live work',
     ],
@@ -34,11 +34,11 @@ const FALLBACK_PLANS: BillingPlan[] = [
     currency: 'usd',
     interval: 'month',
     audience: 'child',
-    description: 'A cheaper student plan for people under 18, packed with classroom extras.',
+    description: 'The student upgrade: essays, gradebook, lessons, labs and homework in real files.',
     features: [
-      'Everything in the free student edition',
+      'Everything in the Child edition',
+      'Full school 365 suite',
       'Student price — less than half of Orbit',
-      'Alpha badge, stickers, and study-streak rewards',
       'Parent or guardian card / Stripe checkout',
     ],
   },
@@ -49,10 +49,10 @@ const FALLBACK_PLANS: BillingPlan[] = [
     currency: 'usd',
     interval: 'month',
     audience: 'adult',
-    description: 'The adult plan: pay with card or Stripe and unlock a fuller work orbit.',
+    description: 'The work upgrade: documents, workbooks, decks, meetings and plans.',
     features: [
-      'Everything in the free student edition',
-      'Orbit identity badge and workplace extras',
+      'Everything in the Adult edition',
+      'Full work 365 suite',
       'Priority Helios capacity when AI is configured',
       'Saved card or Stripe on file',
     ],
@@ -142,7 +142,11 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
       applyUser(result.user)
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'You are on the free student edition.', tone: 'success' },
+        toast: {
+          id: String(Date.now()),
+          message: audience === 'adult' ? 'You are on the Adult edition.' : 'You are on the Child edition.',
+          tone: 'success',
+        },
       })
     } catch (reason) {
       setError((reason as Error).message)
@@ -204,13 +208,13 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
     <section className="payment-tool" aria-labelledby="payment-tool-title">
       <header>
         <span><CreditCard size={13} /> {mode === 'onboarding' ? 'PICK A PLAN' : 'PAYMENT'}</span>
-        <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Stay free, or unlock the Mini Apps people actually want.' : 'Free student edition, or subscribe'}</h3>
+        <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Stay on your free edition, or unlock the full 365 suite.' : 'Child or Adult is free. Alpha and Orbit unlock the rest.'}</h3>
         <p>
           {audience === 'child'
-            ? 'You are under 18, so Alpha is the paid plan. A parent or guardian should complete card or Stripe checkout.'
+            ? 'You are under 18, so you are on the Child edition. Alpha is the student upgrade. A parent or guardian should complete checkout.'
             : audience === 'adult'
-              ? 'You are 18 or over, so Orbit is the paid plan. Pay with card or Stripe.'
-              : 'Helios uses your date of birth to offer Alpha to students under 18 and Orbit to adults.'}
+              ? 'You are 18 or over, so you are on the Adult edition. Orbit is the work upgrade. Pay with card or Stripe.'
+              : 'Helios uses your date of birth: Child + Alpha under 18, Adult + Orbit at 18+.'}
         </p>
       </header>
 
@@ -235,7 +239,7 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
               <div className="payment-plan-top">
                 <i>{plan.id === 'free' ? <Gift size={16} /> : <Sparkles size={16} />}</i>
                 <div>
-                  <small>{plan.id === 'free' ? 'STUDENT EDITION' : plan.id === 'alpha' ? 'UNDER 18' : 'ADULTS 18+'}</small>
+                  <small>{plan.id === 'free' ? (audience === 'adult' ? 'ADULT EDITION' : 'CHILD EDITION') : plan.id === 'alpha' ? 'STUDENT UPGRADE' : 'WORK UPGRADE'}</small>
                   <strong>{plan.name}</strong>
                 </div>
                 <b>{formatPrice(plan.price_cents)}{plan.price_cents > 0 ? <em>/mo</em> : null}</b>
@@ -258,7 +262,7 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
                   onClick={() => void chooseFree()}
                   disabled={busy !== null || current}
                 >
-                  {current ? 'Current free edition' : busy === 'free' ? 'Switching…' : 'Continue free'}
+                  {current ? (audience === 'adult' ? 'Current Adult edition' : 'Current Child edition') : busy === 'free' ? 'Switching…' : audience === 'adult' ? 'Continue on Adult' : 'Continue on Child'}
                 </button>
               ) : !eligible ? (
                 <div className="payment-current-note">

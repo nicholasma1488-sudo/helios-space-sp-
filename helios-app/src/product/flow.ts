@@ -27,6 +27,28 @@ export async function openProjectWorkspace(projectId: number, known: Project[], 
   return project
 }
 
+export async function createSuiteProject(input: {
+  name: string
+  spaceId: string
+  type: Project['type']
+  appKind: string
+}, dispatch: Dispatch<AppAction>) {
+  const result = await api.projects.create({
+    name: input.name,
+    space: input.spaceId,
+    space_id: input.spaceId,
+    type: input.type,
+    app_kind: input.appKind,
+    visibility: 'private',
+    content: '',
+    metadata: {},
+  })
+  dispatch({ type: 'ADD_PROJECT', project: result.project })
+  dispatch({ type: 'SET_ACTIVE_SUBJECT', subjectId: result.project.space_id })
+  dispatch({ type: 'OPEN_CODE_EDITOR', projectId: result.project.id })
+  return result.project
+}
+
 export async function openOrCreateProjectChat(project: Project, dispatch: Dispatch<AppAction>) {
   const result = await api.chat.list()
   const existing = result.conversations.find(item => item.kind === 'project' && item.project_id === project.id)

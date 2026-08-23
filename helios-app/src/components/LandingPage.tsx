@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Check, Code2, Compass, CreditCard, Gift, Grid3X3, Heart, Layers3,
+  ArrowRight, Bookmark, Briefcase, Check, Code2, Compass, CreditCard, GraduationCap, Grid3X3, Heart, Layers3,
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
@@ -31,7 +31,7 @@ const MODES = [
     n: '03',
     icon: <Grid3X3 size={20} />,
     title: 'Workspaces, not toys',
-    body: 'Code Editor, Notebook, Data Viz, and Writing stay bound to the Project you are actually making.',
+    body: 'Word, Excel, PowerPoint and OneNote open real files — the kind you can keep working in, not a scratch pad.',
     accent: '#f2b84b',
   },
 ]
@@ -40,7 +40,7 @@ const PRINCIPLES = [
   ['Projects first', 'Your work is the source of truth.'],
   ['Public or private', 'You choose who sees each update.'],
   ['Useful reactions', 'Appreciate, learn, and inspire.'],
-  ['Workspaces', 'Mini Apps open the Project, not a detached toy.'],
+  ['Workspaces', 'Apps open Word, Excel, slides and notebooks that save to Projects.'],
 ]
 
 const STAGE_MODES: Array<{ id: StageMode; label: string }> = [
@@ -48,7 +48,7 @@ const STAGE_MODES: Array<{ id: StageMode; label: string }> = [
   { id: 'project', label: 'Project' },
   { id: 'chat', label: 'Chat' },
   { id: 'live', label: 'Live' },
-  { id: 'apps', label: 'Mini Apps' },
+  { id: 'apps', label: 'Apps' },
 ]
 
 export function LandingPage({ onGetStarted, onSignIn }: Props) {
@@ -148,7 +148,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <nav aria-label="Landing page">
           <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
           <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
-          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Mini Apps</button>
+          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Apps</button>
           <button type="button" onClick={() => scrollTo('#pricing')}>Pricing</button>
         </nav>
         <div className="landing-nav-actions">
@@ -289,66 +289,82 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <section className="landing-mini-app-band" id="mini-app-preview" data-reveal>
           <div className="mini-band-orbit" aria-hidden="true"><Grid3X3 size={30} /></div>
           <div>
-            <span>MINI APPS ARE WORKSPACES</span>
-            <h2>Open a workspace.<br />It stays bound to the Project.</h2>
+            <span>APPS ARE A 365 SUITE</span>
+            <h2>Open Word, Excel or slides.<br />Keep working in the same file.</h2>
           </div>
           <div className="mini-band-list">
-            <span><Code2 size={15} /> Code Editor</span>
-            <span><Layers3 size={15} /> Notebook</span>
-            <span><Compass size={15} /> Data Viz</span>
-            <span><MessageCircle size={15} /> Writing</span>
+            <span><MessageCircle size={15} /> Word</span>
+            <span><Compass size={15} /> Excel</span>
+            <span><Layers3 size={15} /> PowerPoint</span>
+            <span><Code2 size={15} /> OneNote</span>
           </div>
         </section>
 
         <section className="landing-pricing" id="pricing">
           <div className="pricing-intro" data-reveal>
             <div className="landing-section-label"><span>03</span> PAYMENT</div>
-            <h2>Student edition is free.<br />Alpha or Orbit when you want more.</h2>
-            <p>Create an account, then pick a plan. Free already includes six Mini Apps. Alpha and Orbit unlock the ones people upgrade for — Flash Cards, Homework Radar, Idea Vault, Deep Work, Win Log and more.</p>
+            <h2>Four editions.<br />Child, Adult, Alpha, Orbit.</h2>
+            <p>Your date of birth picks Child or Adult for free. Alpha is the student upgrade. Orbit is the work upgrade. Both open real Word, Excel, PowerPoint and OneNote files — not lightweight scratch pads.</p>
           </div>
-          <div className="pricing-grid is-three">
-            <article className="pricing-card" data-reveal>
-              <span><Gift size={15} /> STUDENT EDITION</span>
-              <h3>Free</h3>
+          <div className="pricing-grid is-four">
+            <article className="pricing-card is-child" data-reveal>
+              <span><GraduationCap size={15} /> UNDER 18</span>
+              <h3>Child</h3>
               <b>$0 <small>forever</small></b>
-              <p>Everyone starts here. No card required.</p>
+              <p>The free school edition. No card required.</p>
               <ul>
-                <li><Check size={13} /> 6 starter Mini Apps</li>
-                <li><Check size={13} /> Focus, Notes, Habits, Mood, Countdown</li>
-                <li><Check size={13} /> Subjects, Hobbies, Projects, Live</li>
+                <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
+                <li><Check size={13} /> Real files saved to Projects</li>
+                <li><Check size={13} /> Subjects, Hobbies, Live</li>
                 <li><Check size={13} /> Helios AI when configured</li>
                 <li><Check size={13} /> No card required</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                Create a free account <ArrowRight size={15} />
+                Start as a student <ArrowRight size={15} />
               </button>
             </article>
             <article className="pricing-card is-alpha" data-reveal>
-              <span><Sparkles size={15} /> UNDER 18</span>
+              <span><Sparkles size={15} /> STUDENT UPGRADE</span>
               <h3>Alpha</h3>
               <b>$3.99 <small>/ month</small></b>
-              <p>The cheaper student plan. A parent or guardian can pay with card or Stripe.</p>
+              <p>The school 365 suite. A parent or guardian can pay.</p>
               <ul>
-                <li><Check size={13} /> Unlock Flash Cards and Vocab Spark</li>
-                <li><Check size={13} /> Homework Radar and Streak Arena</li>
+                <li><Check size={13} /> Essays, gradebook, lesson slides</li>
+                <li><Check size={13} /> Lab notebook, quizzes, homework board</li>
+                <li><Check size={13} /> Reader, Maths Lab, study guides</li>
                 <li><Check size={13} /> 2× Solar on school work</li>
                 <li><Check size={13} /> Exam-week Helios prompts</li>
-                <li><Check size={13} /> Alpha badge and sticker pack</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                Join as a student <ArrowRight size={15} />
+                Unlock Alpha <ArrowRight size={15} />
+              </button>
+            </article>
+            <article className="pricing-card is-adult" data-reveal>
+              <span><Briefcase size={15} /> 18+</span>
+              <h3>Adult</h3>
+              <b>$0 <small>forever</small></b>
+              <p>The free work edition. Same 365 core, aimed at the job.</p>
+              <ul>
+                <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
+                <li><Check size={13} /> Documents that stay on the account</li>
+                <li><Check size={13} /> Spaces, Projects, Live</li>
+                <li><Check size={13} /> Helios AI when configured</li>
+                <li><Check size={13} /> No card required</li>
+              </ul>
+              <button type="button" onClick={() => enterAuth('register')}>
+                Start for work <ArrowRight size={15} />
               </button>
             </article>
             <article className="pricing-card is-orbit" data-reveal>
-              <span><CreditCard size={15} /> ADULTS 18+</span>
+              <span><CreditCard size={15} /> WORK UPGRADE</span>
               <h3>Orbit</h3>
               <b>$9 <small>/ month</small></b>
-              <p>The adult plan. Pay with card or Stripe after your date of birth confirms you are 18+.</p>
+              <p>The office suite. Pay after your date of birth confirms 18+.</p>
               <ul>
-                <li><Check size={13} /> Every Mini App, including adult tools</li>
-                <li><Check size={13} /> Idea Vault, Meeting Pulse, Deep Work</li>
-                <li><Check size={13} /> Win Log portfolio of finished work</li>
-                <li><Check size={13} /> Priority Helios and 3× Live visibility</li>
+                <li><Check size={13} /> Docs, budgets, pitch decks</li>
+                <li><Check size={13} /> Meeting notes, proposals, specs</li>
+                <li><Check size={13} /> OKRs, planner, reports</li>
+                <li><Check size={13} /> Priority Helios and 3× Live</li>
                 <li><Check size={13} /> Card or Stripe on file</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
@@ -564,12 +580,12 @@ function HeroLiveScreen() {
 function HeroAppsScreen() {
   return (
     <div className="hero-apps-ui">
-      <header>Mini Apps · bound to this Project</header>
+      <header>Apps · Word · Excel · PowerPoint · OneNote</header>
       <div>
-        <span><Code2 size={18} /><strong>Web Code Editor</strong><small>Edit · Preview · Go Live</small></span>
-        <span><Layers3 size={18} /><strong>Lab Notebook</strong><small>Cells · Results · Share</small></span>
-        <span><Compass size={18} /><strong>Data Visualization</strong><small>Tables · Charts · Save</small></span>
-        <span><MessageCircle size={18} /><strong>Writing Studio</strong><small>Draft · Comments · Live</small></span>
+        <span><MessageCircle size={18} /><strong>Word</strong><small>Documents that stay saved</small></span>
+        <span><Compass size={18} /><strong>Excel</strong><small>Cells · Formulas · Charts</small></span>
+        <span><Layers3 size={18} /><strong>PowerPoint</strong><small>Slides · Present · Share</small></span>
+        <span><Code2 size={18} /><strong>OneNote</strong><small>Sections you keep adding to</small></span>
       </div>
     </div>
   )
@@ -604,10 +620,10 @@ function SocialModeVisual() {
 function AppsModeVisual() {
   return (
     <div className="mode-apps-ui">
-      <div><Code2 size={22} /><strong>Code Editor</strong><small>BUILD</small></div>
-      <div><Layers3 size={22} /><strong>Notebook</strong><small>LAB</small></div>
-      <div><Compass size={22} /><strong>Data Viz</strong><small>SEE</small></div>
-      <div><MessageCircle size={22} /><strong>Writing</strong><small>DRAFT</small></div>
+      <div><MessageCircle size={22} /><strong>Word</strong><small>WRITE</small></div>
+      <div><Compass size={22} /><strong>Excel</strong><small>CALC</small></div>
+      <div><Layers3 size={22} /><strong>PowerPoint</strong><small>PRESENT</small></div>
+      <div><Code2 size={22} /><strong>OneNote</strong><small>NOTES</small></div>
     </div>
   )
 }

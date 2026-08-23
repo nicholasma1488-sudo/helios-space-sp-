@@ -2,6 +2,7 @@
 
 export type BillingPlanId = 'free' | 'alpha' | 'orbit'
 export type AccountAudience = 'adult' | 'child'
+export type SuiteEdition = 'child' | 'alpha' | 'adult' | 'orbit'
 
 export interface User {
   id: number
@@ -12,6 +13,7 @@ export interface User {
   audience?: AccountAudience | null
   birthdate?: string
   plan_selected?: boolean
+  edition?: SuiteEdition
 }
 
 export interface BillingPlan {
@@ -50,6 +52,7 @@ export interface BillingEvent {
 export interface BillingSnapshot {
   plan: BillingPlanId
   audience?: AccountAudience | null
+  edition?: SuiteEdition
   birthdate?: string
   plans: BillingPlan[]
   payment_method: PaymentMethod | null

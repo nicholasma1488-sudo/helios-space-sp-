@@ -232,7 +232,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
                 {field('auth-birthdate', 'Date of birth', <Calendar size={15} />, birthdate, setBirthdate,
                   { type: 'date', autoComplete: 'bday' })}
                 <p style={{ margin: '-6px 0 0', color: 'var(--helios-muted)', fontSize: 11, lineHeight: 1.45 }}>
-                  Under 18 can subscribe to cheaper Alpha. Adults 18+ can subscribe to Orbit. Everyone can stay on the free student edition.
+                  Under 18 start on Child and can upgrade to Alpha. Adults 18+ start on Adult and can upgrade to Orbit. Both free editions include Word, Excel, PowerPoint and OneNote.
                 </p>
               </>
             )}

@@ -14,10 +14,10 @@ export function PlanPicker() {
           <h1 id="plan-picker-title">Choose a plan before you enter Helios.</h1>
           <p>
             {audience === 'child'
-              ? 'You can stay on the free student edition, or unlock Alpha Mini Apps like Flash Cards, Homework Radar, Vocab Spark and Streak Arena.'
+              ? 'You start on the Child edition: Word, Excel, PowerPoint and OneNote for school. Alpha unlocks essays, gradebook, lessons, labs and homework — real files, not scratch pads.'
               : audience === 'adult'
-                ? 'You can stay free, or unlock every Mini App with Orbit — Idea Vault, Meeting Pulse, Deep Work, Win Log and the full student lab.'
-                : 'Stay free, or pick the paid plan that matches your age. The Mini Apps are the reason people upgrade.'}
+                ? 'You start on the Adult edition: Word, Excel, PowerPoint and OneNote for work. Orbit unlocks docs, budgets, pitch decks, meetings and plans you can actually run.'
+                : 'Stay on your free Child or Adult edition, or unlock Alpha (students) or Orbit (work).'}
           </p>
         </header>
         <PaymentTool mode="onboarding" />
