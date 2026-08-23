@@ -2375,6 +2375,10 @@
   gap: 16px;
 }
 
+.pricing-grid.is-three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .pricing-card {
   display: flex;
   flex-direction: column;
@@ -2393,6 +2397,13 @@
     #131018;
 }
 
+.pricing-card.is-alpha {
+  border-color: rgba(79, 195, 247, .28);
+  background:
+    radial-gradient(circle at 90% 0, rgba(79, 195, 247, .14), transparent 36%),
+    #10161d;
+}
+
 .pricing-card > span {
   display: inline-flex;
   align-items: center;
@@ -2405,6 +2416,10 @@
 
 .pricing-card.is-orbit > span {
   color: #f2bd58;
+}
+
+.pricing-card.is-alpha > span {
+  color: #8fd4ff;
 }
 
 .pricing-card h3 {
@@ -2877,7 +2892,8 @@
     grid-column: auto;
     grid-template-columns: 1fr;
   }
-  .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-grid,
+  .pricing-grid.is-three { grid-template-columns: 1fr; }
   .pricing-card { min-height: 0; }
   .landing-final-cta { min-height: 580px; }
   .landing-footer {

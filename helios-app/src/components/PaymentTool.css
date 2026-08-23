@@ -41,6 +41,10 @@
   gap: 10px;
 }
 
+.payment-plan-grid.is-three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .payment-plan {
   display: flex;
   flex-direction: column;
@@ -54,6 +58,15 @@
 .payment-plan.is-orbit {
   border-color: rgba(242, 184, 75, .28);
   background: linear-gradient(180deg, rgba(242, 184, 75, .07), transparent 48%), var(--helios-surface2);
+}
+
+.payment-plan.is-alpha {
+  border-color: rgba(79, 195, 247, .28);
+  background: linear-gradient(180deg, rgba(79, 195, 247, .08), transparent 48%), var(--helios-surface2);
+}
+
+.payment-plan.is-locked {
+  opacity: .62;
 }
 
 .payment-plan.is-current {
@@ -133,6 +146,31 @@
   flex-shrink: 0;
   margin-top: 1px;
   color: #6ed69a;
+}
+
+.payment-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.payment-methods button,
+.payment-select-btn {
+  min-height: 34px;
+  border: 1px solid var(--helios-border);
+  border-radius: 10px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payment-methods button.is-active,
+.payment-select-btn.is-active {
+  border-color: rgba(133, 118, 245, .4);
+  background: rgba(116, 88, 213, .16);
+  color: #d1c5f8;
 }
 
 .payment-free-btn,
@@ -240,6 +278,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .payment-plan-grid.is-three {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {

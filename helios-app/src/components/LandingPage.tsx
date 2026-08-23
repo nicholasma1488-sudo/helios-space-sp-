@@ -303,36 +303,56 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <section className="landing-pricing" id="pricing">
           <div className="pricing-intro" data-reveal>
             <div className="landing-section-label"><span>03</span> PAYMENT</div>
-            <h2>Pay with card.<br />Or stay free.</h2>
-            <p>Everyone can start on the free option. Orbit is the card-paid plan for people who want to keep a payment method on file.</p>
+            <h2>Student edition is free.<br />Alpha or Orbit when you want more.</h2>
+            <p>Create an account with your date of birth. Under 18 can subscribe to cheaper Alpha. Adults 18+ can subscribe to Orbit. Both paid plans include a long list of extras, and you can pay with card or Stripe.</p>
           </div>
-          <div className="pricing-grid">
+          <div className="pricing-grid is-three">
             <article className="pricing-card" data-reveal>
-              <span><Gift size={15} /> FREE OPTION</span>
+              <span><Gift size={15} /> STUDENT EDITION</span>
               <h3>Free</h3>
-              <b> $0 <small>forever</small></b>
-              <p>Build, share, and collaborate without entering a card.</p>
+              <b>$0 <small>forever</small></b>
+              <p>Everyone starts here. No card required.</p>
               <ul>
                 <li><Check size={13} /> Subjects, Hobbies, and Mini Apps</li>
                 <li><Check size={13} /> Projects, feed, Chat, and Live</li>
+                <li><Check size={13} /> Helios AI when configured</li>
+                <li><Check size={13} /> Public or private updates</li>
                 <li><Check size={13} /> No card required</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                Start free <ArrowRight size={15} />
+                Create a free account <ArrowRight size={15} />
+              </button>
+            </article>
+            <article className="pricing-card is-alpha" data-reveal>
+              <span><Sparkles size={15} /> UNDER 18</span>
+              <h3>Alpha</h3>
+              <b>$3.99 <small>/ month</small></b>
+              <p>The cheaper student plan. A parent or guardian can pay with card or Stripe.</p>
+              <ul>
+                <li><Check size={13} /> Everything in Free</li>
+                <li><Check size={13} /> Alpha badge and sticker pack</li>
+                <li><Check size={13} /> Study streaks and Solar boosts</li>
+                <li><Check size={13} /> Extra school checkpoints</li>
+                <li><Check size={13} /> Classroom challenge board</li>
+              </ul>
+              <button type="button" onClick={() => enterAuth('register')}>
+                Join as a student <ArrowRight size={15} />
               </button>
             </article>
             <article className="pricing-card is-orbit" data-reveal>
-              <span><CreditCard size={15} /> PAY WITH CARD</span>
+              <span><CreditCard size={15} /> ADULTS 18+</span>
               <h3>Orbit</h3>
               <b>$9 <small>/ month</small></b>
-              <p>Enter a card after you create an account. Helios keeps only the brand and last four digits.</p>
+              <p>The adult plan. Pay with card or Stripe after your date of birth confirms you are 18+.</p>
               <ul>
                 <li><Check size={13} /> Everything in Free</li>
-                <li><Check size={13} /> Saved card checkout</li>
-                <li><Check size={13} /> Switch back to free any time</li>
+                <li><Check size={13} /> Orbit badge and workplace extras</li>
+                <li><Check size={13} /> Priority Helios capacity</li>
+                <li><Check size={13} /> Extra collaborator invites</li>
+                <li><Check size={13} /> Card or Stripe on file</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                Pay with card <ArrowRight size={15} />
+                Subscribe to Orbit <ArrowRight size={15} />
               </button>
             </article>
           </div>

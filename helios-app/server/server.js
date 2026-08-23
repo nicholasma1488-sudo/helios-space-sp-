@@ -367,6 +367,14 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
   CREATE INDEX IF NOT EXISTS idx_billing_events_user ON billing_events(user_id, id DESC);
+  CREATE TABLE IF NOT EXISTS stripe_checkouts (
+    session_id  TEXT PRIMARY KEY,
+    user_id     INTEGER NOT NULL,
+    plan        TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `)
 
 function ensureColumn(table, column, definition) {
@@ -385,6 +393,9 @@ ensureColumn('posts', 'media_url', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('chat_messages', 'attachment_json', "TEXT NOT NULL DEFAULT '{}'")
 ensureColumn('users', 'plan', "TEXT NOT NULL DEFAULT 'free'")
 ensureColumn('users', 'plan_updated_at', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'birthdate', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'audience', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('billing_methods', 'source', "TEXT NOT NULL DEFAULT 'card'")
 
 // Seed / reconcile the single owner admin from environment-provided credentials
 if (ADMIN_EMAIL && ADMIN_PASSWORD) {
@@ -510,6 +521,12 @@ const liveEventRateLimit = (req, res, next) => req.body?.kind === 'cursor'
   ? liveCursorRateLimit(req, res, next)
   : socialRateLimit(req, res, next)
 
+const ADULT_AGE = 18
+const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY?.trim() || ''
+const STRIPE_PUBLISHABLE = process.env.STRIPE_PUBLISHABLE_KEY?.trim() || ''
+const STRIPE_MOCK = process.env.HELIOS_STRIPE_MOCK === '1'
+const mockStripeSessions = new Map()
+
 const BILLING_PLANS = {
   free: {
     id: 'free',
@@ -517,12 +534,39 @@ const BILLING_PLANS = {
     price_cents: 0,
     currency: 'usd',
     interval: 'month',
-    description: 'Start building without a card.',
+    audience: 'all',
+    description: 'The student edition. Create an account for free — no card needed.',
     features: [
-      'Subjects and Hobby Spaces',
-      'Projects, Mini Apps, and workspaces',
-      'Lifestyle feed, Chat, and Live',
-      'No card required',
+      'Create a Helios account for free',
+      'Subjects, Hobbies, and Mini App workspaces',
+      'Projects that stay connected to your feed',
+      'Lifestyle, Chat Hub, and Live work',
+      'Helios AI when an administrator enables it',
+      'Public or private progress posts',
+      'Saved posts, comments, and reactions',
+      'Daily tasks and account-scoped Mini Apps',
+      'JSON export of your own data',
+    ],
+  },
+  alpha: {
+    id: 'alpha',
+    name: 'Alpha',
+    price_cents: 399,
+    currency: 'usd',
+    interval: 'month',
+    audience: 'child',
+    description: 'A cheaper student plan for people under 18, packed with classroom extras.',
+    features: [
+      'Everything in the free student edition',
+      'Student price — less than half of Orbit',
+      'Alpha profile badge and classroom sticker pack',
+      'Weekly study-streak rewards and Solar boosts',
+      'Extra project checkpoints for school work',
+      'Priority student Helios study prompts',
+      'Homework focus timer themes',
+      'Classroom challenge board access',
+      'Parent or guardian card / Stripe checkout',
+      'Switch back to Free any time',
     ],
   },
   orbit: {
@@ -531,14 +575,25 @@ const BILLING_PLANS = {
     price_cents: 900,
     currency: 'usd',
     interval: 'month',
-    description: 'Pay with card to support Helios and keep a payment method on file.',
+    audience: 'adult',
+    description: 'The adult plan: pay with card or Stripe and unlock a fuller work orbit.',
     features: [
-      'Everything in Free',
+      'Everything in the free student edition',
+      'Orbit identity badge on your profile',
       'Priority Helios capacity when AI is configured',
-      'Saved card on file',
-      'Help keep the Space running',
+      'Career, portfolio, and workplace extras',
+      'Saved card or Stripe on file',
+      'Higher Live session visibility',
+      'Extra collaborator invitations',
+      'Richer export history and billing receipts',
+      'Early access to adult workspace tools',
+      'Switch back to Free any time',
     ],
   },
+}
+
+function normalizePlan(plan) {
+  return plan === 'orbit' || plan === 'alpha' ? plan : 'free'
 }
 
 function publicUser(user) {
@@ -548,12 +603,53 @@ function publicUser(user) {
     name: user.name,
     handle: user.handle,
     email: user.email,
-    plan: user.plan === 'orbit' ? 'orbit' : 'free',
+    plan: normalizePlan(user.plan),
+    audience: user.audience === 'adult' || user.audience === 'child' ? user.audience : null,
+    birthdate: user.birthdate || '',
   }
 }
 
 function billingCatalog() {
   return Object.values(BILLING_PLANS)
+}
+
+function stripeConfigured() {
+  return STRIPE_MOCK || Boolean(STRIPE_SECRET && STRIPE_PUBLISHABLE)
+}
+
+function stripePublicConfig() {
+  return {
+    enabled: stripeConfigured(),
+    publishable_key: stripeConfigured() ? (STRIPE_PUBLISHABLE || 'pk_test_mock') : null,
+  }
+}
+
+function parseBirthdate(value) {
+  const raw = String(value ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { error: 'Enter your date of birth' }
+  const [year, month, day] = raw.split('-').map(Number)
+  const birth = new Date(Date.UTC(year, month - 1, day))
+  if (birth.getUTCFullYear() !== year || birth.getUTCMonth() !== month - 1 || birth.getUTCDate() !== day)
+    return { error: 'Enter a valid date of birth' }
+  const now = new Date()
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  if (birth.getTime() > today) return { error: 'Date of birth cannot be in the future' }
+  let age = now.getUTCFullYear() - year
+  if (now.getUTCMonth() < month - 1 || (now.getUTCMonth() === month - 1 && now.getUTCDate() < day)) age -= 1
+  if (age < 6) return { error: 'You must be at least 6 years old to create an account' }
+  if (age > 120) return { error: 'Enter a valid date of birth' }
+  return { value: raw, age, audience: age >= ADULT_AGE ? 'adult' : 'child' }
+}
+
+function planEligibilityError(planId, audience) {
+  if (planId === 'free') return null
+  if (!audience) return 'Add your date of birth so Helios can offer Alpha or Orbit'
+  if (planId === 'orbit' && audience !== 'adult')
+    return 'Orbit is for adults 18 and over. Choose Alpha or stay on the free student edition'
+  if (planId === 'alpha' && audience !== 'child')
+    return 'Alpha is the cheaper student plan for people under 18. Choose Orbit or stay free'
+  if (!BILLING_PLANS[planId]) return 'Choose Free, Alpha, or Orbit'
+  return null
 }
 
 function digitsOnly(value) {
@@ -621,20 +717,34 @@ function serializePaymentMethod(row) {
     exp_month: Number(row.exp_month),
     exp_year: Number(row.exp_year),
     cardholder: row.cardholder,
+    source: row.source === 'stripe' ? 'stripe' : 'card',
     updated_at: row.updated_at,
   }
 }
 
-function getBillingSnapshot(userId, plan) {
-  const method = db.prepare('SELECT brand,last4,exp_month,exp_year,cardholder,updated_at FROM billing_methods WHERE user_id = ?').get(userId)
+function billingUserRow(userId) {
+  return db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience FROM users WHERE id = ?').get(userId)
+}
+
+function getBillingSnapshot(userLike) {
+  const user = typeof userLike === 'object' && userLike ? userLike : billingUserRow(userLike)
+  const userId = Number(user.id)
+  const method = db.prepare('SELECT brand,last4,exp_month,exp_year,cardholder,source,updated_at FROM billing_methods WHERE user_id = ?').get(userId)
   const events = db.prepare(
     'SELECT id,kind,plan,amount_cents,currency,detail,created_at FROM billing_events WHERE user_id = ? ORDER BY id DESC LIMIT 8'
   ).all(userId)
+  const audience = user.audience === 'adult' || user.audience === 'child' ? user.audience : null
   return {
-    plan: plan === 'orbit' ? 'orbit' : 'free',
-    plans: billingCatalog(),
+    plan: normalizePlan(user.plan),
+    audience,
+    birthdate: user.birthdate || '',
+    plans: billingCatalog().map(plan => ({
+      ...plan,
+      eligible: plan.id === 'free' || plan.audience === audience,
+    })),
     payment_method: serializePaymentMethod(method),
     events,
+    stripe: stripePublicConfig(),
   }
 }
 
@@ -642,6 +752,110 @@ function recordBillingEvent(userId, kind, plan, amountCents, detail) {
   db.prepare(
     'INSERT INTO billing_events (user_id,kind,plan,amount_cents,currency,detail,created_at) VALUES (?,?,?,?,?,?,?)'
   ).run(userId, kind, plan, amountCents, 'usd', detail || '', new Date().toISOString())
+}
+
+function savePaymentMethod(userId, method, now) {
+  db.prepare(`
+    INSERT INTO billing_methods (user_id,brand,last4,exp_month,exp_year,cardholder,updated_at,source)
+    VALUES (?,?,?,?,?,?,?,?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      brand = excluded.brand,
+      last4 = excluded.last4,
+      exp_month = excluded.exp_month,
+      exp_year = excluded.exp_year,
+      cardholder = excluded.cardholder,
+      updated_at = excluded.updated_at,
+      source = excluded.source
+  `).run(
+    userId,
+    method.brand,
+    method.last4,
+    method.exp_month,
+    method.exp_year,
+    method.cardholder,
+    now,
+    method.source || 'card',
+  )
+}
+
+function activatePlan(user, planId, method, detail, now = new Date().toISOString()) {
+  const catalog = BILLING_PLANS[planId]
+  inTransaction(() => {
+    if (method) savePaymentMethod(user.id, method, now)
+    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ? WHERE id = ?').run(planId, now, user.id)
+    recordBillingEvent(
+      user.id,
+      user.plan === planId ? 'card_updated' : 'paid',
+      planId,
+      catalog?.price_cents || 0,
+      detail,
+    )
+  })
+  return publicUser({ ...user, plan: planId })
+}
+
+function requestOrigin(req) {
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '127.0.0.1').split(',')[0].trim()
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim()
+  return proto + '://' + host
+}
+
+async function stripeForm(path, params, method = 'POST') {
+  const headers = { Authorization: 'Bearer ' + STRIPE_SECRET }
+  let body
+  if (method !== 'GET') {
+    body = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) body.set(key, String(value))
+    headers['Content-Type'] = 'application/x-www-form-urlencoded'
+  }
+  const response = await fetch('https://api.stripe.com/v1/' + path, {
+    method,
+    headers,
+    body,
+  })
+  const json = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const error = new Error(json.error?.message || 'Stripe request failed')
+    error.status = 502
+    throw error
+  }
+  return json
+}
+
+async function createStripeCheckout(user, planId, origin) {
+  const catalog = BILLING_PLANS[planId]
+  if (STRIPE_MOCK) {
+    const sessionId = 'cs_test_' + crypto.randomBytes(8).toString('hex')
+    mockStripeSessions.set(sessionId, {
+      id: sessionId,
+      payment_status: 'paid',
+      metadata: { user_id: String(user.id), plan: planId },
+      payment_method: { brand: 'visa', last4: '4242' },
+    })
+    db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
+      .run(sessionId, user.id, planId, 'pending', new Date().toISOString())
+    return { session_id: sessionId, url: origin + '/?billing=success&session_id=' + encodeURIComponent(sessionId) }
+  }
+  const session = await stripeForm('checkout/sessions', {
+    mode: 'payment',
+    success_url: origin + '/?billing=success&session_id={CHECKOUT_SESSION_ID}',
+    cancel_url: origin + '/?billing=cancel',
+    client_reference_id: String(user.id),
+    'metadata[user_id]': String(user.id),
+    'metadata[plan]': planId,
+    'line_items[0][quantity]': '1',
+    'line_items[0][price_data][currency]': catalog.currency,
+    'line_items[0][price_data][unit_amount]': String(catalog.price_cents),
+    'line_items[0][price_data][product_data][name]': 'Helios ' + catalog.name,
+  })
+  db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
+    .run(session.id, user.id, planId, 'pending', new Date().toISOString())
+  return { session_id: session.id, url: session.url }
+}
+
+async function retrieveStripeSession(sessionId) {
+  if (STRIPE_MOCK) return mockStripeSessions.get(sessionId) || null
+  return stripeForm('checkout/sessions/' + encodeURIComponent(sessionId), {}, 'GET')
 }
 
 function requireAdmin(req, res, next) {
@@ -657,7 +871,7 @@ function requireUser(req, res, next) {
   const token = req.cookies.helios_user
   const s = getFreshSession(token, 'user', USER_SESSION_MS)
   if (!s) return res.status(401).json({ error: 'Not authenticated' })
-  const user = db.prepare('SELECT id,name,handle,email,status,plan FROM users WHERE id = ?').get(s.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience FROM users WHERE id = ?').get(s.subject_id)
   if (!user || user.status !== 'active') return res.status(403).json({ error: 'Account unavailable' })
   req.user = publicUser(user)
   next()
@@ -970,15 +1184,17 @@ app.get('/api/site', (_req, res) => res.json({
 app.post('/api/signup', authRateLimit, (req, res) => {
   if (getSetting('signup_open') !== 'true')
     return res.status(403).json({ error: 'Signups are currently closed' })
-  const { name, handle, email, password } = req.body || {}
-  if (!name || !handle || !email || !password)
-    return res.status(400).json({ error: 'All fields are required' })
+  const { name, handle, email, password, birthdate } = req.body || {}
+  if (!name || !handle || !email || !password || !birthdate)
+    return res.status(400).json({ error: 'All fields are required, including date of birth' })
   const checkedName = checkedString(name, 'Name', MAX_USER_NAME_LENGTH, { required: true, trim: true })
   if (checkedName.error) return res.status(400).json({ error: checkedName.error })
   const checkedEmail = checkedString(email, 'Email', MAX_EMAIL_LENGTH, { required: true, trim: true })
   if (checkedEmail.error) return res.status(400).json({ error: checkedEmail.error })
   const checkedPassword = checkedString(password, 'Password', MAX_PASSWORD_LENGTH, { required: true })
   if (checkedPassword.error) return res.status(400).json({ error: checkedPassword.error })
+  const parsedBirth = parseBirthdate(birthdate)
+  if (parsedBirth.error) return res.status(400).json({ error: parsedBirth.error })
   const normalizedEmail = checkedEmail.value.toLowerCase()
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalizedEmail))
     return res.status(400).json({ error: 'Invalid email address' })
@@ -990,10 +1206,11 @@ app.post('/api/signup', authRateLimit, (req, res) => {
   try {
     const duplicateHandle = db.prepare('SELECT 1 FROM users WHERE lower(handle) = lower(?)').get('@' + h)
     if (duplicateHandle) return res.status(409).json({ error: 'That handle or email is already registered' })
+    const now = new Date().toISOString()
     const info = db.prepare(
-      'INSERT INTO users (name, handle, email, password_hash, created_at) VALUES (?,?,?,?,?)'
+      'INSERT INTO users (name, handle, email, password_hash, created_at, plan, birthdate, audience, plan_updated_at) VALUES (?,?,?,?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), new Date().toISOString())
+          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', parsedBirth.value, parsedBirth.audience, now)
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
     res.json({
@@ -1004,6 +1221,8 @@ app.post('/api/signup', authRateLimit, (req, res) => {
         handle: '@' + h,
         email: normalizedEmail,
         plan: 'free',
+        birthdate: parsedBirth.value,
+        audience: parsedBirth.audience,
       }),
     })
   } catch (e) {
@@ -1035,62 +1254,109 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/session', (req, res) => {
   const session = getFreshSession(req.cookies.helios_user, 'user', USER_SESSION_MS)
   if (!session) return res.json({ user: null })
-  const user = db.prepare('SELECT id,name,handle,email,status,plan FROM users WHERE id = ?').get(session.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience FROM users WHERE id = ?').get(session.subject_id)
   if (!user || user.status !== 'active') return res.json({ user: null })
   res.json({ user: publicUser(user) })
 })
 
 app.get('/api/me', requireUser, (req, res) => res.json({ user: req.user }))
 
+app.put('/api/me', requireUser, (req, res) => {
+  if (req.user.birthdate) return res.status(400).json({ error: 'Date of birth can only be set once' })
+  const parsedBirth = parseBirthdate(req.body?.birthdate)
+  if (parsedBirth.error) return res.status(400).json({ error: parsedBirth.error })
+  db.prepare('UPDATE users SET birthdate = ?, audience = ? WHERE id = ?')
+    .run(parsedBirth.value, parsedBirth.audience, req.user.id)
+  const user = publicUser({ ...req.user, birthdate: parsedBirth.value, audience: parsedBirth.audience })
+  res.json({ user })
+})
+
 app.get('/api/billing', requireUser, (req, res) => {
-  res.json(getBillingSnapshot(req.user.id, req.user.plan))
+  res.json(getBillingSnapshot(req.user))
 })
 
 app.post('/api/billing/checkout', requireUser, billingRateLimit, (req, res) => {
   const planId = String(req.body?.plan || '').trim().toLowerCase()
   const catalog = BILLING_PLANS[planId]
-  if (!catalog) return res.status(400).json({ error: 'Choose the free plan or pay with card' })
+  if (!catalog) return res.status(400).json({ error: 'Choose Free, Alpha, or Orbit' })
+  const blocked = planEligibilityError(planId, req.user.audience)
+  if (blocked) return res.status(403).json({ error: blocked })
 
   const now = new Date().toISOString()
   if (planId === 'free') {
     db.prepare('UPDATE users SET plan = ?, plan_updated_at = ? WHERE id = ?').run('free', now, req.user.id)
     if (req.user.plan !== 'free')
-      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the free option')
+      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the free student edition')
     const user = publicUser({ ...req.user, plan: 'free' })
-    return res.json({ ok: true, user, billing: getBillingSnapshot(req.user.id, 'free') })
+    return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
   }
 
   const tokenized = tokenizeCard(req.body?.card)
   if (tokenized.error) return res.status(400).json({ error: tokenized.error })
+  const user = activatePlan(
+    req.user,
+    planId,
+    { ...tokenized, source: 'card' },
+    `Paid with card · ${tokenized.brand} •••• ${tokenized.last4}`,
+    now,
+  )
+  res.json({ ok: true, user, billing: getBillingSnapshot(user) })
+})
 
-  inTransaction(() => {
-    db.prepare(`
-      INSERT INTO billing_methods (user_id,brand,last4,exp_month,exp_year,cardholder,updated_at)
-      VALUES (?,?,?,?,?,?,?)
-      ON CONFLICT(user_id) DO UPDATE SET
-        brand = excluded.brand,
-        last4 = excluded.last4,
-        exp_month = excluded.exp_month,
-        exp_year = excluded.exp_year,
-        cardholder = excluded.cardholder,
-        updated_at = excluded.updated_at
-    `).run(req.user.id, tokenized.brand, tokenized.last4, tokenized.exp_month, tokenized.exp_year, tokenized.cardholder, now)
-    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ? WHERE id = ?').run('orbit', now, req.user.id)
-    recordBillingEvent(
-      req.user.id,
-      req.user.plan === 'orbit' ? 'card_updated' : 'paid',
-      'orbit',
-      catalog.price_cents,
-      `Paid with ${tokenized.brand} •••• ${tokenized.last4}`,
+app.post('/api/billing/stripe', requireUser, billingRateLimit, async (req, res) => {
+  const planId = String(req.body?.plan || '').trim().toLowerCase()
+  if (!BILLING_PLANS[planId] || planId === 'free')
+    return res.status(400).json({ error: 'Stripe checkout is for Alpha or Orbit' })
+  const blocked = planEligibilityError(planId, req.user.audience)
+  if (blocked) return res.status(403).json({ error: blocked })
+  if (!stripeConfigured())
+    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
+  try {
+    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
+    res.json({ ok: true, ...session })
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message || 'Stripe checkout failed' })
+  }
+})
+
+app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (req, res) => {
+  const sessionId = String(req.body?.session_id || '').trim()
+  if (!sessionId) return res.status(400).json({ error: 'Stripe session is required' })
+  const pending = db.prepare('SELECT * FROM stripe_checkouts WHERE session_id = ? AND user_id = ?').get(sessionId, req.user.id)
+  if (!pending) return res.status(404).json({ error: 'Stripe session not found' })
+  try {
+    const session = await retrieveStripeSession(sessionId)
+    if (!session || session.payment_status !== 'paid')
+      return res.status(402).json({ error: 'Stripe payment is not complete' })
+    if (String(session.metadata?.user_id || '') !== String(req.user.id))
+      return res.status(403).json({ error: 'Stripe session does not match this account' })
+    const planId = pending.plan
+    const blocked = planEligibilityError(planId, req.user.audience)
+    if (blocked) return res.status(403).json({ error: blocked })
+    const now = new Date().toISOString()
+    db.prepare('UPDATE stripe_checkouts SET status = ? WHERE session_id = ?').run('paid', sessionId)
+    const user = activatePlan(
+      req.user,
+      planId,
+      {
+        brand: session.payment_method?.brand || 'stripe',
+        last4: session.payment_method?.last4 || '0000',
+        exp_month: 12,
+        exp_year: new Date().getUTCFullYear() + 3,
+        cardholder: req.user.name,
+        source: 'stripe',
+      },
+      `Paid with Stripe · ${planId}`,
+      now,
     )
-  })
-
-  const user = publicUser({ ...req.user, plan: 'orbit' })
-  res.json({ ok: true, user, billing: getBillingSnapshot(req.user.id, 'orbit') })
+    res.json({ ok: true, user, billing: getBillingSnapshot(user) })
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message || 'Stripe confirmation failed' })
+  }
 })
 
 app.get('/api/export', requireUser, (req, res) => {
-  const account = db.prepare('SELECT id,name,handle,email,created_at,status,plan,plan_updated_at FROM users WHERE id = ?').get(req.user.id)
+  const account = db.prepare('SELECT id,name,handle,email,created_at,status,plan,plan_updated_at,birthdate,audience FROM users WHERE id = ?').get(req.user.id)
   const projects = db.prepare('SELECT * FROM projects WHERE user_id = ? ORDER BY id').all(req.user.id)
   const collaborativeProjects = db.prepare(
     "SELECT p.*,pc.role AS collaborator_role FROM projects p JOIN project_collaborators pc ON pc.project_id = p.id WHERE pc.user_id = ? AND pc.status = 'accepted' ORDER BY p.id"
@@ -1113,7 +1379,7 @@ app.get('/api/export', requireUser, (req, res) => {
   const conversationIds = db.prepare('SELECT conversation_id FROM conversation_members WHERE user_id = ? ORDER BY conversation_id').all(req.user.id).map(row => row.conversation_id)
   const conversations = conversationIds.length ? db.prepare(`SELECT * FROM conversations WHERE id IN (${conversationIds.map(() => '?').join(',')}) ORDER BY id`).all(...conversationIds) : []
   const chatMessages = conversationIds.length ? db.prepare(`SELECT * FROM chat_messages WHERE conversation_id IN (${conversationIds.map(() => '?').join(',')}) ORDER BY id`).all(...conversationIds) : []
-  const billing = getBillingSnapshot(req.user.id, account.plan)
+  const billing = getBillingSnapshot(account)
   res.set('Content-Disposition', 'attachment; filename="helios-data-export.json"')
   res.json({
     exported_at: new Date().toISOString(), account, projects, collaborative_projects: collaborativeProjects,

@@ -27,6 +27,8 @@ const child = spawn(process.execPath, ['--experimental-sqlite', 'server.js'], {
     NODE_ENV: 'test',
     HELIOS_ADMIN_EMAIL: '',
     HELIOS_ADMIN_PASSWORD: '',
+    HELIOS_STRIPE_MOCK: '1',
+    STRIPE_PUBLISHABLE_KEY: 'pk_test_helios_mock',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })
@@ -155,24 +157,39 @@ async function run() {
     handle: 'alice.orbit',
     email: 'alice@example.test',
     password: 'correct-horse',
+    birthdate: '1995-04-12',
   })
   expectStatus(aliceSignup, 200, 'alice signup')
   assert.equal(aliceSignup.body.user.plan, 'free')
+  assert.equal(aliceSignup.body.user.audience, 'adult')
   assert.equal(site.body.plans.some(plan => plan.id === 'free'), true)
+  assert.equal(site.body.plans.some(plan => plan.id === 'alpha'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'orbit'), true)
+
+  const missingBirthdate = await anonymous.post('/api/signup', {
+    name: 'No Birthday',
+    handle: 'no.birthday',
+    email: 'nobirth@example.test',
+    password: 'correct-horse',
+  })
+  expectStatus(missingBirthdate, 400, 'signup requires birthdate')
+
   const bobSignup = await bob.post('/api/signup', {
     name: 'Bob Solar',
     handle: 'bob.solar',
     email: 'bob@example.test',
     password: 'correct-battery',
+    birthdate: '2015-08-20',
   })
   expectStatus(bobSignup, 200, 'bob signup')
+  assert.equal(bobSignup.body.user.audience, 'child')
 
   const duplicate = await anonymous.post('/api/signup', {
     name: 'Duplicate',
     handle: 'alice.orbit',
     email: 'other@example.test',
     password: 'correct-staple',
+    birthdate: '2001-01-01',
   })
   expectStatus(duplicate, 409, 'duplicate account')
 
@@ -491,13 +508,28 @@ async function run() {
   const aliceBilling = await alice.get('/api/billing')
   expectStatus(aliceBilling, 200, 'default billing snapshot')
   assert.equal(aliceBilling.body.plan, 'free')
+  assert.equal(aliceBilling.body.audience, 'adult')
   assert.equal(aliceBilling.body.payment_method, null)
-  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'orbit' && plan.price_cents === 900), true)
+  assert.equal(aliceBilling.body.stripe.enabled, true)
+  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'orbit' && plan.eligible === true && plan.price_cents === 900), true)
+  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'alpha' && plan.eligible === false), true)
 
   const stayFree = await alice.post('/api/billing/checkout', { plan: 'free' })
   expectStatus(stayFree, 200, 'stay on free option')
   assert.equal(stayFree.body.user.plan, 'free')
   assert.equal(stayFree.body.billing.plan, 'free')
+
+  const adultCannotAlpha = await alice.post('/api/billing/checkout', {
+    plan: 'alpha',
+    card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Alice Orbit' },
+  })
+  expectStatus(adultCannotAlpha, 403, 'adult cannot subscribe to alpha')
+
+  const childCannotOrbit = await bob.post('/api/billing/checkout', {
+    plan: 'orbit',
+    card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Parent Solar' },
+  })
+  expectStatus(childCannotOrbit, 403, 'child cannot subscribe to orbit')
 
   const missingCard = await alice.post('/api/billing/checkout', { plan: 'orbit' })
   expectStatus(missingCard, 400, 'orbit requires a card')
@@ -541,6 +573,25 @@ async function run() {
   expectStatus(backToFree, 200, 'switch back to free option')
   assert.equal(backToFree.body.user.plan, 'free')
   assert.equal(backToFree.body.billing.payment_method.last4, '4242')
+
+  const bobAlpha = await bob.post('/api/billing/checkout', {
+    plan: 'alpha',
+    card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Parent Solar' },
+  })
+  expectStatus(bobAlpha, 200, 'child pays for alpha')
+  assert.equal(bobAlpha.body.user.plan, 'alpha')
+  assert.equal(bobAlpha.body.billing.plan, 'alpha')
+
+  const stripeSession = await alice.post('/api/billing/stripe', { plan: 'orbit' })
+  expectStatus(stripeSession, 200, 'create stripe checkout')
+  assert.match(stripeSession.body.session_id, /^cs_test_/)
+  const stripeConfirm = await alice.post('/api/billing/stripe/confirm', { session_id: stripeSession.body.session_id })
+  expectStatus(stripeConfirm, 200, 'confirm stripe payment')
+  assert.equal(stripeConfirm.body.user.plan, 'orbit')
+  assert.equal(stripeConfirm.body.billing.payment_method.source, 'stripe')
+
+  const childStripeOrbit = await bob.post('/api/billing/stripe', { plan: 'orbit' })
+  expectStatus(childStripeOrbit, 403, 'child cannot start orbit stripe checkout')
 
   const unknownApi = await alice.get('/api/does-not-exist')
   expectStatus(unknownApi, 404, 'unknown API')

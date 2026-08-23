@@ -17,12 +17,29 @@ const FALLBACK_PLANS: BillingPlan[] = [
     price_cents: 0,
     currency: 'usd',
     interval: 'month',
-    description: 'Start building without a card.',
+    audience: 'all',
+    eligible: true,
+    description: 'The student edition. Create an account for free — no card needed.',
     features: [
-      'Subjects and Hobby Spaces',
-      'Projects, Mini Apps, and workspaces',
-      'Lifestyle feed, Chat, and Live',
-      'No card required',
+      'Create a Helios account for free',
+      'Subjects, Hobbies, and Mini App workspaces',
+      'Projects that stay connected to your feed',
+      'Lifestyle, Chat Hub, and Live work',
+    ],
+  },
+  {
+    id: 'alpha',
+    name: 'Alpha',
+    price_cents: 399,
+    currency: 'usd',
+    interval: 'month',
+    audience: 'child',
+    description: 'A cheaper student plan for people under 18, packed with classroom extras.',
+    features: [
+      'Everything in the free student edition',
+      'Student price — less than half of Orbit',
+      'Alpha badge, stickers, and study-streak rewards',
+      'Parent or guardian card / Stripe checkout',
     ],
   },
   {
@@ -31,12 +48,13 @@ const FALLBACK_PLANS: BillingPlan[] = [
     price_cents: 900,
     currency: 'usd',
     interval: 'month',
-    description: 'Pay with card to support Helios and keep a payment method on file.',
+    audience: 'adult',
+    description: 'The adult plan: pay with card or Stripe and unlock a fuller work orbit.',
     features: [
-      'Everything in Free',
+      'Everything in the free student edition',
+      'Orbit identity badge and workplace extras',
       'Priority Helios capacity when AI is configured',
-      'Saved card on file',
-      'Help keep the Space running',
+      'Saved card or Stripe on file',
     ],
   },
 ]
@@ -62,15 +80,24 @@ function brandLabel(brand: string) {
   if (brand === 'mastercard') return 'Mastercard'
   if (brand === 'amex') return 'American Express'
   if (brand === 'discover') return 'Discover'
+  if (brand === 'stripe') return 'Stripe'
   return 'Card'
+}
+
+function planLabel(id: BillingPlanId | string) {
+  if (id === 'alpha') return 'Alpha'
+  if (id === 'orbit') return 'Orbit'
+  return 'Free'
 }
 
 export function PaymentTool() {
   const { state, dispatch } = useApp()
   const [billing, setBilling] = useState<BillingSnapshot | null>(null)
   const [loading, setLoading] = useState(true)
-  const [busy, setBusy] = useState<BillingPlanId | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [payMethod, setPayMethod] = useState<'card' | 'stripe'>('card')
+  const [selectedPaid, setSelectedPaid] = useState<Exclude<BillingPlanId, 'free'> | null>(null)
   const [cardNumber, setCardNumber] = useState('')
   const [expiry, setExpiry] = useState('')
   const [cvc, setCvc] = useState('')
@@ -79,7 +106,10 @@ export function PaymentTool() {
   useEffect(() => {
     let cancelled = false
     api.billing.get().then(snapshot => {
-      if (!cancelled) setBilling(snapshot)
+      if (cancelled) return
+      setBilling(snapshot)
+      const firstPaid = snapshot.plans.find(plan => plan.id !== 'free' && plan.eligible)
+      if (firstPaid?.id === 'alpha' || firstPaid?.id === 'orbit') setSelectedPaid(firstPaid.id)
     }).catch(reason => {
       if (!cancelled) setError((reason as Error).message)
     }).finally(() => {
@@ -90,6 +120,9 @@ export function PaymentTool() {
 
   const plans = billing?.plans?.length ? billing.plans : FALLBACK_PLANS
   const currentPlan = billing?.plan ?? state.user?.plan ?? 'free'
+  const audience = billing?.audience ?? state.user?.audience ?? null
+  const stripeEnabled = Boolean(billing?.stripe?.enabled)
+  const paidPlan = selectedPaid || (audience === 'child' ? 'alpha' : 'orbit')
   const cardReady = useMemo(() => {
     const digits = cardNumber.replace(/\D/g, '')
     const expiryDigits = expiry.replace(/\D/g, '')
@@ -109,7 +142,7 @@ export function PaymentTool() {
       applyUser(result.user)
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'You are on the free option.', tone: 'success' },
+        toast: { id: String(Date.now()), message: 'You are on the free student edition.', tone: 'success' },
       })
     } catch (reason) {
       setError((reason as Error).message)
@@ -122,17 +155,15 @@ export function PaymentTool() {
     event.preventDefault()
     const number = cardNumber.replace(/\D/g, '')
     const expiryDigits = expiry.replace(/\D/g, '')
-    const month = Number(expiryDigits.slice(0, 2))
-    const year = Number(expiryDigits.slice(2))
-    setBusy('orbit')
+    setBusy('card')
     setError('')
     try {
       const result = await api.billing.checkout({
-        plan: 'orbit',
+        plan: paidPlan,
         card: {
           number,
-          exp_month: month,
-          exp_year: year,
+          exp_month: Number(expiryDigits.slice(0, 2)),
+          exp_year: Number(expiryDigits.slice(2)),
           cvc: cvc.replace(/\D/g, ''),
           name: name.trim(),
         },
@@ -144,7 +175,11 @@ export function PaymentTool() {
       setCvc('')
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'Orbit is active. Card saved as ' + brandLabel(result.billing.payment_method?.brand || 'card') + ' •••• ' + (result.billing.payment_method?.last4 || ''), tone: 'success' },
+        toast: {
+          id: String(Date.now()),
+          message: planLabel(result.billing.plan) + ' is active. Card saved as ' + brandLabel(result.billing.payment_method?.brand || 'card') + ' •••• ' + (result.billing.payment_method?.last4 || ''),
+          tone: 'success',
+        },
       })
     } catch (reason) {
       setError((reason as Error).message)
@@ -153,26 +188,54 @@ export function PaymentTool() {
     }
   }
 
+  async function payWithStripe() {
+    setBusy('stripe')
+    setError('')
+    try {
+      const session = await api.billing.stripe(paidPlan)
+      window.location.assign(session.url)
+    } catch (reason) {
+      setError((reason as Error).message)
+      setBusy(null)
+    }
+  }
+
   return (
     <section className="payment-tool" aria-labelledby="payment-tool-title">
       <header>
         <span><CreditCard size={13} /> PAYMENT</span>
-        <h3 id="payment-tool-title">Pay with card, or stay free</h3>
-        <p>Choose the free option at any time. Orbit accepts a card and keeps only the brand and last four digits.</p>
+        <h3 id="payment-tool-title">Free student edition, or subscribe</h3>
+        <p>
+          {audience === 'child'
+            ? 'You are under 18, so Alpha is the paid plan. A parent or guardian should complete card or Stripe checkout.'
+            : audience === 'adult'
+              ? 'You are 18 or over, so Orbit is the paid plan. Pay with card or Stripe.'
+              : 'Helios uses your date of birth to offer Alpha to students under 18 and Orbit to adults.'}
+        </p>
       </header>
 
       {loading && <div className="payment-tool-status">Loading payment options…</div>}
       {error && <div className="payment-tool-error" role="alert">{error}</div>}
 
-      <div className="payment-plan-grid">
+      <div className="payment-plan-grid is-three">
         {plans.map(plan => {
           const current = currentPlan === plan.id
+          const eligible = plan.eligible !== false
           return (
-            <article key={plan.id} className={'payment-plan' + (current ? ' is-current' : '') + (plan.id === 'orbit' ? ' is-orbit' : '')}>
+            <article
+              key={plan.id}
+              className={
+                'payment-plan'
+                + (current ? ' is-current' : '')
+                + (plan.id === 'orbit' ? ' is-orbit' : '')
+                + (plan.id === 'alpha' ? ' is-alpha' : '')
+                + (!eligible ? ' is-locked' : '')
+              }
+            >
               <div className="payment-plan-top">
                 <i>{plan.id === 'free' ? <Gift size={16} /> : <Sparkles size={16} />}</i>
                 <div>
-                  <small>{plan.id === 'free' ? 'NO CARD' : 'PAY WITH CARD'}</small>
+                  <small>{plan.id === 'free' ? 'STUDENT EDITION' : plan.id === 'alpha' ? 'UNDER 18' : 'ADULTS 18+'}</small>
                   <strong>{plan.name}</strong>
                 </div>
                 <b>{formatPrice(plan.price_cents)}{plan.price_cents > 0 ? <em>/mo</em> : null}</b>
@@ -190,82 +253,122 @@ export function PaymentTool() {
                   onClick={() => void chooseFree()}
                   disabled={busy !== null || current}
                 >
-                  {current ? 'Current free option' : busy === 'free' ? 'Switching…' : 'Continue free'}
+                  {current ? 'Current free edition' : busy === 'free' ? 'Switching…' : 'Continue free'}
                 </button>
+              ) : !eligible ? (
+                <div className="payment-current-note">
+                  {plan.id === 'alpha' ? 'Alpha is only for accounts under 18.' : 'Orbit is only for adults 18 and over.'}
+                </div>
               ) : current ? (
-                <div className="payment-current-note">Orbit is active on this account.</div>
+                <div className="payment-current-note">{plan.name} is active on this account.</div>
               ) : (
-                <div className="payment-current-note">Enter a card below to switch to Orbit.</div>
+                <button
+                  type="button"
+                  className={selectedPaid === plan.id ? 'payment-select-btn is-active' : 'payment-select-btn'}
+                  onClick={() => setSelectedPaid(plan.id === 'alpha' ? 'alpha' : 'orbit')}
+                >
+                  {selectedPaid === plan.id ? 'Selected for checkout' : 'Choose ' + plan.name}
+                </button>
               )}
             </article>
           )
         })}
       </div>
 
-      <form className="payment-card-form" onSubmit={event => void payWithCard(event)}>
-        <div className="payment-card-heading">
-          <CreditCard size={16} />
-          <div>
-            <strong>Card checkout</strong>
-            <small>The card number and security code are never stored.</small>
-          </div>
+      {audience && (
+        <div className="payment-methods">
+          <button type="button" className={payMethod === 'card' ? 'is-active' : ''} onClick={() => setPayMethod('card')}>
+            Card
+          </button>
+          <button type="button" className={payMethod === 'stripe' ? 'is-active' : ''} onClick={() => setPayMethod('stripe')}>
+            Stripe
+          </button>
         </div>
-        {billing?.payment_method && (
-          <div className="payment-saved-card">
-            <Lock size={13} />
-            <span>
-              Saved {brandLabel(billing.payment_method.brand)} •••• {billing.payment_method.last4}
-              <em>Expires {String(billing.payment_method.exp_month).padStart(2, '0')}/{billing.payment_method.exp_year}</em>
-            </span>
+      )}
+
+      {payMethod === 'stripe' ? (
+        <div className="payment-card-form">
+          <div className="payment-card-heading">
+            <Lock size={16} />
+            <div>
+              <strong>Stripe checkout</strong>
+              <small>Helios never sees the full card number when you pay with Stripe.</small>
+            </div>
           </div>
-        )}
-        <label>
-          <span>Cardholder name</span>
-          <input
-            value={name}
-            onChange={event => setName(event.target.value)}
-            autoComplete="cc-name"
-            maxLength={80}
-            placeholder="Name on card"
-          />
-        </label>
-        <label>
-          <span>Card number</span>
-          <input
-            value={cardNumber}
-            onChange={event => setCardNumber(formatCardNumber(event.target.value))}
-            inputMode="numeric"
-            autoComplete="cc-number"
-            placeholder="4242 4242 4242 4242"
-          />
-        </label>
-        <div className="payment-card-row">
+          {audience === 'child' && <p className="payment-tool-status">Ask a parent or guardian to finish Stripe checkout for Alpha.</p>}
+          <button type="button" disabled={busy !== null || !stripeEnabled} onClick={() => void payWithStripe()}>
+            <Lock size={14} />
+            {busy === 'stripe' ? 'Opening Stripe…' : stripeEnabled ? 'Pay ' + planLabel(paidPlan) + ' with Stripe' : 'Stripe is not configured yet'}
+          </button>
+        </div>
+      ) : (
+        <form className="payment-card-form" onSubmit={event => void payWithCard(event)}>
+          <div className="payment-card-heading">
+            <CreditCard size={16} />
+            <div>
+              <strong>Card checkout</strong>
+              <small>The card number and security code are never stored.</small>
+            </div>
+          </div>
+          {audience === 'child' && <p className="payment-tool-status">Ask a parent or guardian to enter the card for Alpha.</p>}
+          {billing?.payment_method && (
+            <div className="payment-saved-card">
+              <Lock size={13} />
+              <span>
+                Saved {brandLabel(billing.payment_method.brand)} •••• {billing.payment_method.last4}
+                {billing.payment_method.source === 'stripe' ? ' via Stripe' : ''}
+                <em>Expires {String(billing.payment_method.exp_month).padStart(2, '0')}/{billing.payment_method.exp_year}</em>
+              </span>
+            </div>
+          )}
           <label>
-            <span>Expiry</span>
+            <span>Cardholder name</span>
             <input
-              value={expiry}
-              onChange={event => setExpiry(formatExpiry(event.target.value))}
-              inputMode="numeric"
-              autoComplete="cc-exp"
-              placeholder="MM / YY"
+              value={name}
+              onChange={event => setName(event.target.value)}
+              autoComplete="cc-name"
+              maxLength={80}
+              placeholder="Name on card"
             />
           </label>
           <label>
-            <span>Security code</span>
+            <span>Card number</span>
             <input
-              value={cvc}
-              onChange={event => setCvc(event.target.value.replace(/\D/g, '').slice(0, 4))}
+              value={cardNumber}
+              onChange={event => setCardNumber(formatCardNumber(event.target.value))}
               inputMode="numeric"
-              autoComplete="cc-csc"
-              placeholder="CVC"
+              autoComplete="cc-number"
+              placeholder="4242 4242 4242 4242"
             />
           </label>
-        </div>
-        <button type="submit" disabled={busy !== null || !cardReady}>
-          <Lock size={14} />
-          {busy === 'orbit' ? 'Paying…' : currentPlan === 'orbit' ? 'Update card' : 'Pay with card'}
-        </button>
-      </form>
+          <div className="payment-card-row">
+            <label>
+              <span>Expiry</span>
+              <input
+                value={expiry}
+                onChange={event => setExpiry(formatExpiry(event.target.value))}
+                inputMode="numeric"
+                autoComplete="cc-exp"
+                placeholder="MM / YY"
+              />
+            </label>
+            <label>
+              <span>Security code</span>
+              <input
+                value={cvc}
+                onChange={event => setCvc(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                inputMode="numeric"
+                autoComplete="cc-csc"
+                placeholder="CVC"
+              />
+            </label>
+          </div>
+          <button type="submit" disabled={busy !== null || !cardReady}>
+            <Lock size={14} />
+            {busy === 'card' ? 'Paying…' : currentPlan === paidPlan ? 'Update card' : 'Pay ' + planLabel(paidPlan) + ' with card'}
+          </button>
+        </form>
+      )}
     </section>
   )
 }

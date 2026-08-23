@@ -1,6 +1,7 @@
 // Typed API client for Helios Space backend
 
-export type BillingPlanId = 'free' | 'orbit'
+export type BillingPlanId = 'free' | 'alpha' | 'orbit'
+export type AccountAudience = 'adult' | 'child'
 
 export interface User {
   id: number
@@ -8,6 +9,8 @@ export interface User {
   handle: string
   email: string
   plan?: BillingPlanId
+  audience?: AccountAudience | null
+  birthdate?: string
 }
 
 export interface BillingPlan {
@@ -16,8 +19,10 @@ export interface BillingPlan {
   price_cents: number
   currency: string
   interval: 'month' | string
+  audience?: 'all' | AccountAudience | string
   description: string
   features: string[]
+  eligible?: boolean
 }
 
 export interface PaymentMethod {
@@ -26,6 +31,7 @@ export interface PaymentMethod {
   exp_month: number
   exp_year: number
   cardholder: string
+  source?: 'card' | 'stripe' | string
   updated_at: string
 }
 
@@ -41,9 +47,12 @@ export interface BillingEvent {
 
 export interface BillingSnapshot {
   plan: BillingPlanId
+  audience?: AccountAudience | null
+  birthdate?: string
   plans: BillingPlan[]
   payment_method: PaymentMethod | null
   events: BillingEvent[]
+  stripe?: { enabled: boolean; publishable_key: string | null }
 }
 
 export interface CardCheckout {
@@ -359,7 +368,7 @@ function postQuery(filters: PostFilters = {}) {
 export const api = {
   site: () => call<SiteInfo>('/api/site'),
 
-  signup: (data: { name: string; handle: string; email: string; password: string }) =>
+  signup: (data: { name: string; handle: string; email: string; password: string; birthdate: string }) =>
     call<{ ok: boolean; user: User }>('/api/signup', { method: 'POST', body: JSON.stringify(data) }),
 
   login: (data: { email: string; password: string }) =>
@@ -371,12 +380,25 @@ export const api = {
 
   me: () => call<{ user: User }>('/api/me'),
 
+  updateMe: (data: { birthdate: string }) =>
+    call<{ user: User }>('/api/me', { method: 'PUT', body: JSON.stringify(data) }),
+
   billing: {
     get: () => call<BillingSnapshot>('/api/billing'),
     checkout: (data: { plan: BillingPlanId; card?: CardCheckout }) =>
       call<{ ok: boolean; user: User; billing: BillingSnapshot }>('/api/billing/checkout', {
         method: 'POST',
         body: JSON.stringify(data),
+      }),
+    stripe: (plan: BillingPlanId) =>
+      call<{ ok: boolean; session_id: string; url: string }>('/api/billing/stripe', {
+        method: 'POST',
+        body: JSON.stringify({ plan }),
+      }),
+    confirmStripe: (session_id: string) =>
+      call<{ ok: boolean; user: User; billing: BillingSnapshot }>('/api/billing/stripe/confirm', {
+        method: 'POST',
+        body: JSON.stringify({ session_id }),
       }),
   },
 

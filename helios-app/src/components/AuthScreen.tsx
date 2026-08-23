@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '../api'
 import type { User, SiteInfo } from '../api'
 import { Logo } from './Logo'
-import { Mail, Lock, User as UserIcon, AtSign, Eye, EyeOff, Loader, AlertCircle } from 'lucide-react'
+import { Mail, Lock, User as UserIcon, AtSign, Eye, EyeOff, Loader, AlertCircle, Calendar } from 'lucide-react'
 import './AuthScreen.css'
 
 interface Props { onAuth: (user: User) => void; defaultMode?: 'login' | 'register'; onBack?: () => void }
@@ -14,6 +14,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [handle, setHandle] = useState('')
+  const [birthdate, setBirthdate] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -45,6 +46,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
       if (!handle.trim()) errs.handle = 'Username is required'
       else if (!/^[a-zA-Z0-9_.]{3,30}$/.test(handle.replace(/^@/, '')))
         errs.handle = '3–30 chars, letters, numbers, _ or .'
+      if (!birthdate) errs.birthdate = 'Date of birth is required'
     }
     if (!email.trim()) errs.email = 'Email is required'
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errs.email = 'Enter a valid email'
@@ -65,7 +67,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
         const r = await api.login({ email: email.trim(), password })
         onAuth(r.user)
       } else {
-        const r = await api.signup({ name: name.trim(), handle: handle.trim(), email: email.trim(), password })
+        const r = await api.signup({ name: name.trim(), handle: handle.trim(), email: email.trim(), password, birthdate })
         onAuth(r.user)
       }
     } catch (err) {
@@ -227,6 +229,11 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
                   { placeholder: 'Jane Smith', autoComplete: 'name', ref: nameRef })}
                 {field('auth-handle', 'Username', <AtSign size={15} />, handle, setHandle,
                   { placeholder: 'janesmith', autoComplete: 'username' })}
+                {field('auth-birthdate', 'Date of birth', <Calendar size={15} />, birthdate, setBirthdate,
+                  { type: 'date', autoComplete: 'bday' })}
+                <p style={{ margin: '-6px 0 0', color: 'var(--helios-muted)', fontSize: 11, lineHeight: 1.45 }}>
+                  Under 18 can subscribe to cheaper Alpha. Adults 18+ can subscribe to Orbit. Everyone can stay on the free student edition.
+                </p>
               </>
             )}
             {field('auth-email', 'Email', <Mail size={15} />, email, setEmail,

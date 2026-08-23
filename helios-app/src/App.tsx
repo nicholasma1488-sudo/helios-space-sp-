@@ -115,6 +115,33 @@ function AppInner() {
           return
         }
         dispatch({ type: 'SET_USER', user: r.user })
+        const params = new URLSearchParams(window.location.search)
+        const stripeSession = params.get('session_id')
+        if (params.get('billing') === 'success' && stripeSession) {
+          api.billing.confirmStripe(stripeSession)
+            .then(result => {
+              if (cancelled) return
+              dispatch({ type: 'SET_USER', user: result.user })
+              dispatch({ type: 'SET_VIEW', view: 'profile' })
+              try { sessionStorage.setItem('helios-open-settings', 'billing') } catch {}
+              dispatch({
+                type: 'PUSH_TOAST',
+                toast: { id: Date.now().toString(), message: 'Stripe payment confirmed.', tone: 'success' },
+              })
+            })
+            .catch(err => {
+              if (!cancelled) dispatch({
+                type: 'PUSH_TOAST',
+                toast: { id: Date.now().toString(), message: (err as Error).message, tone: 'warning' },
+              })
+            })
+            .finally(() => {
+              params.delete('billing')
+              params.delete('session_id')
+              const next = params.toString()
+              window.history.replaceState({}, '', window.location.pathname + (next ? '?' + next : ''))
+            })
+        }
         api.projects.list()
           .then(projects => { if (!cancelled) dispatch({ type: 'SET_PROJECTS', projects: projects.projects }) })
           .catch(err => {
