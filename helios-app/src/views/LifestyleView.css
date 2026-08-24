@@ -114,15 +114,17 @@
   justify-self: end;
   gap: 7px;
   padding: 0 15px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--helios-accent);
-  color: var(--helios-on-accent);
+  border: 1px solid var(--helios-solar);
+  border-radius: 3px;
+  background: var(--helios-solar);
+  color: #17140d;
   font: inherit;
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(133, 118, 245, .16);
 }
 
 .lifestyle-layout {
@@ -793,13 +795,16 @@
   align-items: center;
   gap: 7px;
   padding: 0 14px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--helios-accent);
-  color: var(--helios-on-accent);
+  border: 1px solid var(--helios-solar);
+  border-radius: 3px;
+  background: var(--helios-solar);
+  color: #17140d;
   font: inherit;
   font-size: 10px;
   font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
 }
 

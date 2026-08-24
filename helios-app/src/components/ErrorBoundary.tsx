@@ -42,11 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <p style={{ fontSize: 13, color: 'var(--helios-muted)', marginBottom: 20, maxWidth: 460 }}>
             {this.state.error.message || 'An unexpected error occurred'}
           </p>
-          <button type="button" onClick={this.reset}
-            style={{
-              padding: '10px 16px', borderRadius: 10, border: 'none',
-              background: 'var(--helios-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            }}>
+          <button type="button" onClick={this.reset} className="hs-btn-fill">
             Try again
           </button>
         </div>

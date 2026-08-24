@@ -66,10 +66,9 @@ export function SpacesView() {
         <button
           type="button"
           onClick={() => setShowNewProject(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer flex-shrink-0"
-          style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}
+          className="hs-btn-fill flex-shrink-0"
         >
-          <Plus size={15} /> New project
+          <Plus size={15} /> New workspace
         </button>
       </header>
 
@@ -136,10 +135,8 @@ export function SpacesView() {
                     : 'Try another space or clear the search.'}
                 </p>
                 {state.projects.length === 0 && (
-                  <button type="button" onClick={() => setShowNewProject(true)}
-                    className="px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-                    style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}>
-                    Create your first project
+                  <button type="button" onClick={() => setShowNewProject(true)} className="hs-btn-fill">
+                    Begin first workspace
                   </button>
                 )}
               </div>
@@ -162,9 +159,8 @@ export function SpacesView() {
                       </div>
                     </div>
                     <button type="button" onClick={() => dispatch({ type: 'OPEN_CODE_EDITOR', projectId: project.id })}
-                      className="mt-auto py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-                      style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}>
-                      Open project
+                      className="hs-btn mt-auto w-full">
+                      Open
                     </button>
                   </article>
                 ))}
@@ -184,9 +180,9 @@ export function SpacesView() {
 function SpaceButton({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active}
-      className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left cursor-pointer"
-      style={{ background: active ? 'rgba(124,106,247,0.16)' : 'var(--helios-surface)', border: `1px solid ${active ? 'var(--helios-accent)' : 'var(--helios-border)'}`, color: active ? 'var(--helios-text)' : 'var(--helios-muted)' }}>
-      <FolderOpen size={14} style={{ color: active ? 'var(--helios-accent)' : 'currentColor' }} />
+      className="w-full flex items-center gap-2 px-3 py-2.5 text-left cursor-pointer"
+      style={{ background: active ? 'color-mix(in srgb, var(--helios-solar) 12%, var(--helios-surface))' : 'var(--helios-surface)', border: `1px solid ${active ? 'var(--helios-solar)' : 'var(--helios-border)'}`, color: active ? 'var(--helios-text)' : 'var(--helios-muted)', borderRadius: 3 }}>
+      <FolderOpen size={14} style={{ color: active ? 'var(--helios-solar)' : 'currentColor' }} />
       <span className="flex-1 min-w-0" style={{ fontSize: 13, fontWeight: active ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
       <span style={{ fontSize: 11 }}>{count}</span>
     </button>

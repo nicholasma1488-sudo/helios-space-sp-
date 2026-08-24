@@ -244,14 +244,13 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
             )}
 
             <button type="submit" disabled={loading || (mode === 'register' && siteInfo !== null && !siteInfo.signup_open)}
-              className="flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold cursor-pointer"
+              className="hs-btn-fill w-full"
               style={{
-                background: 'var(--helios-accent)', color: '#fff', border: 'none', marginTop: 4,
+                marginTop: 4,
                 opacity: (loading || (mode === 'register' && siteInfo !== null && !siteInfo.signup_open)) ? 0.6 : 1,
-                transition: 'opacity var(--dur-quick) var(--ease-move)',
               }}>
               {loading && <Loader size={15} style={{ animation: 'spin var(--dur-deliberate) linear infinite', flexShrink: 0 }} />}
-              {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+              {loading ? 'Please wait…' : mode === 'login' ? 'Enter' : 'Begin'}
             </button>
           </form>
 

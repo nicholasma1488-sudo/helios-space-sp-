@@ -381,12 +381,6 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
     }
     return [...map.entries()]
   }, [filtered])
-  const coreWorkspaces = useMemo(
-    () => ['web-code', 'lab-notebook', 'data-visualization', 'writing']
-      .map(id => catalog.find(app => app.id === id))
-      .filter((app): app is MiniAppDefinition => Boolean(app)),
-    [catalog],
-  )
 
   return (
     <section className="space-panel">
@@ -407,25 +401,6 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
           </label>
         </div>
       </div>
-      {!query && (
-        <div className="core-workspace-row" aria-label="Core workspaces">
-          {coreWorkspaces.map(app => {
-            const appProjects = projects.filter(project => project.app_kind === app.id)
-            return (
-              <button
-                type="button"
-                key={app.id}
-                className="core-workspace-chip"
-                style={{ '--app-accent': app.accent } as React.CSSProperties}
-                onClick={() => appProjects[0] ? onOpen(appProjects[0].id) : onLaunch(app)}
-              >
-                <strong>{app.shortName}</strong>
-                <span>{appProjects[0] ? `Open ${appProjects[0].name}` : 'Create Project'}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
       {grouped.map(([category, categoryApps]) => (
         <div key={category} className="space-app-category">
           <div className="side-section-heading"><h2>{category}</h2><span>{categoryApps.length}</span></div>
@@ -450,8 +425,8 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
                     </ul>
                   )}
                   <footer>
-                    {appProjects[0] && <button type="button" onClick={() => onOpen(appProjects[0].id)}>Open workspace</button>}
-                    <button type="button" onClick={() => onLaunch(app)}>Create Project <Rocket size={14} /></button>
+                    {appProjects[0] && <button type="button" onClick={() => onOpen(appProjects[0].id)}>Open</button>}
+                    <button type="button" onClick={() => onLaunch(app)}>Begin <Rocket size={14} /></button>
                   </footer>
                 </article>
               )

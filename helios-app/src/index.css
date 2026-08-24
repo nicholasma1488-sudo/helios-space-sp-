@@ -159,13 +159,73 @@ body {
   top: 4px;
   z-index: 9999;
   padding: 8px 16px;
-  background: var(--helios-accent);
-  color: #fff;
-  border-radius: var(--radius-md);
+  background: var(--helios-solar);
+  color: #17140d;
+  border-radius: var(--radius-xs);
   font: var(--type-label);
   text-decoration: none;
 }
 .skip-link:focus { left: 8px; }
+
+/*
+  Instrument actions — solar gold, tight corners, no SaaS purple pills.
+  Use these instead of filled periwinkle rounded-xl CTAs.
+*/
+.hs-btn,
+.hs-btn-fill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 3px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--dur-quick) var(--ease-move),
+    border-color var(--dur-quick) var(--ease-move),
+    color var(--dur-quick) var(--ease-move),
+    transform var(--dur-quick) var(--ease-move);
+}
+
+.hs-btn {
+  border: 1px solid color-mix(in srgb, var(--helios-solar) 42%, var(--helios-border));
+  background: transparent;
+  color: var(--helios-solar);
+}
+
+.hs-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--helios-solar) 12%, transparent);
+}
+
+.hs-btn-fill {
+  border: 1px solid var(--helios-solar);
+  background: var(--helios-solar);
+  color: #17140d;
+  box-shadow: 0 10px 28px rgba(242, 184, 75, .12);
+}
+
+.hs-btn-fill:hover:not(:disabled) {
+  background: var(--solar-300);
+  border-color: var(--solar-300);
+}
+
+.hs-btn:disabled,
+.hs-btn-fill:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.hs-btn:active:not(:disabled),
+.hs-btn-fill:active:not(:disabled) {
+  transform: translateY(1px);
+}
 
 /* ── Scrollbar (matte, minimal) ── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }

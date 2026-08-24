@@ -100,7 +100,6 @@
 
 .auth-card-v2 form > button[type='submit'] {
   min-height: 44px;
-  box-shadow: 0 12px 34px rgba(133, 118, 245, .16);
 }
 
 .auth-screen-v2.is-leaving {
