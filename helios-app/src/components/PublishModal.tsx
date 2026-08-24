@@ -107,9 +107,7 @@ export function PublishModal({ project, onClose }: Props) {
                 ? 'Your project update is now available in the public post feed.'
                 : 'This update is visible only to you.'}
             </div>
-            <button type="button" onClick={close} autoFocus
-              className="mt-2 px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
-              style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}>
+            <button type="button" onClick={close} autoFocus className="hs-btn-fill mt-2">
               Close
             </button>
           </div>
@@ -144,8 +142,8 @@ export function PublishModal({ project, onClose }: Props) {
                   ['private', 'Private', 'Visible only to you'],
                 ] as const).map(([value, label, detail]) => (
                   <button key={value} type="button" onClick={() => setAudience(value)} aria-pressed={audience === value}
-                    className="flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-left cursor-pointer"
-                    style={{ background: audience === value ? 'rgba(124,106,247,0.15)' : 'var(--helios-surface2)', color: audience === value ? 'var(--helios-accent)' : 'var(--helios-text)', border: `1px solid ${audience === value ? 'var(--helios-accent)' : 'var(--helios-border)'}` }}>
+                    className="flex flex-col items-start gap-1 px-3 py-2.5 text-left cursor-pointer"
+                    style={{ background: audience === value ? 'color-mix(in srgb, var(--helios-solar) 12%, var(--helios-surface2))' : 'var(--helios-surface2)', color: audience === value ? 'var(--helios-solar)' : 'var(--helios-text)', border: `1px solid ${audience === value ? 'var(--helios-solar)' : 'var(--helios-border)'}`, borderRadius: 3 }}>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
                     <span style={{ fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.4 }}>{detail}</span>
                   </button>
@@ -160,9 +158,7 @@ export function PublishModal({ project, onClose }: Props) {
               </div>
             )}
 
-            <button type="submit" disabled={submitting || !meaningfulBody}
-              className="py-3 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center gap-2"
-              style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none', opacity: (submitting || !meaningfulBody) ? 0.55 : 1 }}>
+            <button type="submit" disabled={submitting || !meaningfulBody} className="hs-btn-fill w-full">
               <Send size={14} aria-hidden="true" /> {submitting ? 'Publishing…' : audience === 'public' ? 'Publish update' : 'Save private update'}
             </button>
           </form>

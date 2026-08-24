@@ -39,11 +39,11 @@
 .space-hero-stats strong { color: var(--helios-text); }
 .space-hero-actions { z-index: 1; display: flex; flex-direction: column; gap: 8px; grid-column: 3; grid-row: 1 / 3; }
 .space-hero-actions button,
-.space-panel-heading > button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 7px; padding: 0 13px; border: 1px solid var(--helios-border); border-radius: 11px; background: var(--helios-surface2); color: var(--helios-text2); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; transition: transform var(--dur-quick), background var(--dur-quick); }
+.space-panel-heading > button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 7px; padding: 0 13px; border: 1px solid var(--helios-border); border-radius: 3px; background: transparent; color: var(--helios-text2); font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; transition: transform var(--dur-quick), background var(--dur-quick), border-color var(--dur-quick); }
 .space-hero-actions button:first-child,
-.space-panel-heading > button { border-color: transparent; background: var(--space-accent); color: #101114; }
+.space-panel-heading > button { border-color: var(--helios-solar); background: var(--helios-solar); color: #17140d; }
 .space-hero-actions button:hover,
-.space-panel-heading > button:hover { transform: translateY(-2px); }
+.space-panel-heading > button:hover { transform: translateY(-1px); }
 
 .space-tabs { display: flex; min-height: 48px; flex-shrink: 0; gap: 2px; overflow-x: auto; padding: 0 28px; border-bottom: 1px solid var(--helios-border); background: color-mix(in srgb, var(--helios-surface) 80%, transparent); scrollbar-width: none; }
 .space-tabs::-webkit-scrollbar { display: none; }
@@ -73,7 +73,7 @@
 .space-composer footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 11px; border-top: 1px solid var(--helios-border); background: rgba(255,255,255,.015); }
 .space-composer label { display: flex; align-items: center; gap: 6px; color: var(--helios-muted); }
 .space-composer select { max-width: 220px; border: 0; outline: 0; background: transparent; color: var(--helios-muted); font: inherit; font-size: 9px; }
-.space-composer footer > button { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; padding: 0 11px; border: 0; border-radius: 9px; background: var(--space-accent); color: #101114; font: inherit; font-size: 9px; font-weight: 750; cursor: pointer; }
+.space-composer footer > button { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid var(--helios-solar); border-radius: 3px; background: var(--helios-solar); color: #17140d; font: inherit; font-size: 9px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
 .space-composer footer > button:disabled { opacity: .42; }
 
 .space-mini-list { display: flex; flex-direction: column; gap: 5px; }
@@ -123,7 +123,7 @@
 .space-comments article p { margin: 2px 0 0; color: var(--helios-text2); font-size: 9px; }
 .space-comments form { display: flex; gap: 7px; }
 .space-comments input { flex: 1; min-width: 0; padding: 9px 11px; border: 1px solid var(--helios-border); border-radius: 10px; outline: 0; background: var(--helios-surface2); color: var(--helios-text); font: inherit; font-size: 9px; }
-.space-comments form button { display: grid; width: 34px; place-items: center; border: 0; border-radius: 10px; background: var(--space-accent); color: #101114; cursor: pointer; }
+.space-comments form button { display: grid; width: 34px; place-items: center; border: 1px solid var(--helios-solar); border-radius: 3px; background: var(--helios-solar); color: #17140d; cursor: pointer; }
 
 .space-panel { width: min(1180px, 100%); margin: 0 auto; }
 .space-panel-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
@@ -164,7 +164,7 @@
 .resource-grid p { margin: 0; color: var(--helios-muted); font-size: 10px; line-height: 1.55; }
 .context-app-grid button,
 .space-live-grid article button,
-.challenge-grid button { display: inline-flex; min-height: 36px; align-items: center; gap: 6px; margin-top: auto; padding: 0 11px; border: 0; border-radius: 9px; background: var(--app-accent, var(--space-accent)); color: #101114; font: inherit; font-size: 9px; font-weight: 750; cursor: pointer; }
+.challenge-grid button { display: inline-flex; min-height: 34px; align-items: center; gap: 6px; margin-top: auto; padding: 0 11px; border: 1px solid color-mix(in srgb, var(--helios-solar) 42%, var(--helios-border)); border-radius: 3px; background: transparent; color: var(--helios-solar); font: inherit; font-size: 9px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
 .space-live-grid > button { cursor: pointer; }
 .space-live-grid > button > span { display: flex; align-items: center; gap: 5px; color: var(--helios-danger); font-size: 8px; font-weight: 750; }
 .space-live-grid > button > span i { width: 6px; height: 6px; border-radius: 50%; background: var(--helios-danger); box-shadow: 0 0 10px var(--helios-danger); }
@@ -188,7 +188,7 @@
 .helios-space-panel p { margin: 0; color: var(--helios-muted); font-size: 11px; line-height: 1.6; }
 .helios-space-panel > div > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin: 22px 0; }
 .helios-space-panel > div > div button { display: flex; align-items: center; gap: 7px; padding: 9px 11px; border: 1px solid var(--helios-border); border-radius: 10px; background: var(--helios-surface); color: var(--helios-text2); font: inherit; font-size: 9px; cursor: pointer; }
-.helios-open-button { display: inline-flex; min-height: 41px; align-items: center; gap: 7px; padding: 0 15px; border: 0; border-radius: 11px; background: var(--helios-accent); color: var(--helios-on-accent); font: inherit; font-size: 10px; font-weight: 750; cursor: pointer; }
+.helios-open-button { display: inline-flex; min-height: 41px; align-items: center; gap: 7px; padding: 0 15px; border: 1px solid var(--helios-solar); border-radius: 3px; background: var(--helios-solar); color: #17140d; font: inherit; font-size: 10px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
 
 .space-empty { display: flex; min-height: 180px; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 22px; border: 1px dashed var(--helios-border); border-radius: 16px; color: var(--helios-muted); text-align: center; }
 .space-empty.wide { grid-column: 1 / -1; }
@@ -268,36 +268,6 @@
 }
 
 
-.core-workspace-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin: 16px 0 4px;
-}
-
-.core-workspace-chip {
-  display: flex;
-  min-height: 72px;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--app-accent, #8576f5) 38%, var(--helios-border));
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--app-accent, #8576f5) 12%, var(--helios-surface));
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.core-workspace-chip strong { font-size: 14px; }
-.core-workspace-chip span { color: var(--helios-muted); font-size: 11px; }
-
-@media (max-width: 860px) {
-  .core-workspace-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
 .space-apps-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -335,7 +305,7 @@
 .mini-app-workspace-card footer { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 0 4px; }
 .space-project-card footer button,
 .mini-app-workspace-card footer button,
-.mini-app-project-list button { min-height: 30px; padding: 0 8px; border: 1px solid var(--helios-border); border-radius: 8px; background: var(--helios-surface2); color: var(--helios-text2); font: inherit; font-size: 8px; cursor: pointer; }
+.mini-app-project-list button { min-height: 30px; padding: 0 8px; border: 1px solid color-mix(in srgb, var(--helios-solar) 28%, var(--helios-border)); border-radius: 3px; background: transparent; color: var(--helios-solar); font: inherit; font-size: 8px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
 .mini-app-project-list { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .mini-app-project-list li { display: flex; justify-content: space-between; gap: 6px; }
 .space-post-links { display: flex; flex-direction: column; gap: 6px; }

@@ -146,7 +146,7 @@
 .custom-hobby-form { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 9px; margin-top: 12px; padding: 10px 11px; border: 1px dashed var(--helios-border); border-radius: 13px; color: var(--helios-muted); }
 .custom-hobby-form label { font-size: 11px; font-weight: 650; }
 .custom-hobby-form input { min-width: 0; padding: 8px 10px; border: 1px solid var(--helios-border); border-radius: 9px; outline: 0; background: var(--helios-bg); color: var(--helios-text); font: inherit; font-size: 11px; }
-.custom-hobby-form button { padding: 8px 11px; border: 0; border-radius: 9px; background: var(--helios-accent); color: var(--helios-on-accent); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer; }
+.custom-hobby-form button { padding: 8px 11px; border: 1px solid var(--helios-solar); border-radius: 3px; background: var(--helios-solar); color: #17140d; font: inherit; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
 
 .topbar-popover { right: 18px; width: min(390px, calc(100vw - 36px)); }
 .topbar-search-popover { right: 62px; width: min(620px, calc(100vw - 100px)); }

@@ -462,7 +462,7 @@
 
 .project-workspace-empty { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: var(--helios-muted); }
 .project-workspace-empty strong { color: var(--helios-text); }
-.project-workspace-empty button { padding: 8px 12px; border: 0; border-radius: 8px; background: var(--helios-accent); cursor: pointer; }
+.project-workspace-empty button { padding: 8px 12px; border: 1px solid var(--helios-solar); border-radius: 3px; background: var(--helios-solar); color: #17140d; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
 
 .workspace-collaborator-cursors { position: absolute; z-index: 18; inset: 0; overflow: hidden; pointer-events: none; }
 .workspace-collaborator-cursors > span { position: absolute; display: flex; align-items: center; gap: 4px; padding: 3px 6px 3px 4px; border-radius: 3px 7px 7px 7px; background: #755bd8; color: #fff; font-size: 7px; font-weight: 700; transform: translate(4px, 4px); transition: left 90ms linear, top 90ms linear; box-shadow: 0 6px 18px rgba(0,0,0,.28); }
@@ -487,8 +487,8 @@
 .live-permission-options>label:last-child { border-bottom: 0; }.live-permission-options>label>span { display: flex; flex-direction: column; }.live-permission-options strong { font-size: 9px; }.live-permission-options small { color: var(--helios-muted); font-size: 7px; }
 .live-permission-options input { accent-color: var(--helios-accent); }
 .live-setup-dialog>footer { display: flex; justify-content: flex-end; gap: 7px; padding: 17px 22px; }
-.live-setup-dialog>footer button { display: flex; align-items: center; gap: 5px; padding: 9px 12px; border: 1px solid var(--helios-border); border-radius: 9px; background: transparent; color: var(--helios-muted); font-size: 9px; cursor: pointer; }
-.live-setup-dialog>footer button:last-child { border: 0; background: var(--helios-accent); color: #fff; }.live-setup-dialog>footer button:disabled { opacity: .4; }
+.live-setup-dialog>footer button { display: flex; align-items: center; gap: 5px; padding: 9px 12px; border: 1px solid var(--helios-border); border-radius: 3px; background: transparent; color: var(--helios-muted); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; cursor: pointer; }
+.live-setup-dialog>footer button:last-child { border-color: var(--helios-solar); background: var(--helios-solar); color: #17140d; }.live-setup-dialog>footer button:disabled { opacity: .4; }
 @keyframes live-setup-fade { from { opacity: 0; } } @keyframes live-setup-expand { from { opacity:0; transform: scale(.88) translateY(18px); } }
 
 @media (max-width: 1180px) {

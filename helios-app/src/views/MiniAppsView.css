@@ -572,9 +572,13 @@
 .decision-actions .decision-choose,
 .habits-app form button,
 .notes-app form button {
-  border-color: transparent;
-  background: var(--helios-accent);
-  color: var(--helios-on-accent);
+  border-color: var(--helios-solar);
+  border-radius: 3px;
+  background: var(--helios-solar);
+  color: #17140d;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .focus-app > p {

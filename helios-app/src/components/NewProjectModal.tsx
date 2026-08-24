@@ -100,10 +100,10 @@ export function NewProjectModal({
         style={{ maxWidth: 500, maxHeight: '80vh', background: 'var(--helios-surface)', border: '1px solid var(--helios-border)' }}
         onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Create a new project"
         aria-describedby="new-proj-desc">
-        <span id="new-proj-desc" className="sr-only">Choose a project type, enter a name, and click Create project.</span>
+        <span id="new-proj-desc" className="sr-only">Choose a project type, enter a name, and begin the workspace.</span>
         <div className="flex items-center gap-3 px-6 py-4 border-b" style={{ borderColor: 'var(--helios-border)' }}>
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'var(--helios-accent)', color: 'var(--helios-on-accent)' }}><Sparkles size={16} /></div>
-          <div style={{ fontSize: 15, fontWeight: 700, flex: 1 }}>New project</div>
+          <div className="w-8 h-8 flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--helios-solar) 18%, transparent)', color: 'var(--helios-solar)', border: '1px solid color-mix(in srgb, var(--helios-solar) 40%, transparent)', borderRadius: 3 }}><Sparkles size={16} /></div>
+          <div style={{ fontSize: 15, fontWeight: 700, flex: 1 }}>New workspace</div>
           <button type="button" onClick={onClose} aria-label="Close new project dialog"
             style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', cursor: 'pointer' }}><X size={16} /></button>
         </div>
@@ -124,10 +124,10 @@ export function NewProjectModal({
                       moveTemplateFocus(t.id, -1)
                     }
                   }}
-                  className="flex flex-col gap-1.5 px-4 py-3 rounded-xl text-left cursor-pointer"
-                  style={{ background: templateId === t.id ? 'rgba(124,106,247,0.15)' : 'var(--helios-surface2)', border: `1px solid ${templateId === t.id ? 'var(--helios-accent)' : 'transparent'}` }}>
+                  className="flex flex-col gap-1.5 px-4 py-3 text-left cursor-pointer"
+                  style={{ background: templateId === t.id ? 'color-mix(in srgb, var(--helios-solar) 12%, var(--helios-surface2))' : 'var(--helios-surface2)', border: `1px solid ${templateId === t.id ? 'var(--helios-solar)' : 'transparent'}`, borderRadius: 3 }}>
                   <div className="flex items-center gap-2">
-                    <span style={{ color: 'var(--helios-accent)' }}>{TYPE_ICON[t.type]}</span>
+                    <span style={{ color: 'var(--helios-solar)' }}>{TYPE_ICON[t.type]}</span>
                     <span style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</span>
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.4 }}>{t.description}</div>
@@ -135,8 +135,8 @@ export function NewProjectModal({
               ))}
             </div>
           </div> : (
-            <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ background: 'rgba(124,106,247,0.10)', border: '1px solid rgba(124,106,247,0.28)' }}>
-              <span style={{ color: 'var(--helios-accent)' }}>{TYPE_ICON[template.type] ?? <Sparkles size={14} />}</span>
+            <div className="flex items-center gap-3 px-4 py-3" style={{ background: 'color-mix(in srgb, var(--helios-solar) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--helios-solar) 32%, transparent)', borderRadius: 3 }}>
+              <span style={{ color: 'var(--helios-solar)' }}>{TYPE_ICON[template.type] ?? <Sparkles size={14} />}</span>
               <div><strong style={{ display: 'block', fontSize: 13 }}>{template.name}</strong><small style={{ display: 'block', marginTop: 3, color: 'var(--helios-muted)', fontSize: 11 }}>{template.description}</small></div>
             </div>
           )}
@@ -155,10 +155,8 @@ export function NewProjectModal({
               style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)', color: 'var(--helios-text)', fontSize: 14 }} />
           </div>
           {error && <div role="alert" style={{ color: 'var(--helios-danger)', fontSize: 13 }}>{error}</div>}
-          <button type="submit" disabled={creating || !name.trim()}
-            className="py-3 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center gap-2"
-            style={{ background: 'var(--helios-accent)', color: 'var(--helios-on-accent)', border: 'none', opacity: (creating || !name.trim()) ? 0.7 : 1 }}>
-            <Check size={14} /> {creating ? 'Creating…' : 'Create project'}
+          <button type="submit" disabled={creating || !name.trim()} className="hs-btn-fill w-full">
+            <Check size={14} /> {creating ? 'Opening…' : 'Begin'}
           </button>
         </form>
       </div>
