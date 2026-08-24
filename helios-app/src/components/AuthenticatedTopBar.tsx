@@ -269,7 +269,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
             <span>会议与计划</span>
             <span>学校与工作套件</span>
             <span>优先 Helios</span>
-            <span>银行卡 / 微信 / 支付宝</span>
+            <span>Stripe 银行卡</span>
           </div>
           <button type="button" onClick={() => dispatch({ type: 'OPEN_UPGRADE' })}>升级到 Orbit</button>
         </div>

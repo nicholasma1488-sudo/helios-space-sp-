@@ -11,7 +11,7 @@ export function PlanPicker() {
           <h1 id="plan-picker-title">Use Free, or subscribe to Orbit.</h1>
           <p>
             Free includes Word, Excel, PowerPoint and OneNote. Orbit unlocks the full Mini App suite.
-            Pay Orbit with card, WeChat or Alipay.
+            Pay Orbit with a bank card on Stripe. Helios detects the payment automatically.
           </p>
         </header>
         <PaymentTool mode="onboarding" />

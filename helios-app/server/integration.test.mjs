@@ -508,7 +508,9 @@ async function run() {
   assert.equal(aliceBilling.body.edition, 'free')
   assert.equal(aliceBilling.body.payment_method, null)
   assert.equal(aliceBilling.body.stripe.enabled, true)
-  assert.deepEqual(aliceBilling.body.pay_methods, ['card', 'wechat', 'alipay'])
+  assert.equal(aliceBilling.body.stripe.auto_detect, true)
+  assert.deepEqual(aliceBilling.body.pay_methods, ['card'])
+  assert.equal(aliceBilling.body.pending_checkout, null)
   assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'orbit' && plan.eligible === true && plan.price_cents === 900), true)
   assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'alpha'), false)
 
@@ -577,47 +579,54 @@ async function run() {
   const missingSymbols = await alice.get('/api/markets/quotes')
   expectStatus(missingSymbols, 403, 'quotes require orbit before tickers are checked')
 
-  const unknownPlan = await alice.post('/api/billing/checkout', {
-    plan: 'alpha',
-    card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Alice Orbit' },
-  })
+  const unknownPlan = await alice.post('/api/billing/checkout', { plan: 'alpha' })
   expectStatus(unknownPlan, 400, 'alpha is no longer a plan')
 
-  const bobOrbitCard = await bob.post('/api/billing/checkout', {
-    plan: 'orbit',
-    card: { number: '4242424242424242', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Bob Solar' },
-  })
-  expectStatus(bobOrbitCard, 200, 'anyone can subscribe to orbit')
-  assert.equal(bobOrbitCard.body.user.plan, 'orbit')
+  const rejectedWallet = await alice.post('/api/billing/stripe', { plan: 'orbit', method: 'wechat' })
+  expectStatus(rejectedWallet, 400, 'wechat is not a pay method')
+  const rejectedAlipay = await alice.post('/api/billing/stripe', { plan: 'orbit', method: 'alipay' })
+  expectStatus(rejectedAlipay, 400, 'alipay is not a pay method')
 
-  const missingCard = await alice.post('/api/billing/checkout', { plan: 'orbit' })
-  expectStatus(missingCard, 400, 'orbit requires a card')
+  const bobSession = await bob.post('/api/billing/stripe', { plan: 'orbit' })
+  expectStatus(bobSession, 200, 'start stripe card checkout')
+  assert.equal(bobSession.body.method, 'card')
+  assert.match(bobSession.body.session_id, /^cs_test_/)
+  const bobPending = await bob.get('/api/billing')
+  assert.equal(bobPending.body.pending_checkout.session_id, bobSession.body.session_id)
 
-  const badCard = await alice.post('/api/billing/checkout', {
-    plan: 'orbit',
-    card: { number: '4242424242424241', exp_month: 12, exp_year: 2030, cvc: '123', name: 'Alice Orbit' },
+  const webhook = await anonymous.post('/api/billing/stripe/webhook', {
+    type: 'checkout.session.completed',
+    data: { object: { id: bobSession.body.session_id, payment_status: 'paid' } },
   })
-  expectStatus(badCard, 400, 'reject invalid card number')
+  expectStatus(webhook, 200, 'webhook auto-detects stripe payment')
+  assert.equal(webhook.body.user.plan, 'orbit')
+  assert.equal(webhook.body.billing.payment_method.source, 'stripe')
+  assert.equal(webhook.body.billing.payment_method.last4, '4242')
+  assert.equal(webhook.body.billing.pending_checkout, null)
 
-  const expiredCard = await alice.post('/api/billing/checkout', {
-    plan: 'orbit',
-    card: { number: '4242424242424242', exp_month: 1, exp_year: 2020, cvc: '123', name: 'Alice Orbit' },
-  })
-  expectStatus(expiredCard, 400, 'reject expired card')
+  const bobSessionAfter = await bob.get('/api/session')
+  assert.equal(bobSessionAfter.body.user.plan, 'orbit')
 
-  const paid = await alice.post('/api/billing/checkout', {
-    plan: 'orbit',
-    card: { number: '4242 4242 4242 4242', exp_month: 12, exp_year: 30, cvc: '123', name: 'Alice Orbit' },
+  const paid = await alice.post('/api/billing/checkout', { plan: 'orbit' })
+  expectStatus(paid, 200, 'orbit checkout starts stripe session')
+  assert.match(paid.body.session_id, /^cs_test_/)
+  const stripeConfirm = await alice.post('/api/billing/stripe/confirm', { session_id: paid.body.session_id })
+  expectStatus(stripeConfirm, 200, 'confirm stripe card payment')
+  assert.equal(stripeConfirm.body.user.plan, 'orbit')
+  assert.equal(stripeConfirm.body.user.edition, 'orbit')
+  assert.equal(stripeConfirm.body.billing.plan, 'orbit')
+  assert.equal(stripeConfirm.body.billing.payment_method.brand, 'visa')
+  assert.equal(stripeConfirm.body.billing.payment_method.last4, '4242')
+  assert.equal(stripeConfirm.body.billing.payment_method.source, 'stripe')
+  assert.equal('number' in stripeConfirm.body.billing.payment_method, false)
+  assert.equal('cvc' in stripeConfirm.body.billing.payment_method, false)
+
+  const replayWebhook = await anonymous.post('/api/billing/stripe/webhook', {
+    type: 'checkout.session.completed',
+    data: { object: { id: paid.body.session_id, payment_status: 'paid' } },
   })
-  expectStatus(paid, 200, 'pay with card')
-  assert.equal(paid.body.user.plan, 'orbit')
-  assert.equal(paid.body.user.edition, 'orbit')
-  assert.equal(paid.body.billing.plan, 'orbit')
-  assert.equal(paid.body.billing.payment_method.brand, 'visa')
-  assert.equal(paid.body.billing.payment_method.last4, '4242')
-  assert.equal('number' in paid.body.billing.payment_method, false)
-  assert.equal('cvc' in paid.body.billing.payment_method, false)
-  assert.equal(JSON.stringify(paid.body).includes('4242424242424242'), false)
+  expectStatus(replayWebhook, 200, 'webhook is idempotent after confirm')
+  assert.equal(replayWebhook.body.user.plan, 'orbit')
 
   const sessionAfterPay = await alice.get('/api/session')
   expectStatus(sessionAfterPay, 200, 'session includes paid plan')
@@ -627,7 +636,6 @@ async function run() {
   expectStatus(exportAfterPay, 200, 'export includes billing metadata')
   assert.equal(exportAfterPay.body.account.plan, 'orbit')
   assert.equal(exportAfterPay.body.billing.payment_method.last4, '4242')
-  assert.equal(JSON.stringify(exportAfterPay.body).includes('4242424242424242'), false)
 
   const aliceQuotes = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
   expectStatus(aliceQuotes, 200, 'orbit can read stock quotes')
@@ -641,25 +649,12 @@ async function run() {
   assert.equal(backToFree.body.user.plan, 'free')
   assert.equal(backToFree.body.billing.payment_method.last4, '4242')
 
-  const wechatSession = await bob.post('/api/billing/stripe', { plan: 'orbit', method: 'wechat' })
-  expectStatus(wechatSession, 200, 'create wechat checkout')
-  assert.equal(wechatSession.body.method, 'wechat')
-  assert.match(wechatSession.body.session_id, /^cs_test_/)
-  const wechatConfirm = await bob.post('/api/billing/stripe/confirm', { session_id: wechatSession.body.session_id })
-  expectStatus(wechatConfirm, 200, 'confirm wechat payment')
-  assert.equal(wechatConfirm.body.user.plan, 'orbit')
-  assert.equal(wechatConfirm.body.billing.payment_method.source, 'wechat')
-
-  const stripeSession = await alice.post('/api/billing/stripe', { plan: 'orbit', method: 'alipay' })
-  expectStatus(stripeSession, 200, 'create alipay checkout')
-  assert.equal(stripeSession.body.method, 'alipay')
-  const stripeConfirm = await alice.post('/api/billing/stripe/confirm', { session_id: stripeSession.body.session_id })
-  expectStatus(stripeConfirm, 200, 'confirm alipay payment')
-  assert.equal(stripeConfirm.body.user.plan, 'orbit')
-  assert.equal(stripeConfirm.body.billing.payment_method.source, 'alipay')
-
-  const badMethod = await alice.post('/api/billing/stripe', { plan: 'orbit', method: 'paypal' })
-  expectStatus(badMethod, 400, 'reject unknown pay method')
+  const ignoredEvent = await anonymous.post('/api/billing/stripe/webhook', {
+    type: 'payment_intent.succeeded',
+    data: { object: { id: 'pi_test' } },
+  })
+  expectStatus(ignoredEvent, 200, 'unrelated stripe events are ignored')
+  assert.equal(ignoredEvent.body.ignored, true)
 
   const unknownApi = await alice.get('/api/does-not-exist')
   expectStatus(unknownApi, 404, 'unknown API')

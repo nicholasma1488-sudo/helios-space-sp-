@@ -12,7 +12,7 @@ export function UpgradeModal() {
           <span><Sparkles size={14} /> UPGRADE</span>
           <h1 id="upgrade-title">Unlock Orbit and every Mini App.</h1>
           <p>
-            Stay on Free, or subscribe to Orbit with card, WeChat or Alipay. The upgrade button stays in the top-left until you are on Orbit.
+            Stay on Free, or subscribe to Orbit with a Stripe card. Helios detects the payment automatically. The upgrade button stays in the top-left until you are on Orbit.
           </p>
           <button
             type="button"

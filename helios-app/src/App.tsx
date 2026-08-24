@@ -131,7 +131,7 @@ function AppInner() {
               try { sessionStorage.setItem('helios-open-settings', 'billing') } catch {}
               dispatch({
                 type: 'PUSH_TOAST',
-                toast: { id: Date.now().toString(), message: 'Stripe payment confirmed.', tone: 'success' },
+                toast: { id: Date.now().toString(), message: 'Stripe payment detected. Orbit is active.', tone: 'success' },
               })
             })
             .catch(err => {

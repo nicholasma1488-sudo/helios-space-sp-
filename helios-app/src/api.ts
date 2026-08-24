@@ -1,7 +1,7 @@
 // Typed API client for Helios Space backend
 
 export type BillingPlanId = 'free' | 'orbit'
-export type PayMethod = 'card' | 'wechat' | 'alipay'
+export type PayMethod = 'card'
 export type SuiteEdition = 'free' | 'orbit'
 
 export interface User {
@@ -32,7 +32,7 @@ export interface PaymentMethod {
   exp_month: number
   exp_year: number
   cardholder: string
-  source?: 'card' | 'stripe' | 'wechat' | 'alipay' | string
+  source?: 'card' | 'stripe' | string
   updated_at: string
 }
 
@@ -62,8 +62,9 @@ export interface BillingSnapshot {
   plans: BillingPlan[]
   payment_method: PaymentMethod | null
   events: BillingEvent[]
-  stripe?: { enabled: boolean; publishable_key: string | null }
+  stripe?: { enabled: boolean; publishable_key: string | null; auto_detect?: boolean }
   pay_methods?: PayMethod[]
+  pending_checkout?: { session_id: string; plan: string; status: string; created_at: string } | null
 }
 
 export interface CardCheckout {
@@ -408,10 +409,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    stripe: (plan: BillingPlanId, method: PayMethod = 'card') =>
+    stripe: (plan: BillingPlanId = 'orbit') =>
       call<{ ok: boolean; session_id: string; url: string; method?: PayMethod; mock?: boolean }>('/api/billing/stripe', {
         method: 'POST',
-        body: JSON.stringify({ plan, method }),
+        body: JSON.stringify({ plan }),
       }),
     confirmStripe: (session_id: string) =>
       call<{ ok: boolean; user: User; billing: BillingSnapshot }>('/api/billing/stripe/confirm', {

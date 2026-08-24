@@ -304,7 +304,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <div className="pricing-intro" data-reveal>
             <div className="landing-section-label"><span>03</span> PAYMENT</div>
             <h2>One Helios.<br />Free or Orbit.</h2>
-            <p>Create an account, then pick Free or Orbit. Orbit unlocks every Mini App and can be paid with card, WeChat or Alipay. You can upgrade later from the top-left banner.</p>
+            <p>Create an account, then pick Free or Orbit. Orbit unlocks every Mini App and is paid with a bank card on Stripe. Helios detects the payment automatically. You can upgrade later from the top-left banner.</p>
           </div>
           <div className="pricing-grid">
             <article className="pricing-card is-child" data-reveal>
@@ -327,13 +327,13 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               <span><CreditCard size={15} /> FULL SUITE</span>
               <h3>Orbit</h3>
               <b>$9 <small>/ month</small></b>
-              <p>Every Mini App. Pay with card, WeChat or Alipay.</p>
+              <p>Every Mini App. Pay with a bank card on Stripe.</p>
               <ul>
                 <li><Check size={13} /> Everything in Free</li>
                 <li><Check size={13} /> Stocks, docs, budgets, decks</li>
                 <li><Check size={13} /> School and work Mini Apps</li>
                 <li><Check size={13} /> Priority Helios and 3× Live</li>
-                <li><Check size={13} /> 银行卡 / 微信 / 支付宝</li>
+                <li><Check size={13} /> Stripe 银行卡自动到账</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
                 Subscribe to Orbit <ArrowRight size={15} />

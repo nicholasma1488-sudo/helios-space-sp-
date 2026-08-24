@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, CreditCard, Gift, Lock, Sparkles } from 'lucide-react'
 import {
   api,
   type BillingPlan,
   type BillingSnapshot,
-  type PayMethod,
   type User,
 } from '../api'
 import { useApp } from '../store/appStore'
@@ -33,12 +32,12 @@ const FALLBACK_PLANS: BillingPlan[] = [
     price_cents: 900,
     currency: 'usd',
     interval: 'month',
-    description: 'The complete Mini App suite. Pay with card, WeChat or Alipay.',
+    description: 'The complete Mini App suite. Pay with a bank card on Stripe.',
     features: [
       'Everything in Free',
       'Every extra Mini App, including Stocks',
       'School and work tools in one account',
-      'Card, WeChat or Alipay checkout',
+      'Stripe card checkout — Helios detects payment automatically',
     ],
     mini_apps: ['Stocks', 'Docs', 'Budget', 'Pitch', 'Meetings', 'Essay', 'Gradebook', 'Planner'],
   },
@@ -49,32 +48,13 @@ function formatPrice(cents: number) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cents / 100)
 }
 
-function formatCardNumber(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 19)
-  return digits.replace(/(\d{4})(?=\d)/g, '$1 ')
-}
-
-function formatExpiry(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 4)
-  if (digits.length <= 2) return digits
-  return digits.slice(0, 2) + ' / ' + digits.slice(2)
-}
-
 function brandLabel(brand: string) {
   if (brand === 'visa') return 'Visa'
   if (brand === 'mastercard') return 'Mastercard'
   if (brand === 'amex') return 'American Express'
   if (brand === 'discover') return 'Discover'
-  if (brand === 'wechat') return 'WeChat'
-  if (brand === 'alipay') return 'Alipay'
   if (brand === 'stripe') return 'Card'
   return 'Card'
-}
-
-function methodLabel(method: PayMethod) {
-  if (method === 'wechat') return 'WeChat'
-  if (method === 'alipay') return 'Alipay'
-  return 'card'
 }
 
 export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboarding' }) {
@@ -83,17 +63,14 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const [payMethod, setPayMethod] = useState<PayMethod>('card')
-  const [cardNumber, setCardNumber] = useState('')
-  const [expiry, setExpiry] = useState('')
-  const [cvc, setCvc] = useState('')
-  const [name, setName] = useState(state.user?.name ?? '')
+  const [watching, setWatching] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     api.billing.get().then(snapshot => {
       if (cancelled) return
       setBilling(snapshot)
+      if (snapshot.pending_checkout && snapshot.plan !== 'orbit') setWatching(true)
     }).catch(reason => {
       if (!cancelled) setError((reason as Error).message)
     }).finally(() => {
@@ -102,14 +79,34 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
     return () => { cancelled = true }
   }, [])
 
+  useEffect(() => {
+    if (!watching || billing?.plan === 'orbit') return
+    let cancelled = false
+    const tick = async () => {
+      try {
+        const snapshot = await api.billing.get()
+        if (cancelled) return
+        setBilling(snapshot)
+        if (snapshot.plan === 'orbit' && state.user) {
+          dispatch({ type: 'SET_USER', user: { ...state.user, plan: snapshot.plan, edition: snapshot.edition, plan_selected: true } })
+          dispatch({ type: 'CLOSE_UPGRADE' })
+          setWatching(false)
+          setBusy(null)
+          dispatch({
+            type: 'PUSH_TOAST',
+            toast: { id: String(Date.now()), message: 'Orbit is active. Stripe payment detected.', tone: 'success' },
+          })
+        }
+      } catch {}
+    }
+    const timer = window.setInterval(() => { void tick() }, 1500)
+    void tick()
+    return () => { cancelled = true; window.clearInterval(timer) }
+  }, [watching, billing?.plan, dispatch, state.user])
+
   const plans = billing?.plans?.length ? billing.plans : FALLBACK_PLANS
   const currentPlan = billing?.plan ?? state.user?.plan ?? 'free'
   const stripeEnabled = Boolean(billing?.stripe?.enabled)
-  const cardReady = useMemo(() => {
-    const digits = cardNumber.replace(/\D/g, '')
-    const expiryDigits = expiry.replace(/\D/g, '')
-    return digits.length >= 13 && expiryDigits.length === 4 && cvc.replace(/\D/g, '').length >= 3 && name.trim().length >= 2
-  }, [cardNumber, expiry, cvc, name])
 
   function applyUser(user: User) {
     dispatch({ type: 'SET_USER', user })
@@ -134,59 +131,20 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
     }
   }
 
-  async function payWithCard(event: React.FormEvent) {
-    event.preventDefault()
-    const number = cardNumber.replace(/\D/g, '')
-    const expiryDigits = expiry.replace(/\D/g, '')
-    setBusy('card')
+  async function payWithStripe() {
+    setBusy('stripe')
     setError('')
     try {
-      const result = await api.billing.checkout({
-        plan: 'orbit',
-        card: {
-          number,
-          exp_month: Number(expiryDigits.slice(0, 2)),
-          exp_year: Number(expiryDigits.slice(2)),
-          cvc: cvc.replace(/\D/g, ''),
-          name: name.trim(),
-        },
-      })
-      setBilling(result.billing)
-      applyUser(result.user)
-      setCardNumber('')
-      setExpiry('')
-      setCvc('')
-      dispatch({
-        type: 'PUSH_TOAST',
-        toast: {
-          id: String(Date.now()),
-          message: 'Orbit is active. Card saved as ' + brandLabel(result.billing.payment_method?.brand || 'card') + ' •••• ' + (result.billing.payment_method?.last4 || ''),
-          tone: 'success',
-        },
-      })
-    } catch (reason) {
-      setError((reason as Error).message)
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  async function payWithWallet(method: PayMethod) {
-    setBusy(method)
-    setError('')
-    try {
-      const session = await api.billing.stripe('orbit', method)
+      const session = await api.billing.stripe('orbit')
+      setWatching(true)
       if (session.mock || session.url.includes('billing=success')) {
         const result = await api.billing.confirmStripe(session.session_id)
         setBilling(result.billing)
         applyUser(result.user)
+        setWatching(false)
         dispatch({
           type: 'PUSH_TOAST',
-          toast: {
-            id: String(Date.now()),
-            message: 'Orbit is active. Paid with ' + methodLabel(method) + '.',
-            tone: 'success',
-          },
+          toast: { id: String(Date.now()), message: 'Orbit is active. Stripe card payment detected.', tone: 'success' },
         })
         setBusy(null)
         return
@@ -195,6 +153,7 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
     } catch (reason) {
       setError((reason as Error).message)
       setBusy(null)
+      setWatching(false)
     }
   }
 
@@ -202,12 +161,15 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
     <section className="payment-tool" aria-labelledby="payment-tool-title">
       <header>
         <span><CreditCard size={13} /> {mode === 'onboarding' ? 'PICK A PLAN' : 'PAYMENT'}</span>
-        <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Start on Free, or unlock every Mini App with Orbit.' : 'Upgrade to Orbit any time. Pay with card, WeChat or Alipay.'}</h3>
-        <p>Free is included with every account. Orbit is $9 a month and adds the complete Mini App suite.</p>
+        <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Start on Free, or unlock every Mini App with Orbit.' : 'Upgrade to Orbit any time. Pay with a Stripe card.'}</h3>
+        <p>Free is included with every account. Orbit is $9 a month. Cards go through Stripe, and Helios detects the payment automatically.</p>
       </header>
 
       {loading && <div className="payment-tool-status">Loading payment options…</div>}
       {error && <div className="payment-tool-error" role="alert">{error}</div>}
+      {watching && currentPlan !== 'orbit' && (
+        <div className="payment-tool-status" role="status">Watching Stripe for your card payment…</div>
+      )}
 
       <div className="payment-plan-grid">
         {plans.filter(plan => plan.id === 'free' || plan.id === 'orbit').map(plan => {
@@ -248,7 +210,7 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
               ) : current ? (
                 <div className="payment-current-note">Orbit is active on this account.</div>
               ) : (
-                <div className="payment-current-note">Choose a payment method below to subscribe.</div>
+                <div className="payment-current-note">Pay with a bank card on Stripe. Helios detects the payment by itself.</div>
               )}
             </article>
           )
@@ -256,116 +218,41 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
       </div>
 
       {currentPlan !== 'orbit' && (
-        <>
-          <div className="payment-methods is-three">
-            <button type="button" className={payMethod === 'card' ? 'is-active' : ''} onClick={() => setPayMethod('card')}>
-              银行卡
-            </button>
-            <button type="button" className={payMethod === 'wechat' ? 'is-active' : ''} onClick={() => setPayMethod('wechat')}>
-              微信
-            </button>
-            <button type="button" className={payMethod === 'alipay' ? 'is-active' : ''} onClick={() => setPayMethod('alipay')}>
-              支付宝
-            </button>
-          </div>
-
-          {payMethod === 'wechat' || payMethod === 'alipay' ? (
-            <div className="payment-card-form">
-              <div className="payment-card-heading">
-                <Lock size={16} />
-                <div>
-                  <strong>{payMethod === 'wechat' ? 'WeChat Pay' : 'Alipay'}</strong>
-                  <small>Helios opens a {payMethod === 'wechat' ? 'WeChat' : 'Alipay'} checkout. The wallet never sends card details here.</small>
-                </div>
-              </div>
-              <button type="button" disabled={busy !== null || !stripeEnabled} onClick={() => void payWithWallet(payMethod)}>
-                <Lock size={14} />
-                {busy === payMethod
-                  ? 'Opening checkout…'
-                  : stripeEnabled
-                    ? 'Pay Orbit with ' + methodLabel(payMethod)
-                    : 'Wallet checkout is not configured yet'}
-              </button>
+        <div className="payment-card-form">
+          <div className="payment-card-heading">
+            <Lock size={16} />
+            <div>
+              <strong>Stripe card checkout</strong>
+              <small>Visa, Mastercard, Amex and more. Helios never sees the full card number. Payment is detected automatically after Stripe confirms it.</small>
             </div>
-          ) : (
-            <form className="payment-card-form" onSubmit={event => void payWithCard(event)}>
-              <div className="payment-card-heading">
-                <CreditCard size={16} />
-                <div>
-                  <strong>Card checkout</strong>
-                  <small>The card number and security code are never stored.</small>
-                </div>
-              </div>
-              {billing?.payment_method && billing.payment_method.source !== 'wechat' && billing.payment_method.source !== 'alipay' && (
-                <div className="payment-saved-card">
-                  <Lock size={13} />
-                  <span>
-                    Saved {brandLabel(billing.payment_method.brand)} •••• {billing.payment_method.last4}
-                    {billing.payment_method.source === 'stripe' ? ' via Stripe' : ''}
-                    <em>Expires {String(billing.payment_method.exp_month).padStart(2, '0')}/{billing.payment_method.exp_year}</em>
-                  </span>
-                </div>
-              )}
-              <label>
-                <span>Cardholder name</span>
-                <input
-                  value={name}
-                  onChange={event => setName(event.target.value)}
-                  autoComplete="cc-name"
-                  maxLength={80}
-                  placeholder="Name on card"
-                />
-              </label>
-              <label>
-                <span>Card number</span>
-                <input
-                  value={cardNumber}
-                  onChange={event => setCardNumber(formatCardNumber(event.target.value))}
-                  inputMode="numeric"
-                  autoComplete="cc-number"
-                  placeholder="4242 4242 4242 4242"
-                />
-              </label>
-              <div className="payment-card-row">
-                <label>
-                  <span>Expiry</span>
-                  <input
-                    value={expiry}
-                    onChange={event => setExpiry(formatExpiry(event.target.value))}
-                    inputMode="numeric"
-                    autoComplete="cc-exp"
-                    placeholder="MM / YY"
-                  />
-                </label>
-                <label>
-                  <span>Security code</span>
-                  <input
-                    value={cvc}
-                    onChange={event => setCvc(event.target.value.replace(/\D/g, '').slice(0, 4))}
-                    inputMode="numeric"
-                    autoComplete="cc-csc"
-                    placeholder="CVC"
-                  />
-                </label>
-              </div>
-              <button type="submit" disabled={busy !== null || !cardReady}>
-                <Lock size={14} />
-                {busy === 'card' ? 'Paying…' : 'Pay Orbit with card'}
-              </button>
-            </form>
+          </div>
+          {billing?.payment_method && (
+            <div className="payment-saved-card">
+              <Lock size={13} />
+              <span>
+                Saved {brandLabel(billing.payment_method.brand)} •••• {billing.payment_method.last4}
+                {billing.payment_method.source === 'stripe' ? ' via Stripe' : ''}
+              </span>
+            </div>
           )}
-        </>
+          <button type="button" disabled={busy !== null || !stripeEnabled} onClick={() => void payWithStripe()}>
+            <Lock size={14} />
+            {busy === 'stripe'
+              ? 'Opening Stripe…'
+              : stripeEnabled
+                ? 'Pay Orbit with Stripe'
+                : 'Stripe is not configured yet'}
+          </button>
+        </div>
       )}
 
       {currentPlan === 'orbit' && billing?.payment_method && (
         <div className="payment-saved-card">
           <Lock size={13} />
           <span>
-            {billing.payment_method.source === 'wechat' || billing.payment_method.brand === 'wechat'
-              ? 'Orbit paid with WeChat'
-              : billing.payment_method.source === 'alipay' || billing.payment_method.brand === 'alipay'
-                ? 'Orbit paid with Alipay'
-                : `Saved ${brandLabel(billing.payment_method.brand)} •••• ${billing.payment_method.last4}`}
+            Orbit paid with {brandLabel(billing.payment_method.brand)}
+            {billing.payment_method.last4 ? ` •••• ${billing.payment_method.last4}` : ''}
+            {billing.payment_method.source === 'stripe' ? ' via Stripe' : ''}
           </span>
         </div>
       )}

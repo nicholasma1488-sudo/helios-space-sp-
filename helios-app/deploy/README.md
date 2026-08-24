@@ -27,7 +27,7 @@ Application admin access is disabled unless `HELIOS_ADMIN_EMAIL` and
 `HELIOS_ADMIN_PASSWORD` are added through a root-readable systemd environment
 file or drop-in. Never commit those values.
 
-Stripe Checkout is optional. Set `STRIPE_SECRET_KEY` and
-`STRIPE_PUBLISHABLE_KEY` to enable the Stripe payment method. Without those
-keys, users can still stay on the free student edition or pay with the in-app
-card form.
+Orbit card payments go through Stripe Checkout. Set `STRIPE_SECRET_KEY` and
+`STRIPE_PUBLISHABLE_KEY`. Set `STRIPE_WEBHOOK_SECRET` so Helios can detect
+`checkout.session.completed` automatically. Without those keys, people can
+still stay on Free.

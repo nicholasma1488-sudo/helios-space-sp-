@@ -527,9 +527,10 @@ const liveEventRateLimit = (req, res, next) => req.body?.kind === 'cursor'
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY?.trim() || ''
 const STRIPE_PUBLISHABLE = process.env.STRIPE_PUBLISHABLE_KEY?.trim() || ''
-const STRIPE_MOCK = process.env.HELIOS_STRIPE_MOCK === '1'
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET?.trim() || ''
+const STRIPE_MOCK = process.env.HELIOS_STRIPE_MOCK === '1' || process.env.NODE_ENV === 'test'
 const mockStripeSessions = new Map()
-const PAY_METHODS = ['card', 'wechat', 'alipay']
+const PAY_METHODS = ['card']
 
 const BILLING_PLANS = {
   free: {
@@ -557,7 +558,7 @@ const BILLING_PLANS = {
     price_cents: 900,
     currency: 'usd',
     interval: 'month',
-    description: 'The full Helios suite. Pay with card, WeChat or Alipay and unlock every Mini App.',
+    description: 'The full Helios suite. Pay with a card on Stripe and unlock every Mini App.',
     mini_apps: [
       'Word', 'Excel', 'PowerPoint', 'OneNote', 'Stocks',
       'Essay', 'Gradebook', 'Lesson Slides', 'Lab Notebook', 'Forms',
@@ -576,7 +577,7 @@ const BILLING_PLANS = {
       'Orbit badge on the paid edition',
       'Priority Helios capacity when AI is configured',
       '3× Live session visibility for collaborators',
-      'Pay with card, WeChat or Alipay',
+      'Pay with a bank card through Stripe',
       'Richer export history and billing receipts',
       'Switch back to Free any time',
     ],
@@ -616,6 +617,7 @@ function stripePublicConfig() {
   return {
     enabled: stripeConfigured(),
     publishable_key: stripeConfigured() ? (STRIPE_PUBLISHABLE || 'pk_test_mock') : null,
+    auto_detect: true,
   }
 }
 
@@ -626,72 +628,13 @@ function planEligibilityError(planId) {
 
 function normalizePayMethod(value) {
   const method = String(value || 'card').trim().toLowerCase()
-  if (method === 'wechat' || method === 'wechat_pay') return 'wechat'
-  if (method === 'alipay') return 'alipay'
-  if (method === 'card' || method === 'stripe') return 'card'
+  if (method === 'card' || method === 'stripe' || method === '') return 'card'
   return null
-}
-
-function digitsOnly(value) {
-  return String(value ?? '').replace(/\D/g, '')
-}
-
-function luhnValid(number) {
-  if (!/^\d{13,19}$/.test(number)) return false
-  let sum = 0
-  let doubleDigit = false
-  for (let index = number.length - 1; index >= 0; index -= 1) {
-    let digit = Number(number[index])
-    if (doubleDigit) {
-      digit *= 2
-      if (digit > 9) digit -= 9
-    }
-    sum += digit
-    doubleDigit = !doubleDigit
-  }
-  return sum % 10 === 0
-}
-
-function cardBrand(number) {
-  if (/^4/.test(number)) return 'visa'
-  if (/^3[47]/.test(number)) return 'amex'
-  if (/^(5[1-5]|2(?:2[2-9]|[3-6]\d|7[01]|720))/.test(number)) return 'mastercard'
-  if (/^(6011|65|64[4-9])/.test(number)) return 'discover'
-  return 'card'
-}
-
-function tokenizeCard(card) {
-  if (!card || typeof card !== 'object') return { error: 'Card details are required to pay' }
-  const number = digitsOnly(card.number)
-  const cvc = digitsOnly(card.cvc)
-  const name = checkedString(card.name, 'Cardholder name', 80, { required: true, trim: true })
-  if (name.error) return { error: name.error }
-  if (!luhnValid(number)) return { error: 'Enter a valid card number' }
-  const brand = cardBrand(number)
-  const expectedCvc = brand === 'amex' ? 4 : 3
-  if (cvc.length !== expectedCvc) return { error: 'Enter a valid security code' }
-  const month = Number(card.exp_month)
-  let year = Number(card.exp_year)
-  if (!Number.isInteger(month) || month < 1 || month > 12)
-    return { error: 'Enter a valid expiry month' }
-  if (!Number.isInteger(year)) return { error: 'Enter a valid expiry year' }
-  if (year < 100) year += 2000
-  if (year < 2000 || year > 2100) return { error: 'Enter a valid expiry year' }
-  const now = new Date()
-  if (year < now.getUTCFullYear() || (year === now.getUTCFullYear() && month < now.getUTCMonth() + 1))
-    return { error: 'This card has expired' }
-  return {
-    brand,
-    last4: number.slice(-4),
-    exp_month: month,
-    exp_year: year,
-    cardholder: name.value,
-  }
 }
 
 function serializePaymentMethod(row) {
   if (!row) return null
-  const source = PAY_METHODS.includes(row.source) || row.source === 'stripe' ? row.source : 'card'
+  const source = row.source === 'stripe' ? 'stripe' : 'card'
   return {
     brand: row.brand,
     last4: row.last4,
@@ -714,6 +657,9 @@ function getBillingSnapshot(userLike) {
   const events = db.prepare(
     'SELECT id,kind,plan,amount_cents,currency,detail,created_at FROM billing_events WHERE user_id = ? ORDER BY id DESC LIMIT 8'
   ).all(userId)
+  const pending = db.prepare(
+    "SELECT session_id,plan,status,created_at FROM stripe_checkouts WHERE user_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1"
+  ).get(userId)
   return {
     plan: normalizePlan(user.plan),
     edition: userEdition(user),
@@ -725,6 +671,7 @@ function getBillingSnapshot(userLike) {
     events,
     stripe: stripePublicConfig(),
     pay_methods: PAY_METHODS,
+    pending_checkout: pending ? { session_id: pending.session_id, plan: pending.plan, status: pending.status, created_at: pending.created_at } : null,
   }
 }
 
@@ -802,18 +749,15 @@ async function stripeForm(path, params, method = 'POST') {
   return json
 }
 
-async function createStripeCheckout(user, planId, origin, payMethod = 'card') {
+async function createStripeCheckout(user, planId, origin) {
   const catalog = BILLING_PLANS[planId]
-  const method = normalizePayMethod(payMethod) || 'card'
   if (STRIPE_MOCK) {
     const sessionId = 'cs_test_' + crypto.randomBytes(8).toString('hex')
     mockStripeSessions.set(sessionId, {
       id: sessionId,
       payment_status: 'paid',
-      metadata: { user_id: String(user.id), plan: planId, method },
-      payment_method: method === 'card'
-        ? { brand: 'visa', last4: '4242' }
-        : { brand: method, last4: '0000' },
+      metadata: { user_id: String(user.id), plan: planId, method: 'card' },
+      payment_method: { brand: 'visa', last4: '4242' },
     })
     db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
       .run(sessionId, user.id, planId, 'pending', new Date().toISOString())
@@ -823,22 +767,20 @@ async function createStripeCheckout(user, planId, origin, payMethod = 'card') {
       mock: true,
     }
   }
-  const params = {
+  const session = await stripeForm('checkout/sessions', {
     mode: 'payment',
     success_url: origin + '/?billing=success&session_id={CHECKOUT_SESSION_ID}',
     cancel_url: origin + '/?billing=cancel',
     client_reference_id: String(user.id),
     'metadata[user_id]': String(user.id),
     'metadata[plan]': planId,
-    'metadata[method]': method,
+    'metadata[method]': 'card',
     'line_items[0][quantity]': '1',
     'line_items[0][price_data][currency]': catalog.currency,
     'line_items[0][price_data][unit_amount]': String(catalog.price_cents),
     'line_items[0][price_data][product_data][name]': 'Helios ' + catalog.name,
-    'payment_method_types[0]': method === 'wechat' ? 'wechat_pay' : method === 'alipay' ? 'alipay' : 'card',
-  }
-  if (method === 'wechat') params['payment_method_options[wechat_pay][client]'] = 'web'
-  const session = await stripeForm('checkout/sessions', params)
+    'payment_method_types[0]': 'card',
+  })
   db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
     .run(session.id, user.id, planId, 'pending', new Date().toISOString())
   return { session_id: session.id, url: session.url }
@@ -847,6 +789,49 @@ async function createStripeCheckout(user, planId, origin, payMethod = 'card') {
 async function retrieveStripeSession(sessionId) {
   if (STRIPE_MOCK) return mockStripeSessions.get(sessionId) || null
   return stripeForm('checkout/sessions/' + encodeURIComponent(sessionId), {}, 'GET')
+}
+
+function verifyStripeWebhook(rawBody, signatureHeader, secret) {
+  const items = String(signatureHeader || '').split(',').map(part => part.trim().split('='))
+  const timestamp = items.find(item => item[0] === 't')?.[1]
+  const signature = items.find(item => item[0] === 'v1')?.[1]
+  if (!timestamp || !signature) return false
+  const expected = crypto.createHmac('sha256', secret).update(timestamp + '.' + rawBody).digest('hex')
+  const left = Buffer.from(signature, 'hex')
+  const right = Buffer.from(expected, 'hex')
+  return left.length === right.length && crypto.timingSafeEqual(left, right)
+}
+
+function fulfillPaidStripeSession(session, sessionId) {
+  const pending = db.prepare('SELECT * FROM stripe_checkouts WHERE session_id = ?').get(sessionId)
+  if (!pending) return { error: 'Payment session not found', status: 404 }
+  const userRow = db.prepare('SELECT id,name,handle,email,status,plan,plan_selected FROM users WHERE id = ?').get(pending.user_id)
+  if (!userRow || userRow.status !== 'active') return { error: 'Account unavailable', status: 403 }
+  if (pending.status === 'paid') {
+    const user = publicUser(userRow)
+    return { user, billing: getBillingSnapshot(user) }
+  }
+  if (!session || session.payment_status !== 'paid') return { error: 'Payment is not complete', status: 402 }
+  if (String(session.metadata?.user_id || pending.user_id) !== String(userRow.id))
+    return { error: 'Payment session does not match this account', status: 403 }
+  const planId = pending.plan
+  const blocked = planEligibilityError(planId)
+  if (blocked) return { error: blocked, status: 403 }
+  db.prepare('UPDATE stripe_checkouts SET status = ? WHERE session_id = ?').run('paid', sessionId)
+  const user = activatePlan(
+    userRow,
+    planId,
+    {
+      brand: session.payment_method?.brand || 'visa',
+      last4: session.payment_method?.last4 || '0000',
+      exp_month: 12,
+      exp_year: new Date().getUTCFullYear() + 3,
+      cardholder: userRow.name,
+      source: 'stripe',
+    },
+    'Paid with Stripe card · ' + planId,
+  )
+  return { user, billing: getBillingSnapshot(user) }
 }
 
 function requireAdmin(req, res, next) {
@@ -1146,7 +1131,12 @@ app.disable('x-powered-by')
 // Trust forwarded client information only from the local reverse proxy. A
 // direct connection still uses its real peer address for rate limiting.
 app.set('trust proxy', 'loopback')
-app.use(express.json({ limit: '2mb' }))
+app.use(express.json({
+  limit: '2mb',
+  verify: (req, _res, buf) => {
+    if (req.originalUrl === '/api/billing/stripe/webhook') req.rawBody = buf
+  },
+}))
 app.use(cookieParser())
 app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff')
@@ -1257,7 +1247,7 @@ app.get('/api/billing', requireUser, (req, res) => {
   res.json(getBillingSnapshot(req.user))
 })
 
-app.post('/api/billing/checkout', requireUser, billingRateLimit, (req, res) => {
+app.post('/api/billing/checkout', requireUser, billingRateLimit, async (req, res) => {
   const planId = String(req.body?.plan || '').trim().toLowerCase()
   const catalog = BILLING_PLANS[planId]
   if (!catalog) return res.status(400).json({ error: 'Choose Free or Orbit' })
@@ -1273,16 +1263,14 @@ app.post('/api/billing/checkout', requireUser, billingRateLimit, (req, res) => {
     return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
   }
 
-  const tokenized = tokenizeCard(req.body?.card)
-  if (tokenized.error) return res.status(400).json({ error: tokenized.error })
-  const user = activatePlan(
-    req.user,
-    planId,
-    { ...tokenized, source: 'card' },
-    `Paid with card · ${tokenized.brand} •••• ${tokenized.last4}`,
-    now,
-  )
-  res.json({ ok: true, user, billing: getBillingSnapshot(user) })
+  if (!stripeConfigured())
+    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
+  try {
+    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
+    return res.json({ ok: true, method: 'card', ...session })
+  } catch (error) {
+    return res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
+  }
 })
 
 app.post('/api/billing/stripe', requireUser, billingRateLimit, async (req, res) => {
@@ -1292,14 +1280,37 @@ app.post('/api/billing/stripe', requireUser, billingRateLimit, async (req, res) 
   const blocked = planEligibilityError(planId)
   if (blocked) return res.status(403).json({ error: blocked })
   const payMethod = normalizePayMethod(req.body?.method)
-  if (!payMethod) return res.status(400).json({ error: 'Choose card, WeChat or Alipay' })
+  if (!payMethod) return res.status(400).json({ error: 'Orbit is paid with a Stripe card only' })
   if (!stripeConfigured())
     return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
   try {
-    const session = await createStripeCheckout(req.user, planId, requestOrigin(req), payMethod)
-    res.json({ ok: true, method: payMethod, ...session })
+    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
+    res.json({ ok: true, method: 'card', ...session })
   } catch (error) {
     res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
+  }
+})
+
+app.post('/api/billing/stripe/webhook', async (req, res) => {
+  if (STRIPE_WEBHOOK_SECRET) {
+    const raw = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {})
+    if (!verifyStripeWebhook(raw, req.headers['stripe-signature'], STRIPE_WEBHOOK_SECRET))
+      return res.status(400).json({ error: 'Invalid Stripe signature' })
+  } else if (!STRIPE_MOCK) {
+    return res.status(503).json({ error: 'Stripe webhook is not configured', code: 'STRIPE_WEBHOOK_NOT_CONFIGURED' })
+  }
+  const event = req.body || {}
+  const sessionId = String(event.data?.object?.id || '').trim()
+  if (event.type && event.type !== 'checkout.session.completed')
+    return res.json({ received: true, ignored: true })
+  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
+  try {
+    const session = await retrieveStripeSession(sessionId) || event.data?.object || null
+    const result = fulfillPaidStripeSession(session, sessionId)
+    if (result.error) return res.status(result.status || 400).json({ error: result.error })
+    res.json({ received: true, ok: true, user: result.user, billing: result.billing })
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message || 'Webhook failed' })
   }
 })
 
@@ -1310,31 +1321,9 @@ app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (re
   if (!pending) return res.status(404).json({ error: 'Payment session not found' })
   try {
     const session = await retrieveStripeSession(sessionId)
-    if (!session || session.payment_status !== 'paid')
-      return res.status(402).json({ error: 'Payment is not complete' })
-    if (String(session.metadata?.user_id || '') !== String(req.user.id))
-      return res.status(403).json({ error: 'Payment session does not match this account' })
-    const planId = pending.plan
-    const blocked = planEligibilityError(planId)
-    if (blocked) return res.status(403).json({ error: blocked })
-    const now = new Date().toISOString()
-    const payMethod = normalizePayMethod(session.metadata?.method) || 'card'
-    db.prepare('UPDATE stripe_checkouts SET status = ? WHERE session_id = ?').run('paid', sessionId)
-    const user = activatePlan(
-      req.user,
-      planId,
-      {
-        brand: session.payment_method?.brand || payMethod,
-        last4: session.payment_method?.last4 || '0000',
-        exp_month: 12,
-        exp_year: new Date().getUTCFullYear() + 3,
-        cardholder: req.user.name,
-        source: payMethod === 'card' ? 'stripe' : payMethod,
-      },
-      `Paid with ${payMethod === 'wechat' ? 'WeChat' : payMethod === 'alipay' ? 'Alipay' : 'card'} · ${planId}`,
-      now,
-    )
-    res.json({ ok: true, user, billing: getBillingSnapshot(user) })
+    const result = fulfillPaidStripeSession(session, sessionId)
+    if (result.error) return res.status(result.status || 400).json({ error: result.error })
+    res.json({ ok: true, user: result.user, billing: result.billing })
   } catch (error) {
     res.status(error.status || 502).json({ error: error.message || 'Payment confirmation failed' })
   }
