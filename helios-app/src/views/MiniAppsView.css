@@ -100,6 +100,13 @@
   font-size: 15px;
 }
 
+.suite-welcome span {
+  display: block;
+  margin-top: 4px;
+  color: var(--helios-text2);
+  font-size: 12px;
+}
+
 .suite-welcome button {
   border: 0;
   border-radius: 999px;

@@ -10,9 +10,9 @@ export function UpgradeModal() {
       <div className="plan-picker-panel">
         <header>
           <span><Sparkles size={14} /> UPGRADE</span>
-          <h1 id="upgrade-title">Unlock Orbit and every Mini App.</h1>
+          <h1 id="upgrade-title">Need more writing room?</h1>
           <p>
-            Stay on Free, or subscribe to Orbit with a Stripe card. Helios detects the payment automatically. The upgrade button stays in the top-left until you are on Orbit.
+            Spreadsheets and the core apps stay on Free. Orbit is for unlimited drafts, 500,000 characters per document, and the extra Mini Apps. Pay with a Stripe card — Helios detects the payment automatically.
           </p>
           <button
             type="button"

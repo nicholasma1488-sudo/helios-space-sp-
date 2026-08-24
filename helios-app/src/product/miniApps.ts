@@ -158,10 +158,15 @@ export function editionKicker(edition: SuiteEdition) {
   return edition === 'orbit' ? 'ORBIT' : 'FREE EDITION'
 }
 
+export const WRITING_LIMITS = {
+  free: { documents: 60, characters: 40_000 },
+  orbit: { documents: null as number | null, characters: 500_000 },
+}
+
 export function editionBlurb(edition: SuiteEdition) {
   if (edition === 'orbit')
-    return 'The full suite: Word, Excel, PowerPoint, OneNote, Stocks and every extra Mini App for school and work.'
-  return 'Word, Excel, PowerPoint and OneNote. Upgrade to Orbit from the top-left banner for the complete Mini App suite.'
+    return 'Word, Excel, PowerPoint and OneNote stay included. Orbit adds unlimited writing documents, 500,000 characters each, plus Stocks and the school and work Mini Apps.'
+  return 'Word, Excel, PowerPoint and OneNote stay included — spreadsheets are not a paywall. Free allows 60 writing documents and 40,000 characters each.'
 }
 
 export function suiteAppsForEdition(_edition: SuiteEdition) {

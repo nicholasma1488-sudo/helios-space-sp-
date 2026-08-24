@@ -15,6 +15,7 @@ import {
   suiteHomeTitle,
   suiteStarterWorkspace,
   unlockLabel,
+  WRITING_LIMITS,
   type SuiteApp,
 } from '../product/miniApps'
 import './MiniAppsView.css'
@@ -139,6 +140,12 @@ export function MiniAppsView() {
   }
 
   const canUpgrade = edition === 'free'
+  const writingUsed = state.projects.filter(project =>
+    project.user_id === state.user?.id
+    && (project.type === 'writing' || (project.type === 'doc' && project.app_kind !== 'stocks')),
+  ).length
+  const writingLimit = state.user?.usage?.documents.limit ?? WRITING_LIMITS[edition].documents
+  const characterLimit = state.user?.usage?.characters.limit ?? WRITING_LIMITS[edition].characters
 
   return (
     <div className="suite-view">
@@ -159,6 +166,11 @@ export function MiniAppsView() {
         <div>
           <small>{editionKicker(edition)}</small>
           <strong>You are on {editionLabel(edition)}</strong>
+          <span>
+            {writingLimit == null
+              ? `Writing documents unlimited · ${characterLimit.toLocaleString()} characters each`
+              : `Writing ${writingUsed} / ${writingLimit} · ${characterLimit.toLocaleString()} characters each`}
+          </span>
         </div>
         {canUpgrade && (
           <button type="button" onClick={goBilling}>

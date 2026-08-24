@@ -263,10 +263,10 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         <div className="topbar-upgrade-banner">
           <strong>Orbit 福利</strong>
           <div>
+            <span>不限文稿数量</span>
+            <span>每篇 50 万字</span>
             <span>完整 Mini Apps</span>
             <span>Stocks</span>
-            <span>文档 / 表格 / 演示</span>
-            <span>会议与计划</span>
             <span>学校与工作套件</span>
             <span>优先 Helios</span>
             <span>Stripe 银行卡</span>

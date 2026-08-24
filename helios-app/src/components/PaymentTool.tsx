@@ -17,14 +17,16 @@ const FALLBACK_PLANS: BillingPlan[] = [
     currency: 'usd',
     interval: 'month',
     eligible: true,
-    description: 'Word, Excel, PowerPoint and OneNote — real files you can keep working in.',
+    description: 'Word, Excel, PowerPoint and OneNote stay included. Limits apply only to writing volume.',
     features: [
       'Create a Helios account for free',
-      'Word, Excel, PowerPoint and OneNote',
-      'Projects that stay connected to your feed',
+      'Word, Excel, PowerPoint and OneNote — no paywall on tables',
+      '60 writing documents',
+      '40,000 characters per document',
       'Lifestyle, Chat Hub, and Live work',
     ],
     mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
+    limits: { documents: 60, characters: 40_000 },
   },
   {
     id: 'orbit',
@@ -32,14 +34,16 @@ const FALLBACK_PLANS: BillingPlan[] = [
     price_cents: 900,
     currency: 'usd',
     interval: 'month',
-    description: 'The complete Mini App suite. Pay with a bank card on Stripe.',
+    description: 'More writing room plus the rest of the suite. Pay with a bank card on Stripe.',
     features: [
-      'Everything in Free',
+      'Everything in Free, including spreadsheets',
+      'Unlimited writing documents',
+      '500,000 characters per document',
       'Every extra Mini App, including Stocks',
-      'School and work tools in one account',
       'Stripe card checkout — Helios detects payment automatically',
     ],
     mini_apps: ['Stocks', 'Docs', 'Budget', 'Pitch', 'Meetings', 'Essay', 'Gradebook', 'Planner'],
+    limits: { documents: null, characters: 500_000 },
   },
 ]
 
@@ -161,8 +165,8 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
     <section className="payment-tool" aria-labelledby="payment-tool-title">
       <header>
         <span><CreditCard size={13} /> {mode === 'onboarding' ? 'PICK A PLAN' : 'PAYMENT'}</span>
-        <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Start on Free, or unlock every Mini App with Orbit.' : 'Upgrade to Orbit any time. Pay with a Stripe card.'}</h3>
-        <p>Free is included with every account. Orbit is $9 a month. Cards go through Stripe, and Helios detects the payment automatically.</p>
+        <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Start on Free, or get more writing room with Orbit.' : 'Upgrade for more writing room. Pay with a Stripe card.'}</h3>
+        <p>Word, Excel, PowerPoint and OneNote stay on Free. Orbit is $9 a month for unlimited drafts, 500,000 characters per document, and the extra Mini Apps. Cards go through Stripe.</p>
       </header>
 
       {loading && <div className="payment-tool-status">Loading payment options…</div>}

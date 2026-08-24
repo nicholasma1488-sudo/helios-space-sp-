@@ -29,6 +29,9 @@ const child = spawn(process.execPath, ['--experimental-sqlite', 'server.js'], {
     HELIOS_ADMIN_PASSWORD: '',
     HELIOS_STRIPE_MOCK: '1',
     STRIPE_PUBLISHABLE_KEY: 'pk_test_helios_mock',
+    HELIOS_FREE_DOCUMENTS: '3',
+    HELIOS_FREE_CHARACTERS: '200',
+    HELIOS_ORBIT_CHARACTERS: '500',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })
@@ -162,6 +165,9 @@ async function run() {
   assert.equal(aliceSignup.body.user.plan, 'free')
   assert.equal(aliceSignup.body.user.plan_selected, false)
   assert.equal(aliceSignup.body.user.edition, 'free')
+  assert.equal(aliceSignup.body.user.usage.documents.used, 0)
+  assert.equal(aliceSignup.body.user.usage.documents.limit, 3)
+  assert.equal(aliceSignup.body.user.usage.characters.limit, 200)
   assert.equal(site.body.plans.some(plan => plan.id === 'free'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'orbit'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'alpha'), false)
@@ -554,6 +560,53 @@ async function run() {
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Stocks'), true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Word'), true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Stocks'), false)
+  assert.equal(aliceBilling.body.usage.documents.limit, 3)
+  assert.equal(aliceBilling.body.usage.characters.limit, 200)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').limits.documents, 3)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').limits.characters, 200)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').limits.documents, null)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').limits.characters, 500)
+
+  const usageAfterCore = await alice.get('/api/billing')
+  assert.equal(usageAfterCore.body.usage.documents.used, 2)
+
+  const overChars = await alice.put('/api/projects/' + wordDoc.body.project.id, {
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'word-docs',
+      data: { html: '<p>' + '字'.repeat(201) + '</p>' },
+    }),
+  })
+  expectStatus(overChars, 403, 'free writing character limit')
+  assert.equal(overChars.body.code, 'character_limit')
+
+  const thirdWriting = await alice.post('/api/projects', {
+    name: 'Third draft',
+    type: 'writing',
+    space_id: 'business',
+    app_kind: 'word-docs',
+    visibility: 'private',
+  })
+  expectStatus(thirdWriting, 200, 'free allows 3 writing documents')
+
+  const fourthWriting = await alice.post('/api/projects', {
+    name: 'Fourth draft',
+    type: 'writing',
+    space_id: 'business',
+    app_kind: 'word-docs',
+    visibility: 'private',
+  })
+  expectStatus(fourthWriting, 403, 'free writing document limit')
+  assert.equal(fourthWriting.body.code, 'document_limit')
+
+  const extraWorkbook = await alice.post('/api/projects', {
+    name: 'Another workbook',
+    type: 'spreadsheet',
+    space_id: 'business',
+    app_kind: 'spreadsheet',
+    visibility: 'private',
+  })
+  expectStatus(extraWorkbook, 200, 'spreadsheets stay free after writing limit')
 
   const stocksProject = await alice.post('/api/projects', {
     name: 'Watchlist',
@@ -640,6 +693,34 @@ async function run() {
   const aliceQuotes = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
   expectStatus(aliceQuotes, 200, 'orbit can read stock quotes')
   assert.equal(aliceQuotes.body.quotes.some(quote => quote.symbol === 'AAPL' && quote.price > 0), true)
+
+  const orbitOverFreeChars = await alice.put('/api/projects/' + wordDoc.body.project.id, {
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'word-docs',
+      data: { html: '<p>' + '字'.repeat(201) + '</p>' },
+    }),
+  })
+  expectStatus(orbitOverFreeChars, 200, 'orbit allows more than the free character cap')
+
+  const orbitFourthWriting = await alice.post('/api/projects', {
+    name: 'Orbit draft',
+    type: 'writing',
+    space_id: 'business',
+    app_kind: 'word-docs',
+    visibility: 'private',
+  })
+  expectStatus(orbitFourthWriting, 200, 'orbit allows more than 3 writing documents')
+
+  const orbitOverChars = await alice.put('/api/projects/' + wordDoc.body.project.id, {
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'word-docs',
+      data: { html: '<p>' + '字'.repeat(501) + '</p>' },
+    }),
+  })
+  expectStatus(orbitOverChars, 403, 'orbit writing character limit')
+  assert.equal(orbitOverChars.body.code, 'character_limit')
 
   const tickerRequired = await alice.get('/api/markets/quotes')
   expectStatus(tickerRequired, 400, 'quotes require tickers')

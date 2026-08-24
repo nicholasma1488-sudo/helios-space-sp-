@@ -4,6 +4,11 @@ export type BillingPlanId = 'free' | 'orbit'
 export type PayMethod = 'card'
 export type SuiteEdition = 'free' | 'orbit'
 
+export interface WritingUsage {
+  documents: { used: number; limit: number | null }
+  characters: { used?: number; limit: number }
+}
+
 export interface User {
   id: number
   name: string
@@ -12,6 +17,7 @@ export interface User {
   plan?: BillingPlanId
   plan_selected?: boolean
   edition?: SuiteEdition
+  usage?: WritingUsage
 }
 
 export interface BillingPlan {
@@ -24,6 +30,7 @@ export interface BillingPlan {
   features: string[]
   mini_apps?: string[]
   eligible?: boolean
+  limits?: { documents: number | null; characters: number }
 }
 
 export interface PaymentMethod {
@@ -65,6 +72,7 @@ export interface BillingSnapshot {
   stripe?: { enabled: boolean; publishable_key: string | null; auto_detect?: boolean }
   pay_methods?: PayMethod[]
   pending_checkout?: { session_id: string; plan: string; status: string; created_at: string } | null
+  usage?: WritingUsage
 }
 
 export interface CardCheckout {

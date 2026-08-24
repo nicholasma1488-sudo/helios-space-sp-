@@ -288,6 +288,16 @@
 .drawing-toolbar > button:hover,
 .drawing-toolbar > button.is-active { background: var(--helios-surface2); color: var(--helios-text); }
 .writing-toolbar .writing-helios-action { color: var(--helios-accent); }
+.writing-usage {
+  margin-left: auto;
+  padding: 0 8px;
+  color: var(--helios-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.writing-usage.is-warn { color: #d97706; }
+.writing-usage.is-over { color: #dc2626; font-weight: 650; }
 .workspace-mode-switch { display: flex; padding: 3px; border: 1px solid var(--helios-border); border-radius: 8px; }
 .workspace-mode-switch button { min-height: 26px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--helios-muted); font: inherit; font-size: 8px; cursor: pointer; }
 .workspace-mode-switch button.is-active { background: var(--helios-surface2); color: var(--helios-text); }

@@ -50,7 +50,7 @@ const MAX_EMAIL_LENGTH = 254
 const MAX_PASSWORD_LENGTH = 128
 const MAX_PROJECT_NAME_LENGTH = 120
 const MAX_PROJECT_SPACE_LENGTH = 120
-const MAX_PROJECT_CONTENT_LENGTH = 1_000_000
+const MAX_PROJECT_CONTENT_LENGTH = 2_000_000
 const MAX_POST_BODY_LENGTH = 2_000
 const MAX_COMMENT_BODY_LENGTH = 600
 const MAX_POST_SEARCH_LENGTH = 100
@@ -532,6 +532,17 @@ const STRIPE_MOCK = process.env.HELIOS_STRIPE_MOCK === '1' || process.env.NODE_E
 const mockStripeSessions = new Map()
 const PAY_METHODS = ['card']
 
+function envLimit(name, fallback) {
+  const raw = process.env[name]
+  if (raw === undefined || raw === '') return fallback
+  const value = Number(raw)
+  return Number.isFinite(value) && value >= 0 ? value : fallback
+}
+
+const FREE_DOCUMENT_LIMIT = envLimit('HELIOS_FREE_DOCUMENTS', 60)
+const FREE_CHARACTER_LIMIT = envLimit('HELIOS_FREE_CHARACTERS', 40_000)
+const ORBIT_CHARACTER_LIMIT = envLimit('HELIOS_ORBIT_CHARACTERS', 500_000)
+
 const BILLING_PLANS = {
   free: {
     id: 'free',
@@ -539,16 +550,18 @@ const BILLING_PLANS = {
     price_cents: 0,
     currency: 'usd',
     interval: 'month',
-    description: 'The included Helios edition. Word, Excel, PowerPoint and OneNote open real files you can keep working in.',
+    description: 'Word, Excel, PowerPoint and OneNote stay included. Limits apply only to how much writing you create.',
     mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
+    limits: { documents: FREE_DOCUMENT_LIMIT, characters: FREE_CHARACTER_LIMIT },
     features: [
       'Create an account in under a minute — no card',
-      'Word, Excel, PowerPoint and OneNote — real files, not scratch pads',
+      'Word, Excel, PowerPoint and OneNote — no paywall on tables or slides',
+      `${FREE_DOCUMENT_LIMIT} writing documents`,
+      `${FREE_CHARACTER_LIMIT.toLocaleString('en-US')} characters per document`,
       'Work saves to Projects and stays in your Spaces',
       'Every Subject and Hobby Space',
       'Lifestyle, Chat Hub and Live',
       'Helios AI when an administrator enables it',
-      'Public or private progress posts',
       'Upgrade to Orbit any time from the top-left banner',
     ],
   },
@@ -558,7 +571,7 @@ const BILLING_PLANS = {
     price_cents: 900,
     currency: 'usd',
     interval: 'month',
-    description: 'The full Helios suite. Pay with a card on Stripe and unlock every Mini App.',
+    description: 'More writing room plus the rest of the suite. Pay with a card on Stripe.',
     mini_apps: [
       'Word', 'Excel', 'PowerPoint', 'OneNote', 'Stocks',
       'Essay', 'Gradebook', 'Lesson Slides', 'Lab Notebook', 'Forms',
@@ -566,19 +579,20 @@ const BILLING_PLANS = {
       'Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals',
       'Product Spec', 'OKRs', 'Planner', 'Reports',
     ],
+    limits: { documents: null, characters: ORBIT_CHARACTER_LIMIT },
     features: [
-      'Everything in Free, plus the complete Mini App suite',
+      'Everything in Free, including spreadsheets and slides',
+      'Unlimited writing documents',
+      `${ORBIT_CHARACTER_LIMIT.toLocaleString('en-US')} characters per document`,
       'Stocks watchlist you can open any time',
       'School and work apps in the same account',
       'Docs, proposals, specs and reports',
       'Budget and OKR workbooks with formulas',
       'Pitch decks, meetings, planner and homework board',
       'Essay studio, gradebook, labs and study tools',
-      'Orbit badge on the paid edition',
       'Priority Helios capacity when AI is configured',
       '3× Live session visibility for collaborators',
       'Pay with a bank card through Stripe',
-      'Richer export history and billing receipts',
       'Switch back to Free any time',
     ],
   },
@@ -602,6 +616,73 @@ function publicUser(user) {
     plan: normalizePlan(user.plan),
     plan_selected: Boolean(user.plan_selected),
     edition: userEdition(user),
+    usage: usageSnapshot(user),
+  }
+}
+
+function planLimits(user) {
+  return BILLING_PLANS[normalizePlan(user?.plan)].limits
+}
+
+function isWritingProject(type, appKind) {
+  return type === 'writing' || (type === 'doc' && appKind !== 'stocks')
+}
+
+function countWritingDocuments(userId) {
+  return db.prepare(
+    `SELECT COUNT(*) AS count FROM projects
+     WHERE user_id = ? AND (type = 'writing' OR (type = 'doc' AND app_kind != 'stocks'))`,
+  ).get(userId).count
+}
+
+function writingPlainText(content) {
+  if (!content) return ''
+  let raw = String(content)
+  try {
+    const parsed = JSON.parse(content)
+    if (parsed && typeof parsed === 'object') {
+      const data = parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed
+      const parts = [data.html, data.content, data.text, data.body]
+        .filter(value => typeof value === 'string')
+      if (parts.length) raw = parts.join('\n')
+    }
+  } catch {}
+  return raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function writingCharacterCount(content) {
+  return [...writingPlainText(content)].length
+}
+
+function usageSnapshot(user) {
+  const limits = planLimits(user)
+  const userId = Number(user?.id)
+  return {
+    documents: {
+      used: Number.isFinite(userId) ? countWritingDocuments(userId) : 0,
+      limit: limits.documents,
+    },
+    characters: {
+      limit: limits.characters,
+    },
+  }
+}
+
+function writingLimitError(user, code, characters = 0) {
+  const limits = planLimits(user)
+  const usage = usageSnapshot(user)
+  if (code === 'document_limit') {
+    return {
+      error: `Free includes ${limits.documents} writing documents. Upgrade to Orbit for unlimited drafts. Spreadsheets and slides stay included.`,
+      code,
+      usage,
+    }
+  }
+  const planName = normalizePlan(user.plan) === 'orbit' ? 'Orbit' : 'Free'
+  return {
+    error: `This draft is ${characters.toLocaleString('en-US')} characters. ${planName} allows ${limits.characters.toLocaleString('en-US')} per document.`,
+    code,
+    usage: { ...usage, characters: { used: characters, limit: limits.characters } },
   }
 }
 
@@ -672,6 +753,7 @@ function getBillingSnapshot(userLike) {
     stripe: stripePublicConfig(),
     pay_methods: PAY_METHODS,
     pending_checkout: pending ? { session_id: pending.session_id, plan: pending.plan, status: pending.status, created_at: pending.created_at } : null,
+    usage: usageSnapshot(user),
   }
 }
 
@@ -1468,6 +1550,15 @@ app.post('/api/projects', requireUser, (req, res) => {
   try { JSON.parse(checkedMetadata.value) } catch {
     return res.status(400).json({ error: 'Project metadata must be valid JSON' })
   }
+  if (isWritingProject(projectType, checkedAppKind.value)) {
+    const user = billingUserRow(req.user.id) || req.user
+    const limits = planLimits(user)
+    if (limits.documents != null && countWritingDocuments(req.user.id) >= limits.documents)
+      return res.status(403).json(writingLimitError(user, 'document_limit'))
+    const characters = writingCharacterCount(checkedContent.value)
+    if (characters > limits.characters)
+      return res.status(403).json(writingLimitError(user, 'character_limit', characters))
+  }
   const now = new Date().toISOString()
   const info = db.prepare(
     'INSERT INTO projects (user_id,name,space,space_id,type,app_kind,visibility,content,metadata,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
@@ -1522,6 +1613,19 @@ app.put('/api/projects/:id', requireUser, (req, res) => {
   if (checkedMetadata.error) return res.status(400).json({ error: checkedMetadata.error })
   try { JSON.parse(checkedMetadata.value) } catch {
     return res.status(400).json({ error: 'Project metadata must be valid JSON' })
+  }
+  const willBeWriting = isWritingProject(projectType, checkedAppKind.value)
+  const wasWriting = isWritingProject(project.type, project.app_kind)
+  if (willBeWriting) {
+    const user = billingUserRow(req.user.id) || req.user
+    const limits = planLimits(user)
+    if (!wasWriting && limits.documents != null && countWritingDocuments(req.user.id) >= limits.documents)
+      return res.status(403).json(writingLimitError(user, 'document_limit'))
+    if (content !== undefined) {
+      const characters = writingCharacterCount(checkedContent.value)
+      if (characters > limits.characters)
+        return res.status(403).json(writingLimitError(user, 'character_limit', characters))
+    }
   }
   const updatedAt = new Date().toISOString()
   db.prepare(

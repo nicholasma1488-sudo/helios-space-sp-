@@ -10,8 +10,9 @@ export function PlanPicker() {
           <span><Sparkles size={14} /> AFTER YOUR ACCOUNT</span>
           <h1 id="plan-picker-title">Use Free, or subscribe to Orbit.</h1>
           <p>
-            Free includes Word, Excel, PowerPoint and OneNote. Orbit unlocks the full Mini App suite.
-            Pay Orbit with a bank card on Stripe. Helios detects the payment automatically.
+            Word, Excel, PowerPoint and OneNote stay included. Free already has generous writing room.
+            Orbit adds unlimited drafts, 500,000 characters per document, and the extra Mini Apps.
+            Pay Orbit with a bank card on Stripe.
           </p>
         </header>
         <PaymentTool mode="onboarding" />
