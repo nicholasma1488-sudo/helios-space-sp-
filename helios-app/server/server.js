@@ -396,6 +396,8 @@ ensureColumn('users', 'plan_updated_at', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'birthdate', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'audience', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'plan_selected', 'INTEGER NOT NULL DEFAULT 0')
+ensureColumn('users', 'stripe_customer_id', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'stripe_subscription_id', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('billing_methods', 'source', "TEXT NOT NULL DEFAULT 'card'")
 
 // Seed / reconcile the single owner admin from environment-provided credentials
@@ -528,7 +530,15 @@ const liveEventRateLimit = (req, res, next) => req.body?.kind === 'cursor'
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY?.trim() || ''
 const STRIPE_PUBLISHABLE = process.env.STRIPE_PUBLISHABLE_KEY?.trim() || ''
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET?.trim() || ''
+const STRIPE_ORBIT_PRICE_ID = process.env.STRIPE_ORBIT_PRICE_ID?.trim() || ''
 const STRIPE_MOCK = process.env.HELIOS_STRIPE_MOCK === '1' || process.env.NODE_ENV === 'test'
+const STRIPE_FULFILL_EVENTS = new Set([
+  'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+])
+const STRIPE_CANCEL_EVENTS = new Set([
+  'customer.subscription.deleted',
+])
 const mockStripeSessions = new Map()
 const PAY_METHODS = ['card']
 
@@ -849,28 +859,64 @@ async function createStripeCheckout(user, planId, origin) {
       mock: true,
     }
   }
-  const session = await stripeForm('checkout/sessions', {
-    mode: 'payment',
+  const params = {
+    mode: 'subscription',
     success_url: origin + '/pay?billing=success&session_id={CHECKOUT_SESSION_ID}',
     cancel_url: origin + '/pay?billing=cancel',
     client_reference_id: String(user.id),
     'metadata[user_id]': String(user.id),
     'metadata[plan]': planId,
-    'metadata[method]': 'card',
+    'subscription_data[metadata][user_id]': String(user.id),
+    'subscription_data[metadata][plan]': planId,
     'line_items[0][quantity]': '1',
-    'line_items[0][price_data][currency]': catalog.currency,
-    'line_items[0][price_data][unit_amount]': String(catalog.price_cents),
-    'line_items[0][price_data][product_data][name]': 'Helios ' + catalog.name,
-    'payment_method_types[0]': 'card',
-  })
+  }
+  if (user.email) params.customer_email = user.email
+  if (STRIPE_ORBIT_PRICE_ID) {
+    params['line_items[0][price]'] = STRIPE_ORBIT_PRICE_ID
+  } else {
+    params['line_items[0][price_data][currency]'] = catalog.currency
+    params['line_items[0][price_data][unit_amount]'] = String(catalog.price_cents)
+    params['line_items[0][price_data][recurring][interval]'] = 'month'
+    params['line_items[0][price_data][product_data][name]'] = 'Helios ' + catalog.name
+  }
+  const session = await stripeForm('checkout/sessions', params)
   db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
     .run(session.id, user.id, planId, 'pending', new Date().toISOString())
   return { session_id: session.id, url: session.url }
 }
 
+function stripeObjectId(value) {
+  if (!value) return ''
+  return typeof value === 'string' ? value : String(value.id || '')
+}
+
+function cardFromStripeSession(session) {
+  const method = session?.payment_intent?.payment_method
+    || session?.subscription?.default_payment_method
+    || session?.payment_method
+    || {}
+  const card = method.card || {}
+  return {
+    brand: card.brand || method.brand || 'card',
+    last4: card.last4 || method.last4 || '0000',
+    exp_month: Number(card.exp_month) || 12,
+    exp_year: Number(card.exp_year) || new Date().getUTCFullYear() + 3,
+  }
+}
+
+function sessionReadyToFulfill(session) {
+  return Boolean(session) && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required')
+}
+
 async function retrieveStripeSession(sessionId) {
   if (STRIPE_MOCK) return mockStripeSessions.get(sessionId) || null
-  return stripeForm('checkout/sessions/' + encodeURIComponent(sessionId), {}, 'GET')
+  return stripeForm(
+    'checkout/sessions/' + encodeURIComponent(sessionId)
+      + '?expand[]=payment_intent.payment_method'
+      + '&expand[]=subscription.default_payment_method',
+    {},
+    'GET',
+  )
 }
 
 function verifyStripeWebhook(rawBody, signatureHeader, secret) {
@@ -893,26 +939,45 @@ function fulfillPaidStripeSession(session, sessionId) {
     const user = publicUser(userRow)
     return { user, billing: getBillingSnapshot(user) }
   }
-  if (!session || session.payment_status !== 'paid') return { error: 'Payment is not complete', status: 402 }
+  if (!sessionReadyToFulfill(session)) return { error: 'Payment is not complete', status: 402 }
   if (String(session.metadata?.user_id || pending.user_id) !== String(userRow.id))
     return { error: 'Payment session does not match this account', status: 403 }
   const planId = pending.plan
   const blocked = planEligibilityError(planId)
   if (blocked) return { error: blocked, status: 403 }
+  const card = cardFromStripeSession(session)
   db.prepare('UPDATE stripe_checkouts SET status = ? WHERE session_id = ?').run('paid', sessionId)
+  db.prepare('UPDATE users SET stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?').run(
+    stripeObjectId(session.customer),
+    stripeObjectId(session.subscription),
+    userRow.id,
+  )
   const user = activatePlan(
     userRow,
     planId,
     {
-      brand: session.payment_method?.brand || 'visa',
-      last4: session.payment_method?.last4 || '0000',
-      exp_month: 12,
-      exp_year: new Date().getUTCFullYear() + 3,
+      brand: card.brand,
+      last4: card.last4,
+      exp_month: card.exp_month,
+      exp_year: card.exp_year,
       cardholder: userRow.name,
       source: 'stripe',
     },
     'Paid with Stripe card · ' + planId,
   )
+  return { user, billing: getBillingSnapshot(user) }
+}
+
+function cancelStripeSubscription(eventObject) {
+  const subscriptionId = stripeObjectId(eventObject)
+  if (!subscriptionId) return { error: 'Subscription is required', status: 400 }
+  const userRow = db.prepare('SELECT id,name,handle,email,status,plan,plan_selected FROM users WHERE stripe_subscription_id = ?').get(subscriptionId)
+  if (!userRow) return { ignored: true }
+  const now = new Date().toISOString()
+  db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, stripe_subscription_id = ? WHERE id = ?')
+    .run('free', now, '', userRow.id)
+  recordBillingEvent(userRow.id, 'plan_change', 'free', 0, 'Stripe subscription ended')
+  const user = publicUser({ ...userRow, plan: 'free', plan_selected: 1, stripe_subscription_id: '' })
   return { user, billing: getBillingSnapshot(user) }
 }
 
@@ -1382,9 +1447,14 @@ app.post('/api/billing/stripe/webhook', async (req, res) => {
     return res.status(503).json({ error: 'Stripe webhook is not configured', code: 'STRIPE_WEBHOOK_NOT_CONFIGURED' })
   }
   const event = req.body || {}
-  const sessionId = String(event.data?.object?.id || '').trim()
-  if (event.type && event.type !== 'checkout.session.completed')
+  if (event.type && STRIPE_CANCEL_EVENTS.has(event.type)) {
+    const result = cancelStripeSubscription(event.data?.object || {})
+    if (result.error) return res.status(result.status || 400).json({ error: result.error })
+    return res.json({ received: true, ok: true, ...result })
+  }
+  if (event.type && !STRIPE_FULFILL_EVENTS.has(event.type))
     return res.json({ received: true, ignored: true })
+  const sessionId = String(event.data?.object?.id || '').trim()
   if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
   try {
     const session = await retrieveStripeSession(sessionId) || event.data?.object || null

@@ -739,6 +739,13 @@ async function run() {
   expectStatus(ignoredEvent, 200, 'unrelated stripe events are ignored')
   assert.equal(ignoredEvent.body.ignored, true)
 
+  const unknownSubscription = await anonymous.post('/api/billing/stripe/webhook', {
+    type: 'customer.subscription.deleted',
+    data: { object: { id: 'sub_missing' } },
+  })
+  expectStatus(unknownSubscription, 200, 'unknown subscription cancel is ignored')
+  assert.equal(unknownSubscription.body.ignored, true)
+
   const unknownApi = await alice.get('/api/does-not-exist')
   expectStatus(unknownApi, 404, 'unknown API')
   assert.equal(unknownApi.body.code, 'API_NOT_FOUND')

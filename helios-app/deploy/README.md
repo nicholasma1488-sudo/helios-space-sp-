@@ -27,7 +27,8 @@ Application admin access is disabled unless `HELIOS_ADMIN_EMAIL` and
 `HELIOS_ADMIN_PASSWORD` are added through a root-readable systemd environment
 file or drop-in. Never commit those values.
 
-Orbit card payments go through Stripe Checkout. Set `STRIPE_SECRET_KEY` and
-`STRIPE_PUBLISHABLE_KEY`. Set `STRIPE_WEBHOOK_SECRET` so Helios can detect
-`checkout.session.completed` automatically. Without those keys, people can
-still stay on Free.
+Orbit card payments go through Stripe Checkout in `subscription` mode. Set
+`STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` on the server, never in git.
+Set `STRIPE_WEBHOOK_SECRET` so Helios can detect `checkout.session.completed`
+and `checkout.session.async_payment_succeeded`. Optional: `STRIPE_ORBIT_PRICE_ID`
+for a Dashboard Price. Without those keys, people can still stay on Free.
