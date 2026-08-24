@@ -845,14 +845,14 @@ async function createStripeCheckout(user, planId, origin) {
       .run(sessionId, user.id, planId, 'pending', new Date().toISOString())
     return {
       session_id: sessionId,
-      url: origin + '/?billing=success&session_id=' + encodeURIComponent(sessionId),
+      url: origin + '/pay?billing=success&session_id=' + encodeURIComponent(sessionId),
       mock: true,
     }
   }
   const session = await stripeForm('checkout/sessions', {
     mode: 'payment',
-    success_url: origin + '/?billing=success&session_id={CHECKOUT_SESSION_ID}',
-    cancel_url: origin + '/?billing=cancel',
+    success_url: origin + '/pay?billing=success&session_id={CHECKOUT_SESSION_ID}',
+    cancel_url: origin + '/pay?billing=cancel',
     client_reference_id: String(user.id),
     'metadata[user_id]': String(user.id),
     'metadata[plan]': planId,

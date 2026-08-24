@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { api, type Post, type Project, type SolarSummary, type SpaceSummary } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
-import { PaymentTool } from '../components/PaymentTool'
+import { goToPay } from '../product/pay'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
 import './ProfileView.css'
@@ -118,7 +118,11 @@ function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExp
   return (
     <section className="profile-settings">
       <header><span>ACCOUNT & ACCESSIBILITY</span><h2>Settings</h2></header>
-      <article className="profile-billing-article"><PaymentTool /></article>
+      <article className="profile-billing-article">
+        <h3><Sparkles size={15} /> 付款</h3>
+        <p>打开独立付款页，然后跳转到 Stripe 用银行卡支付。Helios 不收集卡号。</p>
+        <button type="button" className="profile-export" onClick={() => goToPay()}>打开付款页</button>
+      </article>
       <article>
         <h3><Moon size={15} /> Appearance</h3>
         <div className="profile-theme-buttons">

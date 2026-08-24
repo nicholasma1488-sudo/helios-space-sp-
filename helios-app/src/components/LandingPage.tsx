@@ -4,6 +4,7 @@ import {
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
+import { goToPay } from '../product/pay'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
 import './LandingPage.css'
 
@@ -304,7 +305,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <div className="pricing-intro" data-reveal>
             <div className="landing-section-label"><span>03</span> PAYMENT</div>
             <h2>One Helios.<br />Free or Orbit.</h2>
-            <p>Create an account, then pick Free or Orbit. Word, Excel, PowerPoint and OneNote stay included. Orbit is more writing room plus the extra Mini Apps, paid with a bank card on Stripe.</p>
+            <p>Create an account, then open the payment page. Orbit jumps to Stripe so the bank card is entered on that site, not inside Helios.</p>
           </div>
           <div className="pricing-grid">
             <article className="pricing-card is-child" data-reveal>
@@ -335,8 +336,8 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                 <li><Check size={13} /> Stocks, school and work Mini Apps</li>
                 <li><Check size={13} /> Stripe 银行卡自动到账</li>
               </ul>
-              <button type="button" onClick={() => enterAuth('register')}>
-                Subscribe to Orbit <ArrowRight size={15} />
+              <button type="button" onClick={() => goToPay()}>
+                打开付款页 <ArrowRight size={15} />
               </button>
             </article>
           </div>

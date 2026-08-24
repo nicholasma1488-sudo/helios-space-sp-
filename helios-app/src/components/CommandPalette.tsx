@@ -71,7 +71,7 @@ export function CommandPalette() {
     { id: 'new-project', label: 'Create new project', subtitle: 'Choose a type and name', icon: <Plus size={15} />, group: 'Actions', action: () => { dispatch({ type: 'SET_COMMAND_PALETTE', open: false }); setShowNewProject(true) } },
     { id: 'helios', label: 'Ask Helios', subtitle: 'Open AI assistant', icon: <Sparkles size={15} />, group: 'Actions', shortcut: '⌘J', action: () => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
     { id: 'profile', label: 'My profile', icon: <User size={15} />, group: 'Actions', action: () => { dispatch({ type: 'SET_VIEW', view: 'profile' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
-    { id: 'billing', label: 'Payment and billing', subtitle: 'Free, Orbit, or Stripe card checkout', icon: <CreditCard size={15} />, group: 'Actions', action: () => { try { sessionStorage.setItem('helios-open-settings', 'billing') } catch {} dispatch({ type: 'SET_VIEW', view: 'profile' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
+    { id: 'billing', label: 'Payment page', subtitle: 'Open /pay and jump to Stripe for a bank card', icon: <CreditCard size={15} />, group: 'Actions', action: () => { dispatch({ type: 'SET_COMMAND_PALETTE', open: false }); dispatch({ type: 'OPEN_UPGRADE' }) } },
   ]
 
   const all = [...ACTIONS, ...NAV, ...SPACES, ...PROJECTS]

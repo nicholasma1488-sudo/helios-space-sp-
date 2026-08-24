@@ -644,6 +644,7 @@ async function run() {
   expectStatus(bobSession, 200, 'start stripe card checkout')
   assert.equal(bobSession.body.method, 'card')
   assert.match(bobSession.body.session_id, /^cs_test_/)
+  assert.match(bobSession.body.url, /\/pay\?billing=success/)
   const bobPending = await bob.get('/api/billing')
   assert.equal(bobPending.body.pending_checkout.session_id, bobSession.body.session_id)
 
@@ -663,6 +664,7 @@ async function run() {
   const paid = await alice.post('/api/billing/checkout', { plan: 'orbit' })
   expectStatus(paid, 200, 'orbit checkout starts stripe session')
   assert.match(paid.body.session_id, /^cs_test_/)
+  assert.match(paid.body.url, /\/pay\?billing=success/)
   const stripeConfirm = await alice.post('/api/billing/stripe/confirm', { session_id: paid.body.session_id })
   expectStatus(stripeConfirm, 200, 'confirm stripe card payment')
   assert.equal(stripeConfirm.body.user.plan, 'orbit')

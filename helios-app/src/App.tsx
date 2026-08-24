@@ -19,8 +19,8 @@ import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
 import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
-import { PlanPicker } from './components/PlanPicker'
-import { UpgradeModal } from './components/UpgradeModal'
+import { PaymentPage } from './views/PaymentPage'
+import { goToPay, isPayPath } from './product/pay'
 import './App.css'
 
 function MainContent() {
@@ -68,7 +68,15 @@ function AppInner() {
   // CTA buttons on the landing page set this to 'auth'.
   const [authMode, setAuthMode] = useState<'landing' | 'auth'>('landing')
   const [authDefaultTab, setAuthDefaultTab] = useState<'login' | 'register'>('register')
+  const [path, setPath] = useState(window.location.pathname)
   const previousUserId = useRef<number | null>(state.user?.id ?? null)
+  const onPayPage = isPayPath(path)
+
+  useEffect(() => {
+    const sync = () => setPath(window.location.pathname)
+    window.addEventListener('popstate', sync)
+    return () => window.removeEventListener('popstate', sync)
+  }, [])
 
   useEffect(() => {
     const currentUserId = state.user?.id ?? null
@@ -92,6 +100,10 @@ function AppInner() {
       projects: 'Projects',
       profile: 'Profile',
     }
+    if (onPayPage) {
+      document.title = '付款 — Helios Space'
+      return
+    }
     if (!state.user) {
       document.title = 'Helios Space'
       return
@@ -103,7 +115,7 @@ function AppInner() {
     }
     const label = VIEW_TITLES[state.view] ?? 'Helios Space'
     document.title = `${label} — Helios Space`
-  }, [state.user, state.view, state.codeEditorOpen, state.activeProjectId, state.projects])
+  }, [onPayPage, state.user, state.view, state.codeEditorOpen, state.activeProjectId, state.projects])
 
   // Load site info + check auth on mount
   useEffect(() => {
@@ -127,11 +139,9 @@ function AppInner() {
             .then(result => {
               if (cancelled) return
               dispatch({ type: 'SET_USER', user: result.user })
-              dispatch({ type: 'SET_VIEW', view: 'profile' })
-              try { sessionStorage.setItem('helios-open-settings', 'billing') } catch {}
               dispatch({
                 type: 'PUSH_TOAST',
-                toast: { id: Date.now().toString(), message: 'Stripe payment detected. Orbit is active.', tone: 'success' },
+                toast: { id: Date.now().toString(), message: 'Stripe 已确认银行卡付款，Orbit 已开通。', tone: 'success' },
               })
             })
             .catch(err => {
@@ -144,7 +154,8 @@ function AppInner() {
               params.delete('billing')
               params.delete('session_id')
               const next = params.toString()
-              window.history.replaceState({}, '', window.location.pathname + (next ? '?' + next : ''))
+              window.history.replaceState({}, '', '/pay' + (next ? '?' + next : ''))
+              window.dispatchEvent(new PopStateEvent('popstate'))
             })
         }
         api.projects.list()
@@ -173,6 +184,18 @@ function AppInner() {
     else document.documentElement.classList.remove('motion-reduced')
   }, [state.reducedMotion])
 
+  useEffect(() => {
+    if (state.user && state.user.plan_selected === false && !onPayPage && !state.authLoading) {
+      goToPay()
+    }
+  }, [state.user, onPayPage, state.authLoading])
+
+  useEffect(() => {
+    if (!state.upgradeOpen) return
+    dispatch({ type: 'CLOSE_UPGRADE' })
+    goToPay()
+  }, [state.upgradeOpen, dispatch])
+
   // Respect OS reduced-motion
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -191,6 +214,15 @@ function AppInner() {
         </div>
         <style>{`@keyframes pulse-fade { 0%,100%{opacity:.4;transform:scale(.9)} 50%{opacity:1;transform:scale(1)} }`}</style>
       </div>
+    )
+  }
+
+  if (onPayPage) {
+    return (
+      <>
+        <PaymentPage />
+        <ToastLayer />
+      </>
     )
   }
 
@@ -221,13 +253,10 @@ function AppInner() {
     )
   }
 
-
   const activeProject = state.projects.find(p => p.id === state.activeProjectId) ?? null
 
   return (
     <>
-      {state.user.plan_selected === false && <PlanPicker />}
-      {state.user.plan_selected !== false && state.upgradeOpen && state.user.plan !== 'orbit' && <UpgradeModal />}
       <GlobalShell>
         <MainContent />
         {state.heliosPanelOpen && (
