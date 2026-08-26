@@ -154,8 +154,8 @@ export function editionLabel(edition: SuiteEdition) {
   return edition === 'orbit' ? 'Orbit' : 'Free'
 }
 
-export function editionKicker(edition: SuiteEdition) {
-  return edition === 'orbit' ? 'ORBIT' : 'FREE EDITION'
+export function editionKicker(_edition: SuiteEdition) {
+  return 'ALL APPS OPEN'
 }
 
 export const WRITING_LIMITS = {
@@ -163,22 +163,20 @@ export const WRITING_LIMITS = {
   orbit: { documents: null as number | null, characters: 500_000 },
 }
 
-export function editionBlurb(edition: SuiteEdition) {
-  if (edition === 'orbit')
-    return 'Word, Excel, PowerPoint and OneNote stay included. Orbit adds unlimited writing documents, 500,000 characters each, plus Stocks and the school and work Mini Apps.'
-  return 'Word, Excel, PowerPoint and OneNote stay included — spreadsheets are not a paywall. Free allows 60 writing documents and 40,000 characters each.'
+export function editionBlurb(_edition: SuiteEdition) {
+  return 'Every Mini App is open. Writing documents, character counts, Stocks, and the school and work suite are included — no payment required.'
 }
 
 export function suiteAppsForEdition(_edition: SuiteEdition) {
   return SUITE_APPS
 }
 
-export function suiteAppUnlocked(app: SuiteApp, edition: SuiteEdition) {
-  return app.track === 'core' || edition === 'orbit'
+export function suiteAppUnlocked(_app: SuiteApp, _edition: SuiteEdition) {
+  return true
 }
 
 export function unlockLabel(_edition: SuiteEdition) {
-  return 'Unlock with Orbit'
+  return 'Open this app'
 }
 
 export function spaceForSuiteApp(app: SuiteApp) {
@@ -197,8 +195,8 @@ export function getSuiteApp(id: string) {
   return SUITE_APPS.find(app => app.id === id) ?? null
 }
 
-export function suiteHomeTitle(edition: SuiteEdition) {
-  return edition === 'orbit' ? 'Orbit apps' : 'Apps'
+export function suiteHomeTitle(_edition: SuiteEdition) {
+  return 'Apps'
 }
 
 function writingData(html: string) {
