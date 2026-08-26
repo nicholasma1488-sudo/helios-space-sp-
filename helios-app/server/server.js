@@ -873,11 +873,16 @@ async function createStripeCheckout(user, planId, origin) {
   if (user.email) params.customer_email = user.email
   if (STRIPE_ORBIT_PRICE_ID) {
     params['line_items[0][price]'] = STRIPE_ORBIT_PRICE_ID
-  } else {
-    params['line_items[0][price_data][currency]'] = catalog.currency
-    params['line_items[0][price_data][unit_amount]'] = String(catalog.price_cents)
-    params['line_items[0][price_data][recurring][interval]'] = 'month'
-    params['line_items[0][price_data][product_data][name]'] = 'Helios ' + catalog.name
+  }
+  params['line_items[0][price_data][currency]'] = catalog.currency
+  params['line_items[0][price_data][unit_amount]'] = String(catalog.price_cents)
+  params['line_items[0][price_data][recurring][interval]'] = 'month'
+  params['line_items[0][price_data][product_data][name]'] = 'Helios ' + catalog.name
+  if (STRIPE_ORBIT_PRICE_ID) {
+    delete params['line_items[0][price_data][currency]']
+    delete params['line_items[0][price_data][unit_amount]']
+    delete params['line_items[0][price_data][recurring][interval]']
+    delete params['line_items[0][price_data][product_data][name]']
   }
   const session = await stripeForm('checkout/sessions', params)
   db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
