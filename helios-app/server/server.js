@@ -622,10 +622,6 @@ function publicUser(user) {
     name: user.name,
     handle: user.handle,
     email: user.email,
-    plan: normalizePlan(user.plan),
-    plan_selected: Boolean(user.plan_selected),
-    edition: userEdition(user),
-    usage: usageSnapshot(user),
   }
 }
 
@@ -1300,7 +1296,6 @@ app.get('/api/site', (_req, res) => res.json({
   announcement: getSetting('announcement'),
   signup_open: getSetting('signup_open') === 'true',
   ai_enabled: !!getSetting('openai_api_key'),
-  plans: billingCatalog(),
 }))
 
 // ── User auth ──
@@ -1385,96 +1380,18 @@ app.put('/api/me', requireUser, (req, res) => {
   res.json({ user: req.user })
 })
 
-app.get('/api/billing', requireUser, (req, res) => {
-  res.json(getBillingSnapshot(req.user))
-})
+function billingUnavailable(_req, res) {
+  return res.status(410).json({
+    error: 'Helios is free. There are no paid plans.',
+    code: 'NO_PLANS',
+  })
+}
 
-app.post('/api/billing/checkout', requireUser, billingRateLimit, async (req, res) => {
-  const planId = String(req.body?.plan || '').trim().toLowerCase()
-  const catalog = BILLING_PLANS[planId]
-  if (!catalog) return res.status(400).json({ error: 'Choose Free or Orbit' })
-  const blocked = planEligibilityError(planId)
-  if (blocked) return res.status(403).json({ error: blocked })
-
-  const now = new Date().toISOString()
-  if (planId === 'free') {
-    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
-    if (req.user.plan !== 'free')
-      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the Free edition')
-    const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
-    return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
-  }
-
-  if (!stripeConfigured())
-    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
-  try {
-    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
-    return res.json({ ok: true, method: 'card', ...session })
-  } catch (error) {
-    return res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
-  }
-})
-
-app.post('/api/billing/stripe', requireUser, billingRateLimit, async (req, res) => {
-  const planId = String(req.body?.plan || '').trim().toLowerCase()
-  if (!BILLING_PLANS[planId] || planId === 'free')
-    return res.status(400).json({ error: 'Checkout is for Orbit' })
-  const blocked = planEligibilityError(planId)
-  if (blocked) return res.status(403).json({ error: blocked })
-  const payMethod = normalizePayMethod(req.body?.method)
-  if (!payMethod) return res.status(400).json({ error: 'Orbit is paid with a Stripe card only' })
-  if (!stripeConfigured())
-    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
-  try {
-    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
-    res.json({ ok: true, method: 'card', ...session })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
-  }
-})
-
-app.post('/api/billing/stripe/webhook', async (req, res) => {
-  if (STRIPE_WEBHOOK_SECRET) {
-    const raw = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {})
-    if (!verifyStripeWebhook(raw, req.headers['stripe-signature'], STRIPE_WEBHOOK_SECRET))
-      return res.status(400).json({ error: 'Invalid Stripe signature' })
-  } else if (!STRIPE_MOCK) {
-    return res.status(503).json({ error: 'Stripe webhook is not configured', code: 'STRIPE_WEBHOOK_NOT_CONFIGURED' })
-  }
-  const event = req.body || {}
-  if (event.type && STRIPE_CANCEL_EVENTS.has(event.type)) {
-    const result = cancelStripeSubscription(event.data?.object || {})
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    return res.json({ received: true, ok: true, ...result })
-  }
-  if (event.type && !STRIPE_FULFILL_EVENTS.has(event.type))
-    return res.json({ received: true, ignored: true })
-  const sessionId = String(event.data?.object?.id || '').trim()
-  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
-  try {
-    const session = await retrieveStripeSession(sessionId) || event.data?.object || null
-    const result = fulfillPaidStripeSession(session, sessionId)
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    res.json({ received: true, ok: true, user: result.user, billing: result.billing })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Webhook failed' })
-  }
-})
-
-app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (req, res) => {
-  const sessionId = String(req.body?.session_id || '').trim()
-  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
-  const pending = db.prepare('SELECT * FROM stripe_checkouts WHERE session_id = ? AND user_id = ?').get(sessionId, req.user.id)
-  if (!pending) return res.status(404).json({ error: 'Payment session not found' })
-  try {
-    const session = await retrieveStripeSession(sessionId)
-    const result = fulfillPaidStripeSession(session, sessionId)
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    res.json({ ok: true, user: result.user, billing: result.billing })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Payment confirmation failed' })
-  }
-})
+app.get('/api/billing', requireUser, billingUnavailable)
+app.post('/api/billing/checkout', requireUser, billingUnavailable)
+app.post('/api/billing/stripe', requireUser, billingUnavailable)
+app.post('/api/billing/stripe/confirm', requireUser, billingUnavailable)
+app.post('/api/billing/stripe/webhook', billingUnavailable)
 
 function normalizeMarketSymbol(value) {
   const symbol = String(value || '').trim().toUpperCase()
@@ -1535,7 +1452,10 @@ app.get('/api/markets/quotes', requireUser, marketsRateLimit, async (req, res) =
 })
 
 app.get('/api/export', requireUser, (req, res) => {
-  const account = db.prepare('SELECT id,name,handle,email,created_at,status,plan,plan_updated_at,birthdate,audience FROM users WHERE id = ?').get(req.user.id)
+  const account = db.prepare('SELECT id,name,handle,email,created_at,status FROM users WHERE id = ?').get(req.user.id)
+  delete account.plan
+  delete account.plan_updated_at
+  delete account.plan_selected
   const projects = db.prepare('SELECT * FROM projects WHERE user_id = ? ORDER BY id').all(req.user.id)
   const collaborativeProjects = db.prepare(
     "SELECT p.*,pc.role AS collaborator_role FROM projects p JOIN project_collaborators pc ON pc.project_id = p.id WHERE pc.user_id = ? AND pc.status = 'accepted' ORDER BY p.id"
@@ -1558,13 +1478,12 @@ app.get('/api/export', requireUser, (req, res) => {
   const conversationIds = db.prepare('SELECT conversation_id FROM conversation_members WHERE user_id = ? ORDER BY conversation_id').all(req.user.id).map(row => row.conversation_id)
   const conversations = conversationIds.length ? db.prepare(`SELECT * FROM conversations WHERE id IN (${conversationIds.map(() => '?').join(',')}) ORDER BY id`).all(...conversationIds) : []
   const chatMessages = conversationIds.length ? db.prepare(`SELECT * FROM chat_messages WHERE conversation_id IN (${conversationIds.map(() => '?').join(',')}) ORDER BY id`).all(...conversationIds) : []
-  const billing = getBillingSnapshot(account)
   res.set('Content-Disposition', 'attachment; filename="helios-data-export.json"')
   res.json({
     exported_at: new Date().toISOString(), account, projects, collaborative_projects: collaborativeProjects,
     posts, reactions, comments, project_comments: projectComments, project_versions: projectVersions,
     spaces, live_sessions: liveSessions, live_events: liveEvents, conversations, chat_messages: chatMessages,
-    solar_events: solarEvents, notifications, follows, billing,
+    solar_events: solarEvents, notifications, follows,
   })
 })
 

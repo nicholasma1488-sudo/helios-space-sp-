@@ -159,10 +159,6 @@ function AppInner() {
     setPath('/')
   }, [onPayPage])
 
-  useEffect(() => {
-    if (state.upgradeOpen) dispatch({ type: 'CLOSE_UPGRADE' })
-  }, [state.upgradeOpen, dispatch])
-
   // Respect OS reduced-motion
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)')

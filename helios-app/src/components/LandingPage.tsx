@@ -149,7 +149,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
           <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
           <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Apps</button>
-          <button type="button" onClick={() => scrollTo('#pricing')}>Pricing</button>
+          <button type="button" onClick={() => scrollTo('#start-free')}>Start</button>
         </nav>
         <div className="landing-nav-actions">
           <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
@@ -300,24 +300,23 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           </div>
         </section>
 
-        <section className="landing-pricing" id="pricing">
+        <section className="landing-pricing" id="start-free">
           <div className="pricing-intro" data-reveal>
-            <div className="landing-section-label"><span>03</span> OPEN ACCESS</div>
-            <h2>One Helios.<br />Every app is open.</h2>
-            <p>Create an account and use the full suite. No payment page, no card, no locked Mini Apps.</p>
+            <div className="landing-section-label"><span>03</span> FREE</div>
+            <h2>One Helios.<br />Completely free.</h2>
+            <p>Create an account and use every app. There is no paid plan, no upgrade, and no card.</p>
           </div>
           <div className="pricing-grid">
             <article className="pricing-card is-orbit" data-reveal>
-              <span><Gift size={15} /> INCLUDED</span>
-              <h3>Helios</h3>
-              <b>¥0 <small>全部开放</small></b>
-              <p>Word, Excel, PowerPoint, OneNote, Stocks, and the school and work apps stay available on every account.</p>
+              <span><Gift size={15} /> HELIOS</span>
+              <h3>Free for everyone</h3>
+              <p>Word, Excel, PowerPoint, OneNote, Stocks, and the school and work apps stay on every account.</p>
               <ul>
                 <li><Check size={13} /> 全部 Mini Apps</li>
                 <li><Check size={13} /> 文稿不限篇数、不限字数</li>
                 <li><Check size={13} /> Stocks 行情</li>
                 <li><Check size={13} /> Subjects, Hobbies, Live</li>
-                <li><Check size={13} /> 不用绑定银行卡</li>
+                <li><Check size={13} /> 没有套餐，也不收钱</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
                 免费开始 <ArrowRight size={15} />
