@@ -14,7 +14,7 @@ const FALLBACK_PLANS: BillingPlan[] = [
     id: 'free',
     name: 'Free',
     price_cents: 0,
-    currency: 'usd',
+    currency: 'cny',
     interval: 'month',
     eligible: true,
     description: 'Word, Excel, PowerPoint and OneNote stay included. Limits apply only to writing volume.',
@@ -31,8 +31,8 @@ const FALLBACK_PLANS: BillingPlan[] = [
   {
     id: 'orbit',
     name: 'Orbit',
-    price_cents: 900,
-    currency: 'usd',
+    price_cents: 6800,
+    currency: 'cny',
     interval: 'month',
     description: 'More writing room plus the rest of the suite. Pay with a bank card on Stripe.',
     features: [
@@ -47,9 +47,9 @@ const FALLBACK_PLANS: BillingPlan[] = [
   },
 ]
 
-function formatPrice(cents: number) {
-  if (cents <= 0) return 'Free'
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(cents / 100)
+function formatPrice(cents: number, currency = 'cny') {
+  if (cents <= 0) return '¥0'
+  return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100)
 }
 
 function brandLabel(brand: string) {
@@ -166,7 +166,7 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
       <header>
         <span><CreditCard size={13} /> {mode === 'onboarding' ? 'PICK A PLAN' : 'PAYMENT'}</span>
         <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Start on Free, or get more writing room with Orbit.' : 'Upgrade for more writing room. Pay with a Stripe card.'}</h3>
-        <p>Word, Excel, PowerPoint and OneNote stay on Free. Orbit is $9 a month for unlimited drafts, 500,000 characters per document, and the extra Mini Apps. Cards go through Stripe.</p>
+        <p>Word, Excel, PowerPoint and OneNote stay on Free. Orbit is ¥68 a month for unlimited drafts, 500,000 characters per document, and the extra Mini Apps. Cards go through Stripe.</p>
       </header>
 
       {loading && <div className="payment-tool-status">Loading payment options…</div>}
@@ -189,7 +189,7 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
                   <small>{plan.id === 'free' ? 'INCLUDED' : 'FULL SUITE'}</small>
                   <strong>{plan.name}</strong>
                 </div>
-                <b>{formatPrice(plan.price_cents)}{plan.price_cents > 0 ? <em>/mo</em> : null}</b>
+                <b>{formatPrice(plan.price_cents, plan.currency)}{plan.price_cents > 0 ? <em>/月</em> : null}</b>
               </div>
               <p>{plan.description}</p>
               <ul>

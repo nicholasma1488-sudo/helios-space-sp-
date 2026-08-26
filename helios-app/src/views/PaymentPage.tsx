@@ -7,9 +7,9 @@ import { leavePay } from '../product/pay'
 import { useApp } from '../store/appStore'
 import './PaymentPage.css'
 
-function formatPrice(cents: number) {
-  if (cents <= 0) return '$0'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100)
+function formatPrice(cents: number, currency = 'cny') {
+  if (cents <= 0) return '¥0'
+  return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: currency.toUpperCase() }).format(cents / 100)
 }
 
 export function PaymentPage() {
@@ -44,6 +44,7 @@ export function PaymentPage() {
 
   const currentPlan = billing?.plan ?? state.user?.plan ?? 'free'
   const stripeEnabled = !state.user || billing == null || Boolean(billing.stripe?.enabled)
+  const orbitPlan = billing?.plans.find(plan => plan.id === 'orbit')
 
   function applyUser(user: User) {
     dispatch({ type: 'SET_USER', user })
@@ -143,7 +144,7 @@ export function PaymentPage() {
                 <small>INCLUDED</small>
                 <strong>Free</strong>
               </div>
-              <b>$0 <em>forever</em></b>
+              <b>¥0 <em>永久</em></b>
             </header>
             <p>Word、Excel、PowerPoint、OneNote 一直可用。表格不设付费门槛。</p>
             <ul>
@@ -169,7 +170,7 @@ export function PaymentPage() {
                 <small>ORBIT</small>
                 <strong>Orbit</strong>
               </div>
-              <b>{formatPrice(900)} <em>/ 月</em></b>
+              <b>{formatPrice(orbitPlan?.price_cents ?? 6800, orbitPlan?.currency ?? 'cny')} <em>/ 月</em></b>
             </header>
             <p>更多文稿额度，以及 Stocks 和学校 / 工作套件。</p>
             <ul>

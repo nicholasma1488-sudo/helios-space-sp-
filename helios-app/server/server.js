@@ -558,7 +558,7 @@ const BILLING_PLANS = {
     id: 'free',
     name: 'Free',
     price_cents: 0,
-    currency: 'usd',
+    currency: 'cny',
     interval: 'month',
     description: 'Word, Excel, PowerPoint and OneNote stay included. Limits apply only to how much writing you create.',
     mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
@@ -578,8 +578,8 @@ const BILLING_PLANS = {
   orbit: {
     id: 'orbit',
     name: 'Orbit',
-    price_cents: 900,
-    currency: 'usd',
+    price_cents: 6800,
+    currency: 'cny',
     interval: 'month',
     description: 'More writing room plus the rest of the suite. Pay with a card on Stripe.',
     mini_apps: [
@@ -770,7 +770,7 @@ function getBillingSnapshot(userLike) {
 function recordBillingEvent(userId, kind, plan, amountCents, detail) {
   db.prepare(
     'INSERT INTO billing_events (user_id,kind,plan,amount_cents,currency,detail,created_at) VALUES (?,?,?,?,?,?,?)'
-  ).run(userId, kind, plan, amountCents, 'usd', detail || '', new Date().toISOString())
+  ).run(userId, kind, plan, amountCents, BILLING_PLANS[plan]?.currency || 'cny', detail || '', new Date().toISOString())
 }
 
 function savePaymentMethod(userId, method, now) {

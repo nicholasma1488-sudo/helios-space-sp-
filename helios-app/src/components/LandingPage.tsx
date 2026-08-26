@@ -311,7 +311,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
             <article className="pricing-card is-child" data-reveal>
               <span><Gift size={15} /> INCLUDED</span>
               <h3>Free</h3>
-              <b>$0 <small>forever</small></b>
+              <b>¥0 <small>永久免费</small></b>
               <p>The included edition. No card required.</p>
               <ul>
                 <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
@@ -327,7 +327,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
             <article className="pricing-card is-orbit" data-reveal>
               <span><CreditCard size={15} /> FULL SUITE</span>
               <h3>Orbit</h3>
-              <b>$9 <small>/ month</small></b>
+              <b>¥68 <small>/ 月</small></b>
               <p>More writing room plus every Mini App. Pay with a bank card on Stripe.</p>
               <ul>
                 <li><Check size={13} /> Everything in Free, including tables</li>

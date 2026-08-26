@@ -517,7 +517,7 @@ async function run() {
   assert.equal(aliceBilling.body.stripe.auto_detect, true)
   assert.deepEqual(aliceBilling.body.pay_methods, ['card'])
   assert.equal(aliceBilling.body.pending_checkout, null)
-  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'orbit' && plan.eligible === true && plan.price_cents === 900), true)
+  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'orbit' && plan.eligible === true && plan.price_cents === 6800 && plan.currency === 'cny'), true)
   assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'alpha'), false)
 
   const stayFree = await alice.post('/api/billing/checkout', { plan: 'free' })
