@@ -629,8 +629,8 @@ function publicUser(user) {
   }
 }
 
-function planLimits(user) {
-  return BILLING_PLANS[normalizePlan(user?.plan)].limits
+function planLimits(_user) {
+  return { documents: null, characters: null }
 }
 
 function isWritingProject(type, appKind) {
@@ -1331,7 +1331,7 @@ app.post('/api/signup', authRateLimit, (req, res) => {
     const info = db.prepare(
       'INSERT INTO users (name, handle, email, password_hash, created_at, plan, plan_updated_at, plan_selected) VALUES (?,?,?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', now, 0)
+          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', now, 1)
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
     res.json({
@@ -1342,7 +1342,7 @@ app.post('/api/signup', authRateLimit, (req, res) => {
         handle: '@' + h,
         email: normalizedEmail,
         plan: 'free',
-        plan_selected: 0,
+        plan_selected: 1,
       }),
     })
   } catch (e) {
@@ -1522,8 +1522,8 @@ async function fetchYahooQuotes(symbols) {
 }
 
 app.get('/api/markets/quotes', requireUser, marketsRateLimit, async (req, res) => {
-  if (normalizePlan(req.user.plan) !== 'orbit')
-    return res.status(403).json({ error: 'Stocks is included with Orbit' })
+  if (!req.user)
+    return res.status(401).json({ error: 'Not authenticated' })
   const unique = [...new Set(String(req.query.symbols || '').split(',').map(normalizeMarketSymbol).filter(Boolean))].slice(0, 20)
   if (unique.length === 0) return res.status(400).json({ error: 'Add at least one ticker' })
   try {
@@ -1621,7 +1621,7 @@ app.post('/api/projects', requireUser, (req, res) => {
     if (limits.documents != null && countWritingDocuments(req.user.id) >= limits.documents)
       return res.status(403).json(writingLimitError(user, 'document_limit'))
     const characters = writingCharacterCount(checkedContent.value)
-    if (characters > limits.characters)
+    if (limits.characters != null && characters > limits.characters)
       return res.status(403).json(writingLimitError(user, 'character_limit', characters))
   }
   const now = new Date().toISOString()
@@ -1688,7 +1688,7 @@ app.put('/api/projects/:id', requireUser, (req, res) => {
       return res.status(403).json(writingLimitError(user, 'document_limit'))
     if (content !== undefined) {
       const characters = writingCharacterCount(checkedContent.value)
-      if (characters > limits.characters)
+      if (limits.characters != null && characters > limits.characters)
         return res.status(403).json(writingLimitError(user, 'character_limit', characters))
     }
   }
