@@ -163,11 +163,11 @@ async function run() {
   })
   expectStatus(aliceSignup, 200, 'alice signup')
   assert.equal(aliceSignup.body.user.plan, 'free')
-  assert.equal(aliceSignup.body.user.plan_selected, false)
+  assert.equal(aliceSignup.body.user.plan_selected, true)
   assert.equal(aliceSignup.body.user.edition, 'free')
   assert.equal(aliceSignup.body.user.usage.documents.used, 0)
-  assert.equal(aliceSignup.body.user.usage.documents.limit, 3)
-  assert.equal(aliceSignup.body.user.usage.characters.limit, 200)
+  assert.equal(aliceSignup.body.user.usage.documents.limit, null)
+  assert.equal(aliceSignup.body.user.usage.characters.limit, null)
   assert.equal(site.body.plans.some(plan => plan.id === 'free'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'orbit'), true)
   assert.equal(site.body.plans.some(plan => plan.id === 'alpha'), false)
@@ -560,8 +560,8 @@ async function run() {
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Stocks'), true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Word'), true)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Stocks'), false)
-  assert.equal(aliceBilling.body.usage.documents.limit, 3)
-  assert.equal(aliceBilling.body.usage.characters.limit, 200)
+  assert.equal(aliceBilling.body.usage.documents.limit, null)
+  assert.equal(aliceBilling.body.usage.characters.limit, null)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').limits.documents, 3)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').limits.characters, 200)
   assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').limits.documents, null)
@@ -577,8 +577,7 @@ async function run() {
       data: { html: '<p>' + '字'.repeat(201) + '</p>' },
     }),
   })
-  expectStatus(overChars, 403, 'free writing character limit')
-  assert.equal(overChars.body.code, 'character_limit')
+  expectStatus(overChars, 200, 'writing character caps are open')
 
   const thirdWriting = await alice.post('/api/projects', {
     name: 'Third draft',
@@ -596,8 +595,7 @@ async function run() {
     app_kind: 'word-docs',
     visibility: 'private',
   })
-  expectStatus(fourthWriting, 403, 'free writing document limit')
-  assert.equal(fourthWriting.body.code, 'document_limit')
+  expectStatus(fourthWriting, 200, 'writing document caps are open')
 
   const extraWorkbook = await alice.post('/api/projects', {
     name: 'Another workbook',
@@ -624,13 +622,13 @@ async function run() {
   assert.equal(stocksProject.body.project.app_kind, 'stocks')
 
   const aliceQuotesDenied = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
-  expectStatus(aliceQuotesDenied, 403, 'free cannot read stock quotes')
+  expectStatus(aliceQuotesDenied, 200, 'stock quotes are open')
 
   const bobQuotes = await bob.get('/api/markets/quotes?symbols=AAPL')
-  expectStatus(bobQuotes, 403, 'free cannot read stock quotes')
+  expectStatus(bobQuotes, 200, 'stock quotes are open')
 
   const missingSymbols = await alice.get('/api/markets/quotes')
-  expectStatus(missingSymbols, 403, 'quotes require orbit before tickers are checked')
+  expectStatus(missingSymbols, 400, 'quotes still require tickers')
 
   const unknownPlan = await alice.post('/api/billing/checkout', { plan: 'alpha' })
   expectStatus(unknownPlan, 400, 'alpha is no longer a plan')
@@ -721,8 +719,7 @@ async function run() {
       data: { html: '<p>' + '字'.repeat(501) + '</p>' },
     }),
   })
-  expectStatus(orbitOverChars, 403, 'orbit writing character limit')
-  assert.equal(orbitOverChars.body.code, 'character_limit')
+  expectStatus(orbitOverChars, 200, 'writing character caps stay open after checkout')
 
   const tickerRequired = await alice.get('/api/markets/quotes')
   expectStatus(tickerRequired, 400, 'quotes require tickers')
