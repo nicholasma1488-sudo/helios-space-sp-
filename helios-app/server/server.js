@@ -530,7 +530,6 @@ const liveEventRateLimit = (req, res, next) => req.body?.kind === 'cursor'
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY?.trim() || ''
 const STRIPE_PUBLISHABLE = process.env.STRIPE_PUBLISHABLE_KEY?.trim() || ''
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET?.trim() || ''
-const STRIPE_ORBIT_PRICE_ID = process.env.STRIPE_ORBIT_PRICE_ID?.trim() || ''
 const STRIPE_MOCK = process.env.HELIOS_STRIPE_MOCK === '1' || process.env.NODE_ENV === 'test'
 const STRIPE_FULFILL_EVENTS = new Set([
   'checkout.session.completed',
@@ -871,19 +870,10 @@ async function createStripeCheckout(user, planId, origin) {
     'line_items[0][quantity]': '1',
   }
   if (user.email) params.customer_email = user.email
-  if (STRIPE_ORBIT_PRICE_ID) {
-    params['line_items[0][price]'] = STRIPE_ORBIT_PRICE_ID
-  }
   params['line_items[0][price_data][currency]'] = catalog.currency
   params['line_items[0][price_data][unit_amount]'] = String(catalog.price_cents)
   params['line_items[0][price_data][recurring][interval]'] = 'month'
   params['line_items[0][price_data][product_data][name]'] = 'Helios ' + catalog.name
-  if (STRIPE_ORBIT_PRICE_ID) {
-    delete params['line_items[0][price_data][currency]']
-    delete params['line_items[0][price_data][unit_amount]']
-    delete params['line_items[0][price_data][recurring][interval]']
-    delete params['line_items[0][price_data][product_data][name]']
-  }
   const session = await stripeForm('checkout/sessions', params)
   db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
     .run(session.id, user.id, planId, 'pending', new Date().toISOString())
