@@ -1,6 +1,5 @@
-import type { BillingPlanId, Project } from '../api'
+import type { Project } from '../api'
 
-export type SuiteEdition = 'free' | 'orbit'
 export type SuiteTrack = 'core' | 'orbit'
 
 export interface SuiteApp {
@@ -146,39 +145,6 @@ export const SUITE_APPS: SuiteApp[] = [
   },
 ]
 
-export function editionFor(plan?: BillingPlanId | null): SuiteEdition {
-  return plan === 'orbit' ? 'orbit' : 'free'
-}
-
-export function editionLabel(edition: SuiteEdition) {
-  return edition === 'orbit' ? 'Orbit' : 'Free'
-}
-
-export function editionKicker(_edition: SuiteEdition) {
-  return 'ALL APPS OPEN'
-}
-
-export const WRITING_LIMITS = {
-  free: { documents: 60, characters: 40_000 },
-  orbit: { documents: null as number | null, characters: 500_000 },
-}
-
-export function editionBlurb(_edition: SuiteEdition) {
-  return 'Every Mini App is open. Writing documents, character counts, Stocks, and the school and work suite are included — no payment required.'
-}
-
-export function suiteAppsForEdition(_edition: SuiteEdition) {
-  return SUITE_APPS
-}
-
-export function suiteAppUnlocked(_app: SuiteApp, _edition: SuiteEdition) {
-  return true
-}
-
-export function unlockLabel(_edition: SuiteEdition) {
-  return 'Open this app'
-}
-
 export function spaceForSuiteApp(app: SuiteApp) {
   return app.spaceAdult
 }
@@ -193,10 +159,6 @@ export function nextSuiteFileName(base: string, existing: Array<{ name: string; 
 
 export function getSuiteApp(id: string) {
   return SUITE_APPS.find(app => app.id === id) ?? null
-}
-
-export function suiteHomeTitle(_edition: SuiteEdition) {
-  return 'Apps'
 }
 
 function writingData(html: string) {

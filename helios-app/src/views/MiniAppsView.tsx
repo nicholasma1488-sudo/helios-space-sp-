@@ -4,13 +4,9 @@ import { useApp } from '../store/appStore'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { createSuiteProject, openProjectWorkspace } from '../product/flow'
 import {
-  editionBlurb,
-  editionFor,
-  editionKicker,
   nextSuiteFileName,
   spaceForSuiteApp,
-  suiteAppsForEdition,
-  suiteHomeTitle,
+  SUITE_APPS,
   suiteStarterWorkspace,
   type SuiteApp,
 } from '../product/miniApps'
@@ -30,8 +26,7 @@ function relativeTime(value: string) {
 
 export function MiniAppsView() {
   const { state, dispatch } = useApp()
-  const edition = editionFor(state.user?.plan)
-  const apps = suiteAppsForEdition(edition)
+  const apps = SUITE_APPS
   const [query, setQuery] = useState('')
   const [active, setActive] = useState<SuiteApp | null>(null)
   const [creating, setCreating] = useState(false)
@@ -136,9 +131,9 @@ export function MiniAppsView() {
     <div className="suite-view">
       <header className="suite-top">
         <div>
-          <div className="suite-kicker"><Sparkles size={13} /> {editionKicker(edition)}</div>
-          <h1>{suiteHomeTitle(edition)}</h1>
-          <p>{editionBlurb(edition)}</p>
+          <div className="suite-kicker"><Sparkles size={13} /> APPS</div>
+          <h1>Apps</h1>
+          <p>Word, Excel, PowerPoint, OneNote, Stocks, and the school and work suite are all included.</p>
         </div>
         <label className="suite-search">
           <Search size={16} aria-hidden="true" />
@@ -149,9 +144,9 @@ export function MiniAppsView() {
 
       <div className="suite-welcome">
         <div>
-          <small>{editionKicker(edition)}</small>
-          <strong>All apps are open</strong>
-          <span>Writing {writingUsed} documents · every app is included</span>
+          <small>INCLUDED</small>
+          <strong>Every app is included</strong>
+          <span>Writing {writingUsed} documents</span>
         </div>
       </div>
 
