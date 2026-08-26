@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Code2, Compass, Grid3X3, Heart, Layers3,
+  ArrowRight, Bookmark, Check, Code2, Compass, CreditCard, Gift, Grid3X3, Heart, Layers3,
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
+import { goToPay } from '../product/pay'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
 import './LandingPage.css'
 
@@ -31,7 +32,7 @@ const MODES = [
     n: '03',
     icon: <Grid3X3 size={20} />,
     title: 'Workspaces, not toys',
-    body: 'Code Editor, Notebook, Data Viz, and Writing stay bound to the Project you are actually making.',
+    body: 'Word, Excel, PowerPoint and OneNote open real files — the kind you can keep working in, not a scratch pad.',
     accent: '#f2b84b',
   },
 ]
@@ -40,7 +41,7 @@ const PRINCIPLES = [
   ['Projects first', 'Your work is the source of truth.'],
   ['Public or private', 'You choose who sees each update.'],
   ['Useful reactions', 'Appreciate, learn, and inspire.'],
-  ['Workspaces', 'Mini Apps open the Project, not a detached toy.'],
+  ['Workspaces', 'Apps open Word, Excel, slides and notebooks that save to Projects.'],
 ]
 
 const STAGE_MODES: Array<{ id: StageMode; label: string }> = [
@@ -48,7 +49,7 @@ const STAGE_MODES: Array<{ id: StageMode; label: string }> = [
   { id: 'project', label: 'Project' },
   { id: 'chat', label: 'Chat' },
   { id: 'live', label: 'Live' },
-  { id: 'apps', label: 'Mini Apps' },
+  { id: 'apps', label: 'Apps' },
 ]
 
 export function LandingPage({ onGetStarted, onSignIn }: Props) {
@@ -148,7 +149,8 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <nav aria-label="Landing page">
           <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
           <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
-          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Mini Apps</button>
+          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Apps</button>
+          <button type="button" onClick={() => scrollTo('#pricing')}>Pricing</button>
         </nav>
         <div className="landing-nav-actions">
           <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
@@ -288,14 +290,56 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <section className="landing-mini-app-band" id="mini-app-preview" data-reveal>
           <div className="mini-band-orbit" aria-hidden="true"><Grid3X3 size={30} /></div>
           <div>
-            <span>MINI APPS ARE WORKSPACES</span>
-            <h2>Open a workspace.<br />It stays bound to the Project.</h2>
+            <span>APPS ARE A 365 SUITE</span>
+            <h2>Open Word, Excel or slides.<br />Keep working in the same file.</h2>
           </div>
           <div className="mini-band-list">
-            <span><Code2 size={15} /> Code Editor</span>
-            <span><Layers3 size={15} /> Notebook</span>
-            <span><Compass size={15} /> Data Viz</span>
-            <span><MessageCircle size={15} /> Writing</span>
+            <span><MessageCircle size={15} /> Word</span>
+            <span><Compass size={15} /> Excel</span>
+            <span><Layers3 size={15} /> PowerPoint</span>
+            <span><Code2 size={15} /> OneNote</span>
+          </div>
+        </section>
+
+        <section className="landing-pricing" id="pricing">
+          <div className="pricing-intro" data-reveal>
+            <div className="landing-section-label"><span>03</span> PAYMENT</div>
+            <h2>One Helios.<br />Free or Orbit.</h2>
+            <p>Create an account, then open the payment page. Orbit jumps to Stripe so the bank card is entered on that site, not inside Helios.</p>
+          </div>
+          <div className="pricing-grid">
+            <article className="pricing-card is-child" data-reveal>
+              <span><Gift size={15} /> INCLUDED</span>
+              <h3>Free</h3>
+              <b>¥0 <small>永久免费</small></b>
+              <p>The included edition. No card required.</p>
+              <ul>
+                <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
+                <li><Check size={13} /> Spreadsheets stay included</li>
+                <li><Check size={13} /> 60 writing documents</li>
+                <li><Check size={13} /> 40,000 characters per document</li>
+                <li><Check size={13} /> Subjects, Hobbies, Live</li>
+              </ul>
+              <button type="button" onClick={() => enterAuth('register')}>
+                Start free <ArrowRight size={15} />
+              </button>
+            </article>
+            <article className="pricing-card is-orbit" data-reveal>
+              <span><CreditCard size={15} /> FULL SUITE</span>
+              <h3>Orbit</h3>
+              <b>¥68 <small>/ 月</small></b>
+              <p>More writing room plus every Mini App. Pay with a bank card on Stripe.</p>
+              <ul>
+                <li><Check size={13} /> Everything in Free, including tables</li>
+                <li><Check size={13} /> Unlimited writing documents</li>
+                <li><Check size={13} /> 500,000 characters per document</li>
+                <li><Check size={13} /> Stocks, school and work Mini Apps</li>
+                <li><Check size={13} /> Stripe 银行卡自动到账</li>
+              </ul>
+              <button type="button" onClick={() => goToPay()}>
+                打开付款页 <ArrowRight size={15} />
+              </button>
+            </article>
           </div>
         </section>
 
@@ -505,12 +549,12 @@ function HeroLiveScreen() {
 function HeroAppsScreen() {
   return (
     <div className="hero-apps-ui">
-      <header>Mini Apps · bound to this Project</header>
+      <header>Apps · Word · Excel · PowerPoint · OneNote</header>
       <div>
-        <span><Code2 size={18} /><strong>Web Code Editor</strong><small>Edit · Preview · Go Live</small></span>
-        <span><Layers3 size={18} /><strong>Lab Notebook</strong><small>Cells · Results · Share</small></span>
-        <span><Compass size={18} /><strong>Data Visualization</strong><small>Tables · Charts · Save</small></span>
-        <span><MessageCircle size={18} /><strong>Writing Studio</strong><small>Draft · Comments · Live</small></span>
+        <span><MessageCircle size={18} /><strong>Word</strong><small>Documents that stay saved</small></span>
+        <span><Compass size={18} /><strong>Excel</strong><small>Cells · Formulas · Charts</small></span>
+        <span><Layers3 size={18} /><strong>PowerPoint</strong><small>Slides · Present · Share</small></span>
+        <span><Code2 size={18} /><strong>OneNote</strong><small>Sections you keep adding to</small></span>
       </div>
     </div>
   )
@@ -545,10 +589,10 @@ function SocialModeVisual() {
 function AppsModeVisual() {
   return (
     <div className="mode-apps-ui">
-      <div><Code2 size={22} /><strong>Code Editor</strong><small>BUILD</small></div>
-      <div><Layers3 size={22} /><strong>Notebook</strong><small>LAB</small></div>
-      <div><Compass size={22} /><strong>Data Viz</strong><small>SEE</small></div>
-      <div><MessageCircle size={22} /><strong>Writing</strong><small>DRAFT</small></div>
+      <div><MessageCircle size={22} /><strong>Word</strong><small>WRITE</small></div>
+      <div><Compass size={22} /><strong>Excel</strong><small>CALC</small></div>
+      <div><Layers3 size={22} /><strong>PowerPoint</strong><small>PRESENT</small></div>
+      <div><Code2 size={22} /><strong>OneNote</strong><small>NOTES</small></div>
     </div>
   )
 }

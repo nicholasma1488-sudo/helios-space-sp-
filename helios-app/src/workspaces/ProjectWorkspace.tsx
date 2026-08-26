@@ -9,11 +9,13 @@ import {
 } from '../api'
 import { PublishModal } from '../components/PublishModal'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { getSuiteApp } from '../product/miniApps'
 import { useApp } from '../store/appStore'
 import { CodeWorkspace } from './CodeWorkspace'
 import { DrawingWorkspace, MathWorkspace, ProjectBoardWorkspace, SurveyWorkspace } from './CreativeWorkspaces'
 import { NotebookWorkspace } from './NotebookWorkspace'
 import { PresentationWorkspace, SpreadsheetWorkspace, WritingWorkspace } from './ProductivityWorkspaces'
+import { StocksWorkspace } from './StocksWorkspace'
 import { RepoBoundWorkspace } from './RepoFrame'
 import { askHeliosWithContext, openOrCreateProjectChat, publishLiveReplay } from '../product/flow'
 import { parseWorkspace, resolveWorkspaceKind, serializeWorkspace, type WorkspacePayload } from './workspaceData'
@@ -194,8 +196,11 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   const project = activeProject
   const workspacePayload = payload
   const app = getMiniApp(workspacePayload.appKind)
+  const suiteApp = getSuiteApp(workspacePayload.appKind)
   const space = getSpaceDefinition(project.space_id)
   const saveLabel = saveState === 'saving' ? 'Saving…' : saveState === 'dirty' ? 'Unsaved changes' : saveState === 'error' ? 'Save failed' : 'Saved'
+  const chromeName = suiteApp?.name || app.name
+  const chromeColor = suiteApp?.color || app.accent
 
   async function close() {
     const saved = await saveNow()
@@ -268,9 +273,9 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
       project_id: project.id,
       project_name: project.name,
       app_kind: workspacePayload.appKind,
-      app_name: app.name,
+      app_name: chromeName,
       live_status: liveSession?.status || 'offline',
-    }, prompt || `Help with ${project.name} in ${app.name}.`, dispatch)
+    }, prompt || `Help with ${project.name} in ${chromeName}.`, dispatch)
   }
 
   function openLiveControls() {
@@ -327,10 +332,10 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   const collaboratorCursors = liveEvents.filter(event => event.kind === 'cursor' && event.user_id !== state.user?.id)
 
   return (
-    <div className={'project-workspace' + (liveSession?.status === 'live' ? ' is-live' : '')} style={{ '--workspace-accent': app.accent } as React.CSSProperties}>
+    <div className={'project-workspace' + (liveSession?.status === 'live' ? ' is-live' : '') + (suiteApp ? ' is-suite' : '')} style={{ '--workspace-accent': chromeColor } as React.CSSProperties}>
       <header className="project-shell-header">
         <button type="button" className="project-close" onClick={() => void close()} aria-label="Save and close Project"><X size={17} /></button>
-        <div className="project-shell-identity"><i>{app.shortName.slice(0, 1)}</i><span><small>{space.name} · {app.name}{liveSession?.status === 'live' ? ' · LIVE' : ''}</small><strong>{project.name}</strong></span><span className="repo-branch">main</span><ChevronDown size={13} /></div>
+        <div className="project-shell-identity"><i>{suiteApp?.letter || app.shortName.slice(0, 1)}</i><span><small>{chromeName}{liveSession?.status === 'live' ? ' · LIVE' : suiteApp ? '' : ` · ${space.name}`}</small><strong>{project.name}</strong></span>{!suiteApp && <span className="repo-branch">main</span>}<ChevronDown size={13} /></div>
         <span className={'project-save-state state-' + saveState} role="status"><i />{saveLabel}</span>
         <div className="project-shell-actions">
           <button type="button" onClick={() => void saveNow()} disabled={!project.can_edit || saveState === 'saving'}><Save size={14} /><span>Save</span></button>
@@ -388,6 +393,7 @@ function WorkspaceEditor({ project, payload, canEdit, onChange, onCheckpoint, on
   else if (kind === 'survey') editor = <SurveyWorkspace {...props} />
   else if (kind === 'board') editor = <ProjectBoardWorkspace {...props} />
   else if (kind === 'writing') editor = <RepoBoundWorkspace project={project} canEdit={canEdit} kind="writing" data={payload.data} onChange={props.onChange}><WritingWorkspace {...props} /></RepoBoundWorkspace>
+  else if (kind === 'stocks') editor = <StocksWorkspace data={payload.data} onChange={props.onChange} />
   else editor = <WritingWorkspace {...props} />
   return <div className={'workspace-editor-host' + (!canEdit ? ' is-readonly' : '')}>{editor}</div>
 }

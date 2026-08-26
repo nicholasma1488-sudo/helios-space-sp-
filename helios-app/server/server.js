@@ -50,7 +50,7 @@ const MAX_EMAIL_LENGTH = 254
 const MAX_PASSWORD_LENGTH = 128
 const MAX_PROJECT_NAME_LENGTH = 120
 const MAX_PROJECT_SPACE_LENGTH = 120
-const MAX_PROJECT_CONTENT_LENGTH = 1_000_000
+const MAX_PROJECT_CONTENT_LENGTH = 2_000_000
 const MAX_POST_BODY_LENGTH = 2_000
 const MAX_COMMENT_BODY_LENGTH = 600
 const MAX_POST_SEARCH_LENGTH = 100
@@ -345,6 +345,36 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_project_files_project ON project_files(project_id, path);
   CREATE INDEX IF NOT EXISTS idx_project_commits_project ON project_commits(project_id, id DESC);
+  CREATE TABLE IF NOT EXISTS billing_methods (
+    user_id     INTEGER PRIMARY KEY,
+    brand       TEXT NOT NULL,
+    last4       TEXT NOT NULL,
+    exp_month   INTEGER NOT NULL,
+    exp_year    INTEGER NOT NULL,
+    cardholder  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE TABLE IF NOT EXISTS billing_events (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    kind        TEXT NOT NULL,
+    plan        TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL DEFAULT 0,
+    currency    TEXT NOT NULL DEFAULT 'usd',
+    detail      TEXT NOT NULL DEFAULT '',
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_billing_events_user ON billing_events(user_id, id DESC);
+  CREATE TABLE IF NOT EXISTS stripe_checkouts (
+    session_id  TEXT PRIMARY KEY,
+    user_id     INTEGER NOT NULL,
+    plan        TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `)
 
 function ensureColumn(table, column, definition) {
@@ -361,6 +391,14 @@ ensureColumn('posts', 'space_id', "TEXT NOT NULL DEFAULT 'lifestyle'")
 ensureColumn('posts', 'post_type', "TEXT NOT NULL DEFAULT 'progress'")
 ensureColumn('posts', 'media_url', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('chat_messages', 'attachment_json', "TEXT NOT NULL DEFAULT '{}'")
+ensureColumn('users', 'plan', "TEXT NOT NULL DEFAULT 'free'")
+ensureColumn('users', 'plan_updated_at', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'birthdate', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'audience', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'plan_selected', 'INTEGER NOT NULL DEFAULT 0')
+ensureColumn('users', 'stripe_customer_id', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('users', 'stripe_subscription_id', "TEXT NOT NULL DEFAULT ''")
+ensureColumn('billing_methods', 'source', "TEXT NOT NULL DEFAULT 'card'")
 
 // Seed / reconcile the single owner admin from environment-provided credentials
 if (ADMIN_EMAIL && ADMIN_PASSWORD) {
@@ -480,10 +518,463 @@ function rateLimit({ windowMs, max, key }) {
 const authRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, key: 'auth' })
 const aiRateLimit = rateLimit({ windowMs: 5 * 60 * 1000, max: 20, key: 'ai' })
 const socialRateLimit = rateLimit({ windowMs: 5 * 60 * 1000, max: 120, key: 'social' })
+const billingRateLimit = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, key: 'billing' })
+const marketsRateLimit = rateLimit({ windowMs: 60 * 1000, max: 30, key: 'markets' })
+const MARKETS_MOCK = process.env.HELIOS_MARKETS_MOCK === '1' || process.env.NODE_ENV === 'test'
+const marketQuoteCache = new Map()
 const liveCursorRateLimit = rateLimit({ windowMs: 60 * 1000, max: 900, key: 'live-cursor' })
 const liveEventRateLimit = (req, res, next) => req.body?.kind === 'cursor'
   ? liveCursorRateLimit(req, res, next)
   : socialRateLimit(req, res, next)
+
+const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY?.trim() || ''
+const STRIPE_PUBLISHABLE = process.env.STRIPE_PUBLISHABLE_KEY?.trim() || ''
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET?.trim() || ''
+const STRIPE_MOCK = process.env.HELIOS_STRIPE_MOCK === '1' || process.env.NODE_ENV === 'test'
+const STRIPE_FULFILL_EVENTS = new Set([
+  'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+])
+const STRIPE_CANCEL_EVENTS = new Set([
+  'customer.subscription.deleted',
+])
+const mockStripeSessions = new Map()
+const PAY_METHODS = ['card']
+
+function envLimit(name, fallback) {
+  const raw = process.env[name]
+  if (raw === undefined || raw === '') return fallback
+  const value = Number(raw)
+  return Number.isFinite(value) && value >= 0 ? value : fallback
+}
+
+const FREE_DOCUMENT_LIMIT = envLimit('HELIOS_FREE_DOCUMENTS', 60)
+const FREE_CHARACTER_LIMIT = envLimit('HELIOS_FREE_CHARACTERS', 40_000)
+const ORBIT_CHARACTER_LIMIT = envLimit('HELIOS_ORBIT_CHARACTERS', 500_000)
+
+const BILLING_PLANS = {
+  free: {
+    id: 'free',
+    name: 'Free',
+    price_cents: 0,
+    currency: 'cny',
+    interval: 'month',
+    description: 'Word, Excel, PowerPoint and OneNote stay included. Limits apply only to how much writing you create.',
+    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
+    limits: { documents: FREE_DOCUMENT_LIMIT, characters: FREE_CHARACTER_LIMIT },
+    features: [
+      'Create an account in under a minute — no card',
+      'Word, Excel, PowerPoint and OneNote — no paywall on tables or slides',
+      `${FREE_DOCUMENT_LIMIT} writing documents`,
+      `${FREE_CHARACTER_LIMIT.toLocaleString('en-US')} characters per document`,
+      'Work saves to Projects and stays in your Spaces',
+      'Every Subject and Hobby Space',
+      'Lifestyle, Chat Hub and Live',
+      'Helios AI when an administrator enables it',
+      'Upgrade to Orbit any time from the top-left banner',
+    ],
+  },
+  orbit: {
+    id: 'orbit',
+    name: 'Orbit',
+    price_cents: 6800,
+    currency: 'cny',
+    interval: 'month',
+    description: 'More writing room plus the rest of the suite. Pay with a card on Stripe.',
+    mini_apps: [
+      'Word', 'Excel', 'PowerPoint', 'OneNote', 'Stocks',
+      'Essay', 'Gradebook', 'Lesson Slides', 'Lab Notebook', 'Forms',
+      'Flashcards', 'Reader', 'Maths Lab', 'Homework Board', 'Study Guide',
+      'Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals',
+      'Product Spec', 'OKRs', 'Planner', 'Reports',
+    ],
+    limits: { documents: null, characters: ORBIT_CHARACTER_LIMIT },
+    features: [
+      'Everything in Free, including spreadsheets and slides',
+      'Unlimited writing documents',
+      `${ORBIT_CHARACTER_LIMIT.toLocaleString('en-US')} characters per document`,
+      'Stocks watchlist you can open any time',
+      'School and work apps in the same account',
+      'Docs, proposals, specs and reports',
+      'Budget and OKR workbooks with formulas',
+      'Pitch decks, meetings, planner and homework board',
+      'Essay studio, gradebook, labs and study tools',
+      'Priority Helios capacity when AI is configured',
+      '3× Live session visibility for collaborators',
+      'Pay with a bank card through Stripe',
+      'Switch back to Free any time',
+    ],
+  },
+}
+
+function normalizePlan(plan) {
+  return plan === 'orbit' || plan === 'alpha' ? 'orbit' : 'free'
+}
+
+function userEdition(user) {
+  return normalizePlan(user?.plan)
+}
+
+function publicUser(user) {
+  if (!user) return null
+  return {
+    id: Number(user.id),
+    name: user.name,
+    handle: user.handle,
+    email: user.email,
+    plan: normalizePlan(user.plan),
+    plan_selected: Boolean(user.plan_selected),
+    edition: userEdition(user),
+    usage: usageSnapshot(user),
+  }
+}
+
+function planLimits(user) {
+  return BILLING_PLANS[normalizePlan(user?.plan)].limits
+}
+
+function isWritingProject(type, appKind) {
+  return type === 'writing' || (type === 'doc' && appKind !== 'stocks')
+}
+
+function countWritingDocuments(userId) {
+  return db.prepare(
+    `SELECT COUNT(*) AS count FROM projects
+     WHERE user_id = ? AND (type = 'writing' OR (type = 'doc' AND app_kind != 'stocks'))`,
+  ).get(userId).count
+}
+
+function writingPlainText(content) {
+  if (!content) return ''
+  let raw = String(content)
+  try {
+    const parsed = JSON.parse(content)
+    if (parsed && typeof parsed === 'object') {
+      const data = parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed
+      const parts = [data.html, data.content, data.text, data.body]
+        .filter(value => typeof value === 'string')
+      if (parts.length) raw = parts.join('\n')
+    }
+  } catch {}
+  return raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function writingCharacterCount(content) {
+  return [...writingPlainText(content)].length
+}
+
+function usageSnapshot(user) {
+  const limits = planLimits(user)
+  const userId = Number(user?.id)
+  return {
+    documents: {
+      used: Number.isFinite(userId) ? countWritingDocuments(userId) : 0,
+      limit: limits.documents,
+    },
+    characters: {
+      limit: limits.characters,
+    },
+  }
+}
+
+function writingLimitError(user, code, characters = 0) {
+  const limits = planLimits(user)
+  const usage = usageSnapshot(user)
+  if (code === 'document_limit') {
+    return {
+      error: `Free includes ${limits.documents} writing documents. Upgrade to Orbit for unlimited drafts. Spreadsheets and slides stay included.`,
+      code,
+      usage,
+    }
+  }
+  const planName = normalizePlan(user.plan) === 'orbit' ? 'Orbit' : 'Free'
+  return {
+    error: `This draft is ${characters.toLocaleString('en-US')} characters. ${planName} allows ${limits.characters.toLocaleString('en-US')} per document.`,
+    code,
+    usage: { ...usage, characters: { used: characters, limit: limits.characters } },
+  }
+}
+
+function billingCatalog() {
+  return Object.values(BILLING_PLANS)
+}
+
+function stripeConfigured() {
+  return STRIPE_MOCK || Boolean(STRIPE_SECRET && STRIPE_PUBLISHABLE)
+}
+
+function stripePublicConfig() {
+  return {
+    enabled: stripeConfigured(),
+    publishable_key: stripeConfigured() ? (STRIPE_PUBLISHABLE || 'pk_test_mock') : null,
+    auto_detect: true,
+  }
+}
+
+function planEligibilityError(planId) {
+  if (planId === 'free' || planId === 'orbit') return null
+  return 'Choose Free or Orbit'
+}
+
+function normalizePayMethod(value) {
+  const method = String(value || 'card').trim().toLowerCase()
+  if (method === 'card' || method === 'stripe' || method === '') return 'card'
+  return null
+}
+
+function serializePaymentMethod(row) {
+  if (!row) return null
+  const source = row.source === 'stripe' ? 'stripe' : 'card'
+  return {
+    brand: row.brand,
+    last4: row.last4,
+    exp_month: Number(row.exp_month),
+    exp_year: Number(row.exp_year),
+    cardholder: row.cardholder,
+    source,
+    updated_at: row.updated_at,
+  }
+}
+
+function billingUserRow(userId) {
+  return db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(userId)
+}
+
+function getBillingSnapshot(userLike) {
+  const user = typeof userLike === 'object' && userLike ? userLike : billingUserRow(userLike)
+  const userId = Number(user.id)
+  const method = db.prepare('SELECT brand,last4,exp_month,exp_year,cardholder,source,updated_at FROM billing_methods WHERE user_id = ?').get(userId)
+  const events = db.prepare(
+    'SELECT id,kind,plan,amount_cents,currency,detail,created_at FROM billing_events WHERE user_id = ? ORDER BY id DESC LIMIT 8'
+  ).all(userId)
+  const pending = db.prepare(
+    "SELECT session_id,plan,status,created_at FROM stripe_checkouts WHERE user_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1"
+  ).get(userId)
+  return {
+    plan: normalizePlan(user.plan),
+    edition: userEdition(user),
+    plans: billingCatalog().map(plan => ({
+      ...plan,
+      eligible: true,
+    })),
+    payment_method: serializePaymentMethod(method),
+    events,
+    stripe: stripePublicConfig(),
+    pay_methods: PAY_METHODS,
+    pending_checkout: pending ? { session_id: pending.session_id, plan: pending.plan, status: pending.status, created_at: pending.created_at } : null,
+    usage: usageSnapshot(user),
+  }
+}
+
+function recordBillingEvent(userId, kind, plan, amountCents, detail) {
+  db.prepare(
+    'INSERT INTO billing_events (user_id,kind,plan,amount_cents,currency,detail,created_at) VALUES (?,?,?,?,?,?,?)'
+  ).run(userId, kind, plan, amountCents, BILLING_PLANS[plan]?.currency || 'cny', detail || '', new Date().toISOString())
+}
+
+function savePaymentMethod(userId, method, now) {
+  db.prepare(`
+    INSERT INTO billing_methods (user_id,brand,last4,exp_month,exp_year,cardholder,updated_at,source)
+    VALUES (?,?,?,?,?,?,?,?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      brand = excluded.brand,
+      last4 = excluded.last4,
+      exp_month = excluded.exp_month,
+      exp_year = excluded.exp_year,
+      cardholder = excluded.cardholder,
+      updated_at = excluded.updated_at,
+      source = excluded.source
+  `).run(
+    userId,
+    method.brand,
+    method.last4,
+    method.exp_month,
+    method.exp_year,
+    method.cardholder,
+    now,
+    method.source || 'card',
+  )
+}
+
+function activatePlan(user, planId, method, detail, now = new Date().toISOString()) {
+  const catalog = BILLING_PLANS[planId]
+  inTransaction(() => {
+    if (method) savePaymentMethod(user.id, method, now)
+    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run(planId, now, user.id)
+    recordBillingEvent(
+      user.id,
+      user.plan === planId ? 'card_updated' : 'paid',
+      planId,
+      catalog?.price_cents || 0,
+      detail,
+    )
+  })
+  return publicUser({ ...user, plan: planId, plan_selected: 1 })
+}
+
+function requestOrigin(req) {
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '127.0.0.1').split(',')[0].trim()
+  const proto = String(req.headers['x-forwarded-proto'] || req.protocol || 'http').split(',')[0].trim()
+  return proto + '://' + host
+}
+
+async function stripeForm(path, params, method = 'POST') {
+  const headers = { Authorization: 'Bearer ' + STRIPE_SECRET }
+  let body
+  if (method !== 'GET') {
+    body = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) body.set(key, String(value))
+    headers['Content-Type'] = 'application/x-www-form-urlencoded'
+  }
+  const response = await fetch('https://api.stripe.com/v1/' + path, {
+    method,
+    headers,
+    body,
+  })
+  const json = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const error = new Error(json.error?.message || 'Stripe request failed')
+    error.status = 502
+    throw error
+  }
+  return json
+}
+
+async function createStripeCheckout(user, planId, origin) {
+  const catalog = BILLING_PLANS[planId]
+  if (STRIPE_MOCK) {
+    const sessionId = 'cs_test_' + crypto.randomBytes(8).toString('hex')
+    mockStripeSessions.set(sessionId, {
+      id: sessionId,
+      payment_status: 'paid',
+      metadata: { user_id: String(user.id), plan: planId, method: 'card' },
+      payment_method: { brand: 'visa', last4: '4242' },
+    })
+    db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
+      .run(sessionId, user.id, planId, 'pending', new Date().toISOString())
+    return {
+      session_id: sessionId,
+      url: origin + '/pay?billing=success&session_id=' + encodeURIComponent(sessionId),
+      mock: true,
+    }
+  }
+  const params = {
+    mode: 'subscription',
+    success_url: origin + '/pay?billing=success&session_id={CHECKOUT_SESSION_ID}',
+    cancel_url: origin + '/pay?billing=cancel',
+    client_reference_id: String(user.id),
+    'metadata[user_id]': String(user.id),
+    'metadata[plan]': planId,
+    'subscription_data[metadata][user_id]': String(user.id),
+    'subscription_data[metadata][plan]': planId,
+    'line_items[0][quantity]': '1',
+  }
+  if (user.email) params.customer_email = user.email
+  params['line_items[0][price_data][currency]'] = catalog.currency
+  params['line_items[0][price_data][unit_amount]'] = String(catalog.price_cents)
+  params['line_items[0][price_data][recurring][interval]'] = 'month'
+  params['line_items[0][price_data][product_data][name]'] = 'Helios ' + catalog.name
+  const session = await stripeForm('checkout/sessions', params)
+  db.prepare('INSERT INTO stripe_checkouts (session_id,user_id,plan,status,created_at) VALUES (?,?,?,?,?)')
+    .run(session.id, user.id, planId, 'pending', new Date().toISOString())
+  return { session_id: session.id, url: session.url }
+}
+
+function stripeObjectId(value) {
+  if (!value) return ''
+  return typeof value === 'string' ? value : String(value.id || '')
+}
+
+function cardFromStripeSession(session) {
+  const method = session?.payment_intent?.payment_method
+    || session?.subscription?.default_payment_method
+    || session?.payment_method
+    || {}
+  const card = method.card || {}
+  return {
+    brand: card.brand || method.brand || 'card',
+    last4: card.last4 || method.last4 || '0000',
+    exp_month: Number(card.exp_month) || 12,
+    exp_year: Number(card.exp_year) || new Date().getUTCFullYear() + 3,
+  }
+}
+
+function sessionReadyToFulfill(session) {
+  return Boolean(session) && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required')
+}
+
+async function retrieveStripeSession(sessionId) {
+  if (STRIPE_MOCK) return mockStripeSessions.get(sessionId) || null
+  return stripeForm(
+    'checkout/sessions/' + encodeURIComponent(sessionId)
+      + '?expand[]=payment_intent.payment_method'
+      + '&expand[]=subscription.default_payment_method',
+    {},
+    'GET',
+  )
+}
+
+function verifyStripeWebhook(rawBody, signatureHeader, secret) {
+  const items = String(signatureHeader || '').split(',').map(part => part.trim().split('='))
+  const timestamp = items.find(item => item[0] === 't')?.[1]
+  const signature = items.find(item => item[0] === 'v1')?.[1]
+  if (!timestamp || !signature) return false
+  const expected = crypto.createHmac('sha256', secret).update(timestamp + '.' + rawBody).digest('hex')
+  const left = Buffer.from(signature, 'hex')
+  const right = Buffer.from(expected, 'hex')
+  return left.length === right.length && crypto.timingSafeEqual(left, right)
+}
+
+function fulfillPaidStripeSession(session, sessionId) {
+  const pending = db.prepare('SELECT * FROM stripe_checkouts WHERE session_id = ?').get(sessionId)
+  if (!pending) return { error: 'Payment session not found', status: 404 }
+  const userRow = db.prepare('SELECT id,name,handle,email,status,plan,plan_selected FROM users WHERE id = ?').get(pending.user_id)
+  if (!userRow || userRow.status !== 'active') return { error: 'Account unavailable', status: 403 }
+  if (pending.status === 'paid') {
+    const user = publicUser(userRow)
+    return { user, billing: getBillingSnapshot(user) }
+  }
+  if (!sessionReadyToFulfill(session)) return { error: 'Payment is not complete', status: 402 }
+  if (String(session.metadata?.user_id || pending.user_id) !== String(userRow.id))
+    return { error: 'Payment session does not match this account', status: 403 }
+  const planId = pending.plan
+  const blocked = planEligibilityError(planId)
+  if (blocked) return { error: blocked, status: 403 }
+  const card = cardFromStripeSession(session)
+  db.prepare('UPDATE stripe_checkouts SET status = ? WHERE session_id = ?').run('paid', sessionId)
+  db.prepare('UPDATE users SET stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?').run(
+    stripeObjectId(session.customer),
+    stripeObjectId(session.subscription),
+    userRow.id,
+  )
+  const user = activatePlan(
+    userRow,
+    planId,
+    {
+      brand: card.brand,
+      last4: card.last4,
+      exp_month: card.exp_month,
+      exp_year: card.exp_year,
+      cardholder: userRow.name,
+      source: 'stripe',
+    },
+    'Paid with Stripe card · ' + planId,
+  )
+  return { user, billing: getBillingSnapshot(user) }
+}
+
+function cancelStripeSubscription(eventObject) {
+  const subscriptionId = stripeObjectId(eventObject)
+  if (!subscriptionId) return { error: 'Subscription is required', status: 400 }
+  const userRow = db.prepare('SELECT id,name,handle,email,status,plan,plan_selected FROM users WHERE stripe_subscription_id = ?').get(subscriptionId)
+  if (!userRow) return { ignored: true }
+  const now = new Date().toISOString()
+  db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, stripe_subscription_id = ? WHERE id = ?')
+    .run('free', now, '', userRow.id)
+  recordBillingEvent(userRow.id, 'plan_change', 'free', 0, 'Stripe subscription ended')
+  const user = publicUser({ ...userRow, plan: 'free', plan_selected: 1, stripe_subscription_id: '' })
+  return { user, billing: getBillingSnapshot(user) }
+}
 
 function requireAdmin(req, res, next) {
   if (!ADMIN_EMAIL || !ADMIN_PASSWORD) return res.status(503).json({ error: 'Admin access is not configured' })
@@ -498,9 +989,9 @@ function requireUser(req, res, next) {
   const token = req.cookies.helios_user
   const s = getFreshSession(token, 'user', USER_SESSION_MS)
   if (!s) return res.status(401).json({ error: 'Not authenticated' })
-  const user = db.prepare('SELECT id,name,handle,email,status FROM users WHERE id = ?').get(s.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(s.subject_id)
   if (!user || user.status !== 'active') return res.status(403).json({ error: 'Account unavailable' })
-  req.user = user
+  req.user = publicUser(user)
   next()
 }
 
@@ -782,7 +1273,12 @@ app.disable('x-powered-by')
 // Trust forwarded client information only from the local reverse proxy. A
 // direct connection still uses its real peer address for rate limiting.
 app.set('trust proxy', 'loopback')
-app.use(express.json({ limit: '2mb' }))
+app.use(express.json({
+  limit: '2mb',
+  verify: (req, _res, buf) => {
+    if (req.originalUrl === '/api/billing/stripe/webhook') req.rawBody = buf
+  },
+}))
 app.use(cookieParser())
 app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff')
@@ -804,6 +1300,7 @@ app.get('/api/site', (_req, res) => res.json({
   announcement: getSetting('announcement'),
   signup_open: getSetting('signup_open') === 'true',
   ai_enabled: !!getSetting('openai_api_key'),
+  plans: billingCatalog(),
 }))
 
 // ── User auth ──
@@ -812,7 +1309,7 @@ app.post('/api/signup', authRateLimit, (req, res) => {
     return res.status(403).json({ error: 'Signups are currently closed' })
   const { name, handle, email, password } = req.body || {}
   if (!name || !handle || !email || !password)
-    return res.status(400).json({ error: 'All fields are required' })
+    return res.status(400).json({ error: 'Name, username, email and password are required' })
   const checkedName = checkedString(name, 'Name', MAX_USER_NAME_LENGTH, { required: true, trim: true })
   if (checkedName.error) return res.status(400).json({ error: checkedName.error })
   const checkedEmail = checkedString(email, 'Email', MAX_EMAIL_LENGTH, { required: true, trim: true })
@@ -830,13 +1327,24 @@ app.post('/api/signup', authRateLimit, (req, res) => {
   try {
     const duplicateHandle = db.prepare('SELECT 1 FROM users WHERE lower(handle) = lower(?)').get('@' + h)
     if (duplicateHandle) return res.status(409).json({ error: 'That handle or email is already registered' })
+    const now = new Date().toISOString()
     const info = db.prepare(
-      'INSERT INTO users (name, handle, email, password_hash, created_at) VALUES (?,?,?,?,?)'
+      'INSERT INTO users (name, handle, email, password_hash, created_at, plan, plan_updated_at, plan_selected) VALUES (?,?,?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), new Date().toISOString())
+          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', now, 0)
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
-    res.json({ ok: true, user: { id: info.lastInsertRowid, name: checkedName.value, handle: '@' + h, email: normalizedEmail } })
+    res.json({
+      ok: true,
+      user: publicUser({
+        id: info.lastInsertRowid,
+        name: checkedName.value,
+        handle: '@' + h,
+        email: normalizedEmail,
+        plan: 'free',
+        plan_selected: 0,
+      }),
+    })
   } catch (e) {
     if (String(e.message).includes('UNIQUE'))
       return res.status(409).json({ error: 'That handle or email is already registered' })
@@ -853,7 +1361,7 @@ app.post('/api/login', authRateLimit, (req, res) => {
     return res.status(403).json({ error: 'This account has been suspended' })
   const token = newSession('user', user.id)
   res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
-  res.json({ ok: true, user: { id: user.id, name: user.name, handle: user.handle, email: user.email } })
+  res.json({ ok: true, user: publicUser(user) })
 })
 
 app.post('/api/logout', (req, res) => {
@@ -866,15 +1374,168 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/session', (req, res) => {
   const session = getFreshSession(req.cookies.helios_user, 'user', USER_SESSION_MS)
   if (!session) return res.json({ user: null })
-  const user = db.prepare('SELECT id,name,handle,email,status FROM users WHERE id = ?').get(session.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(session.subject_id)
   if (!user || user.status !== 'active') return res.json({ user: null })
-  res.json({ user: { id: user.id, name: user.name, handle: user.handle, email: user.email } })
+  res.json({ user: publicUser(user) })
 })
 
 app.get('/api/me', requireUser, (req, res) => res.json({ user: req.user }))
 
+app.put('/api/me', requireUser, (req, res) => {
+  res.json({ user: req.user })
+})
+
+app.get('/api/billing', requireUser, (req, res) => {
+  res.json(getBillingSnapshot(req.user))
+})
+
+app.post('/api/billing/checkout', requireUser, billingRateLimit, async (req, res) => {
+  const planId = String(req.body?.plan || '').trim().toLowerCase()
+  const catalog = BILLING_PLANS[planId]
+  if (!catalog) return res.status(400).json({ error: 'Choose Free or Orbit' })
+  const blocked = planEligibilityError(planId)
+  if (blocked) return res.status(403).json({ error: blocked })
+
+  const now = new Date().toISOString()
+  if (planId === 'free') {
+    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
+    if (req.user.plan !== 'free')
+      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the Free edition')
+    const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
+    return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
+  }
+
+  if (!stripeConfigured())
+    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
+  try {
+    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
+    return res.json({ ok: true, method: 'card', ...session })
+  } catch (error) {
+    return res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
+  }
+})
+
+app.post('/api/billing/stripe', requireUser, billingRateLimit, async (req, res) => {
+  const planId = String(req.body?.plan || '').trim().toLowerCase()
+  if (!BILLING_PLANS[planId] || planId === 'free')
+    return res.status(400).json({ error: 'Checkout is for Orbit' })
+  const blocked = planEligibilityError(planId)
+  if (blocked) return res.status(403).json({ error: blocked })
+  const payMethod = normalizePayMethod(req.body?.method)
+  if (!payMethod) return res.status(400).json({ error: 'Orbit is paid with a Stripe card only' })
+  if (!stripeConfigured())
+    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
+  try {
+    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
+    res.json({ ok: true, method: 'card', ...session })
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
+  }
+})
+
+app.post('/api/billing/stripe/webhook', async (req, res) => {
+  if (STRIPE_WEBHOOK_SECRET) {
+    const raw = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {})
+    if (!verifyStripeWebhook(raw, req.headers['stripe-signature'], STRIPE_WEBHOOK_SECRET))
+      return res.status(400).json({ error: 'Invalid Stripe signature' })
+  } else if (!STRIPE_MOCK) {
+    return res.status(503).json({ error: 'Stripe webhook is not configured', code: 'STRIPE_WEBHOOK_NOT_CONFIGURED' })
+  }
+  const event = req.body || {}
+  if (event.type && STRIPE_CANCEL_EVENTS.has(event.type)) {
+    const result = cancelStripeSubscription(event.data?.object || {})
+    if (result.error) return res.status(result.status || 400).json({ error: result.error })
+    return res.json({ received: true, ok: true, ...result })
+  }
+  if (event.type && !STRIPE_FULFILL_EVENTS.has(event.type))
+    return res.json({ received: true, ignored: true })
+  const sessionId = String(event.data?.object?.id || '').trim()
+  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
+  try {
+    const session = await retrieveStripeSession(sessionId) || event.data?.object || null
+    const result = fulfillPaidStripeSession(session, sessionId)
+    if (result.error) return res.status(result.status || 400).json({ error: result.error })
+    res.json({ received: true, ok: true, user: result.user, billing: result.billing })
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message || 'Webhook failed' })
+  }
+})
+
+app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (req, res) => {
+  const sessionId = String(req.body?.session_id || '').trim()
+  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
+  const pending = db.prepare('SELECT * FROM stripe_checkouts WHERE session_id = ? AND user_id = ?').get(sessionId, req.user.id)
+  if (!pending) return res.status(404).json({ error: 'Payment session not found' })
+  try {
+    const session = await retrieveStripeSession(sessionId)
+    const result = fulfillPaidStripeSession(session, sessionId)
+    if (result.error) return res.status(result.status || 400).json({ error: result.error })
+    res.json({ ok: true, user: result.user, billing: result.billing })
+  } catch (error) {
+    res.status(error.status || 502).json({ error: error.message || 'Payment confirmation failed' })
+  }
+})
+
+function normalizeMarketSymbol(value) {
+  const symbol = String(value || '').trim().toUpperCase()
+  if (!/^[A-Z0-9][A-Z0-9.^/-]{0,14}$/.test(symbol)) return null
+  return symbol
+}
+
+function mockMarketQuotes(symbols) {
+  return symbols.map((symbol, index) => ({
+    symbol,
+    name: symbol === 'AAPL' ? 'Apple Inc.' : symbol === 'MSFT' ? 'Microsoft Corporation' : symbol,
+    price: 100 + index * 3.25,
+    change: index % 2 === 0 ? 1.25 : -0.8,
+    change_percent: index % 2 === 0 ? 1.1 : -0.6,
+    currency: 'USD',
+    market_state: 'REGULAR',
+  }))
+}
+
+async function fetchYahooQuotes(symbols) {
+  const cacheKey = symbols.join(',')
+  const cached = marketQuoteCache.get(cacheKey)
+  if (cached && Date.now() - cached.at < 20_000) return cached.quotes
+  const response = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(cacheKey)}`, {
+    headers: { 'User-Agent': 'HeliosSpace/1.0' },
+  })
+  if (!response.ok) throw new Error('Market data is unavailable')
+  const body = await response.json()
+  const rows = body?.quoteResponse?.result
+  if (!Array.isArray(rows)) throw new Error('Market data is unavailable')
+  const quotes = symbols.map(symbol => {
+    const row = rows.find(item => String(item.symbol || '').toUpperCase() === symbol)
+    return {
+      symbol,
+      name: row?.shortName || row?.longName || symbol,
+      price: Number.isFinite(row?.regularMarketPrice) ? row.regularMarketPrice : null,
+      change: Number.isFinite(row?.regularMarketChange) ? row.regularMarketChange : null,
+      change_percent: Number.isFinite(row?.regularMarketChangePercent) ? row.regularMarketChangePercent : null,
+      currency: row?.currency || 'USD',
+      market_state: row?.marketState || '',
+    }
+  })
+  marketQuoteCache.set(cacheKey, { at: Date.now(), quotes })
+  return quotes
+}
+
+app.get('/api/markets/quotes', requireUser, marketsRateLimit, async (req, res) => {
+  if (normalizePlan(req.user.plan) !== 'orbit')
+    return res.status(403).json({ error: 'Stocks is included with Orbit' })
+  const unique = [...new Set(String(req.query.symbols || '').split(',').map(normalizeMarketSymbol).filter(Boolean))].slice(0, 20)
+  if (unique.length === 0) return res.status(400).json({ error: 'Add at least one ticker' })
+  try {
+    const quotes = MARKETS_MOCK ? mockMarketQuotes(unique) : await fetchYahooQuotes(unique)
+    res.json({ quotes, updated_at: new Date().toISOString(), delayed: true })
+  } catch (error) {
+    res.status(502).json({ error: error.message || 'Market data is unavailable' })
+  }
+})
+
 app.get('/api/export', requireUser, (req, res) => {
-  const account = db.prepare('SELECT id,name,handle,email,created_at,status FROM users WHERE id = ?').get(req.user.id)
+  const account = db.prepare('SELECT id,name,handle,email,created_at,status,plan,plan_updated_at,birthdate,audience FROM users WHERE id = ?').get(req.user.id)
   const projects = db.prepare('SELECT * FROM projects WHERE user_id = ? ORDER BY id').all(req.user.id)
   const collaborativeProjects = db.prepare(
     "SELECT p.*,pc.role AS collaborator_role FROM projects p JOIN project_collaborators pc ON pc.project_id = p.id WHERE pc.user_id = ? AND pc.status = 'accepted' ORDER BY p.id"
@@ -897,12 +1558,13 @@ app.get('/api/export', requireUser, (req, res) => {
   const conversationIds = db.prepare('SELECT conversation_id FROM conversation_members WHERE user_id = ? ORDER BY conversation_id').all(req.user.id).map(row => row.conversation_id)
   const conversations = conversationIds.length ? db.prepare(`SELECT * FROM conversations WHERE id IN (${conversationIds.map(() => '?').join(',')}) ORDER BY id`).all(...conversationIds) : []
   const chatMessages = conversationIds.length ? db.prepare(`SELECT * FROM chat_messages WHERE conversation_id IN (${conversationIds.map(() => '?').join(',')}) ORDER BY id`).all(...conversationIds) : []
+  const billing = getBillingSnapshot(account)
   res.set('Content-Disposition', 'attachment; filename="helios-data-export.json"')
   res.json({
     exported_at: new Date().toISOString(), account, projects, collaborative_projects: collaborativeProjects,
     posts, reactions, comments, project_comments: projectComments, project_versions: projectVersions,
     spaces, live_sessions: liveSessions, live_events: liveEvents, conversations, chat_messages: chatMessages,
-    solar_events: solarEvents, notifications, follows,
+    solar_events: solarEvents, notifications, follows, billing,
   })
 })
 
@@ -952,6 +1614,15 @@ app.post('/api/projects', requireUser, (req, res) => {
   if (checkedMetadata.error) return res.status(400).json({ error: checkedMetadata.error })
   try { JSON.parse(checkedMetadata.value) } catch {
     return res.status(400).json({ error: 'Project metadata must be valid JSON' })
+  }
+  if (isWritingProject(projectType, checkedAppKind.value)) {
+    const user = billingUserRow(req.user.id) || req.user
+    const limits = planLimits(user)
+    if (limits.documents != null && countWritingDocuments(req.user.id) >= limits.documents)
+      return res.status(403).json(writingLimitError(user, 'document_limit'))
+    const characters = writingCharacterCount(checkedContent.value)
+    if (characters > limits.characters)
+      return res.status(403).json(writingLimitError(user, 'character_limit', characters))
   }
   const now = new Date().toISOString()
   const info = db.prepare(
@@ -1007,6 +1678,19 @@ app.put('/api/projects/:id', requireUser, (req, res) => {
   if (checkedMetadata.error) return res.status(400).json({ error: checkedMetadata.error })
   try { JSON.parse(checkedMetadata.value) } catch {
     return res.status(400).json({ error: 'Project metadata must be valid JSON' })
+  }
+  const willBeWriting = isWritingProject(projectType, checkedAppKind.value)
+  const wasWriting = isWritingProject(project.type, project.app_kind)
+  if (willBeWriting) {
+    const user = billingUserRow(req.user.id) || req.user
+    const limits = planLimits(user)
+    if (!wasWriting && limits.documents != null && countWritingDocuments(req.user.id) >= limits.documents)
+      return res.status(403).json(writingLimitError(user, 'document_limit'))
+    if (content !== undefined) {
+      const characters = writingCharacterCount(checkedContent.value)
+      if (characters > limits.characters)
+        return res.status(403).json(writingLimitError(user, 'character_limit', characters))
+    }
   }
   const updatedAt = new Date().toISOString()
   db.prepare(

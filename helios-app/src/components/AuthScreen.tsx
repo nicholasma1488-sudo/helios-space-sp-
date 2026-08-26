@@ -227,6 +227,9 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
                   { placeholder: 'Jane Smith', autoComplete: 'name', ref: nameRef })}
                 {field('auth-handle', 'Username', <AtSign size={15} />, handle, setHandle,
                   { placeholder: 'janesmith', autoComplete: 'username' })}
+                <p style={{ margin: '-6px 0 0', color: 'var(--helios-muted)', fontSize: 11, lineHeight: 1.45 }}>
+                  After you create an account you can stay on Free or subscribe to Orbit with a Stripe card.
+                </p>
               </>
             )}
             {field('auth-email', 'Email', <Mail size={15} />, email, setEmail,

@@ -27,6 +27,11 @@ const child = spawn(process.execPath, ['--experimental-sqlite', 'server.js'], {
     NODE_ENV: 'test',
     HELIOS_ADMIN_EMAIL: '',
     HELIOS_ADMIN_PASSWORD: '',
+    HELIOS_STRIPE_MOCK: '1',
+    STRIPE_PUBLISHABLE_KEY: 'pk_test_helios_mock',
+    HELIOS_FREE_DOCUMENTS: '3',
+    HELIOS_FREE_CHARACTERS: '200',
+    HELIOS_ORBIT_CHARACTERS: '500',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })
@@ -157,6 +162,23 @@ async function run() {
     password: 'correct-horse',
   })
   expectStatus(aliceSignup, 200, 'alice signup')
+  assert.equal(aliceSignup.body.user.plan, 'free')
+  assert.equal(aliceSignup.body.user.plan_selected, false)
+  assert.equal(aliceSignup.body.user.edition, 'free')
+  assert.equal(aliceSignup.body.user.usage.documents.used, 0)
+  assert.equal(aliceSignup.body.user.usage.documents.limit, 3)
+  assert.equal(aliceSignup.body.user.usage.characters.limit, 200)
+  assert.equal(site.body.plans.some(plan => plan.id === 'free'), true)
+  assert.equal(site.body.plans.some(plan => plan.id === 'orbit'), true)
+  assert.equal(site.body.plans.some(plan => plan.id === 'alpha'), false)
+
+  const missingPassword = await anonymous.post('/api/signup', {
+    name: 'No Password',
+    handle: 'no.password',
+    email: 'nopass@example.test',
+  })
+  expectStatus(missingPassword, 400, 'signup requires password')
+
   const bobSignup = await bob.post('/api/signup', {
     name: 'Bob Solar',
     handle: 'bob.solar',
@@ -164,6 +186,7 @@ async function run() {
     password: 'correct-battery',
   })
   expectStatus(bobSignup, 200, 'bob signup')
+  assert.equal(bobSignup.body.user.edition, 'free')
 
   const duplicate = await anonymous.post('/api/signup', {
     name: 'Duplicate',
@@ -481,6 +504,247 @@ async function run() {
   })
   expectStatus(aiNotConfigured, 503, 'AI not configured')
   assert.equal(aiNotConfigured.body.code, 'AI_NOT_CONFIGURED')
+
+  const billingDenied = await anonymous.get('/api/billing')
+  expectStatus(billingDenied, 401, 'billing requires a session')
+
+  const aliceBilling = await alice.get('/api/billing')
+  expectStatus(aliceBilling, 200, 'default billing snapshot')
+  assert.equal(aliceBilling.body.plan, 'free')
+  assert.equal(aliceBilling.body.edition, 'free')
+  assert.equal(aliceBilling.body.payment_method, null)
+  assert.equal(aliceBilling.body.stripe.enabled, true)
+  assert.equal(aliceBilling.body.stripe.auto_detect, true)
+  assert.deepEqual(aliceBilling.body.pay_methods, ['card'])
+  assert.equal(aliceBilling.body.pending_checkout, null)
+  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'orbit' && plan.eligible === true && plan.price_cents === 6800 && plan.currency === 'cny'), true)
+  assert.equal(aliceBilling.body.plans.some(plan => plan.id === 'alpha'), false)
+
+  const stayFree = await alice.post('/api/billing/checkout', { plan: 'free' })
+  expectStatus(stayFree, 200, 'stay on free option')
+  assert.equal(stayFree.body.user.plan, 'free')
+  assert.equal(stayFree.body.user.edition, 'free')
+  assert.equal(stayFree.body.user.plan_selected, true)
+
+  const wordDoc = await alice.post('/api/projects', {
+    name: 'Document',
+    type: 'writing',
+    space_id: 'business',
+    app_kind: 'word-docs',
+    visibility: 'private',
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'word-docs',
+      data: { html: '<h1>Work document</h1><h2>Purpose</h2><p></p>' },
+    }),
+  })
+  expectStatus(wordDoc, 200, 'create Word workspace')
+  assert.equal(wordDoc.body.project.app_kind, 'word-docs')
+  assert.equal(wordDoc.body.project.type, 'writing')
+  assert.equal(wordDoc.body.project.content.includes('Work document'), true)
+
+  const workbook = await alice.post('/api/projects', {
+    name: 'Workbook',
+    type: 'spreadsheet',
+    space_id: 'business',
+    app_kind: 'spreadsheet',
+    visibility: 'private',
+  })
+  expectStatus(workbook, 200, 'create Excel workspace')
+  assert.equal(workbook.body.project.app_kind, 'spreadsheet')
+  assert.equal(workbook.body.project.type, 'spreadsheet')
+  assert.equal(stayFree.body.billing.plan, 'free')
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').features.length >= 10, true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Meeting Notes'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Gradebook'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').mini_apps.includes('Stocks'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Word'), true)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').mini_apps.includes('Stocks'), false)
+  assert.equal(aliceBilling.body.usage.documents.limit, 3)
+  assert.equal(aliceBilling.body.usage.characters.limit, 200)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').limits.documents, 3)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'free').limits.characters, 200)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').limits.documents, null)
+  assert.equal(aliceBilling.body.plans.find(plan => plan.id === 'orbit').limits.characters, 500)
+
+  const usageAfterCore = await alice.get('/api/billing')
+  assert.equal(usageAfterCore.body.usage.documents.used, 2)
+
+  const overChars = await alice.put('/api/projects/' + wordDoc.body.project.id, {
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'word-docs',
+      data: { html: '<p>' + '字'.repeat(201) + '</p>' },
+    }),
+  })
+  expectStatus(overChars, 403, 'free writing character limit')
+  assert.equal(overChars.body.code, 'character_limit')
+
+  const thirdWriting = await alice.post('/api/projects', {
+    name: 'Third draft',
+    type: 'writing',
+    space_id: 'business',
+    app_kind: 'word-docs',
+    visibility: 'private',
+  })
+  expectStatus(thirdWriting, 200, 'free allows 3 writing documents')
+
+  const fourthWriting = await alice.post('/api/projects', {
+    name: 'Fourth draft',
+    type: 'writing',
+    space_id: 'business',
+    app_kind: 'word-docs',
+    visibility: 'private',
+  })
+  expectStatus(fourthWriting, 403, 'free writing document limit')
+  assert.equal(fourthWriting.body.code, 'document_limit')
+
+  const extraWorkbook = await alice.post('/api/projects', {
+    name: 'Another workbook',
+    type: 'spreadsheet',
+    space_id: 'business',
+    app_kind: 'spreadsheet',
+    visibility: 'private',
+  })
+  expectStatus(extraWorkbook, 200, 'spreadsheets stay free after writing limit')
+
+  const stocksProject = await alice.post('/api/projects', {
+    name: 'Watchlist',
+    type: 'doc',
+    space_id: 'business',
+    app_kind: 'stocks',
+    visibility: 'private',
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'stocks',
+      data: { symbols: ['AAPL', 'MSFT'] },
+    }),
+  })
+  expectStatus(stocksProject, 200, 'create Stocks watchlist')
+  assert.equal(stocksProject.body.project.app_kind, 'stocks')
+
+  const aliceQuotesDenied = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
+  expectStatus(aliceQuotesDenied, 403, 'free cannot read stock quotes')
+
+  const bobQuotes = await bob.get('/api/markets/quotes?symbols=AAPL')
+  expectStatus(bobQuotes, 403, 'free cannot read stock quotes')
+
+  const missingSymbols = await alice.get('/api/markets/quotes')
+  expectStatus(missingSymbols, 403, 'quotes require orbit before tickers are checked')
+
+  const unknownPlan = await alice.post('/api/billing/checkout', { plan: 'alpha' })
+  expectStatus(unknownPlan, 400, 'alpha is no longer a plan')
+
+  const rejectedWallet = await alice.post('/api/billing/stripe', { plan: 'orbit', method: 'wechat' })
+  expectStatus(rejectedWallet, 400, 'wechat is not a pay method')
+  const rejectedAlipay = await alice.post('/api/billing/stripe', { plan: 'orbit', method: 'alipay' })
+  expectStatus(rejectedAlipay, 400, 'alipay is not a pay method')
+
+  const bobSession = await bob.post('/api/billing/stripe', { plan: 'orbit' })
+  expectStatus(bobSession, 200, 'start stripe card checkout')
+  assert.equal(bobSession.body.method, 'card')
+  assert.match(bobSession.body.session_id, /^cs_test_/)
+  assert.match(bobSession.body.url, /\/pay\?billing=success/)
+  const bobPending = await bob.get('/api/billing')
+  assert.equal(bobPending.body.pending_checkout.session_id, bobSession.body.session_id)
+
+  const webhook = await anonymous.post('/api/billing/stripe/webhook', {
+    type: 'checkout.session.completed',
+    data: { object: { id: bobSession.body.session_id, payment_status: 'paid' } },
+  })
+  expectStatus(webhook, 200, 'webhook auto-detects stripe payment')
+  assert.equal(webhook.body.user.plan, 'orbit')
+  assert.equal(webhook.body.billing.payment_method.source, 'stripe')
+  assert.equal(webhook.body.billing.payment_method.last4, '4242')
+  assert.equal(webhook.body.billing.pending_checkout, null)
+
+  const bobSessionAfter = await bob.get('/api/session')
+  assert.equal(bobSessionAfter.body.user.plan, 'orbit')
+
+  const paid = await alice.post('/api/billing/checkout', { plan: 'orbit' })
+  expectStatus(paid, 200, 'orbit checkout starts stripe session')
+  assert.match(paid.body.session_id, /^cs_test_/)
+  assert.match(paid.body.url, /\/pay\?billing=success/)
+  const stripeConfirm = await alice.post('/api/billing/stripe/confirm', { session_id: paid.body.session_id })
+  expectStatus(stripeConfirm, 200, 'confirm stripe card payment')
+  assert.equal(stripeConfirm.body.user.plan, 'orbit')
+  assert.equal(stripeConfirm.body.user.edition, 'orbit')
+  assert.equal(stripeConfirm.body.billing.plan, 'orbit')
+  assert.equal(stripeConfirm.body.billing.payment_method.brand, 'visa')
+  assert.equal(stripeConfirm.body.billing.payment_method.last4, '4242')
+  assert.equal(stripeConfirm.body.billing.payment_method.source, 'stripe')
+  assert.equal('number' in stripeConfirm.body.billing.payment_method, false)
+  assert.equal('cvc' in stripeConfirm.body.billing.payment_method, false)
+
+  const replayWebhook = await anonymous.post('/api/billing/stripe/webhook', {
+    type: 'checkout.session.completed',
+    data: { object: { id: paid.body.session_id, payment_status: 'paid' } },
+  })
+  expectStatus(replayWebhook, 200, 'webhook is idempotent after confirm')
+  assert.equal(replayWebhook.body.user.plan, 'orbit')
+
+  const sessionAfterPay = await alice.get('/api/session')
+  expectStatus(sessionAfterPay, 200, 'session includes paid plan')
+  assert.equal(sessionAfterPay.body.user.plan, 'orbit')
+
+  const exportAfterPay = await alice.get('/api/export')
+  expectStatus(exportAfterPay, 200, 'export includes billing metadata')
+  assert.equal(exportAfterPay.body.account.plan, 'orbit')
+  assert.equal(exportAfterPay.body.billing.payment_method.last4, '4242')
+
+  const aliceQuotes = await alice.get('/api/markets/quotes?symbols=AAPL,MSFT')
+  expectStatus(aliceQuotes, 200, 'orbit can read stock quotes')
+  assert.equal(aliceQuotes.body.quotes.some(quote => quote.symbol === 'AAPL' && quote.price > 0), true)
+
+  const orbitOverFreeChars = await alice.put('/api/projects/' + wordDoc.body.project.id, {
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'word-docs',
+      data: { html: '<p>' + '字'.repeat(201) + '</p>' },
+    }),
+  })
+  expectStatus(orbitOverFreeChars, 200, 'orbit allows more than the free character cap')
+
+  const orbitFourthWriting = await alice.post('/api/projects', {
+    name: 'Orbit draft',
+    type: 'writing',
+    space_id: 'business',
+    app_kind: 'word-docs',
+    visibility: 'private',
+  })
+  expectStatus(orbitFourthWriting, 200, 'orbit allows more than 3 writing documents')
+
+  const orbitOverChars = await alice.put('/api/projects/' + wordDoc.body.project.id, {
+    content: JSON.stringify({
+      schema: 'helios-workspace-v1',
+      appKind: 'word-docs',
+      data: { html: '<p>' + '字'.repeat(501) + '</p>' },
+    }),
+  })
+  expectStatus(orbitOverChars, 403, 'orbit writing character limit')
+  assert.equal(orbitOverChars.body.code, 'character_limit')
+
+  const tickerRequired = await alice.get('/api/markets/quotes')
+  expectStatus(tickerRequired, 400, 'quotes require tickers')
+
+  const backToFree = await alice.post('/api/billing/checkout', { plan: 'free' })
+  expectStatus(backToFree, 200, 'switch back to free option')
+  assert.equal(backToFree.body.user.plan, 'free')
+  assert.equal(backToFree.body.billing.payment_method.last4, '4242')
+
+  const ignoredEvent = await anonymous.post('/api/billing/stripe/webhook', {
+    type: 'payment_intent.succeeded',
+    data: { object: { id: 'pi_test' } },
+  })
+  expectStatus(ignoredEvent, 200, 'unrelated stripe events are ignored')
+  assert.equal(ignoredEvent.body.ignored, true)
+
+  const unknownSubscription = await anonymous.post('/api/billing/stripe/webhook', {
+    type: 'customer.subscription.deleted',
+    data: { object: { id: 'sub_missing' } },
+  })
+  expectStatus(unknownSubscription, 200, 'unknown subscription cancel is ignored')
+  assert.equal(unknownSubscription.body.ignored, true)
 
   const unknownApi = await alice.get('/api/does-not-exist')
   expectStatus(unknownApi, 404, 'unknown API')

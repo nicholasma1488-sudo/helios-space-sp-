@@ -151,12 +151,20 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   }
 
   const searchCount = results.projects.length + results.people.length + results.posts.length + results.live.length + results.spaces.length
+  const showUpgrade = state.user?.plan !== 'orbit' && state.user?.plan_selected !== false
 
   return (
-    <header className={'authenticated-topbar' + (compact ? ' is-compact' : '')} ref={rootRef}>
-      <button type="button" className="topbar-brand" onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })} aria-label="Helios Space home">
-        <span>✦</span><strong>helios<span>space</span></strong>
-      </button>
+    <header className={'authenticated-topbar' + (compact ? ' is-compact' : '') + (showUpgrade ? ' has-upgrade' : '')} ref={rootRef}>
+      <div className="topbar-brand-cluster">
+        <button type="button" className="topbar-brand" onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })} aria-label="Helios Space home">
+          <span>✦</span><strong>helios<span>space</span></strong>
+        </button>
+        {showUpgrade && (
+          <button type="button" className="topbar-upgrade-btn" onClick={() => dispatch({ type: 'OPEN_UPGRADE' })}>
+            <Sparkles size={13} /> Upgrade
+          </button>
+        )}
+      </div>
 
       <nav className="topbar-context-nav" aria-label="Subject and hobby navigation">
         <button type="button" className={openMenu === 'subjects' ? 'is-open' : ''} onClick={() => toggle('subjects')} aria-expanded={openMenu === 'subjects'}>
@@ -248,6 +256,22 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
           <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'SET_VIEW', view: 'profile' }); setOpenMenu(null) }}><User size={15} /> Creator profile</button>
           <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); setOpenMenu(null) }}><Sparkles size={15} /> Ask Helios</button>
           <button type="button" role="menuitem" onClick={() => void signOut()}><span>↪</span> Sign out</button>
+        </div>
+      )}
+
+      {showUpgrade && (
+        <div className="topbar-upgrade-banner">
+          <strong>Orbit 福利</strong>
+          <div>
+            <span>不限文稿数量</span>
+            <span>每篇 50 万字</span>
+            <span>完整 Mini Apps</span>
+            <span>Stocks</span>
+            <span>学校与工作套件</span>
+            <span>优先 Helios</span>
+            <span>Stripe 银行卡</span>
+          </div>
+          <button type="button" onClick={() => dispatch({ type: 'OPEN_UPGRADE' })}>升级到 Orbit</button>
         </div>
       )}
     </header>

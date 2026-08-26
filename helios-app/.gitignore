@@ -28,6 +28,10 @@ __pycache__/
 *.db-wal
 helios.db*
 
+# Local agent skill copies
+.agents/
+skills-lock.json
+
 # Secrets
 .env
 .env.*
