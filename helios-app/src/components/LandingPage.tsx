@@ -93,6 +93,17 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   }, [])
 
   useEffect(() => {
+    const scene = sceneRef.current
+    if (!scene) return
+    const lockHeight = () => {
+      scene.style.height = `${Math.round(window.innerHeight * 2.4)}px`
+    }
+    lockHeight()
+    window.addEventListener('resize', lockHeight)
+    return () => window.removeEventListener('resize', lockHeight)
+  }, [])
+
+  useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduced) {
       setHeroPhase('live')
@@ -140,6 +151,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     <div
       ref={rootRef}
       className={'landing-v2' + (transitioning ? ' is-entering-auth intent-' + transitioning : '')}
+      data-landing-scroller="true"
       onScroll={handleLandingScroll}
     >
       <div className="landing-noise" aria-hidden="true" />

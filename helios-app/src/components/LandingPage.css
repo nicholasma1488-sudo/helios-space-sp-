@@ -8,7 +8,7 @@
   overflow-y: auto;
   background: var(--landing-bg);
   color: #f7f6f2;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   perspective: none;
   isolation: isolate;
 }
@@ -118,9 +118,10 @@
   --hero-rush: 0;
   position: relative;
   z-index: 2;
-  height: 560vh;
+  height: 260vh;
   margin: 0;
-  overflow: visible;
+  overflow: clip;
+  contain: layout paint;
 }
 
 .hero-scene-sticky {
@@ -128,6 +129,7 @@
   top: 0;
   height: 100vh;
   overflow: hidden;
+  contain: strict;
   background: #04060b;
 }
 
@@ -3070,6 +3072,7 @@
   top: 0;
   height: 100vh;
   overflow: hidden;
+  contain: strict;
   background: #04060b;
 }
 
@@ -3094,6 +3097,7 @@
 }
 
 .hero-css3d-window-host {
+  position: absolute;
   width: 920px;
   height: 600px;
   pointer-events: auto;
