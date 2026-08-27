@@ -77,7 +77,7 @@
   cursor: pointer;
 }
 
-.home-heading > div:last-child button:last-child {
+.home-heading > div:last-child button.is-primary {
   border: 0;
   background: var(--helios-accent);
   color: var(--helios-on-accent);

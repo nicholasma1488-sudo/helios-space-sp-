@@ -356,7 +356,7 @@ export function LifestyleView({ currentUser }: Props) {
       </header>
 
       <div className="lifestyle-layout">
-        <aside className="lifestyle-left" aria-label="Lifestyle shortcuts">
+        <aside className="lifestyle-left" aria-label="Feed shortcuts">
           <button type="button" className="lifestyle-profile-shortcut" onClick={() => dispatch({ type: 'SET_VIEW', view: 'profile' })}>
             <Avatar name={currentUser.name} size="md" />
             <span><strong>{currentUser.name}</strong><small>{currentUser.handle}</small></span>

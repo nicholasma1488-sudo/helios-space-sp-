@@ -89,13 +89,13 @@ function AppInner() {
   // Dynamic document title per view
   useEffect(() => {
     const VIEW_TITLES: Record<string, string> = {
-      home: 'Home',
+      home: 'Collaborate',
       explore: 'Explore',
       spaces: 'Spaces',
-      lifestyle: 'Lifestyle',
-      apps: 'Mini Apps',
+      lifestyle: 'Feed',
+      apps: 'Apps',
       live: 'Live',
-      chat: 'Chat Hub',
+      chat: 'Chat',
       projects: 'Projects',
       profile: 'Profile',
     }

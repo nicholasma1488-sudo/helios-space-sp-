@@ -191,7 +191,7 @@ export function HomeView() {
               <p>People, live work, and the 365 suite — one place to collaborate.</p>
             </div>
             <div>
-              <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'lifestyle' })}><Users size={14} /> Feed</button>
+              <button type="button" className="is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'lifestyle' })}><Users size={14} /> Feed</button>
               <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'live' })}><Radio size={14} /> Go Live</button>
               <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}><MessageCircle size={14} /> Chat</button>
             </div>
@@ -200,7 +200,7 @@ export function HomeView() {
           <section className="home-apps" aria-labelledby="home-apps-title">
             <header>
               <div>
-                <span>MICROSOFT 365 STYLE SUITE</span>
+                <span>THE SUITE</span>
                 <h2 id="home-apps-title">Open an app</h2>
               </div>
               <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>All apps <ChevronRight size={13} /></button>
