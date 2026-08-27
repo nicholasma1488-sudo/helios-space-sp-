@@ -338,7 +338,7 @@ export function LifestyleView({ currentUser }: Props) {
       <header className="lifestyle-topbar">
         <div className="lifestyle-title">
           <span className="lifestyle-title-mark"><Zap size={17} /></span>
-          <div><strong>Home</strong><small>A Twitter-style feed for work, projects, and Live</small></div>
+          <div><strong>Feed</strong><small>A social feed for collaborators, projects, and Live work</small></div>
         </div>
         <label className="lifestyle-search">
           <Search size={16} />

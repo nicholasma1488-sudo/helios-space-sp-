@@ -1107,10 +1107,11 @@
 
 .landing-hero-copy h1 {
   margin: 20px 0 23px;
+  font-family: var(--font-display);
   font-size: clamp(52px, 6.2vw, 88px);
-  font-weight: 720;
+  font-weight: 650;
   line-height: .94;
-  letter-spacing: -.065em;
+  letter-spacing: -.05em;
   animation: cinematic-copy-fly-in 1200ms 750ms cubic-bezier(.22, 1, .36, 1) both;
 }
 
@@ -1930,10 +1931,11 @@
 .landing-pricing h2,
 .landing-final-cta h2 {
   margin: 0;
+  font-family: var(--font-display);
   font-size: clamp(38px, 5.5vw, 72px);
-  font-weight: 680;
+  font-weight: 650;
   line-height: 1;
-  letter-spacing: -.055em;
+  letter-spacing: -.04em;
 }
 
 .principles-heading p,
@@ -2271,11 +2273,10 @@
 .mode-apps-ui > div:nth-child(3) { background: linear-gradient(145deg, rgba(110, 214, 154, .1), transparent 48%), #151820; }
 .mode-apps-ui > div:nth-child(4) { background: linear-gradient(145deg, rgba(242, 184, 75, .1), transparent 48%), #151820; }
 
-.mode-apps-ui svg {
+.mode-apps-ui .suite-app-icon {
   position: absolute;
   top: 17px;
   left: 17px;
-  color: var(--mode-color);
 }
 
 .mode-apps-ui strong {

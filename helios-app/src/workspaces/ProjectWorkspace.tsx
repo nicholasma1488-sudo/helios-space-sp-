@@ -8,6 +8,7 @@ import {
   type ProjectComment, type ProjectVersion,
 } from '../api'
 import { PublishModal } from '../components/PublishModal'
+import { SuiteAppIcon } from '../components/SuiteAppIcon'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { getSuiteApp } from '../product/miniApps'
 import { useApp } from '../store/appStore'
@@ -335,7 +336,7 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
     <div className={'project-workspace' + (liveSession?.status === 'live' ? ' is-live' : '') + (suiteApp ? ' is-suite' : '')} style={{ '--workspace-accent': chromeColor } as React.CSSProperties}>
       <header className="project-shell-header">
         <button type="button" className="project-close" onClick={() => void close()} aria-label="Save and close Project"><X size={17} /></button>
-        <div className="project-shell-identity"><i>{suiteApp?.letter || app.shortName.slice(0, 1)}</i><span><small>{chromeName}{liveSession?.status === 'live' ? ' · LIVE' : suiteApp ? '' : ` · ${space.name}`}</small><strong>{project.name}</strong></span>{!suiteApp && <span className="repo-branch">main</span>}<ChevronDown size={13} /></div>
+        <div className="project-shell-identity">{suiteApp ? <SuiteAppIcon app={suiteApp} size={34} /> : <i>{app.shortName.slice(0, 1)}</i>}<span><small>{chromeName}{liveSession?.status === 'live' ? ' · LIVE' : suiteApp ? '' : ` · ${space.name}`}</small><strong>{project.name}</strong></span>{!suiteApp && <span className="repo-branch">main</span>}<ChevronDown size={13} /></div>
         <span className={'project-save-state state-' + saveState} role="status"><i />{saveLabel}</span>
         <div className="project-shell-actions">
           <button type="button" onClick={() => void saveNow()} disabled={!project.can_edit || saveState === 'saving'}><Save size={14} /><span>Save</span></button>

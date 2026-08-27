@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Clock3, FilePlus2, Search, Sparkles, X } from 'lucide-react'
+import { SuiteAppIcon } from '../components/SuiteAppIcon'
 import { useApp } from '../store/appStore'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { createSuiteProject, openProjectWorkspace } from '../product/flow'
@@ -131,9 +132,9 @@ export function MiniAppsView() {
     <div className="suite-view">
       <header className="suite-top">
         <div>
-          <div className="suite-kicker"><Sparkles size={13} /> APPS</div>
+          <div className="suite-kicker"><Sparkles size={13} /> 365 SUITE</div>
           <h1>Apps</h1>
-          <p>Word, Excel, PowerPoint, OneNote, Stocks, and the school and work suite are all included.</p>
+          <p>A real product suite — Word, Excel, PowerPoint, OneNote, Stocks, plus school and work apps.</p>
         </div>
         <label className="suite-search">
           <Search size={16} aria-hidden="true" />
@@ -172,9 +173,7 @@ export function MiniAppsView() {
                         onClick={() => openApp(app)}
                         aria-label={`Open ${app.name}`}
                       >
-                        <span className="suite-tile-icon" style={{ background: app.color }}>
-                          {app.letter}
-                        </span>
+                        <SuiteAppIcon app={app} size={48} />
                         <strong>{app.name}</strong>
                       </button>
                   ))}
@@ -208,7 +207,7 @@ export function MiniAppsView() {
                 const app = apps.find(item => item.id === project.app_kind)
                 return (
                   <button key={project.id} type="button" onClick={() => void openExisting(project.id)}>
-                    <span style={{ background: app?.color || '#185ABD' }}>{app?.letter || 'W'}</span>
+                    {app ? <SuiteAppIcon app={app} size={32} /> : <span style={{ background: '#185ABD' }}>W</span>}
                     <span>
                       <strong>{project.name}</strong>
                       <small>{app?.name || project.app_kind} · {relativeTime(project.updated_at)}</small>
@@ -231,7 +230,7 @@ export function MiniAppsView() {
         >
           <div className="suite-picker-panel" ref={pickerRef}>
             <header>
-              <span className="suite-tile-icon" style={{ background: active.color }}>{active.letter}</span>
+              <SuiteAppIcon app={active} size={44} />
               <div>
                 <small>NEW OR OPEN</small>
                 <h2 id="suite-picker-title">{active.name}</h2>
@@ -249,7 +248,7 @@ export function MiniAppsView() {
               <div className="suite-file-list">
                 {activeFiles.map(project => (
                   <button key={project.id} type="button" onClick={() => void openExisting(project.id)}>
-                    <span style={{ background: active.color }}>{active.letter}</span>
+                    <SuiteAppIcon app={active} size={32} />
                     <span>
                       <strong>{project.name}</strong>
                       <small><Clock3 size={11} /> {relativeTime(project.updated_at)}</small>

@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Check, Code2, Compass, Gift, Grid3X3, Heart, Layers3,
+  ArrowRight, Bookmark, Check, Code2, Gift, Grid3X3, Heart, Layers3,
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
+import { SuiteAppIcon } from './SuiteAppIcon'
+import { getSuiteApp } from '../product/miniApps'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
 import './LandingPage.css'
 
@@ -293,10 +295,10 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
             <h2>Open Word, Excel or slides.<br />Keep working in the same file.</h2>
           </div>
           <div className="mini-band-list">
-            <span><MessageCircle size={15} /> Word</span>
-            <span><Compass size={15} /> Excel</span>
-            <span><Layers3 size={15} /> PowerPoint</span>
-            <span><Code2 size={15} /> OneNote</span>
+            <span><SuiteAppIcon app={getSuiteApp('word-docs')!} size={22} /> Word</span>
+            <span><SuiteAppIcon app={getSuiteApp('spreadsheet')!} size={22} /> Excel</span>
+            <span><SuiteAppIcon app={getSuiteApp('presentation')!} size={22} /> PowerPoint</span>
+            <span><SuiteAppIcon app={getSuiteApp('notebook')!} size={22} /> OneNote</span>
           </div>
         </section>
 
@@ -533,10 +535,10 @@ function HeroAppsScreen() {
     <div className="hero-apps-ui">
       <header>Apps · Word · Excel · PowerPoint · OneNote</header>
       <div>
-        <span><MessageCircle size={18} /><strong>Word</strong><small>Documents that stay saved</small></span>
-        <span><Compass size={18} /><strong>Excel</strong><small>Cells · Formulas · Charts</small></span>
-        <span><Layers3 size={18} /><strong>PowerPoint</strong><small>Slides · Present · Share</small></span>
-        <span><Code2 size={18} /><strong>OneNote</strong><small>Sections you keep adding to</small></span>
+        <span><SuiteAppIcon app={getSuiteApp('word-docs')!} size={28} /><strong>Word</strong><small>Documents that stay saved</small></span>
+        <span><SuiteAppIcon app={getSuiteApp('spreadsheet')!} size={28} /><strong>Excel</strong><small>Cells · Formulas · Charts</small></span>
+        <span><SuiteAppIcon app={getSuiteApp('presentation')!} size={28} /><strong>PowerPoint</strong><small>Slides · Present · Share</small></span>
+        <span><SuiteAppIcon app={getSuiteApp('notebook')!} size={28} /><strong>OneNote</strong><small>Sections you keep adding to</small></span>
       </div>
     </div>
   )
@@ -571,10 +573,10 @@ function SocialModeVisual() {
 function AppsModeVisual() {
   return (
     <div className="mode-apps-ui">
-      <div><MessageCircle size={22} /><strong>Word</strong><small>WRITE</small></div>
-      <div><Compass size={22} /><strong>Excel</strong><small>CALC</small></div>
-      <div><Layers3 size={22} /><strong>PowerPoint</strong><small>PRESENT</small></div>
-      <div><Code2 size={22} /><strong>OneNote</strong><small>NOTES</small></div>
+      <div><SuiteAppIcon app={getSuiteApp('word-docs')!} size={36} /><strong>Word</strong><small>WRITE</small></div>
+      <div><SuiteAppIcon app={getSuiteApp('spreadsheet')!} size={36} /><strong>Excel</strong><small>CALC</small></div>
+      <div><SuiteAppIcon app={getSuiteApp('presentation')!} size={36} /><strong>PowerPoint</strong><small>PRESENT</small></div>
+      <div><SuiteAppIcon app={getSuiteApp('notebook')!} size={36} /><strong>OneNote</strong><small>NOTES</small></div>
     </div>
   )
 }
