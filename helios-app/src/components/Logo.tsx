@@ -23,7 +23,7 @@ export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
       {/* Wordmark */}
       <div className="flex items-baseline leading-none" style={{ userSelect: 'none' }}>
         {/* helios — normal weight */}
-        <span style={{ fontSize: s.text, fontWeight: 400, color: 'var(--helios-text)', letterSpacing: '-0.02em' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: s.text, fontWeight: 500, color: 'var(--helios-text)', letterSpacing: '-0.03em' }}>
           helios
         </span>
 
@@ -31,7 +31,7 @@ export function Logo({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
         <span style={{ position: 'relative', display: 'inline-block' }}>
           <span
             style={{
-              fontSize: s.text, fontWeight: 800, letterSpacing: '-0.02em',
+              fontFamily: 'var(--font-display)', fontSize: s.text, fontWeight: 700, letterSpacing: '-0.03em',
               background: 'linear-gradient(90deg, #7c6af7, #4fc3f7)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',

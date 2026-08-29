@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/source-sans-3-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /*
   Helios Space design tokens
   Chapter 12 (Design System) + exact token reference pages 359-368
@@ -75,19 +93,23 @@
   --ease-exit:   cubic-bezier(.7, 0, .84, 0);
   --ease-move:   cubic-bezier(.4, 0, .2, 1);
 
+  /* Display = cinematic trailer titles. UI = 365-like humanist sans. */
+  --font-display: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif;
+  --font-ui: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+
   /* ── Typography scale (P360) ── */
-  --type-display-lg: 600 40px/44px 'Inter', system-ui, sans-serif;
-  --type-display-md: 600 32px/38px 'Inter', system-ui, sans-serif;
-  --type-title-lg:   600 28px/34px 'Inter', system-ui, sans-serif;
-  --type-title-md:   600 24px/30px 'Inter', system-ui, sans-serif;
-  --type-heading-lg: 600 20px/26px 'Inter', system-ui, sans-serif;
-  --type-heading-md: 600 17px/23px 'Inter', system-ui, sans-serif;
-  --type-heading-sm: 600 15px/20px 'Inter', system-ui, sans-serif;
-  --type-label:      600 13px/16px 'Inter', system-ui, sans-serif;
-  --type-body-lg:    400 17px/25px 'Inter', system-ui, sans-serif;
-  --type-body-md:    400 15px/22px 'Inter', system-ui, sans-serif;
-  --type-body-sm:    400 13px/19px 'Inter', system-ui, sans-serif;
-  --type-caption:    400 11px/16px 'Inter', system-ui, sans-serif;
+  --type-display-lg: 650 40px/44px var(--font-display);
+  --type-display-md: 650 32px/38px var(--font-display);
+  --type-title-lg:   650 28px/34px var(--font-display);
+  --type-title-md:   650 24px/30px var(--font-display);
+  --type-heading-lg: 650 20px/26px var(--font-display);
+  --type-heading-md: 600 17px/23px var(--font-ui);
+  --type-heading-sm: 600 15px/20px var(--font-ui);
+  --type-label:      600 13px/16px var(--font-ui);
+  --type-body-lg:    400 17px/25px var(--font-ui);
+  --type-body-md:    400 15px/22px var(--font-ui);
+  --type-body-sm:    400 13px/19px var(--font-ui);
+  --type-caption:    400 11px/16px var(--font-ui);
   --type-mono-md:    400 13px/19px 'Fira Code', monospace;
   --type-mono-sm:    400 11px/16px 'Fira Code', monospace;
 }
@@ -137,12 +159,17 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   font: var(--type-body-md);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-ui);
   background: var(--helios-bg);
   color: var(--helios-text);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+h1, h2.display-title, .display-title {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
 }
 
 /* ── Focus ring (P367): 2px solar inner ring, never clipped ── */

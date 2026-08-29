@@ -338,7 +338,7 @@ export function LifestyleView({ currentUser }: Props) {
       <header className="lifestyle-topbar">
         <div className="lifestyle-title">
           <span className="lifestyle-title-mark"><Zap size={17} /></span>
-          <div><strong>Home</strong><small>A Twitter-style feed for work, projects, and Live</small></div>
+          <div><strong>Feed</strong><small>A social feed for collaborators, projects, and Live work</small></div>
         </div>
         <label className="lifestyle-search">
           <Search size={16} />
@@ -356,7 +356,7 @@ export function LifestyleView({ currentUser }: Props) {
       </header>
 
       <div className="lifestyle-layout">
-        <aside className="lifestyle-left" aria-label="Lifestyle shortcuts">
+        <aside className="lifestyle-left" aria-label="Feed shortcuts">
           <button type="button" className="lifestyle-profile-shortcut" onClick={() => dispatch({ type: 'SET_VIEW', view: 'profile' })}>
             <Avatar name={currentUser.name} size="md" />
             <span><strong>{currentUser.name}</strong><small>{currentUser.handle}</small></span>

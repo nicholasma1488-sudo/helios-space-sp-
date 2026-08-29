@@ -11,14 +11,14 @@ import { ErrorBoundary } from './ErrorBoundary'
 interface NavItem { id: NavView; label: string; icon: React.ReactNode; shortLabel?: string }
 
 const NAV: NavItem[] = [
-  { id: 'home', label: 'Home', icon: <Home size={20} /> },
-  { id: 'explore', label: 'Explore', icon: <Compass size={20} /> },
+  { id: 'home', label: 'Collaborate', shortLabel: 'Home', icon: <Home size={20} /> },
+  { id: 'lifestyle', label: 'Feed', icon: <Zap size={20} /> },
   { id: 'spaces', label: 'Spaces', icon: <Users size={20} /> },
-  { id: 'lifestyle', label: 'Lifestyle', icon: <Zap size={20} /> },
-  { id: 'apps', label: 'Apps', shortLabel: 'Apps', icon: <Grid3X3 size={20} /> },
   { id: 'live', label: 'Live', icon: <Radio size={20} /> },
-  { id: 'chat', label: 'Chat Hub', shortLabel: 'Chat', icon: <MessageCircle size={20} /> },
+  { id: 'chat', label: 'Chat', icon: <MessageCircle size={20} /> },
+  { id: 'apps', label: 'Apps', icon: <Grid3X3 size={20} /> },
   { id: 'projects', label: 'Projects', icon: <FolderGit2 size={20} /> },
+  { id: 'explore', label: 'Explore', icon: <Compass size={20} /> },
   { id: 'profile', label: 'Profile', icon: <User size={20} /> },
 ]
 
