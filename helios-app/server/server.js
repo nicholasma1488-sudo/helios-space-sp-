@@ -375,6 +375,25 @@ db.exec(`
     created_at  TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS simplibox_requests (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id         INTEGER NOT NULL UNIQUE,
+    provider        TEXT NOT NULL,
+    local_part      TEXT NOT NULL,
+    address         TEXT NOT NULL UNIQUE,
+    status          TEXT NOT NULL DEFAULT 'open',
+    recovery_email  TEXT NOT NULL,
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE TABLE IF NOT EXISTS simplibox_tickets (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    message     TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
 `)
 
 function ensureColumn(table, column, definition) {
@@ -1377,8 +1396,82 @@ app.get('/api/session', (req, res) => {
 app.get('/api/me', requireUser, (req, res) => res.json({ user: req.user }))
 
 app.put('/api/me', requireUser, (req, res) => {
-  res.json({ user: req.user })
+  if (req.body?.email === undefined) return res.json({ user: req.user })
+  const updated = updateLoginEmail(req.user.id, req.body.email)
+  if (updated.error) return res.status(updated.status).json({ error: updated.error })
+  res.json({ user: updated.user })
 })
+
+const SIMPLIBOX_SUPPORT_EMAIL = 'support@helioschat.space'
+const SIMPLIBOX_RESERVED_LOCAL = new Set([
+  'admin', 'administrator', 'support', 'help', 'postmaster', 'abuse',
+  'root', 'microsoft', 'outlook', 'hotmail', 'live', 'simplibox', 'helios',
+])
+
+function simpliboxDomain(provider) {
+  return provider === 'hotmail' ? 'hotmail.com' : 'outlook.com'
+}
+
+function normalizeSimpliBoxLocal(value) {
+  return String(value || '').trim().toLowerCase().replace(/^@/, '')
+}
+
+function parseSimpliBoxDesign(provider, localPartRaw) {
+  if (provider !== 'hotmail' && provider !== 'outlook')
+    return { error: 'Choose Hotmail or Outlook.' }
+  const localPart = normalizeSimpliBoxLocal(localPartRaw)
+  if (localPart.length < 3 || localPart.length > 32)
+    return { error: 'Use 3–32 characters, starting with a letter.' }
+  if (!/^[a-z][a-z0-9._-]*$/.test(localPart))
+    return { error: 'Start with a letter. Use letters, numbers, dots, _ or -.' }
+  if (localPart.includes('..') || /[._-]$/.test(localPart))
+    return { error: 'Do not end with a dot, underscore, or hyphen.' }
+  if (SIMPLIBOX_RESERVED_LOCAL.has(localPart))
+    return { error: 'That name is reserved. Try another design.' }
+  return {
+    provider,
+    localPart,
+    address: `${localPart}@${simpliboxDomain(provider)}`,
+  }
+}
+
+function simpliboxSuggestions(localPart, provider) {
+  const base = normalizeSimpliBoxLocal(localPart).replace(/[^a-z0-9]/g, '') || 'mail'
+  const year = new Date().getUTCFullYear()
+  const unique = []
+  for (const candidate of [`${base}2017`, `${base}${year}`, `${base}${String(year).slice(2)}`, `${base}123`, `${base}88`]) {
+    const parsed = parseSimpliBoxDesign(provider, candidate)
+    if (!parsed.error && parsed.localPart !== normalizeSimpliBoxLocal(localPart) && !unique.includes(parsed.address))
+      unique.push(parsed.address)
+  }
+  return unique.slice(0, 5)
+}
+
+function publicSimpliBoxRequest(row) {
+  if (!row) return null
+  return {
+    provider: row.provider,
+    local_part: row.local_part,
+    address: row.address,
+    status: row.status,
+    recovery_email: row.recovery_email,
+    created_at: row.created_at,
+    applied: row.status === 'applied',
+  }
+}
+
+function updateLoginEmail(userId, email) {
+  const checkedEmail = checkedString(email, 'Email', MAX_EMAIL_LENGTH, { required: true, trim: true })
+  if (checkedEmail.error) return { status: 400, error: checkedEmail.error }
+  const normalizedEmail = checkedEmail.value.toLowerCase()
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalizedEmail))
+    return { status: 400, error: 'Invalid email address' }
+  const taken = db.prepare('SELECT id FROM users WHERE lower(email) = lower(?) AND id != ?').get(normalizedEmail, userId)
+  if (taken) return { status: 409, error: 'That email is already in use' }
+  db.prepare('UPDATE users SET email = ? WHERE id = ?').run(normalizedEmail, userId)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(userId)
+  return { user: publicUser(user) }
+}
 
 function billingUnavailable(_req, res) {
   return res.status(410).json({
@@ -3074,6 +3167,91 @@ app.post('/api/admin/settings', requireAdmin, (req, res) => {
 app.post('/api/admin/settings/clear-key', requireAdmin, (_req, res) => {
   setSetting('openai_api_key', '')
   res.json({ ok: true })
+})
+
+app.get('/api/simplibox', requireUser, (req, res) => {
+  const row = db.prepare('SELECT * FROM simplibox_requests WHERE user_id = ?').get(req.user.id)
+  res.json({
+    support_email: SIMPLIBOX_SUPPORT_EMAIL,
+    recovery_email: SIMPLIBOX_SUPPORT_EMAIL,
+    request: publicSimpliBoxRequest(row),
+  })
+})
+
+app.post('/api/simplibox/check', requireUser, socialRateLimit, (req, res) => {
+  const parsed = parseSimpliBoxDesign(req.body?.provider, req.body?.local_part)
+  if (parsed.error) return res.status(400).json({ error: parsed.error, suggestions: simpliboxSuggestions(req.body?.local_part, req.body?.provider === 'hotmail' ? 'hotmail' : 'outlook') })
+  const taken = db.prepare('SELECT user_id FROM simplibox_requests WHERE lower(address) = lower(?)').get(parsed.address)
+  const available = !taken || taken.user_id === req.user.id
+  res.json({
+    available,
+    address: parsed.address,
+    message: available
+      ? 'This design is free to reserve in Helios.'
+      : 'This email design has already been used.',
+    suggestions: simpliboxSuggestions(parsed.localPart, parsed.provider),
+  })
+})
+
+app.post('/api/simplibox', requireUser, socialRateLimit, (req, res) => {
+  if (req.body?.password_confirmed !== true)
+    return res.status(400).json({ error: 'Confirm the password twice before saving the design.' })
+  const parsed = parseSimpliBoxDesign(req.body?.provider, req.body?.local_part)
+  if (parsed.error) return res.status(400).json({ error: parsed.error })
+  const taken = db.prepare('SELECT user_id FROM simplibox_requests WHERE lower(address) = lower(?)').get(parsed.address)
+  if (taken && taken.user_id !== req.user.id)
+    return res.status(409).json({
+      error: 'This email design has already been used.',
+      suggestions: simpliboxSuggestions(parsed.localPart, parsed.provider),
+    })
+  const now = new Date().toISOString()
+  const existing = db.prepare('SELECT id, status FROM simplibox_requests WHERE user_id = ?').get(req.user.id)
+  if (existing) {
+    db.prepare(
+      'UPDATE simplibox_requests SET provider = ?, local_part = ?, address = ?, recovery_email = ?, updated_at = ?, status = CASE WHEN status = ? THEN status ELSE ? END WHERE id = ?',
+    ).run(parsed.provider, parsed.localPart, parsed.address, SIMPLIBOX_SUPPORT_EMAIL, now, 'applied', 'open', existing.id)
+  } else {
+    db.prepare(
+      'INSERT INTO simplibox_requests (user_id, provider, local_part, address, status, recovery_email, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)',
+    ).run(req.user.id, parsed.provider, parsed.localPart, parsed.address, 'open', SIMPLIBOX_SUPPORT_EMAIL, now, now)
+  }
+  const row = db.prepare('SELECT * FROM simplibox_requests WHERE user_id = ?').get(req.user.id)
+  res.json({ request: publicSimpliBoxRequest(row) })
+})
+
+app.post('/api/simplibox/apply-login', requireUser, socialRateLimit, (req, res) => {
+  const row = db.prepare('SELECT * FROM simplibox_requests WHERE user_id = ?').get(req.user.id)
+  if (!row) return res.status(400).json({ error: 'Save a SimpliBox design first.' })
+  const updated = updateLoginEmail(req.user.id, row.address)
+  if (updated.error) return res.status(updated.status).json({ error: updated.error })
+  const now = new Date().toISOString()
+  db.prepare("UPDATE simplibox_requests SET status = 'applied', updated_at = ? WHERE id = ?").run(now, row.id)
+  const next = db.prepare('SELECT * FROM simplibox_requests WHERE id = ?').get(row.id)
+  res.json({ user: updated.user, request: publicSimpliBoxRequest(next), progress_reset: false })
+})
+
+app.post('/api/simplibox/support', requireUser, socialRateLimit, (req, res) => {
+  const checked = checkedString(req.body?.message, 'Message', 2000, { required: true, trim: true })
+  if (checked.error) return res.status(400).json({ error: checked.error })
+  if (checked.value.length < 8) return res.status(400).json({ error: 'Tell us a little more so support can help.' })
+  db.prepare('INSERT INTO simplibox_tickets (user_id, message, created_at) VALUES (?,?,?)')
+    .run(req.user.id, checked.value, new Date().toISOString())
+  res.json({ ok: true, support_email: SIMPLIBOX_SUPPORT_EMAIL })
+})
+
+app.get('/api/admin/simplibox', requireAdmin, (_req, res) => {
+  res.json({
+    requests: db.prepare(
+      `SELECT r.id, r.user_id, u.name, u.handle, u.email AS login_email, r.provider, r.address, r.status, r.created_at
+       FROM simplibox_requests r JOIN users u ON u.id = r.user_id
+       ORDER BY r.id DESC LIMIT 200`,
+    ).all(),
+    tickets: db.prepare(
+      `SELECT t.id, t.user_id, u.name, u.handle, t.message, t.created_at
+       FROM simplibox_tickets t JOIN users u ON u.id = t.user_id
+       ORDER BY t.id DESC LIMIT 200`,
+    ).all(),
+  })
 })
 
 app.use('/api', (_req, res) => {

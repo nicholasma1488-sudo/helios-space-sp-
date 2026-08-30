@@ -7,6 +7,22 @@ export interface User {
   email: string
 }
 
+export interface SimpliBoxRequest {
+  provider: 'hotmail' | 'outlook'
+  local_part: string
+  address: string
+  status: string
+  recovery_email: string
+  created_at: string
+  applied: boolean
+}
+
+export interface SimpliBoxState {
+  support_email: string
+  recovery_email: string
+  request: SimpliBoxRequest | null
+}
+
 export interface MarketQuote {
   symbol: string
   name: string
@@ -471,5 +487,20 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ messages, project_id, context }),
       }),
+  },
+
+  simplibox: {
+    get: () => call<SimpliBoxState>('/api/simplibox'),
+    check: (data: { provider: 'hotmail' | 'outlook'; local_part: string }) =>
+      call<{ available: boolean; address: string; message: string; suggestions: string[] }>(
+        '/api/simplibox/check',
+        { method: 'POST', body: JSON.stringify(data) },
+      ),
+    create: (data: { provider: 'hotmail' | 'outlook'; local_part: string; password_confirmed: boolean }) =>
+      call<{ request: SimpliBoxRequest }>('/api/simplibox', { method: 'POST', body: JSON.stringify(data) }),
+    applyLogin: () =>
+      call<{ user: User; request: SimpliBoxRequest; progress_reset: false }>('/api/simplibox/apply-login', { method: 'POST' }),
+    support: (message: string) =>
+      call<{ ok: boolean }>('/api/simplibox/support', { method: 'POST', body: JSON.stringify({ message }) }),
   },
 }

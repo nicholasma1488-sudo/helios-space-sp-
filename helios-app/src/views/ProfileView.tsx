@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Award, BookOpen, ChevronRight, Download, FolderGit2, LogOut, MessageCircle,
+  Award, BookOpen, ChevronRight, Download, FolderGit2, LogOut, Mail, MessageCircle,
   Moon, Plus, Settings, Sparkles, Star, Sun, Trash2, Users,
 } from 'lucide-react'
 import { api, type Post, type Project, type SolarSummary, type SpaceSummary } from '../api'
@@ -91,6 +91,26 @@ export function ProfileView() {
         <div className="profile-identity"><span>CREATOR · STUDENT · COLLABORATOR</span><h1>{user.name}</h1><p>{user.handle} · Building across {joinedSpaces.length || 1} Space{joinedSpaces.length === 1 ? '' : 's'}</p><div><b>{ownedProjects.length}<small>Projects</small></b><b>{posts.length}<small>Progress posts</small></b><b>{contributions.length + helpEvents.length}<small>Contributions</small></b></div></div>
         <div className="profile-solar-card"><div className="profile-solar-orbit" style={{ '--solar-progress': `${progress * 3.6}deg` } as React.CSSProperties}><span><Sun size={20} /><strong>{solar.total}</strong><small>Solar</small></span></div><div><span>CURRENT IDENTITY</span><strong>{solar.identity}</strong><small>{solar.next_threshold ? `${solar.next_threshold - solar.total} Solar until the next identity` : 'Highest Solar identity reached'}</small></div></div>
       </header>
+      {(!creator || creator.id === state.user.id) && (
+        <section className="profile-login-stack">
+          <article className="profile-login-card">
+            <span>YOUR LOGIN</span>
+            <strong>{user.email || 'No email on this account'}</strong>
+            <small>{user.handle}</small>
+          </article>
+          <article className="profile-simplibox-card">
+            <Mail size={20} />
+            <div>
+              <span>SIMPLIBOX</span>
+              <h2>Did you log in with your school or work email? Ever thinking of having your own?</h2>
+              <p>Try our newest feature SimpliBox that automatically gives you an own email in seconds.</p>
+            </div>
+            <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'simplibox' })}>
+              Try now
+            </button>
+          </article>
+        </section>
+      )}
       <nav className="profile-tabs" aria-label="Profile sections">{(['Journey', 'Projects', 'Posts', 'Spaces', 'Settings'] as const).map(item => <button type="button" key={item} className={tab === item ? 'is-active' : ''} onClick={() => setTab(item)}>{item}</button>)}</nav>
 
       <main className="profile-content">

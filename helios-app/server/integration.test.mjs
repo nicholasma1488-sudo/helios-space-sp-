@@ -639,6 +639,58 @@ async function run() {
   })
   expectStatus(extraWriting, 200, 'more writing documents stay allowed')
 
+  const simpliboxAnon = await anonymous.get('/api/simplibox')
+  expectStatus(simpliboxAnon, 401, 'simplibox requires login')
+
+  const reservedName = await alice.post('/api/simplibox/check', { provider: 'outlook', local_part: 'admin' })
+  expectStatus(reservedName, 400, 'reserved simplibox name')
+
+  const aliceCheck = await alice.post('/api/simplibox/check', { provider: 'outlook', local_part: 'alice.orbit' })
+  expectStatus(aliceCheck, 200, 'simplibox check')
+  assert.equal(aliceCheck.body.available, true)
+  assert.equal(aliceCheck.body.address, 'alice.orbit@outlook.com')
+  assert.equal(aliceCheck.body.suggestions.includes('aliceorbit2017@outlook.com'), true)
+
+  const missingConfirm = await alice.post('/api/simplibox', { provider: 'outlook', local_part: 'alice.orbit' })
+  expectStatus(missingConfirm, 400, 'simplibox requires password confirm')
+
+  const aliceBox = await alice.post('/api/simplibox', {
+    provider: 'outlook',
+    local_part: 'alice.orbit',
+    password_confirmed: true,
+  })
+  expectStatus(aliceBox, 200, 'simplibox reserve')
+  assert.equal(aliceBox.body.request.address, 'alice.orbit@outlook.com')
+  assert.equal(aliceBox.body.request.applied, false)
+
+  const bobTaken = await bob.post('/api/simplibox/check', { provider: 'outlook', local_part: 'alice.orbit' })
+  expectStatus(bobTaken, 200, 'simplibox taken design')
+  assert.equal(bobTaken.body.available, false)
+
+  const bobSteal = await bob.post('/api/simplibox', {
+    provider: 'outlook',
+    local_part: 'alice.orbit',
+    password_confirmed: true,
+  })
+  expectStatus(bobSteal, 409, 'cannot take reserved simplibox design')
+
+  const applyLogin = await alice.post('/api/simplibox/apply-login')
+  expectStatus(applyLogin, 200, 'apply simplibox login email')
+  assert.equal(applyLogin.body.progress_reset, false)
+  assert.equal(applyLogin.body.user.email, 'alice.orbit@outlook.com')
+  assert.equal(applyLogin.body.request.applied, true)
+
+  const afterSwitch = await alice.get('/api/me')
+  expectStatus(afterSwitch, 200, 'session survives email switch')
+  assert.equal(afterSwitch.body.user.email, 'alice.orbit@outlook.com')
+
+  const stillHasProject = await alice.get('/api/projects/' + projectId)
+  expectStatus(stillHasProject, 200, 'projects remain after email switch')
+  assert.equal(stillHasProject.body.project.name, 'Solar Journal')
+
+  const ticket = await alice.post('/api/simplibox/support', { message: 'Need help finishing the mailbox.' })
+  expectStatus(ticket, 200, 'simplibox support ticket')
+
   const tickerRequired = await alice.get('/api/markets/quotes')
   expectStatus(tickerRequired, 400, 'quotes require tickers')
 

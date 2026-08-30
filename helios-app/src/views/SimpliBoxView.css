@@ -1,0 +1,245 @@
+.simplibox-page {
+  height: 100%;
+  overflow: auto;
+  padding: 28px clamp(20px, 3vw, 42px) 70px;
+  color: var(--helios-text);
+}
+
+.simplibox-back,
+.simplibox-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.simplibox-hero {
+  max-width: 720px;
+  margin-bottom: 22px;
+}
+
+.simplibox-hero span,
+.simplibox-support header span {
+  color: #9c88e4;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+.simplibox-hero h1,
+.simplibox-card h2 {
+  margin: 8px 0 8px;
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: -.03em;
+}
+
+.simplibox-hero h1 { font-size: clamp(32px, 5vw, 52px); line-height: 1.05; }
+.simplibox-card h2 { font-size: 22px; }
+.simplibox-hero p,
+.simplibox-card > p,
+.simplibox-recovery p {
+  margin: 0;
+  color: var(--helios-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.simplibox-steps {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+  text-transform: capitalize;
+}
+
+.simplibox-steps li {
+  padding: 6px 10px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  color: var(--helios-muted);
+  font-size: 11px;
+}
+
+.simplibox-steps li.is-on {
+  border-color: rgba(124, 106, 247, .4);
+  background: rgba(124, 106, 247, .12);
+  color: var(--helios-text);
+}
+
+.simplibox-card {
+  max-width: 720px;
+  margin-bottom: 16px;
+  padding: 22px;
+  border: 1px solid var(--helios-border);
+  border-radius: 20px;
+  background: var(--helios-surface);
+}
+
+.simplibox-providers,
+.simplibox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.simplibox-providers button,
+.simplibox-actions button,
+.simplibox-actions a,
+.simplibox-try button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--helios-border);
+  border-radius: 12px;
+  background: var(--helios-surface2);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.simplibox-providers button {
+  flex: 1;
+  min-width: 180px;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 92px;
+  padding: 14px;
+}
+
+.simplibox-providers button.is-on,
+.simplibox-primary {
+  border-color: transparent;
+  background: #f2b84b;
+  color: #17140d;
+}
+
+.simplibox-providers strong { font-size: 16px; }
+.simplibox-providers small { color: inherit; opacity: .72; }
+
+.simplibox-card label {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.simplibox-card label > span { font-size: 11px; color: var(--helios-muted); }
+
+.simplibox-card input,
+.simplibox-card textarea {
+  width: 100%;
+  border: 1px solid var(--helios-border);
+  border-radius: 12px;
+  background: var(--helios-surface2);
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.simplibox-card input { min-height: 44px; padding: 0 12px; }
+.simplibox-card textarea { padding: 10px 12px; resize: vertical; }
+
+.simplibox-address {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.simplibox-address input { flex: 1; }
+.simplibox-address em { color: var(--helios-muted); font-style: normal; }
+
+.simplibox-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 0;
+  color: #8fd4a4;
+  font-size: 13px;
+}
+
+.simplibox-note.is-used { color: #f2b84b; }
+
+.simplibox-try { margin-top: 16px; }
+.simplibox-try > span {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.simplibox-try > div { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.simplibox-recovery {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--helios-border);
+  border-radius: 14px;
+}
+
+.simplibox-final-address {
+  margin: 8px 0 12px !important;
+  color: var(--helios-text) !important;
+  font-family: var(--font-display);
+  font-size: 26px;
+}
+
+.simplibox-support header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.simplibox-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 10, 14, .62);
+}
+
+.simplibox-modal-card {
+  width: min(520px, 100%);
+  padding: 24px;
+  border: 1px solid var(--helios-border);
+  border-radius: 20px;
+  background: var(--helios-surface);
+}
+
+.simplibox-modal-card h2 {
+  margin: 0 0 10px;
+  font-family: var(--font-display);
+  font-size: 26px;
+}
+
+.simplibox-modal-card p {
+  margin: 0 0 10px;
+  color: var(--helios-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+@media (max-width: 620px) {
+  .simplibox-page { padding: 18px 14px 90px; }
+  .simplibox-address { flex-direction: column; align-items: stretch; }
+}
