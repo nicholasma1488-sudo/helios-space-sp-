@@ -29,7 +29,7 @@ export function savePrefs(prefs: Partial<StoredPrefs>) {
   } catch {}
 }
 
-export type NavView = 'home' | 'explore' | 'spaces' | 'lifestyle' | 'apps' | 'live' | 'chat' | 'projects' | 'profile' | 'simplibox'
+export type NavView = 'home' | 'explore' | 'spaces' | 'lifestyle' | 'apps' | 'live' | 'chat' | 'projects' | 'profile'
 export type ThemeMode = 'dark' | 'high-contrast'
 export type SpaceTab = 'feed' | 'projects' | 'apps' | 'live' | 'chat' | 'members' | 'challenges' | 'resources' | 'helios'
 

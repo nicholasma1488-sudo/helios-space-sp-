@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, BookOpen, ChevronDown, Compass, Dumbbell, FolderGit2, Mail, MessageCircle,
+  Bell, BookOpen, ChevronDown, Compass, Dumbbell, FolderGit2, MessageCircle,
   Plus, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults, type SpaceSummary } from '../api'
@@ -248,7 +248,6 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         <div className="topbar-popover profile-popover" role="menu" aria-label="Account">
           <div className="profile-popover-user"><span>{(state.user?.name || '?')[0].toUpperCase()}</span><div><strong>{state.user?.name}</strong><small>{state.user?.handle}</small></div></div>
           <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'SET_VIEW', view: 'profile' }); setOpenMenu(null) }}><User size={15} /> Creator profile</button>
-          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'SET_VIEW', view: 'simplibox' }); setOpenMenu(null) }}><Mail size={15} /> SimpliBox</button>
           <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); setOpenMenu(null) }}><Sparkles size={15} /> Ask Helios</button>
           <button type="button" role="menuitem" onClick={() => void signOut()}><span>↪</span> Sign out</button>
         </div>

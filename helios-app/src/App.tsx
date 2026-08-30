@@ -17,7 +17,6 @@ import { LifestyleView } from './views/LifestyleView'
 import { LiveView } from './views/LiveView'
 import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
-import { SimpliBoxView } from './views/SimpliBoxView'
 import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
 import { isPayPath } from './product/pay'
@@ -49,7 +48,6 @@ function MainContent() {
     case 'chat':      content = <ChatView />; break
     case 'projects':  content = <SpacesView />; break
     case 'profile':   content = <ProfileView />; break
-    case 'simplibox': content = <SimpliBoxView />; break
     default:          content = <HomeView />
   }
   return (
@@ -100,7 +98,6 @@ function AppInner() {
       chat: 'Chat',
       projects: 'Projects',
       profile: 'Profile',
-      simplibox: 'SimpliBox',
     }
     if (!state.user) {
       document.title = 'Helios Space'
