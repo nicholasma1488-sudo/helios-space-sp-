@@ -40,10 +40,11 @@
 
 .auth-context h1 {
   margin: 20px 0 18px;
+  font-family: var(--font-display);
   font-size: clamp(42px, 5vw, 67px);
-  font-weight: 690;
+  font-weight: 650;
   line-height: .98;
-  letter-spacing: -.055em;
+  letter-spacing: -.04em;
 }
 
 .auth-context > p {

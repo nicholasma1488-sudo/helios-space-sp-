@@ -19,8 +19,7 @@ import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
 import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
-import { PaymentPage } from './views/PaymentPage'
-import { goToPay, isPayPath } from './product/pay'
+import { isPayPath } from './product/pay'
 import './App.css'
 
 function MainContent() {
@@ -90,19 +89,15 @@ function AppInner() {
   // Dynamic document title per view
   useEffect(() => {
     const VIEW_TITLES: Record<string, string> = {
-      home: 'Home',
+      home: 'Collaborate',
       explore: 'Explore',
       spaces: 'Spaces',
-      lifestyle: 'Lifestyle',
-      apps: 'Mini Apps',
+      lifestyle: 'Feed',
+      apps: 'Apps',
       live: 'Live',
-      chat: 'Chat Hub',
+      chat: 'Chat',
       projects: 'Projects',
       profile: 'Profile',
-    }
-    if (onPayPage) {
-      document.title = '付款 — Helios Space'
-      return
     }
     if (!state.user) {
       document.title = 'Helios Space'
@@ -115,7 +110,7 @@ function AppInner() {
     }
     const label = VIEW_TITLES[state.view] ?? 'Helios Space'
     document.title = `${label} — Helios Space`
-  }, [onPayPage, state.user, state.view, state.codeEditorOpen, state.activeProjectId, state.projects])
+  }, [state.user, state.view, state.codeEditorOpen, state.activeProjectId, state.projects])
 
   // Load site info + check auth on mount
   useEffect(() => {
@@ -132,32 +127,6 @@ function AppInner() {
           return
         }
         dispatch({ type: 'SET_USER', user: r.user })
-        const params = new URLSearchParams(window.location.search)
-        const stripeSession = params.get('session_id')
-        if (params.get('billing') === 'success' && stripeSession) {
-          api.billing.confirmStripe(stripeSession)
-            .then(result => {
-              if (cancelled) return
-              dispatch({ type: 'SET_USER', user: result.user })
-              dispatch({
-                type: 'PUSH_TOAST',
-                toast: { id: Date.now().toString(), message: 'Stripe 已确认银行卡付款，Orbit 已开通。', tone: 'success' },
-              })
-            })
-            .catch(err => {
-              if (!cancelled) dispatch({
-                type: 'PUSH_TOAST',
-                toast: { id: Date.now().toString(), message: (err as Error).message, tone: 'warning' },
-              })
-            })
-            .finally(() => {
-              params.delete('billing')
-              params.delete('session_id')
-              const next = params.toString()
-              window.history.replaceState({}, '', '/pay' + (next ? '?' + next : ''))
-              window.dispatchEvent(new PopStateEvent('popstate'))
-            })
-        }
         api.projects.list()
           .then(projects => { if (!cancelled) dispatch({ type: 'SET_PROJECTS', projects: projects.projects }) })
           .catch(err => {
@@ -185,16 +154,10 @@ function AppInner() {
   }, [state.reducedMotion])
 
   useEffect(() => {
-    if (state.user && state.user.plan_selected === false && !onPayPage && !state.authLoading) {
-      goToPay()
-    }
-  }, [state.user, onPayPage, state.authLoading])
-
-  useEffect(() => {
-    if (!state.upgradeOpen) return
-    dispatch({ type: 'CLOSE_UPGRADE' })
-    goToPay()
-  }, [state.upgradeOpen, dispatch])
+    if (!onPayPage) return
+    window.history.replaceState({}, '', '/')
+    setPath('/')
+  }, [onPayPage])
 
   // Respect OS reduced-motion
   useEffect(() => {
@@ -214,15 +177,6 @@ function AppInner() {
         </div>
         <style>{`@keyframes pulse-fade { 0%,100%{opacity:.4;transform:scale(.9)} 50%{opacity:1;transform:scale(1)} }`}</style>
       </div>
-    )
-  }
-
-  if (onPayPage) {
-    return (
-      <>
-        <PaymentPage />
-        <ToastLayer />
-      </>
     )
   }
 

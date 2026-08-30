@@ -33,12 +33,11 @@ const WINDOW_HEIGHT = 600
 const WINDOW_SCALE = 0.008
 
 const PATH: CameraKey[] = [
-  { t: 0, x: 0, y: 9, z: 240, lx: 0, ly: 0.25, lz: 0, fov: 16 },
-  { t: 0.18, x: 0.25, y: 5.2, z: 155, lx: 0.02, ly: 0.14, lz: 0, fov: 16.5 },
-  { t: 0.36, x: -0.18, y: 2.8, z: 96, lx: 0, ly: 0.08, lz: 0, fov: 17 },
-  { t: 0.54, x: 0.08, y: 1.2, z: 52, lx: 0, ly: 0.03, lz: 0.1, fov: 18 },
-  { t: 0.72, x: 0.02, y: 0.4, z: 24, lx: 0, ly: 0.01, lz: 0.2, fov: 19 },
-  { t: 0.88, x: 0, y: 0.1, z: 11.5, lx: 0, ly: 0, lz: 0.3, fov: 20 },
+  { t: 0, x: 0, y: 3.6, z: 78, lx: 0, ly: 0.1, lz: 0, fov: 18 },
+  { t: 0.22, x: 0.16, y: 2.2, z: 46, lx: 0.01, ly: 0.06, lz: 0, fov: 18.5 },
+  { t: 0.46, x: -0.08, y: 1.05, z: 26, lx: 0, ly: 0.03, lz: 0.08, fov: 19 },
+  { t: 0.7, x: 0.03, y: 0.32, z: 13.5, lx: 0, ly: 0.01, lz: 0.2, fov: 20 },
+  { t: 0.88, x: 0, y: 0.08, z: 8.4, lx: 0, ly: 0, lz: 0.3, fov: 20.5 },
   { t: 1, x: 0, y: 0, z: 6.2, lx: 0, ly: 0, lz: 0.4, fov: 21 },
 ]
 
@@ -104,23 +103,23 @@ function makeStarfield(count: number, spread: number, depth: number, size: numbe
 
 function paintScreen(kind: 'feed' | 'code' | 'chat') {
   const canvas = document.createElement('canvas')
-  canvas.width = 768
-  canvas.height = 480
+  canvas.width = 384
+  canvas.height = 240
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas
   ctx.fillStyle = '#10151c'
-  ctx.fillRect(0, 0, 768, 480)
+  ctx.fillRect(0, 0, 384, 240)
   ctx.fillStyle = '#161c24'
-  ctx.fillRect(0, 0, 768, 44)
+  ctx.fillRect(0, 0, 384, 22)
   ctx.fillStyle = '#ff5f57'
-  ctx.beginPath(); ctx.arc(22, 22, 6, 0, Math.PI * 2); ctx.fill()
+  ctx.beginPath(); ctx.arc(11, 11, 3, 0, Math.PI * 2); ctx.fill()
   ctx.fillStyle = '#febc2e'
-  ctx.beginPath(); ctx.arc(42, 22, 6, 0, Math.PI * 2); ctx.fill()
+  ctx.beginPath(); ctx.arc(21, 11, 3, 0, Math.PI * 2); ctx.fill()
   ctx.fillStyle = '#28c840'
-  ctx.beginPath(); ctx.arc(62, 22, 6, 0, Math.PI * 2); ctx.fill()
+  ctx.beginPath(); ctx.arc(31, 11, 3, 0, Math.PI * 2); ctx.fill()
   ctx.fillStyle = '#f4f6fb'
-  ctx.font = '600 18px Inter, sans-serif'
-  ctx.fillText(kind === 'feed' ? 'Home' : kind === 'code' ? 'Web Code Editor' : 'Project Chat', 86, 28)
+  ctx.font = '600 10px system-ui, sans-serif'
+  ctx.fillText(kind === 'feed' ? 'Home' : kind === 'code' ? 'Web Code Editor' : 'Project Chat', 43, 14)
 
   if (kind === 'feed') {
     ;['Alex Morgan  @alexm', 'Lea Stone  @lea', 'Jordan  @jd'].forEach((name, index) => {
@@ -178,7 +177,9 @@ function paintScreen(kind: 'feed' | 'code' | 'chat') {
 function makePanel(kind: 'feed' | 'code' | 'chat', width: number, height: number) {
   const texture = new THREE.CanvasTexture(paintScreen(kind))
   texture.colorSpace = THREE.SRGBColorSpace
-  texture.anisotropy = 4
+  texture.anisotropy = 1
+  texture.generateMipmaps = false
+  texture.minFilter = THREE.LinearFilter
   texture.needsUpdate = true
   const group = new THREE.Group()
   const plateMaterial = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false, transparent: true, opacity: 0 })
@@ -188,10 +189,8 @@ function makePanel(kind: 'feed' | 'code' | 'chat', width: number, height: number
     new THREE.EdgesGeometry(new THREE.BoxGeometry(width + 0.08, height + 0.08, 0.12)),
     frameMaterial,
   )
-  const backMaterial = new THREE.MeshStandardMaterial({
+  const backMaterial = new THREE.MeshBasicMaterial({
     color: 0x0b0f14,
-    metalness: 0.3,
-    roughness: 0.45,
     transparent: true,
     opacity: 0,
   })
@@ -219,7 +218,17 @@ function setGroupOpacity(group: THREE.Group, opacity: number) {
 
 function introProgress(elapsed: number, _phase: HeroPhase, reducedMotion: boolean) {
   if (reducedMotion) return 0
-  return THREE.MathUtils.smoothstep(elapsed, 0, 1.15) * 0.04
+  return THREE.MathUtils.smoothstep(elapsed, 0.2, 1.8) * 0.2
+}
+
+function readScrollProgress(host: HTMLElement) {
+  const scroller = host.closest('[data-landing-scroller]') as HTMLElement | null
+  const scene = host.closest('.hero-scene') as HTMLElement | null
+  if (scroller && scene) {
+    const runway = Math.max(1, scene.offsetHeight - scroller.clientHeight)
+    return THREE.MathUtils.clamp(scroller.scrollTop / runway, 0, 1)
+  }
+  return THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1)
 }
 
 export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, children }: Props) {
@@ -257,7 +266,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     let renderer: THREE.WebGLRenderer
     try {
-      renderer = new THREE.WebGLRenderer({ alpha: false, antialias: true, powerPreference: 'high-performance' })
+      renderer = new THREE.WebGLRenderer({ alpha: false, antialias: false, powerPreference: 'high-performance' })
     } catch (error) {
       console.error('[Helios hero] WebGL unavailable', error)
       host.dataset.webgl = 'unavailable'
@@ -272,7 +281,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     host.dataset.webgl = 'ready'
     try {
     renderer.setClearColor(0x04060b, 1)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.domElement.className = 'interactive-orbit-canvas'
     renderer.domElement.setAttribute('aria-hidden', 'true')
@@ -290,14 +299,8 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const look = new THREE.Vector3(PATH[0].lx, PATH[0].ly, PATH[0].lz)
     camera.lookAt(look)
 
-    const ambient = new THREE.AmbientLight(0xb8c4ff, 0.42)
-    const keyLight = new THREE.PointLight(0x4fc3f7, 36, 140)
-    const fill = new THREE.PointLight(0x8576f5, 22, 110)
-    const rim = new THREE.PointLight(0xf2b84b, 14, 90)
-    keyLight.position.set(-8, 6, 18)
-    fill.position.set(10, -3, 8)
-    rim.position.set(0, 8, -12)
-    scene.add(ambient, keyLight, fill, rim)
+    const ambient = new THREE.AmbientLight(0xb8c4ff, 0.55)
+    scene.add(ambient)
 
     const nebula = new THREE.Mesh(
       new THREE.SphereGeometry(160, 24, 24),
@@ -310,10 +313,10 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     )
     scene.add(nebula)
 
-    const rings = [8.5, 13, 19].map((radius, index) => {
+    const rings = [9, 15].map((radius, index) => {
       const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(radius, 0.016, 8, 96),
-        new THREE.MeshBasicMaterial({ color: index === 1 ? 0x8576f5 : 0x4fc3f7, transparent: true, opacity: 0.2 }),
+        new THREE.TorusGeometry(radius, 0.014, 6, 48),
+        new THREE.MeshBasicMaterial({ color: index === 1 ? 0x8576f5 : 0x4fc3f7, transparent: true, opacity: 0.18 }),
       )
       ring.rotation.x = 1.22 + index * 0.16
       ring.rotation.y = index * 0.45
@@ -322,7 +325,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     })
 
     const starGroup = new THREE.Group()
-    starGroup.add(makeStarfield(280, 40, 110, 0.055), makeStarfield(420, 88, 220, 0.038))
+    starGroup.add(makeStarfield(90, 36, 90, 0.06), makeStarfield(140, 72, 160, 0.04))
     scene.add(starGroup)
 
     const feedPanel = makePanel('feed', 5.6, 3.5)
@@ -385,70 +388,82 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     let frame = 0
     let previous = performance.now()
     const started = previous
-    let visible = !document.hidden
+    let pageVisible = !document.hidden
+    let inView = true
+    let lastScrollCss = -1
+    let lastFov = camera.fov
 
     const animate = () => {
       frame = window.requestAnimationFrame(animate)
-      if (!visible) return
+      if (!pageVisible || !inView) return
       const now = performance.now()
       const delta = Math.min((now - previous) / 1000, 0.05)
       previous = now
       const elapsed = (now - started) / 1000
-      const scroll = THREE.MathUtils.clamp(Number(host.dataset.scrollProgress || 0), 0, 1)
+      const scroll = readScrollProgress(host)
       const ease = scroll * scroll * (3 - 2 * scroll)
       const introT = introProgress(elapsed, phaseRef.current, reducedMotion)
       const pathT = THREE.MathUtils.clamp(introT + ease * (1 - introT), 0, 1)
       const shot = samplePath(pathT)
-      const enter = THREE.MathUtils.smoothstep(pathT, 0.82, 1)
-      const glimpse = THREE.MathUtils.smoothstep(pathT, 0.08, 0.28) * (1 - THREE.MathUtils.smoothstep(pathT, 0.48, 0.74))
+      const enter = THREE.MathUtils.smoothstep(pathT, 0.78, 1)
+      const glimpse = THREE.MathUtils.smoothstep(pathT, 0.12, 0.32) * (1 - THREE.MathUtils.smoothstep(pathT, 0.52, 0.78))
+      const showCss = pathT > 0.16
 
-      pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 4.2, delta)
-      pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 4.2, delta)
+      pointer.x = damp(pointer.x, reducedMotion ? 0 : pointerTarget.x, 6, delta)
+      pointer.y = damp(pointer.y, reducedMotion ? 0 : pointerTarget.y, 6, delta)
 
-      camera.position.x = damp(camera.position.x, shot.x + pointer.x * 0.35, 5.4, delta)
-      camera.position.y = damp(camera.position.y, shot.y + pointer.y * -0.18, 5.4, delta)
-      camera.position.z = damp(camera.position.z, shot.z, 6.8, delta)
-      camera.fov = damp(camera.fov, shot.fov, 4.2, delta)
-      camera.updateProjectionMatrix()
-      look.x = damp(look.x, shot.lx + pointer.x * 0.12, 5.2, delta)
-      look.y = damp(look.y, shot.ly - pointer.y * 0.08, 5.2, delta)
-      look.z = damp(look.z, shot.lz, 5.2, delta)
+      camera.position.set(shot.x + pointer.x * 0.22, shot.y + pointer.y * -0.12, shot.z)
+      if (Math.abs(shot.fov - lastFov) > 0.04) {
+        camera.fov = shot.fov
+        lastFov = shot.fov
+        camera.updateProjectionMatrix()
+      }
+      look.set(shot.lx + pointer.x * 0.08, shot.ly - pointer.y * 0.05, shot.lz)
       camera.lookAt(look)
 
-      cssObject.visible = true
-      cssObject.rotation.x = damp(cssObject.rotation.x, 0.05 * (1 - enter), 3.4, delta)
-      cssObject.rotation.y = damp(cssObject.rotation.y, -0.08 * (1 - enter), 3.4, delta)
-      windowHost.style.opacity = '1'
-      windowHost.style.pointerEvents = pathT > 0.18 ? 'auto' : 'none'
+      cssObject.visible = showCss
+      cssObject.rotation.set(0.04 * (1 - enter), -0.06 * (1 - enter), 0)
+      windowHost.style.pointerEvents = pathT > 0.28 ? 'auto' : 'none'
+      cssRenderer.domElement.style.visibility = showCss ? 'visible' : 'hidden'
 
-      setGroupOpacity(feedPanel, glimpse * 0.5)
-      setGroupOpacity(codePanel, glimpse * 0.5)
-      setGroupOpacity(chatPanel, glimpse * 0.42)
+      setGroupOpacity(feedPanel, glimpse * 0.42)
+      setGroupOpacity(codePanel, glimpse * 0.42)
+      setGroupOpacity(chatPanel, glimpse * 0.34)
 
-      starGroup.position.z = pathT * 150
+      starGroup.position.z = pathT * 80
       rings.forEach((ring, index) => {
-        ring.rotation.z += delta * (0.035 + index * 0.012)
-        ring.position.z = pathT * (14 + index * 5)
+        ring.rotation.z += delta * (0.03 + index * 0.01)
+        ring.position.z = pathT * (10 + index * 4)
       })
       const glowMat = glow.material as THREE.MeshBasicMaterial
-      glowMat.opacity = 0.04 + enter * 0.14
-      keyLight.intensity = 18 + (1 - pathT) * 22
+      glowMat.opacity = 0.05 + enter * 0.12
 
-      host.style.setProperty('--hero-scroll', ease.toFixed(4))
+      if (Math.abs(ease - lastScrollCss) > 0.004) {
+        lastScrollCss = ease
+        host.style.setProperty('--hero-scroll', ease.toFixed(3))
+        host.dataset.scrollProgress = ease.toFixed(3)
+      }
+
       renderer.render(scene, camera)
-      cssRenderer.render(cssScene, camera)
+      if (showCss) cssRenderer.render(cssScene, camera)
     }
 
     const onVisibility = () => {
-      visible = !document.hidden
-      if (visible) previous = performance.now()
+      pageVisible = !document.hidden
+      if (pageVisible) previous = performance.now()
     }
+    const intersection = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting
+      if (inView) previous = performance.now()
+    }, { threshold: 0.02 })
+    intersection.observe(host)
     document.addEventListener('visibilitychange', onVisibility)
     animate()
 
     return () => {
       window.cancelAnimationFrame(frame)
       document.removeEventListener('visibilitychange', onVisibility)
+      intersection.disconnect()
       resizeObserver.disconnect()
       host.removeEventListener('pointermove', onPointerMove)
       host.removeEventListener('pointerdown', onPointerDown)

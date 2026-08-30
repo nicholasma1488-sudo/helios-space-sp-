@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Check, Code2, Compass, CreditCard, Gift, Grid3X3, Heart, Layers3,
+  ArrowRight, Bookmark, Code2, Grid3X3, Heart, Layers3,
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
-import { goToPay } from '../product/pay'
+import { SuiteAppIcon } from './SuiteAppIcon'
+import { getSuiteApp } from '../product/miniApps'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
 import './LandingPage.css'
 
@@ -92,6 +93,17 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   }, [])
 
   useEffect(() => {
+    const scene = sceneRef.current
+    if (!scene) return
+    const lockHeight = () => {
+      scene.style.height = `${Math.round(window.innerHeight * 2.4)}px`
+    }
+    lockHeight()
+    window.addEventListener('resize', lockHeight)
+    return () => window.removeEventListener('resize', lockHeight)
+  }, [])
+
+  useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduced) {
       setHeroPhase('live')
@@ -139,6 +151,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
     <div
       ref={rootRef}
       className={'landing-v2' + (transitioning ? ' is-entering-auth intent-' + transitioning : '')}
+      data-landing-scroller="true"
       onScroll={handleLandingScroll}
     >
       <div className="landing-noise" aria-hidden="true" />
@@ -150,7 +163,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
           <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
           <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Apps</button>
-          <button type="button" onClick={() => scrollTo('#pricing')}>Pricing</button>
+          <button type="button" onClick={() => scrollTo('#start-free')}>Start</button>
         </nav>
         <div className="landing-nav-actions">
           <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
@@ -294,56 +307,14 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
             <h2>Open Word, Excel or slides.<br />Keep working in the same file.</h2>
           </div>
           <div className="mini-band-list">
-            <span><MessageCircle size={15} /> Word</span>
-            <span><Compass size={15} /> Excel</span>
-            <span><Layers3 size={15} /> PowerPoint</span>
-            <span><Code2 size={15} /> OneNote</span>
+            <span><SuiteAppIcon app={getSuiteApp('word-docs')!} size={22} /> Word</span>
+            <span><SuiteAppIcon app={getSuiteApp('spreadsheet')!} size={22} /> Excel</span>
+            <span><SuiteAppIcon app={getSuiteApp('presentation')!} size={22} /> PowerPoint</span>
+            <span><SuiteAppIcon app={getSuiteApp('notebook')!} size={22} /> OneNote</span>
           </div>
         </section>
 
-        <section className="landing-pricing" id="pricing">
-          <div className="pricing-intro" data-reveal>
-            <div className="landing-section-label"><span>03</span> PAYMENT</div>
-            <h2>One Helios.<br />Free or Orbit.</h2>
-            <p>Create an account, then open the payment page. Orbit jumps to Stripe so the bank card is entered on that site, not inside Helios.</p>
-          </div>
-          <div className="pricing-grid">
-            <article className="pricing-card is-child" data-reveal>
-              <span><Gift size={15} /> INCLUDED</span>
-              <h3>Free</h3>
-              <b>¥0 <small>永久免费</small></b>
-              <p>The included edition. No card required.</p>
-              <ul>
-                <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
-                <li><Check size={13} /> Spreadsheets stay included</li>
-                <li><Check size={13} /> 60 writing documents</li>
-                <li><Check size={13} /> 40,000 characters per document</li>
-                <li><Check size={13} /> Subjects, Hobbies, Live</li>
-              </ul>
-              <button type="button" onClick={() => enterAuth('register')}>
-                Start free <ArrowRight size={15} />
-              </button>
-            </article>
-            <article className="pricing-card is-orbit" data-reveal>
-              <span><CreditCard size={15} /> FULL SUITE</span>
-              <h3>Orbit</h3>
-              <b>¥68 <small>/ 月</small></b>
-              <p>More writing room plus every Mini App. Pay with a bank card on Stripe.</p>
-              <ul>
-                <li><Check size={13} /> Everything in Free, including tables</li>
-                <li><Check size={13} /> Unlimited writing documents</li>
-                <li><Check size={13} /> 500,000 characters per document</li>
-                <li><Check size={13} /> Stocks, school and work Mini Apps</li>
-                <li><Check size={13} /> Stripe 银行卡自动到账</li>
-              </ul>
-              <button type="button" onClick={() => goToPay()}>
-                打开付款页 <ArrowRight size={15} />
-              </button>
-            </article>
-          </div>
-        </section>
-
-        <section className="landing-final-cta" data-reveal>
+        <section className="landing-final-cta" id="start-free" data-reveal>
           <div className="final-cta-light" aria-hidden="true" />
           <span className="landing-eyebrow"><Sparkles size={13} /> YOUR SPACE STARTS QUIET</span>
           <h2>Make one thing.<br />Share one honest update.</h2>
@@ -551,10 +522,10 @@ function HeroAppsScreen() {
     <div className="hero-apps-ui">
       <header>Apps · Word · Excel · PowerPoint · OneNote</header>
       <div>
-        <span><MessageCircle size={18} /><strong>Word</strong><small>Documents that stay saved</small></span>
-        <span><Compass size={18} /><strong>Excel</strong><small>Cells · Formulas · Charts</small></span>
-        <span><Layers3 size={18} /><strong>PowerPoint</strong><small>Slides · Present · Share</small></span>
-        <span><Code2 size={18} /><strong>OneNote</strong><small>Sections you keep adding to</small></span>
+        <span><SuiteAppIcon app={getSuiteApp('word-docs')!} size={28} /><strong>Word</strong><small>Documents that stay saved</small></span>
+        <span><SuiteAppIcon app={getSuiteApp('spreadsheet')!} size={28} /><strong>Excel</strong><small>Cells · Formulas · Charts</small></span>
+        <span><SuiteAppIcon app={getSuiteApp('presentation')!} size={28} /><strong>PowerPoint</strong><small>Slides · Present · Share</small></span>
+        <span><SuiteAppIcon app={getSuiteApp('notebook')!} size={28} /><strong>OneNote</strong><small>Sections you keep adding to</small></span>
       </div>
     </div>
   )
@@ -589,10 +560,10 @@ function SocialModeVisual() {
 function AppsModeVisual() {
   return (
     <div className="mode-apps-ui">
-      <div><MessageCircle size={22} /><strong>Word</strong><small>WRITE</small></div>
-      <div><Compass size={22} /><strong>Excel</strong><small>CALC</small></div>
-      <div><Layers3 size={22} /><strong>PowerPoint</strong><small>PRESENT</small></div>
-      <div><Code2 size={22} /><strong>OneNote</strong><small>NOTES</small></div>
+      <div><SuiteAppIcon app={getSuiteApp('word-docs')!} size={36} /><strong>Word</strong><small>WRITE</small></div>
+      <div><SuiteAppIcon app={getSuiteApp('spreadsheet')!} size={36} /><strong>Excel</strong><small>CALC</small></div>
+      <div><SuiteAppIcon app={getSuiteApp('presentation')!} size={36} /><strong>PowerPoint</strong><small>PRESENT</small></div>
+      <div><SuiteAppIcon app={getSuiteApp('notebook')!} size={36} /><strong>OneNote</strong><small>NOTES</small></div>
     </div>
   )
 }

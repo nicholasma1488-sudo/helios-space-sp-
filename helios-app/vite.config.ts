@@ -8,9 +8,11 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    host: '127.0.0.1',
+    port: 5173,
     proxy: {
       '/api': {
-        target: process.env.HELIOS_API_URL || 'http://localhost:8080',
+        target: process.env.HELIOS_API_URL || 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
     },
