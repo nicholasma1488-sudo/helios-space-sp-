@@ -27,8 +27,10 @@ function describeHost() {
     : location.host.includes('netlify.app')
       ? 'Netlify free subdomain — same idea as your-app.base44.app.'
       : 'Public URL for this static site. You can still download the zip and republish it.'
-  hereUrl.href = location.href
-  hereUrl.textContent = location.href
+  if (hereUrl) {
+    hereUrl.href = location.href
+    hereUrl.textContent = location.href
+  }
 }
 
 function loadNotes() {
@@ -60,15 +62,29 @@ window.addEventListener('scroll', () => {
   nav.classList.toggle('is-scrolled', window.scrollY > 8)
 }, { passive: true })
 
-copyBtn.addEventListener('click', async () => {
-  const value = location.protocol === 'file:' ? 'Open index.html from the unzipped folder' : location.href
+async function copyText(value) {
   try {
     await navigator.clipboard.writeText(value)
-    copyBtn.textContent = 'Copied'
-    setTimeout(() => { copyBtn.textContent = 'Copy URL' }, 1400)
+    return true
   } catch {
-    copyBtn.textContent = 'Copy unavailable'
+    const field = document.createElement('textarea')
+    field.value = value
+    field.setAttribute('readonly', '')
+    field.style.position = 'fixed'
+    field.style.left = '-9999px'
+    document.body.appendChild(field)
+    field.select()
+    const ok = document.execCommand('copy')
+    field.remove()
+    return ok
   }
+}
+
+copyBtn.addEventListener('click', async () => {
+  const value = location.protocol === 'file:' ? 'Open index.html from the unzipped folder' : location.href
+  const ok = await copyText(value)
+  copyBtn.textContent = ok ? 'Copied' : 'Copy unavailable'
+  setTimeout(() => { copyBtn.textContent = 'Copy URL' }, 1400)
 })
 
 form.addEventListener('submit', (event) => {

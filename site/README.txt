@@ -20,5 +20,5 @@ Free domain options
 These are free subdomains, the same idea as Base44 publishing a site
 to a free *.base44.app address.
 
-This copy is also live at:
-https://red-glitter-1388.zerodeploy.app
+The public free-domain URL is printed on the live site itself
+(the address bar, plus the Live address card).
