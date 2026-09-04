@@ -1,21 +1,13 @@
 import { useMemo, useState } from 'react'
-import { Clock3, FilePlus2, Lock, Search, Sparkles, X } from 'lucide-react'
+import { Clock3, FilePlus2, Search, Sparkles, X } from 'lucide-react'
 import { useApp } from '../store/appStore'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { createSuiteProject, openProjectWorkspace } from '../product/flow'
 import {
-  editionBlurb,
-  editionFor,
-  editionKicker,
-  editionLabel,
   nextSuiteFileName,
   spaceForSuiteApp,
-  suiteAppUnlocked,
-  suiteAppsForEdition,
-  suiteHomeTitle,
+  SUITE_APPS,
   suiteStarterWorkspace,
-  unlockLabel,
-  WRITING_LIMITS,
   type SuiteApp,
 } from '../product/miniApps'
 import './MiniAppsView.css'
@@ -34,8 +26,7 @@ function relativeTime(value: string) {
 
 export function MiniAppsView() {
   const { state, dispatch } = useApp()
-  const edition = editionFor(state.user?.plan)
-  const apps = suiteAppsForEdition(edition)
+  const apps = SUITE_APPS
   const [query, setQuery] = useState('')
   const [active, setActive] = useState<SuiteApp | null>(null)
   const [creating, setCreating] = useState(false)
@@ -71,15 +62,7 @@ export function MiniAppsView() {
     [active, state.projects],
   )
 
-  function goBilling() {
-    dispatch({ type: 'OPEN_UPGRADE' })
-  }
-
   function openApp(app: SuiteApp) {
-    if (!suiteAppUnlocked(app, edition)) {
-      goBilling()
-      return
-    }
     if (app.id === 'stocks') {
       const existing = state.projects
         .filter(project => project.app_kind === 'stocks')
@@ -139,21 +122,18 @@ export function MiniAppsView() {
     }
   }
 
-  const canUpgrade = edition === 'free'
   const writingUsed = state.projects.filter(project =>
     project.user_id === state.user?.id
     && (project.type === 'writing' || (project.type === 'doc' && project.app_kind !== 'stocks')),
   ).length
-  const writingLimit = state.user?.usage?.documents.limit ?? WRITING_LIMITS[edition].documents
-  const characterLimit = state.user?.usage?.characters.limit ?? WRITING_LIMITS[edition].characters
 
   return (
     <div className="suite-view">
       <header className="suite-top">
         <div>
-          <div className="suite-kicker"><Sparkles size={13} /> {editionKicker(edition)}</div>
-          <h1>{suiteHomeTitle(edition)}</h1>
-          <p>{editionBlurb(edition)}</p>
+          <div className="suite-kicker"><Sparkles size={13} /> APPS</div>
+          <h1>Apps</h1>
+          <p>Word, Excel, PowerPoint, OneNote, Stocks, and the school and work suite are all included.</p>
         </div>
         <label className="suite-search">
           <Search size={16} aria-hidden="true" />
@@ -164,19 +144,10 @@ export function MiniAppsView() {
 
       <div className="suite-welcome">
         <div>
-          <small>{editionKicker(edition)}</small>
-          <strong>You are on {editionLabel(edition)}</strong>
-          <span>
-            {writingLimit == null
-              ? `Writing documents unlimited · ${characterLimit.toLocaleString()} characters each`
-              : `Writing ${writingUsed} / ${writingLimit} · ${characterLimit.toLocaleString()} characters each`}
-          </span>
+          <small>INCLUDED</small>
+          <strong>Every app is included</strong>
+          <span>Writing {writingUsed} documents</span>
         </div>
-        {canUpgrade && (
-          <button type="button" onClick={goBilling}>
-            Upgrade to Orbit
-          </button>
-        )}
       </div>
 
       <div className="suite-body">
@@ -190,26 +161,23 @@ export function MiniAppsView() {
             if (group.length === 0) return null
             return (
               <div key={track} className="suite-group">
-                <h3>{track === 'core' ? 'Included' : 'Orbit suite'}</h3>
+                <h3>{track === 'core' ? '365 suite' : 'School and work'}</h3>
                 <div className="suite-grid">
-                  {group.map(app => {
-                    const unlocked = suiteAppUnlocked(app, edition)
-                    return (
+                  {group.map(app => (
                       <button
                         key={app.id}
                         type="button"
-                        className={'suite-tile' + (unlocked ? '' : ' is-locked')}
-                        title={unlocked ? app.description : unlockLabel(edition)}
+                        className="suite-tile"
+                        title={app.description}
                         onClick={() => openApp(app)}
-                        aria-label={unlocked ? `Open ${app.name}` : unlockLabel(edition)}
+                        aria-label={`Open ${app.name}`}
                       >
                         <span className="suite-tile-icon" style={{ background: app.color }}>
-                          {unlocked ? app.letter : <Lock size={18} />}
+                          {app.letter}
                         </span>
                         <strong>{app.name}</strong>
                       </button>
-                    )
-                  })}
+                  ))}
                 </div>
               </div>
             )

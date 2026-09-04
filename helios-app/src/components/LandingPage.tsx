@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Check, Code2, Compass, CreditCard, Gift, Grid3X3, Heart, Layers3,
+  ArrowRight, Bookmark, Check, Code2, Compass, Gift, Grid3X3, Heart, Layers3,
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
-import { goToPay } from '../product/pay'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
 import './LandingPage.css'
 
@@ -150,7 +149,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
           <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
           <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Apps</button>
-          <button type="button" onClick={() => scrollTo('#pricing')}>Pricing</button>
+          <button type="button" onClick={() => scrollTo('#start-free')}>Start</button>
         </nav>
         <div className="landing-nav-actions">
           <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
@@ -301,43 +300,26 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           </div>
         </section>
 
-        <section className="landing-pricing" id="pricing">
+        <section className="landing-pricing" id="start-free">
           <div className="pricing-intro" data-reveal>
-            <div className="landing-section-label"><span>03</span> PAYMENT</div>
-            <h2>One Helios.<br />Free or Orbit.</h2>
-            <p>Create an account, then open the payment page. Orbit jumps to Stripe so the bank card is entered on that site, not inside Helios.</p>
+            <div className="landing-section-label"><span>03</span> FREE</div>
+            <h2>One Helios.<br />Completely free.</h2>
+            <p>Create an account and use every app. There is no paid plan, no upgrade, and no card.</p>
           </div>
           <div className="pricing-grid">
-            <article className="pricing-card is-child" data-reveal>
-              <span><Gift size={15} /> INCLUDED</span>
-              <h3>Free</h3>
-              <b>¥0 <small>永久免费</small></b>
-              <p>The included edition. No card required.</p>
+            <article className="pricing-card is-orbit" data-reveal>
+              <span><Gift size={15} /> HELIOS</span>
+              <h3>Free for everyone</h3>
+              <p>Word, Excel, PowerPoint, OneNote, Stocks, and the school and work apps stay on every account.</p>
               <ul>
-                <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
-                <li><Check size={13} /> Spreadsheets stay included</li>
-                <li><Check size={13} /> 60 writing documents</li>
-                <li><Check size={13} /> 40,000 characters per document</li>
+                <li><Check size={13} /> 全部 Mini Apps</li>
+                <li><Check size={13} /> 文稿不限篇数、不限字数</li>
+                <li><Check size={13} /> Stocks 行情</li>
                 <li><Check size={13} /> Subjects, Hobbies, Live</li>
+                <li><Check size={13} /> 没有套餐，也不收钱</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                Start free <ArrowRight size={15} />
-              </button>
-            </article>
-            <article className="pricing-card is-orbit" data-reveal>
-              <span><CreditCard size={15} /> FULL SUITE</span>
-              <h3>Orbit</h3>
-              <b>¥68 <small>/ 月</small></b>
-              <p>More writing room plus every Mini App. Pay with a bank card on Stripe.</p>
-              <ul>
-                <li><Check size={13} /> Everything in Free, including tables</li>
-                <li><Check size={13} /> Unlimited writing documents</li>
-                <li><Check size={13} /> 500,000 characters per document</li>
-                <li><Check size={13} /> Stocks, school and work Mini Apps</li>
-                <li><Check size={13} /> Stripe 银行卡自动到账</li>
-              </ul>
-              <button type="button" onClick={() => goToPay()}>
-                打开付款页 <ArrowRight size={15} />
+                免费开始 <ArrowRight size={15} />
               </button>
             </article>
           </div>

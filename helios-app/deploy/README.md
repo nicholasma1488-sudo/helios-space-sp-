@@ -12,7 +12,7 @@ From `helios-app/`, with the VPS root password in `SSHPASS` (never commit it):
 
 ```bash
 chmod +x deploy/push-release.sh
-SSHPASS='...' ./deploy/push-release.sh 149.88.73.252
+SSHPASS='...' ./deploy/push-release.sh 154.222.19.38
 ```
 
 That builds the frontend, rsyncs `dist/` and `server/` into
@@ -27,7 +27,5 @@ Application admin access is disabled unless `HELIOS_ADMIN_EMAIL` and
 `HELIOS_ADMIN_PASSWORD` are added through a root-readable systemd environment
 file or drop-in. Never commit those values.
 
-Orbit is **¥68 / month in CNY**. Checkout always uses that catalog amount, so
-do not leave an old USD `STRIPE_ORBIT_PRICE_ID` on the server. Set
-`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, and `STRIPE_WEBHOOK_SECRET`
-on the server, never in git. Without those keys, people can still stay on Free.
+Helios is completely free. There is no paid plan and no Stripe checkout.
+Do not set payment keys on the server. Billing routes return 410.

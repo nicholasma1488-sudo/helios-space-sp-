@@ -1,56 +1,10 @@
 // Typed API client for Helios Space backend
 
-export type BillingPlanId = 'free' | 'orbit'
-export type PayMethod = 'card'
-export type SuiteEdition = 'free' | 'orbit'
-
-export interface WritingUsage {
-  documents: { used: number; limit: number | null }
-  characters: { used?: number; limit: number }
-}
-
 export interface User {
   id: number
   name: string
   handle: string
   email: string
-  plan?: BillingPlanId
-  plan_selected?: boolean
-  edition?: SuiteEdition
-  usage?: WritingUsage
-}
-
-export interface BillingPlan {
-  id: BillingPlanId
-  name: string
-  price_cents: number
-  currency: string
-  interval: 'month' | string
-  description: string
-  features: string[]
-  mini_apps?: string[]
-  eligible?: boolean
-  limits?: { documents: number | null; characters: number }
-}
-
-export interface PaymentMethod {
-  brand: string
-  last4: string
-  exp_month: number
-  exp_year: number
-  cardholder: string
-  source?: 'card' | 'stripe' | string
-  updated_at: string
-}
-
-export interface BillingEvent {
-  id: number
-  kind: string
-  plan: BillingPlanId | string
-  amount_cents: number
-  currency: string
-  detail: string
-  created_at: string
 }
 
 export interface MarketQuote {
@@ -61,26 +15,6 @@ export interface MarketQuote {
   change_percent: number | null
   currency: string
   market_state: string
-}
-
-export interface BillingSnapshot {
-  plan: BillingPlanId
-  edition?: SuiteEdition
-  plans: BillingPlan[]
-  payment_method: PaymentMethod | null
-  events: BillingEvent[]
-  stripe?: { enabled: boolean; publishable_key: string | null; auto_detect?: boolean }
-  pay_methods?: PayMethod[]
-  pending_checkout?: { session_id: string; plan: string; status: string; created_at: string } | null
-  usage?: WritingUsage
-}
-
-export interface CardCheckout {
-  number: string
-  exp_month: number
-  exp_year: number
-  cvc: string
-  name: string
 }
 
 export interface Project {
@@ -324,7 +258,6 @@ export interface UserExport {
   solar_events?: Array<Record<string, unknown>>
   notifications?: Array<Record<string, unknown>>
   follows?: Array<Record<string, unknown>>
-  billing?: BillingSnapshot
 }
 
 export interface SiteInfo {
@@ -333,7 +266,6 @@ export interface SiteInfo {
   announcement: string
   signup_open: boolean
   ai_enabled: boolean
-  plans?: BillingPlan[]
 }
 
 export class ApiError extends Error {
@@ -408,25 +340,6 @@ export const api = {
       call<{ quotes: MarketQuote[]; updated_at: string; delayed: boolean }>(
         '/api/markets/quotes?symbols=' + encodeURIComponent(symbols.join(',')),
       ),
-  },
-
-  billing: {
-    get: () => call<BillingSnapshot>('/api/billing'),
-    checkout: (data: { plan: BillingPlanId; card?: CardCheckout }) =>
-      call<{ ok: boolean; user: User; billing: BillingSnapshot }>('/api/billing/checkout', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    stripe: (plan: BillingPlanId = 'orbit') =>
-      call<{ ok: boolean; session_id: string; url: string; method?: PayMethod; mock?: boolean }>('/api/billing/stripe', {
-        method: 'POST',
-        body: JSON.stringify({ plan }),
-      }),
-    confirmStripe: (session_id: string) =>
-      call<{ ok: boolean; user: User; billing: BillingSnapshot }>('/api/billing/stripe/confirm', {
-        method: 'POST',
-        body: JSON.stringify({ session_id }),
-      }),
   },
 
   projects: {

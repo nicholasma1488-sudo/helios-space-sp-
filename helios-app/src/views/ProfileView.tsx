@@ -5,7 +5,6 @@ import {
 } from 'lucide-react'
 import { api, type Post, type Project, type SolarSummary, type SpaceSummary } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
-import { goToPay } from '../product/pay'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
 import './ProfileView.css'
@@ -29,7 +28,7 @@ export function ProfileView() {
       const raw = sessionStorage.getItem('helios-open-creator')
       sessionStorage.removeItem('helios-open-creator')
       if (raw) setCreator(JSON.parse(raw) as { id: number; name: string; handle: string })
-      if (sessionStorage.getItem('helios-open-settings') === 'billing') {
+      if (sessionStorage.getItem('helios-open-settings') === 'settings') {
         sessionStorage.removeItem('helios-open-settings')
         setTab('Settings')
       }
@@ -89,7 +88,7 @@ export function ProfileView() {
       {creator && creator.id !== state.user.id && <div className="space-readonly-banner" style={{ padding: 10, textAlign: 'center' }}>Viewing {creator.name}'s public work. <button type="button" onClick={() => setCreator(null)}>Back to your profile</button></div>}
       <header className="profile-hero">
         <div className="profile-avatar"><span>{user.name.slice(0, 1).toUpperCase()}</span><i /></div>
-        <div className="profile-identity"><span>CREATOR · STUDENT · COLLABORATOR{(!creator || creator.id === state.user.id) ? ` · ${state.user.plan === 'orbit' ? 'ORBIT' : 'FREE'}` : ''}</span><h1>{user.name}</h1><p>{user.handle} · Building across {joinedSpaces.length || 1} Space{joinedSpaces.length === 1 ? '' : 's'}</p><div><b>{ownedProjects.length}<small>Projects</small></b><b>{posts.length}<small>Progress posts</small></b><b>{contributions.length + helpEvents.length}<small>Contributions</small></b></div></div>
+        <div className="profile-identity"><span>CREATOR · STUDENT · COLLABORATOR</span><h1>{user.name}</h1><p>{user.handle} · Building across {joinedSpaces.length || 1} Space{joinedSpaces.length === 1 ? '' : 's'}</p><div><b>{ownedProjects.length}<small>Projects</small></b><b>{posts.length}<small>Progress posts</small></b><b>{contributions.length + helpEvents.length}<small>Contributions</small></b></div></div>
         <div className="profile-solar-card"><div className="profile-solar-orbit" style={{ '--solar-progress': `${progress * 3.6}deg` } as React.CSSProperties}><span><Sun size={20} /><strong>{solar.total}</strong><small>Solar</small></span></div><div><span>CURRENT IDENTITY</span><strong>{solar.identity}</strong><small>{solar.next_threshold ? `${solar.next_threshold - solar.total} Solar until the next identity` : 'Highest Solar identity reached'}</small></div></div>
       </header>
       <nav className="profile-tabs" aria-label="Profile sections">{(['Journey', 'Projects', 'Posts', 'Spaces', 'Settings'] as const).map(item => <button type="button" key={item} className={tab === item ? 'is-active' : ''} onClick={() => setTab(item)}>{item}</button>)}</nav>
@@ -118,11 +117,6 @@ function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExp
   return (
     <section className="profile-settings">
       <header><span>ACCOUNT & ACCESSIBILITY</span><h2>Settings</h2></header>
-      <article className="profile-billing-article">
-        <h3><Sparkles size={15} /> 付款</h3>
-        <p>打开独立付款页，然后跳转到 Stripe 用银行卡支付。Helios 不收集卡号。</p>
-        <button type="button" className="profile-export" onClick={() => goToPay()}>打开付款页</button>
-      </article>
       <article>
         <h3><Moon size={15} /> Appearance</h3>
         <div className="profile-theme-buttons">
