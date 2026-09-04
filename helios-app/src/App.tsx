@@ -19,7 +19,6 @@ import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
 import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
-import { isPayPath } from './product/pay'
 import './App.css'
 
 function MainContent() {
@@ -67,14 +66,13 @@ function AppInner() {
   // CTA buttons on the landing page set this to 'auth'.
   const [authMode, setAuthMode] = useState<'landing' | 'auth'>('landing')
   const [authDefaultTab, setAuthDefaultTab] = useState<'login' | 'register'>('register')
-  const [path, setPath] = useState(window.location.pathname)
   const previousUserId = useRef<number | null>(state.user?.id ?? null)
-  const onPayPage = isPayPath(path)
 
   useEffect(() => {
-    const sync = () => setPath(window.location.pathname)
-    window.addEventListener('popstate', sync)
-    return () => window.removeEventListener('popstate', sync)
+    const path = window.location.pathname
+    if (path === '/pay' || path === '/pay/') {
+      window.history.replaceState({}, '', '/')
+    }
   }, [])
 
   useEffect(() => {
@@ -152,12 +150,6 @@ function AppInner() {
     if (state.reducedMotion) document.documentElement.classList.add('motion-reduced')
     else document.documentElement.classList.remove('motion-reduced')
   }, [state.reducedMotion])
-
-  useEffect(() => {
-    if (!onPayPage) return
-    window.history.replaceState({}, '', '/')
-    setPath('/')
-  }, [onPayPage])
 
   // Respect OS reduced-motion
   useEffect(() => {

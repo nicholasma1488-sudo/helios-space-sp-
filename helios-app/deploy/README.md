@@ -12,7 +12,7 @@ From `helios-app/`, with the VPS root password in `SSHPASS` (never commit it):
 
 ```bash
 chmod +x deploy/push-release.sh
-SSHPASS='...' ./deploy/push-release.sh 149.88.73.252
+SSHPASS='...' ./deploy/push-release.sh 154.222.19.38
 ```
 
 That builds the frontend, rsyncs `dist/` and `server/` into

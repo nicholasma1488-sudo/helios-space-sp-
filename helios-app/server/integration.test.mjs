@@ -27,11 +27,6 @@ const child = spawn(process.execPath, ['--experimental-sqlite', 'server.js'], {
     NODE_ENV: 'test',
     HELIOS_ADMIN_EMAIL: '',
     HELIOS_ADMIN_PASSWORD: '',
-    HELIOS_STRIPE_MOCK: '1',
-    STRIPE_PUBLISHABLE_KEY: 'pk_test_helios_mock',
-    HELIOS_FREE_DOCUMENTS: '3',
-    HELIOS_FREE_CHARACTERS: '200',
-    HELIOS_ORBIT_CHARACTERS: '500',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
 })
