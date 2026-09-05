@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOST="${1:-${HELIOS_DEPLOY_HOST:-149.88.73.252}}"
+HOST="${1:-${HELIOS_DEPLOY_HOST:-154.222.19.38}}"
 USER="${HELIOS_DEPLOY_USER:-root}"
 REMOTE="${USER}@${HOST}"
 

@@ -1,33 +1,41 @@
 # Production deployment
 
-The production server uses versioned releases under `/opt/helios-space/releases`,
-a `current` symlink, and the `helios-space.service` systemd unit.
+Production for `helioschat.space` runs on `154.222.19.38` (CentOS 7 + nginx +
+Docker Compose). The previous VPS `149.88.73.252` is retired and unreachable —
+do not deploy there.
 
-Persistent SQLite data lives in `/var/lib/helios-space`, outside every release.
-The Node service binds to `127.0.0.1:8080`; Caddy owns public HTTP/HTTPS.
+Nginx terminates TLS and proxies `helioschat.space` to
+`127.0.0.1:8080`, where the `helios` container listens. SQLite data lives in
+the Docker volume `helios-app_helios-data`.
 
-## Push a release
+## Push a Docker release (current production path)
 
 From `helios-app/`, with the VPS root password in `SSHPASS` (never commit it):
 
 ```bash
-chmod +x deploy/push-release.sh
-SSHPASS='...' ./deploy/push-release.sh 149.88.73.252
+chmod +x deploy/push-docker.sh
+SSHPASS='...' ./deploy/push-docker.sh 154.222.19.38
 ```
 
-That builds the frontend, rsyncs `dist/` and `server/` into
-`/opt/helios-space/releases/<UTC timestamp>`, runs `npm ci --omit=dev` on the
-server, flips `current`, and restarts `helios-space`.
+That rsyncs the app tree to `/root/helios-space-sp-/helios-app`, rebuilds the
+`helios` image, recreates the container, and keeps the existing data volume.
 
-`deploy/release.sh` packs a local tarball if you need an offline artifact.
-`deploy/install-release.sh` activates an already-copied release directory on
-the VPS.
+Create `/root/helios-space-sp-/helios-app/.env` on the server once (mode 600)
+with:
 
-Application admin access is disabled unless `HELIOS_ADMIN_EMAIL` and
-`HELIOS_ADMIN_PASSWORD` are added through a root-readable systemd environment
-file or drop-in. Never commit those values.
+```bash
+HELIOS_ADMIN_EMAIL=...
+HELIOS_ADMIN_PASSWORD=...
+```
 
-Orbit is **¥68 / month in CNY**. Checkout always uses that catalog amount, so
-do not leave an old USD `STRIPE_ORBIT_PRICE_ID` on the server. Set
-`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, and `STRIPE_WEBHOOK_SECRET`
-on the server, never in git. Without those keys, people can still stay on Free.
+Never commit `.env` or passwords.
+
+## Legacy systemd release scripts
+
+`deploy/push-release.sh`, `deploy/release.sh`, and `deploy/install-release.sh`
+target a native Node + systemd layout under `/opt/helios-space`. The current
+production host does not use that path.
+
+Helios is completely free. There is no paid plan and no Stripe checkout.
+Do not set payment keys on the server. Billing routes return 410 for signed-in
+sessions (anonymous callers get 401).

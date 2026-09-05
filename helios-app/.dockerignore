@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.env
+.env.*
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+deploy/*.sh
+output
+tmp
+.playwright-cli

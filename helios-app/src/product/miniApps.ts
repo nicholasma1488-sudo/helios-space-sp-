@@ -1,6 +1,5 @@
-import type { BillingPlanId, Project } from '../api'
+import type { Project } from '../api'
 
-export type SuiteEdition = 'free' | 'orbit'
 export type SuiteTrack = 'core' | 'orbit'
 
 export interface SuiteApp {
@@ -146,41 +145,6 @@ export const SUITE_APPS: SuiteApp[] = [
   },
 ]
 
-export function editionFor(plan?: BillingPlanId | null): SuiteEdition {
-  return plan === 'orbit' ? 'orbit' : 'free'
-}
-
-export function editionLabel(edition: SuiteEdition) {
-  return edition === 'orbit' ? 'Orbit' : 'Free'
-}
-
-export function editionKicker(edition: SuiteEdition) {
-  return edition === 'orbit' ? 'ORBIT' : 'FREE EDITION'
-}
-
-export const WRITING_LIMITS = {
-  free: { documents: 60, characters: 40_000 },
-  orbit: { documents: null as number | null, characters: 500_000 },
-}
-
-export function editionBlurb(edition: SuiteEdition) {
-  if (edition === 'orbit')
-    return 'Word, Excel, PowerPoint and OneNote stay included. Orbit adds unlimited writing documents, 500,000 characters each, plus Stocks and the school and work Mini Apps.'
-  return 'Word, Excel, PowerPoint and OneNote stay included — spreadsheets are not a paywall. Free allows 60 writing documents and 40,000 characters each.'
-}
-
-export function suiteAppsForEdition(_edition: SuiteEdition) {
-  return SUITE_APPS
-}
-
-export function suiteAppUnlocked(app: SuiteApp, edition: SuiteEdition) {
-  return app.track === 'core' || edition === 'orbit'
-}
-
-export function unlockLabel(_edition: SuiteEdition) {
-  return 'Unlock with Orbit'
-}
-
 export function spaceForSuiteApp(app: SuiteApp) {
   return app.spaceAdult
 }
@@ -195,10 +159,6 @@ export function nextSuiteFileName(base: string, existing: Array<{ name: string; 
 
 export function getSuiteApp(id: string) {
   return SUITE_APPS.find(app => app.id === id) ?? null
-}
-
-export function suiteHomeTitle(edition: SuiteEdition) {
-  return edition === 'orbit' ? 'Orbit apps' : 'Apps'
 }
 
 function writingData(html: string) {

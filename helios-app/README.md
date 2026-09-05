@@ -57,7 +57,7 @@ dedicated persistent directory.
 - Projects view pre-selects the active Space when navigated from a Space context
 - Global React error boundary protecting against unexpected view crashes
 - Helios AI self-negation correction: upstream model replies claiming inability are replaced with a Helios-scoped boundary explanation
-- After signup, a required plan picker offers Free, Alpha, or Orbit. Paid plans unlock extra Mini Apps (Flash Cards, Homework Radar, Vocab Spark, Streak Arena, Idea Vault, Meeting Pulse, Deep Work, Win Log) plus card or Stripe checkout.
+- Helios is completely free: every Mini App is available after signup, with no paid plans or checkout.
 
 ## Deliberately not represented as available
 
@@ -90,7 +90,7 @@ Or run all three gates:
 npm run check
 ```
 
-The API suite starts the Express server against a temporary isolated SQLite database and verifies authentication, projects, public/private visibility, cursor pagination, search/category filters, reactions, comments, saved posts, age-based billing (free, Alpha, Orbit, Stripe), malformed input, unknown routes, logout, and the unconfigured-AI response.
+The API suite starts the Express server against a temporary isolated SQLite database and verifies authentication, projects, public/private visibility, cursor pagination, search/category filters, reactions, comments, saved posts, removed billing routes (410), malformed input, unknown routes, logout, and the unconfigured-AI response.
 
 Browser QA artifacts are generated under `output/playwright/`. The upgrade specification and acceptance checklist live in `HELIOS_UPGRADE_MASTER_PROMPT.md` and `HELIOS_UPGRADE_TODO.md`.
 
