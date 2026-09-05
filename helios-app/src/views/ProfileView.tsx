@@ -7,6 +7,8 @@ import { api, type Post, type Project, type SolarSummary, type SpaceSummary } fr
 import { NewProjectModal } from '../components/NewProjectModal'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
+import { t } from '../i18n'
+import type { Locale } from '../i18n'
 import './ProfileView.css'
 
 type ProfileTab = 'Journey' | 'Projects' | 'Posts' | 'Spaces' | 'Settings'
@@ -98,7 +100,7 @@ export function ProfileView() {
         {tab === 'Projects' && <ProjectsTab projects={state.projects} deleting={deleting} onOpen={openProject} onDelete={project => void deleteProject(project)} onNew={() => setShowNewProject(true)} />}
         {tab === 'Posts' && <PostsTab posts={posts} onOpenProject={id => { const project = state.projects.find(item => item.id === id); if (project) openProject(project) }} />}
         {tab === 'Spaces' && <SpacesTab spaces={joinedSpaces} onOpen={id => dispatch({ type: 'OPEN_SPACE', spaceId: id })} />}
-        {tab === 'Settings' && <SettingsTab theme={state.theme} reducedMotion={state.reducedMotion} exporting={exporting} onTheme={theme => dispatch({ type: 'SET_THEME', theme })} onMotion={() => dispatch({ type: 'SET_REDUCED_MOTION', val: !state.reducedMotion })} onExport={() => void downloadData()} onLogout={() => void logout()} />}
+        {tab === 'Settings' && <SettingsTab theme={state.theme} reducedMotion={state.reducedMotion} locale={state.locale} exporting={exporting} onTheme={theme => dispatch({ type: 'SET_THEME', theme })} onMotion={() => dispatch({ type: 'SET_REDUCED_MOTION', val: !state.reducedMotion })} onLocale={locale => dispatch({ type: 'SET_LOCALE', locale })} onExport={() => void downloadData()} onLogout={() => void logout()} />}
       </main>
     </div>
   )
@@ -113,7 +115,7 @@ function JourneyTab({ solar, projects, posts, joinedSpaces, contributions, onOpe
 function ProjectsTab({ projects, deleting, onOpen, onDelete, onNew }: { projects: Project[]; deleting: number | null; onOpen: (project: Project) => void; onDelete: (project: Project) => void; onNew: () => void }) { return <section className="profile-tab-section"><header><div><span>DURABLE PORTFOLIO</span><h2>Projects and contributions</h2><p>The same work stays connected in Space feeds, Lifestyle, Chat, Live and Helios.</p></div><button type="button" onClick={onNew}><Plus size={14} /> New Project</button></header><div className="profile-project-grid">{projects.map(project => <article key={project.id}><div><i><FolderGit2 size={18} /></i><span>{project.can_manage ? 'Owned' : project.collaborator_role ? `Collaborator · ${project.collaborator_role}` : 'Shared'}</span></div><small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small><h3>{project.name}</h3><p>{project.visibility} · Updated {new Date(project.updated_at).toLocaleDateString()}</p><footer><button type="button" onClick={() => onOpen(project)}>Open actual Project</button>{project.can_manage && <button type="button" onClick={() => onDelete(project)} disabled={deleting === project.id} aria-label={`Delete ${project.name}`}><Trash2 size={13} /></button>}</footer></article>)}{projects.length === 0 && <JourneyEmpty text="No Projects yet. Open a Subject or Hobby Space to start." />}</div></section> }
 function PostsTab({ posts, onOpenProject }: { posts: Post[]; onOpenProject: (id: number) => void }) { return <section className="profile-tab-section"><header><div><span>PROGRESS, NOT APPEARANCE</span><h2>Lifestyle and Space posts</h2><p>Your meaningful progress across school, creative work and hobbies.</p></div></header><div className="profile-post-list">{posts.map(post => <article key={post.id}><header><span>{getSpaceDefinition(post.space_id).name}</span><time>{new Date(post.created_at).toLocaleDateString()}</time></header><p>{post.body}</p>{post.media_url && <img src={post.media_url} alt="Progress" />}{post.project_id && <button type="button" onClick={() => onOpenProject(post.project_id!)}><FolderGit2 size={14} /> {post.project_name}<ChevronRight size={13} /></button>}<footer><span><Sparkles size={12} /> {Object.values(post.reactions).reduce((sum, value) => sum + value, 0)}</span><span><MessageCircle size={12} /> {post.comment_count}</span></footer></article>)}{posts.length === 0 && <JourneyEmpty text="Share a genuine accomplishment from Lifestyle or a Space feed." />}</div></section> }
 function SpacesTab({ spaces, onOpen }: { spaces: SpaceSummary[]; onOpen: (id: string) => void }) { return <section className="profile-tab-section"><header><div><span>WHERE YOUR WORK LIVES</span><h2>Joined Spaces and interests</h2><p>Subjects and Hobbies become part of your creator/student journey through real work.</p></div></header><div className="profile-space-grid">{spaces.map(space => { const definition = getSpaceDefinition(space.id); return <button type="button" key={space.id} onClick={() => onOpen(space.id)} style={{ '--profile-accent': definition.accent } as React.CSSProperties}><i>{space.name.slice(0, 1)}</i><span>{space.kind}</span><h3>{space.name}</h3><p>{definition.description}</p><footer>{space.project_count} Projects · {space.live_count} Live <ChevronRight size={12} /></footer></button> })}{spaces.length === 0 && <JourneyEmpty text="Choose a Space from Subjects or Hobbies and begin meaningful work." />}</div></section> }
-function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExport, onLogout }: { theme: string; reducedMotion: boolean; exporting: boolean; onTheme: (theme: 'dark' | 'high-contrast') => void; onMotion: () => void; onExport: () => void; onLogout: () => void }) {
+function SettingsTab({ theme, reducedMotion, locale, exporting, onTheme, onMotion, onLocale, onExport, onLogout }: { theme: string; reducedMotion: boolean; locale: Locale; exporting: boolean; onTheme: (theme: 'dark' | 'high-contrast') => void; onMotion: () => void; onLocale: (locale: Locale) => void; onExport: () => void; onLogout: () => void }) {
   return (
     <section className="profile-settings">
       <header><span>ACCOUNT & ACCESSIBILITY</span><h2>Settings</h2></header>
@@ -122,6 +124,14 @@ function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExp
         <div className="profile-theme-buttons">
           <button type="button" className={theme === 'dark' ? 'is-active' : ''} onClick={() => onTheme('dark')}>Dark</button>
           <button type="button" className={theme === 'high-contrast' ? 'is-active' : ''} onClick={() => onTheme('high-contrast')}>High contrast</button>
+        </div>
+      </article>
+      <article>
+        <h3>{t(locale, 'settings.language')}</h3>
+        <p>{t(locale, 'lang.hint')}</p>
+        <div className="profile-theme-buttons" role="group" aria-label={t(locale, 'lang.label')}>
+          <button type="button" className={locale === 'en' ? 'is-active' : ''} onClick={() => onLocale('en')}>{t(locale, 'lang.english')}</button>
+          <button type="button" className={locale === 'zh' ? 'is-active' : ''} onClick={() => onLocale('zh')}>{t(locale, 'lang.chinese')}</button>
         </div>
       </article>
       <article>
@@ -140,4 +150,5 @@ function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExp
     </section>
   )
 }
+
 function JourneyEmpty({ text }: { text: string }) { return <div className="profile-journey-empty"><Sparkles size={18} /><span>{text}</span></div> }

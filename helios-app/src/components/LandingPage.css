@@ -81,6 +81,33 @@
   cursor: pointer;
 }
 
+.landing-lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+}
+.landing-lang-switch button {
+  min-width: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255,255,255,0.62);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.landing-lang-switch button.is-active {
+  background: rgba(124, 96, 224, 0.28);
+  color: #f4f0ff;
+}
+
+
 .landing-nav nav button:hover,
 .landing-nav-actions > button:first-child:hover {
   background: rgba(255, 255, 255, .055);

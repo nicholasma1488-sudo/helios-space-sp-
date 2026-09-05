@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react'
 import type { Dispatch } from 'react'
 import type { User, Project, SiteInfo } from '../api'
+import type { Locale } from '../i18n'
+import { normalizeLocale } from '../i18n'
 
 // ── Preference persistence ────────────────────────────────────────────────────
 // Only safe, non-sensitive UI prefs are persisted — never auth or project data.
@@ -9,6 +11,7 @@ const PREFS_KEY = 'helios-prefs-v1'
 interface StoredPrefs {
   theme: ThemeMode
   reducedMotion: boolean
+  locale: Locale
   activeSpaceId: string
   activeSubjectId?: string
 }
@@ -83,9 +86,10 @@ export interface AppState {
   // Chat unread badge (polled by GlobalShell)
   chatUnreadCount: number
 
-  // Theme / accessibility
+  // Theme / accessibility / language
   theme: ThemeMode
   reducedMotion: boolean
+  locale: Locale
 }
 
 type Action =
@@ -118,6 +122,7 @@ type Action =
   | { type: 'DISMISS_TOAST'; id: string }
   | { type: 'SET_THEME'; theme: ThemeMode }
   | { type: 'SET_REDUCED_MOTION'; val: boolean }
+  | { type: 'SET_LOCALE'; locale: Locale }
   | { type: 'RESET_SESSION' }
   | { type: 'SET_CHAT_UNREAD'; count: number }
 
@@ -146,6 +151,7 @@ export const INITIAL_STATE: AppState = {
   toasts: [],
   theme: _prefs.theme ?? 'dark',
   reducedMotion: _prefs.reducedMotion ?? false,
+  locale: normalizeLocale(_prefs.locale),
   chatUnreadCount: 0,
 }
 
@@ -262,12 +268,16 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'SET_REDUCED_MOTION':
       savePrefs({ reducedMotion: action.val })
       return { ...state, reducedMotion: action.val }
+    case 'SET_LOCALE':
+      savePrefs({ locale: action.locale })
+      return { ...state, locale: action.locale }
     case 'RESET_SESSION':
       return {
         ...INITIAL_STATE,
         authLoading: false,
         theme: state.theme,
         reducedMotion: state.reducedMotion,
+        locale: state.locale,
         activeSpaceId: state.activeSpaceId,
       }
     default:

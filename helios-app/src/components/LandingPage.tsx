@@ -5,6 +5,8 @@ import {
 } from 'lucide-react'
 import { Logo } from './Logo'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
+import { useApp } from '../store/appStore'
+import { t } from '../i18n'
 import './LandingPage.css'
 
 interface Props {
@@ -52,6 +54,8 @@ const STAGE_MODES: Array<{ id: StageMode; label: string }> = [
 ]
 
 export function LandingPage({ onGetStarted, onSignIn }: Props) {
+  const { state, dispatch } = useApp()
+  const locale = state.locale
   const [scrolled, setScrolled] = useState(false)
   const [transitioning, setTransitioning] = useState<'register' | 'login' | null>(null)
   const [stageMode, setStageMode] = useState<StageMode>('feed')
@@ -146,15 +150,19 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <Logo size="sm" />
         </button>
         <nav aria-label="Landing page">
-          <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
-          <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
-          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Apps</button>
-          <button type="button" onClick={() => scrollTo('#start-free')}>Start</button>
+          <button type="button" onClick={() => scrollTo('#why-helios')}>{t(locale, 'landing.nav.why')}</button>
+          <button type="button" onClick={() => scrollTo('#connected-modes')}>{t(locale, 'landing.nav.product')}</button>
+          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>{t(locale, 'landing.nav.apps')}</button>
+          <button type="button" onClick={() => scrollTo('#start-free')}>{t(locale, 'landing.nav.start')}</button>
         </nav>
         <div className="landing-nav-actions">
-          <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
+          <div className="landing-lang-switch" role="group" aria-label={t(locale, 'lang.label')}>
+            <button type="button" className={locale === 'en' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_LOCALE', locale: 'en' })}>EN</button>
+            <button type="button" className={locale === 'zh' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_LOCALE', locale: 'zh' })}>中文</button>
+          </div>
+          <button type="button" onClick={() => enterAuth('login')}>{t(locale, 'landing.nav.signIn')}</button>
           <button type="button" onClick={() => enterAuth('register')} className="landing-nav-primary">
-            Create your space <ArrowRight size={13} />
+            {t(locale, 'landing.nav.create')} <ArrowRight size={13} />
           </button>
         </div>
       </header>
@@ -302,24 +310,24 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
 
         <section className="landing-pricing" id="start-free">
           <div className="pricing-intro" data-reveal>
-            <div className="landing-section-label"><span>03</span> FREE</div>
-            <h2>One Helios.<br />Completely free.</h2>
-            <p>Create an account and use every app. There is no paid plan, no upgrade, and no card.</p>
+            <div className="landing-section-label"><span>03</span> {t(locale, 'landing.pricing.kicker')}</div>
+            <h2>{t(locale, 'landing.pricing.title').split('\n').map((line, i) => <span key={i}>{line}{i === 0 ? <br /> : null}</span>)}</h2>
+            <p>{t(locale, 'landing.pricing.body')}</p>
           </div>
           <div className="pricing-grid">
             <article className="pricing-card is-orbit" data-reveal>
-              <span><Gift size={15} /> HELIOS</span>
-              <h3>Free for everyone</h3>
-              <p>Word, Excel, PowerPoint, OneNote, Stocks, and the school and work apps stay on every account.</p>
+              <span><Gift size={15} /> {t(locale, 'landing.pricing.cardKicker')}</span>
+              <h3>{t(locale, 'landing.pricing.cardTitle')}</h3>
+              <p>{t(locale, 'landing.pricing.cardBody')}</p>
               <ul>
-                <li><Check size={13} /> 全部 Mini Apps</li>
-                <li><Check size={13} /> 文稿不限篇数、不限字数</li>
-                <li><Check size={13} /> Stocks 行情</li>
-                <li><Check size={13} /> Subjects, Hobbies, Live</li>
-                <li><Check size={13} /> 没有套餐，也不收钱</li>
+                <li><Check size={13} /> {t(locale, 'landing.pricing.f1')}</li>
+                <li><Check size={13} /> {t(locale, 'landing.pricing.f2')}</li>
+                <li><Check size={13} /> {t(locale, 'landing.pricing.f3')}</li>
+                <li><Check size={13} /> {t(locale, 'landing.pricing.f4')}</li>
+                <li><Check size={13} /> {t(locale, 'landing.pricing.f5')}</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                免费开始 <ArrowRight size={15} />
+                {t(locale, 'landing.pricing.cta')} <ArrowRight size={15} />
               </button>
             </article>
           </div>

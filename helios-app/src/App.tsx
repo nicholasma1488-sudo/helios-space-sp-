@@ -144,6 +144,11 @@ function AppInner() {
     document.documentElement.setAttribute('data-theme', state.theme)
   }, [state.theme])
 
+  // Sync interface language
+  useEffect(() => {
+    document.documentElement.lang = state.locale === 'zh' ? 'zh-CN' : 'en'
+  }, [state.locale])
+
   // Sync reduced-motion to document
   useEffect(() => {
     document.documentElement.setAttribute('data-reduced-motion', state.reducedMotion ? 'true' : 'false')
