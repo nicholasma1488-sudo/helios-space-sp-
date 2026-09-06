@@ -586,3 +586,22 @@
 .motion-reduced .project-side-panel,
 .motion-reduced .live-workspace-drawer,
 .motion-reduced .live-event-stream article { animation: none; }
+
+
+/* Helios buddy docked beside workspace */
+.project-workspace {
+  --helios-buddy-width: min(360px, 36vw);
+}
+.project-workspace.is-suite .project-main,
+.project-workspace .project-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+body:has(.helios-panel.is-open) .project-workspace .project-main {
+  grid-template-columns: minmax(0, 1fr) var(--helios-buddy-width);
+}
+.helios-panel {
+  border-left: 1px solid var(--helios-border) !important;
+  background: var(--helios-surface) !important;
+  box-shadow: none !important;
+}

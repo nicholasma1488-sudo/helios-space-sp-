@@ -169,14 +169,19 @@ function numericCell(cells: string[][], reference: string): number {
 function computeCell(cells: string[][], raw: string, seen = new Set<string>()): string {
   if (!raw.startsWith('=')) return raw
   let expression = raw.slice(1).toUpperCase()
-  expression = expression.replace(/SUM\(([A-Z][1-9]\d*):([A-Z][1-9]\d*)\)/g, (_, start: string, end: string) => {
+  expression = expression.replace(/(SUM|AVERAGE)\(([A-Z][1-9]\d*):([A-Z][1-9]\d*)\)/g, (_, fn: string, start: string, end: string) => {
     const a = cellPosition(start)
     const b = cellPosition(end)
     if (!a || !b) return '0'
     let total = 0
-    for (let row = Math.min(a.row, b.row); row <= Math.max(a.row, b.row); row += 1)
-      for (let column = Math.min(a.column, b.column); column <= Math.max(a.column, b.column); column += 1)
+    let count = 0
+    for (let row = Math.min(a.row, b.row); row <= Math.max(a.row, b.row); row += 1) {
+      for (let column = Math.min(a.column, b.column); column <= Math.max(a.column, b.column); column += 1) {
         total += Number(computeCell(cells, cells[row]?.[column] || '0', seen)) || 0
+        count += 1
+      }
+    }
+    if (fn === 'AVERAGE') return String(count ? total / count : 0)
     return String(total)
   })
   expression = expression.replace(/[A-Z][1-9]\d*/g, reference => {

@@ -39,13 +39,13 @@ export function CommandPalette() {
 
   const NAV: Cmd[] = ([
     ['home', 'Go to Home', <Home key="home" size={15} />],
-    ['explore', 'Go to Explore', <Compass key="explore" size={15} />],
+    ['explore', 'Go to Apps', <Compass key="explore" size={15} />],
     ['spaces', 'Go to Spaces', <Users key="spaces" size={15} />],
     ['lifestyle', 'Go to Lifestyle', <Zap key="lifestyle" size={15} />],
     ['apps', 'Go to Apps', <Grid3X3 key="apps" size={15} />],
-    ['live', 'Go to Live work', <Radio key="live" size={15} />],
-    ['chat', 'Go to Chat Hub', <MessageCircle key="chat" size={15} />],
-    ['projects', 'Go to Projects', <FolderGit2 key="projects" size={15} />],
+    ['live', 'Go to Lifestyle work', <Radio key="live" size={15} />],
+    ['chat', 'Go to Messages', <MessageCircle key="chat" size={15} />],
+    ['projects', 'Go to Home', <FolderGit2 key="projects" size={15} />],
     ['profile', 'Go to Profile', <User key="profile" size={15} />],
   ] as [NavView, string, React.ReactNode][]).map(([view, label, icon]) => ({
     id: `nav-${view}`, label, icon, group: 'Navigate',

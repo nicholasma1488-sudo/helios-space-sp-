@@ -216,7 +216,7 @@ export function reducer(state: AppState, action: Action): AppState {
   case 'SET_SPACE_TAB':
     return { ...state, activeSpaceTab: action.tab }
   case 'OPEN_LIVE_SESSION':
-    return { ...state, view: 'live', activeLiveSessionId: action.sessionId, codeEditorOpen: false }
+    return { ...state, view: 'lifestyle', activeLiveSessionId: action.sessionId, codeEditorOpen: false }
     case 'CLOSE_LIVE_SESSION':
       return { ...state, activeLiveSessionId: null }
     case 'SET_CHAT_UNREAD':

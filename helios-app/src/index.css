@@ -32,32 +32,32 @@
   --s-danger: #ff6b6b;
   --s-collab: #b794ff;
 
-  /* ── Semantic tokens — dark theme default ── */
-  --helios-bg:       var(--graphite-950);
-  --helios-surface:  var(--graphite-900);
-  --helios-surface2: var(--graphite-800);
-  --helios-surface3: var(--graphite-700);
-  --helios-border:   var(--divider);
+  /* ── Semantic tokens — M365-like light default (正规办公) ── */
+  --helios-bg:       #f3f2f1;
+  --helios-surface:  #ffffff;
+  --helios-surface2: #faf9f8;
+  --helios-surface3: #edebe9;
+  --helios-border:   #e1dfdd;
 
-  --helios-text:  var(--white);
-  --helios-text2: var(--text-secondary);
-  --helios-muted: var(--text-tertiary);
+  --helios-text:  #242424;
+  --helios-text2: #605e5c;
+  --helios-muted: #8a8886;
 
-  /* Primary accent (violet) and info accent (blue) */
-  --helios-accent:  #8576f5;
-  --helios-accent2: #4fc3f7;
+  /* Primary accent: Fluent blue (not violet AI) */
+  --helios-accent:  #0f6cbd;
+  --helios-accent2: #115ea3;
 
   /* Foregrounds for filled semantic colours. */
-  --helios-on-accent:  #0f1012;
-  --helios-on-accent2: #0f1012;
-  --helios-on-success: #0f1012;
+  --helios-on-accent:  #ffffff;
+  --helios-on-accent2: #ffffff;
+  --helios-on-success: #ffffff;
 
-  --helios-solar:   var(--solar-400);
-  --helios-success: var(--s-success);
-  --helios-info:    var(--s-info);
-  --helios-warning: var(--s-warning);
-  --helios-danger:  var(--s-danger);
-  --helios-collab:  var(--s-collab);
+  --helios-solar:   #c19c00;
+  --helios-success: #0e700e;
+  --helios-info:    #0078d4;
+  --helios-warning: #8a3707;
+  --helios-danger:  #b10e1c;
+  --helios-collab:  #5b5fc7;
 
   /* ── Radius scale (P361) ── */
   --radius-xs: 4px;

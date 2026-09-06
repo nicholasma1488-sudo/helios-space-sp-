@@ -16,3 +16,36 @@
 .chat-message-row.is-selected{background:rgba(117,88,220,.08)}
 .chat-message-row.is-selected .chat-select-message{background:#7558dc}
 .chat-attach-label{margin:8px 8px 4px;color:#9f8ce8;font-size:8px;letter-spacing:.08em}
+
+
+/* iMessage-style simplification */
+.chat-page, .chat-view, .chat-hub {
+  background: #f2f2f7 !important;
+  color: #1c1c1e !important;
+}
+.chat-thread-log, .chat-message-log, .chat-messages {
+  background: transparent !important;
+}
+.chat-bubble-mine, .chat-message.is-mine .chat-bubble, .chat-row.is-mine .bubble {
+  background: #34c759 !important;
+  color: #fff !important;
+  border-radius: 18px 18px 4px 18px !important;
+  box-shadow: none !important;
+}
+.chat-bubble-theirs, .chat-message:not(.is-mine) .chat-bubble, .chat-row:not(.is-mine) .bubble {
+  background: #e5e5ea !important;
+  color: #1c1c1e !important;
+  border-radius: 18px 18px 18px 4px !important;
+  box-shadow: none !important;
+}
+.chat-composer, .chat-composer-box {
+  background: rgba(255,255,255,.92) !important;
+  border-color: #d1d1d6 !important;
+}
+.chat-hub-sidebar, .chat-sidebar {
+  background: #ffffff !important;
+  border-color: #d1d1d6 !important;
+}
+.chat-conversation.is-active {
+  background: #e8f2ff !important;
+}

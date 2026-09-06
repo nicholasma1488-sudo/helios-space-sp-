@@ -66,8 +66,8 @@ function validateUpdatedContent(current: string, proposed: string) {
 // Quick actions adapt to the open project's type so suggestions feel native to
 // the medium (code vs. prose vs. design vs. research) rather than generic.
 const NO_PROJECT_ACTIONS = [
-  'What can you help me with?',
-  'How does Helios keep my work private?',
+  '帮我看看这个文件里有什么？',
+  '先别打开文件，用白话告诉我内容',
 ]
 
 const QUICK_ACTIONS_BY_TYPE: Partial<Record<Project['type'], string[]>> = {

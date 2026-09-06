@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Clock3, FilePlus2, Lock, Search, Sparkles, X } from 'lucide-react'
+import {
+  BookOpen, CheckSquare, Clock3, Code2, FilePlus2, FileText, LayoutGrid,
+  Presentation, Search, Sheet, Sparkles, X,
+} from 'lucide-react'
 import { useApp } from '../store/appStore'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { createSuiteProject, openProjectWorkspace } from '../product/flow'
@@ -10,26 +13,36 @@ import {
   editionLabel,
   nextSuiteFileName,
   spaceForSuiteApp,
-  suiteAppUnlocked,
   suiteAppsForEdition,
   suiteHomeTitle,
   suiteStarterWorkspace,
-  unlockLabel,
-  WRITING_LIMITS,
   type SuiteApp,
 } from '../product/miniApps'
 import './MiniAppsView.css'
 
 function relativeTime(value: string) {
-  const delta = Date.now() - new Date(value).getTime()
-  const minutes = Math.round(delta / 60000)
-  if (minutes < 1) return 'Just now'
-  if (minutes < 60) return `${minutes}m ago`
+  const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
   const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return `${hours} 小时前`
   const days = Math.round(hours / 24)
-  if (days < 14) return `${days}d ago`
+  if (days < 14) return `${days} 天前`
   return new Date(value).toLocaleDateString()
+}
+
+function AppIcon({ icon, size = 22 }: { icon: SuiteApp['icon']; size?: number }) {
+  const props = { size }
+  switch (icon) {
+    case 'write': return <FileText {...props} />
+    case 'sheet': return <Sheet {...props} />
+    case 'slides': return <Presentation {...props} />
+    case 'notes': return <BookOpen {...props} />
+    case 'tasks': return <CheckSquare {...props} />
+    case 'cards': return <LayoutGrid {...props} />
+    case 'code': return <Code2 {...props} />
+    default: return <Sparkles {...props} />
+  }
 }
 
 export function MiniAppsView() {
@@ -45,8 +58,8 @@ export function MiniAppsView() {
     const needle = query.trim().toLowerCase()
     if (!needle) return apps
     return apps.filter(app =>
-      app.name.toLowerCase().includes(needle) ||
-      app.description.toLowerCase().includes(needle),
+      [app.name, app.guideName, app.description, app.guideTip]
+        .some(value => value.toLowerCase().includes(needle)),
     )
   }, [apps, query])
 
@@ -71,42 +84,6 @@ export function MiniAppsView() {
     [active, state.projects],
   )
 
-  function goBilling() {
-    dispatch({ type: 'OPEN_UPGRADE' })
-  }
-
-  function openApp(app: SuiteApp) {
-    if (!suiteAppUnlocked(app, edition)) {
-      goBilling()
-      return
-    }
-    if (app.id === 'stocks') {
-      const existing = state.projects
-        .filter(project => project.app_kind === 'stocks')
-        .sort((left, right) => +new Date(right.updated_at) - +new Date(left.updated_at))[0]
-      if (existing) {
-        void openExisting(existing.id)
-        return
-      }
-      if (creating) return
-      setCreating(true)
-      void createSuiteProject({
-        name: nextSuiteFileName(app.newName, state.projects, app.id),
-        spaceId: spaceForSuiteApp(app),
-        type: app.projectType,
-        appKind: app.id,
-        content: suiteStarterWorkspace(app),
-      }, dispatch).catch(error => {
-        dispatch({
-          type: 'PUSH_TOAST',
-          toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' },
-        })
-      }).finally(() => setCreating(false))
-      return
-    }
-    setActive(app)
-  }
-
   async function openExisting(projectId: number) {
     try {
       await openProjectWorkspace(projectId, state.projects, dispatch)
@@ -129,6 +106,7 @@ export function MiniAppsView() {
         appKind: active.id,
         content: suiteStarterWorkspace(active),
       }, dispatch)
+      setActive(null)
     } catch (error) {
       dispatch({
         type: 'PUSH_TOAST',
@@ -139,100 +117,92 @@ export function MiniAppsView() {
     }
   }
 
-  const canUpgrade = edition === 'free'
-  const writingUsed = state.projects.filter(project =>
-    project.user_id === state.user?.id
-    && (project.type === 'writing' || (project.type === 'doc' && project.app_kind !== 'stocks')),
-  ).length
-  const writingLimit = state.user?.usage?.documents.limit ?? WRITING_LIMITS[edition].documents
-  const characterLimit = state.user?.usage?.characters.limit ?? WRITING_LIMITS[edition].characters
-
   return (
     <div className="suite-view">
       <header className="suite-top">
         <div>
-          <div className="suite-kicker"><Sparkles size={13} /> {editionKicker(edition)}</div>
+          <div className="suite-kicker"><Sparkles size={13} /> {editionKicker(edition)} · {editionLabel(edition)}</div>
           <h1>{suiteHomeTitle(edition)}</h1>
           <p>{editionBlurb(edition)}</p>
         </div>
         <label className="suite-search">
           <Search size={16} aria-hidden="true" />
-          <span className="sr-only">Search apps</span>
-          <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Word, Excel, Stocks…" />
+          <span className="sr-only">搜索应用</span>
+          <input
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="搜 墨语 / 格间 / 小墨…"
+          />
         </label>
       </header>
 
       <div className="suite-welcome">
         <div>
-          <small>{editionKicker(edition)}</small>
-          <strong>You are on {editionLabel(edition)}</strong>
-          <span>
-            {writingLimit == null
-              ? `Writing documents unlimited · ${characterLimit.toLocaleString()} characters each`
-              : `Writing ${writingUsed} / ${writingLimit} · ${characterLimit.toLocaleString()} characters each`}
-          </span>
+          <small>一眼就懂</small>
+          <strong>点图标开始 · 每个 App 都有小姐姐带你</strong>
+          <span>只有学生和日常工作真正用得到的工具，找得到就能用。</span>
         </div>
-        {canUpgrade && (
-          <button type="button" onClick={goBilling}>
-            Upgrade to Orbit
-          </button>
-        )}
+        <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
+          找 WorkBuddy
+        </button>
       </div>
 
       <div className="suite-body">
         <section className="suite-apps" aria-labelledby="suite-apps-title">
           <header>
-            <h2 id="suite-apps-title">{query ? 'Search results' : 'Apps'}</h2>
-            <span>{filtered.length}</span>
+            <h2 id="suite-apps-title">{query ? '搜索结果' : 'Mini Apps'}</h2>
+            <span>{filtered.length} 个</span>
           </header>
-          {['core', 'orbit'].map(track => {
-            const group = filtered.filter(app => app.track === track)
-            if (group.length === 0) return null
-            return (
-              <div key={track} className="suite-group">
-                <h3>{track === 'core' ? 'Included' : 'Orbit suite'}</h3>
-                <div className="suite-grid">
-                  {group.map(app => {
-                    const unlocked = suiteAppUnlocked(app, edition)
-                    return (
-                      <button
-                        key={app.id}
-                        type="button"
-                        className={'suite-tile' + (unlocked ? '' : ' is-locked')}
-                        title={unlocked ? app.description : unlockLabel(edition)}
-                        onClick={() => openApp(app)}
-                        aria-label={unlocked ? `Open ${app.name}` : unlockLabel(edition)}
-                      >
-                        <span className="suite-tile-icon" style={{ background: app.color }}>
-                          {unlocked ? app.letter : <Lock size={18} />}
-                        </span>
-                        <strong>{app.name}</strong>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+          <div className="suite-grid suite-grid-guides">
+            {filtered.map(app => (
+              <button
+                key={app.id}
+                type="button"
+                className="suite-tile suite-tile-guide"
+                title={app.guideTip}
+                onClick={() => setActive(app)}
+                aria-label={`打开 ${app.name}（${app.guideName}）`}
+              >
+                <span className="suite-tile-icon" style={{ background: app.color }} aria-hidden="true">
+                  <AppIcon icon={app.icon} />
+                </span>
+                <strong className="suite-tile-name">{app.name}</strong>
+                <span className="suite-guide">
+                  <span
+                    className="suite-guide-avatar"
+                    style={{ background: `${app.color}22`, color: app.color }}
+                    aria-hidden="true"
+                  >
+                    {app.guideEmoji}
+                  </span>
+                  <span className="suite-guide-meta">
+                    <b>{app.guideName}</b>
+                    <small>{app.guideTip}</small>
+                  </span>
+                </span>
+                <em className="suite-tile-desc">{app.description}</em>
+              </button>
+            ))}
+          </div>
           {filtered.length === 0 && (
             <div className="suite-empty">
               <Search size={22} />
-              <strong>No app found</strong>
-              <span>Try Word, Excel, PowerPoint, or OneNote.</span>
+              <strong>没有这个应用</strong>
+              <span>试试：墨语、格间、光幕、随身本、今日事、记卡、搭子码</span>
             </div>
           )}
         </section>
 
         <section className="suite-files" aria-labelledby="suite-recent-title">
           <header>
-            <h2 id="suite-recent-title">Recent</h2>
-            <span>Saved to your Projects</span>
+            <h2 id="suite-recent-title">最近文件</h2>
+            <span>也在 Home 里</span>
           </header>
           {recent.length === 0 ? (
             <div className="suite-empty">
               <FilePlus2 size={22} />
-              <strong>No files yet</strong>
-              <span>Open Word, Excel or PowerPoint and start a real file.</span>
+              <strong>还没有文件</strong>
+              <span>点左边任一应用，新建就能用。</span>
             </div>
           ) : (
             <div className="suite-file-list">
@@ -240,7 +210,9 @@ export function MiniAppsView() {
                 const app = apps.find(item => item.id === project.app_kind)
                 return (
                   <button key={project.id} type="button" onClick={() => void openExisting(project.id)}>
-                    <span style={{ background: app?.color || '#185ABD' }}>{app?.letter || 'W'}</span>
+                    <span style={{ background: app?.color || 'var(--helios-accent)' }} aria-hidden="true">
+                      {app ? <AppIcon icon={app.icon} size={16} /> : '·'}
+                    </span>
                     <span>
                       <strong>{project.name}</strong>
                       <small>{app?.name || project.app_kind} · {relativeTime(project.updated_at)}</small>
@@ -263,19 +235,26 @@ export function MiniAppsView() {
         >
           <div className="suite-picker-panel" ref={pickerRef}>
             <header>
-              <span className="suite-tile-icon" style={{ background: active.color }}>{active.letter}</span>
+              <span className="suite-tile-icon" style={{ background: active.color }} aria-hidden="true">
+                <AppIcon icon={active.icon} />
+              </span>
               <div>
-                <small>NEW OR OPEN</small>
+                <small>{active.guideName} 说</small>
                 <h2 id="suite-picker-title">{active.name}</h2>
               </div>
-              <button type="button" onClick={() => setActive(null)} aria-label="Close">
+              <button type="button" onClick={() => setActive(null)} aria-label="关闭">
                 <X size={16} />
               </button>
             </header>
-            <p>{active.description}</p>
+            <div className="suite-picker-guide">
+              <span className="suite-guide-avatar" style={{ background: `${active.color}22` }}>
+                {active.guideEmoji}
+              </span>
+              <p>{active.guideTip} — {active.description}</p>
+            </div>
             <button type="button" className="suite-create" onClick={() => void createFile()} disabled={creating}>
               <FilePlus2 size={16} />
-              {creating ? 'Creating…' : `Blank ${active.newName.toLowerCase()}`}
+              {creating ? '创建中…' : `新建${active.newName}`}
             </button>
             {activeFiles.length > 0 && (
               <div className="suite-file-list">

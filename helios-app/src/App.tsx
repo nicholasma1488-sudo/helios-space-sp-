@@ -10,11 +10,7 @@ import { CommandPalette } from './components/CommandPalette'
 import { ShortcutsHelp } from './components/ShortcutsHelp'
 import { ToastLayer } from './components/ToastLayer'
 import { HomeView } from './views/HomeView'
-import { ExploreView } from './views/ExploreView'
-import { SpacesView } from './views/SpacesView'
-import { SpaceView } from './views/SpaceView'
 import { LifestyleView } from './views/LifestyleView'
-import { LiveView } from './views/LiveView'
 import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
 import { MiniAppsView } from './views/MiniAppsView'
@@ -41,14 +37,14 @@ function MainContent() {
   let content: React.ReactNode
   switch (state.view) {
     case 'home':      content = <HomeView />; break
-    case 'explore':   content = <ExploreView />; break
-    case 'spaces':    content = <SpaceView />; break
-    case 'lifestyle': content = <LifestyleView currentUser={state.user} />; break
+    case 'lifestyle':
+    case 'live':      content = <LifestyleView currentUser={state.user} />; break
     case 'apps':      content = <MiniAppsView />; break
-    case 'live':      content = <LiveView />; break
     case 'chat':      content = <ChatView />; break
-    case 'projects':  content = <SpacesView />; break
     case 'profile':   content = <ProfileView />; break
+    case 'projects':
+    case 'explore':
+    case 'spaces':    content = <HomeView />; break
     default:          content = <HomeView />
   }
   return (
@@ -91,14 +87,14 @@ function AppInner() {
   useEffect(() => {
     const VIEW_TITLES: Record<string, string> = {
       home: 'Home',
-      explore: 'Explore',
-      spaces: 'Spaces',
       lifestyle: 'Lifestyle',
-      apps: 'Mini Apps',
-      live: 'Live',
-      chat: 'Chat Hub',
-      projects: 'Projects',
-      profile: 'Profile',
+      apps: 'Apps',
+      chat: 'Messages',
+      profile: 'Me',
+      live: 'Lifestyle',
+      explore: 'Home',
+      spaces: 'Home',
+      projects: 'Home',
     }
     if (onPayPage) {
       document.title = '付款 — Helios Space'

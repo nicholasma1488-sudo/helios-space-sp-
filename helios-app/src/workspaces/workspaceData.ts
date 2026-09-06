@@ -337,8 +337,8 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
 export function resolveWorkspaceKind(appKind: string): 'code' | 'spreadsheet' | 'presentation' | 'drawing' | 'math' | 'survey' | 'board' | 'reader' | 'notebook' | 'writing' | 'stocks' {
   if (appKind === 'stocks') return 'stocks'
   if ([
-    'web-code', 'api-playground', 'game-prototype', 'web-prototype', 'algorithm-lab', 'data-script',
-  ].includes(appKind)) return 'code'
+    'code', 'web-code', 'api-playground', 'game-prototype', 'web-prototype', 'algorithm-lab', 'data-script',
+  ].includes(appKind) || appKind.endsWith('-code')) return 'code'
 
   if ([
     'spreadsheet', 'data-visualization', 'budget-sheet', 'gradebook', 'stats-lab', 'experiment-tracker',

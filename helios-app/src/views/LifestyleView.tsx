@@ -462,7 +462,7 @@ export function LifestyleView({ currentUser }: Props) {
                   ))}
                 </div>
                 <div className="composer-kind-row" role="group" aria-label="What you are sharing">
-                  {([['text', 'Text'], ['project', 'Project'], ['mini-app', 'Mini App'], ['live', 'Live Project']] as const).map(([id, label]) => (
+                  {([['text', 'Text'], ['project', 'Project'], ['mini-app', 'Mini App'], ['live', '开播协作']] as const).map(([id, label]) => (
                     <button type="button" key={id} aria-pressed={postKind === id} onClick={() => setPostKind(id)}>{label}</button>
                   ))}
                 </div>
@@ -496,7 +496,7 @@ export function LifestyleView({ currentUser }: Props) {
                         const session = liveSessions.find(item => item.id === id)
                         if (session) setLinkedProjectId(session.project_id)
                       }}>
-                        <option value="">Choose a Live Project</option>
+                        <option value="">Choose a 直播协作</option>
                         {liveSessions.map(session => <option key={session.id} value={session.id}>{session.title}</option>)}
                       </select>
                     </label>
@@ -570,7 +570,7 @@ export function LifestyleView({ currentUser }: Props) {
               onWatchLive={() => {
                 const session = liveSessions.find(item => item.project_id === post.project_id)
                 if (session) openLiveSession(session.id, dispatch)
-                else dispatch({ type: 'SET_VIEW', view: 'live' })
+                else dispatch({ type: 'SET_VIEW', view: 'lifestyle' })
               }}
               onOpenCreator={() => openCreatorProfile({ id: post.author_id || 0, name: post.author_name, handle: post.author_handle }, dispatch)}
               onCommentCountChange={delta => updateCommentCount(post.id, delta)}
@@ -711,10 +711,10 @@ function PostCard({
         {post.project_name && (
           <div className="post-project-row">
             <button type="button" onClick={onOpenProject} className="post-project">
-              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? 'Live Project' : 'Project'}</span><strong>{post.project_name}</strong>
+              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? '直播协作' : 'Project'}</span><strong>{post.project_name}</strong>
             </button>
             {post.project_app_kind && <button type="button" onClick={onOpenMiniApp} className="post-project"><AppWindow size={14} /><span>Mini App</span><strong>{getMiniApp(post.project_app_kind).name}</strong></button>}
-            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>Watch</span><strong>Live Project</strong></button>}
+            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>Watch</span><strong>直播协作</strong></button>}
           </div>
         )}
 
