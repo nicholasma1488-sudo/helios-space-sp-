@@ -4,6 +4,8 @@ Helios Space is a React application for creating projects and sharing progress. 
 
 The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, Lifestyle uses a familiar social-feed information architecture while retaining the Helios graphite, solar, violet, and sky visual language. Chat Hub shows unread badges in navigation, Home has loading states, and error boundaries protect against unexpected crashes.
 
+**Product direction:** Helios is simplifying into a work-collaboration platform — Mini Apps + Lifestyle (social + live posts, no separate Live page), iMessage-style Chat, projects on Home, free API, Helios as a file-preview buddy, IDE + Helios side by side, and friends as **WorkBuddys**. See [`REDESIGN.md`](./REDESIGN.md).
+
 ## Run locally
 
 Requirements: Node.js 22 or newer.
