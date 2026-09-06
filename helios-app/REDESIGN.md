@@ -1,153 +1,133 @@
-# Helios → Simple Work Collaboration Platform
+# Helios → Everyday Work Collab (M365-simple + social + realtime)
 
-This document describes how Helios Space should change from a multi-page product into a **simpler platform to collaborate on work**. It is the product target for navigation, Lifestyle, Chat, Home, Mini Apps, Helios Agent, and WorkBuddys.
+Helios should feel like a **normal work app anyone can use without training** — as obvious as Microsoft 365 — while keeping **most existing power features**, plus a light **social feed** and **realtime collaborate**.
 
-## Product goal
-
-Keep only what helps people work together:
-
-- **Mini Apps** for doing the work (sheets, docs, code, etc.)
-- **Lifestyle** as the social feed (including live collab posts)
-- **Chat** as iMessage-style messaging
-- **Home** as the dashboard (including projects — no separate Projects page)
-- **Helios** as a buddy who helps you understand files without opening them
-- **WorkBuddys** as the name for friends / collaborators
-
-Remove cluttered separate destinations (especially a standalone Live page and a standalone Projects page).
+Not an “AI product.” Not a dark neon dashboard. A **正规协作平台**: clean, calm, office-grade.
 
 ---
 
-## 1. Navigation & Lifestyle (no separate Live section)
+## North star
 
-### Keep
+> A collab work website/app that **ordinary people open once and already know how to use** — simple like Word / Excel / Teams — with social posts and live collaboration built in.
 
-- **Mini Apps** as a first-class section in the main nav.
-- **Lifestyle** as the social surface.
+### Design principles
 
-### Change
-
-| Before | After |
-|--------|--------|
-| Separate **Live** nav item + `LiveView` | **Remove Live from nav.** Live collab lives inside Lifestyle. |
-| Lifestyle = feed only; Live = its own room list | Lifestyle = **social media feed**. Going live creates a **feed post** for that live collab. |
-| Live sessions discovered only under Live | Live sessions appear as **Lifestyle posts** (join / watch from the post). |
-
-### Lifestyle behavior
-
-- Lifestyle is a social feed: posts, reactions, comments, follows — familiar social media patterns.
-- When someone starts a live collab, Helios automatically (or via one tap) publishes a **Live Collab post** into Lifestyle.
-- That post is the entry point into the session — no separate Live tab.
-- Existing Live APIs can stay under the hood; the UI surface moves into Lifestyle only.
-
-### Nav target (authenticated)
-
-Suggested primary nav after simplification:
-
-1. **Home**
-2. **Lifestyle** (social + live posts)
-3. **Apps** (Mini Apps)
-4. **Chat** (iMessage-style)
-5. **Profile** (account / settings)
-
-Optional later: Explore / Spaces only if they still earn a place; do not bring Live or Projects back as top-level pages.
+1. **一看就会用** — Labels in plain language. One primary action per screen. No jargon, no mode maze.
+2. **最简洁，功能大多保留** — Hide complexity behind progressive disclosure. Power stays; chrome goes.
+3. **正规项目观感（像 M365）** — Light, professional Office palette. No purple-glow “AI startup” look.
+4. **社交媒体 + 实时协作** — Feed for sharing progress / going live; realtime co-editing and live sessions with WorkBuddys.
+5. **编程也要更简单** — Code IDE stays, but beside Helios buddy and plain-language controls so non-experts can still open, ask, and collaborate.
 
 ---
 
-## 2. Chat → iMessage-style
+## Visual language (M365-like, not AI)
 
-### Keep
+Replace graphite / violet / neon AI aesthetics with an Office-family system:
 
-- The **Chat** section (do not remove it).
+| Token idea | Direction |
+|------------|-----------|
+| Background | Soft light gray / white (`#f3f2f1` / `#ffffff`) — Fluent-like |
+| Surfaces | White cards / panes, subtle borders (`#edebe9`) |
+| Text | Near-black body (`#242424`), secondary gray (`#605e5c`) |
+| Primary accent | Professional blue (`#0f6cbd` / Fluent brand blue) — not violet |
+| Success / warn / danger | Standard Office semantic greens / oranges / reds |
+| Typography | Clear UI sans (Segoe-like / system UI), not display/AI fonts |
+| Motion | Short, purposeful; no glow, bloom, or orbit theatrics in-app |
+| Icons | Simple line icons; consistent size; avoid emoji as UI chrome |
 
-### Change
+**Anti-patterns to remove:** purple-on-dark, neon accents, glassmorphism glow, cinematic orbit UI as the daily product shell, dense “dashboard widget walls.”
 
-Restyle and simplify Chat Hub toward an **iMessage-like** experience:
-
-- Clean conversation list on the left (or full-width on mobile).
-- Bubble thread on the right / below: clear sent vs received, soft bubbles, timestamps.
-- Simple composer: text + attachments; less “hub / tabs / dense chrome.”
-- Prefer **WorkBuddy DMs** and small work groups over many chat “kinds” competing in the UI.
-- Unread badges stay; keep polling / badge behavior that already works.
-
-Goal: Chat should feel like messaging a WorkBuddy, not like a Slack clone with project/group/private tab overload.
-
----
-
-## 3. Delete Projects page → Home section + free API + Helios buddy
-
-### Projects
-
-| Before | After |
-|--------|--------|
-| Separate **Projects** page (`SpacesView` / projects nav) | **Delete the Projects page** from nav. |
-| Projects managed in their own view | Projects live as a **section on Home** (recent work, open, create). |
-
-Home becomes the place to see today’s work and jump into project workspaces / Mini Apps.
-
-### Free API
-
-- Ship a **free, usable API** for core collaboration flows (auth session, projects list/create, posts, chat, Helios when configured).
-- Document public/free endpoints clearly so the platform stays open for simple integrations.
-- Keep the app fully usable **without** a paid AI key (current “Helios AI without a key” behavior remains the baseline).
-
-### Helios Agent = buddy (file preview without opening)
-
-Helios should act like a **work buddy**, not only a floating code assistant:
-
-- From Home, Lifestyle, Chat, or a file list, ask Helios about a file.
-- Helios **summarizes / previews** content **without forcing the user to open the full editor**.
-- Typical buddy asks:
-  - “What’s in this sheet?”
-  - “Summarize this doc.”
-  - “What does this file do?”
-  - “Any risks before I open it?”
-- Opening the full workspace remains optional after the preview.
+Landing can stay expressive; **the logged-in app must look like a real productivity suite**.
 
 ---
 
-## 4. Mini Apps, IDE + Helios, WorkBuddys, simpler platform
+## Keep most features — simplify how they appear
 
-### Mini Apps must be real tools
+| Keep (capability) | How ordinary users see it |
+|-------------------|---------------------------|
+| Documents, sheets, slides, notebooks, code | **Apps** — open like Office apps |
+| Projects | **My files / Recent** on Home (no separate Projects page) |
+| Posts, reactions, comments | **Lifestyle** social feed |
+| Live collab / going live | A **post + Join** in Lifestyle (no Live tab) |
+| Chat | **Messages** — iMessage-simple bubbles |
+| Helios AI | **Buddy** — “Ask about this file” without opening it |
+| Spaces / subjects | Soft grouping under Home / Apps, not a nav maze |
+| Explore | Optional search on Home / Lifestyle — not a required tab |
+| Free API | Documented, free core endpoints |
 
-Mini Apps such as the Excel-like workbook should have **their own identity and depth**, not empty shells:
+**Rule:** If a feature needs a tutorial, the UI failed. Put advanced options behind “More” / overflow, not on the first screen.
 
-- Clear **product names** (e.g. Workbook / Document / Presentation — not generic placeholders).
-- Spreadsheets need **formulas, cells, charts**, and real editing — not a scratch pad.
-- Same bar for other suite tools: docs, slides, notebooks, etc. should feel like actual apps.
+---
 
-### Code editor = IDE with Helios side by side
+## Information architecture (max 5 places)
 
-| Before | After |
-|--------|--------|
-| Code workspace + floating Helios panel | **IDE-style layout**: editor + **Helios docked side by side** |
-| Helios as optional overlay | Helios as a persistent buddy column while coding |
+1. **Home** — Recent files, projects section, “New”, WorkBuddys online, short tips (one sentence).
+2. **Lifestyle** — Social media feed + live collab posts.
+3. **Apps** — Mini Apps (Workbook, Document, Presentation, Notebook, Code, …).
+4. **Chat** — Messages with WorkBuddys (iMessage-style).
+5. **Me / Profile** — Account, theme, export, settings.
 
-Layout sketch:
+**Remove from primary nav:** Live, Projects, and any extra hubs that duplicate Home / Lifestyle / Apps.
+
+---
+
+## 1. Lifestyle = social + realtime live posts
+
+- Familiar social patterns: feed, composer, like/comment, follow.
+- **Go live** from Lifestyle → creates a **Live Collab post** in the feed.
+- Others tap **Join** on that post — no separate Live section.
+- Realtime: presence, cursors / comments / shared session where the product already supports live APIs.
+- Tone: work-social (share progress, ask for help, go live on a file) — not a generic meme network.
+
+## 2. Chat = simple Messages (iMessage-like)
+
+- Conversation list + bubble thread.
+- Plain “Message WorkBuddy” — minimize Project/Group/Private tab overload.
+- Attach a file / project lightly; don’t look like Slack admin.
+
+## 3. Home carries projects + free API + Helios buddy
+
+- **Projects live on Home** (recent, open, new) — delete the Projects page.
+- **Free API** for auth, files/projects, posts, chat, Helios-when-configured.
+- **Helios buddy:** preview / summarize a file **without opening the editor**; then optional “Open”.
+
+## 4. Apps, IDE, WorkBuddys, realtime collab
+
+### Mini Apps (real tools, plain names)
+
+- Clear names people already know: Document, Workbook, Presentation, Notebook, Code…
+- Workbook needs **cells, formulas, charts** — real spreadsheet behavior.
+- Same honesty for other apps: they must *work*, not only look like tiles.
+
+### Code = simple IDE + Helios side by side
 
 ```
-┌─────────────┬──────────────────────────┬─────────────┐
-│ file tree   │  editor / tabs / preview │  Helios     │
-│             │                          │  (buddy)    │
-└─────────────┴──────────────────────────┴─────────────┘
+┌──────────┬─────────────────────┬────────────┐
+│ files    │ editor / preview    │ Helios     │
+│          │                     │ buddy      │
+└──────────┴─────────────────────┴────────────┘
 ```
 
-### Friends = WorkBuddys
+Make coding *look* approachable: big Open / Share / Ask Helios / Invite WorkBuddy actions; advanced git/terminal behind secondary UI.
 
-- Rename friend / collaborator framing to **WorkBuddys** (product spelling for this redesign).
-- WorkBuddys appear in Chat, Lifestyle (live collab posts), and project sharing on Home.
-- Collaboration is “work with your WorkBuddys,” not a separate social network brand.
+### WorkBuddys
 
-### Overall platform tone
+- Friends / collaborators are **WorkBuddys**.
+- Invite to a file, chat, or live session in one obvious control: **Invite WorkBuddy**.
+- Realtime collaborate: co-presence on files + live sessions from Lifestyle posts.
 
-Helios becomes a **simple platform to collaborate on work**:
+---
 
-- Fewer top-level pages
-- Social + live in one Lifestyle feed
-- Messaging that feels personal (iMessage-like)
-- Projects under Home
-- Real Mini Apps
-- Helios as a side-by-side buddy
-- WorkBuddys as the people you collaborate with
+## Everyday-user UX checklist
+
+Every primary screen must pass:
+
+- [ ] Can a non-technical adult find **New**, **Open**, **Share**, **Message** in under 5 seconds?
+- [ ] Is there **one** clear next action (not six equal CTAs)?
+- [ ] Are labels everyday words (Files, Messages, Apps) not product jargon?
+- [ ] Does color look like Office / Teams, not an AI demo?
+- [ ] Can they go live / join collab from Lifestyle without hunting a Live tab?
+- [ ] Can Helios explain a file before they open it?
 
 ---
 
@@ -155,38 +135,47 @@ Helios becomes a **simple platform to collaborate on work**:
 
 | Area | Current (approx.) | Target |
 |------|-------------------|--------|
-| Nav | Home, Explore, Spaces, Lifestyle, Apps, **Live**, Chat, **Projects**, Profile | Home, Lifestyle, Apps, Chat, Profile (+ trim the rest) |
-| `LiveView` | Top-level view | Remove from nav; embed live join/create in Lifestyle posts |
-| `SpacesView` / projects | Top-level Projects | Home “Projects” section |
-| `ChatView` | Chat Hub tabs | iMessage-style bubbles + simple list |
-| `HeliosPanel` | Floating / overlay | Buddy: file preview + IDE side panel |
-| Suite apps (`Excel`, etc.) | Named in catalog; deepen fidelity | Real formulas & tool features; keep clear names |
-| Friends | Generic / incomplete | **WorkBuddys** |
+| Visual system | Dark graphite + violet AI look | Light M365 / Fluent-like suite |
+| Nav | Many hubs including Live + Projects | Home · Lifestyle · Apps · Chat · Me |
+| Live | Own page | Lifestyle live posts + Join |
+| Projects | Own page | Home “Files / Projects” section |
+| Chat | Chat Hub complexity | Simple Messages (iMessage-like) |
+| Helios | Floating AI panel energy | Calm buddy + IDE side column |
+| Mini Apps | Catalog heavy | Real tools, plain names, formulas |
+| People | Vague friends | **WorkBuddys** + realtime invite |
+| Copy / IA | Feature-dense | Ordinary-language, progressive disclosure |
 
-### Suggested code touchpoints
+### Code touchpoints
 
-- `src/components/GlobalShell.tsx` — nav items
-- `src/App.tsx` — view routing (drop `live` / `projects` as primary views)
-- `src/views/LifestyleView.tsx` — social feed + live collab posts
-- `src/views/LiveView.tsx` — fold into Lifestyle or thin session overlay
-- `src/views/ChatView.tsx` + `ChatView.css` — iMessage UI
-- `src/views/HomeView.tsx` — Projects section
-- `src/components/HeliosPanel.tsx` — buddy preview + side-by-side IDE
+- `src/index.css` — replace AI palette with Fluent-like light tokens
+- `src/components/GlobalShell.tsx` — slim nav + calm chrome
+- `src/App.tsx` — drop Live / Projects as primary views
+- `src/views/LifestyleView.tsx` — social + live posts
+- `src/views/LiveView.tsx` — session overlay only (entered from a post)
+- `src/views/ChatView.tsx` — Messages UI
+- `src/views/HomeView.tsx` — Files/Projects section, plain CTAs
+- `src/components/HeliosPanel.tsx` — buddy preview, no “AI theater”
 - `src/workspaces/CodeWorkspace.tsx` / `ProjectWorkspace.tsx` — IDE + Helios column
-- `src/product/miniApps.ts` / spreadsheet workspace — formulas & real app behavior
-- `server/` — free API surface + live→post creation when going live
+- Suite / spreadsheet workspaces — formulas & real app behavior
+- `server/` — free API docs + live→Lifestyle post on go-live
+- Landing / marketing — can stay cinematic; **in-app shell must be suite-simple**
 
 ---
 
-## Out of scope for this redesign doc
+## Ship order
 
-This README defines **product direction**. Shipping may be incremental:
+1. **Visual + nav** — M365-like light theme; 5-item nav; remove Live/Projects from rail  
+2. **Home files section** + plain New / Open / Invite WorkBuddy  
+3. **Lifestyle** live collab posts (social + realtime entry)  
+4. **Messages** iMessage-style Chat  
+5. **Helios buddy** file preview + IDE side-by-side  
+6. **Workbook formulas** / Mini App fidelity  
+7. **WorkBuddys** naming + invite everywhere  
 
-1. Nav + Lifestyle live posts + remove Live/Projects pages  
-2. Home projects section  
-3. iMessage Chat UI  
-4. Helios buddy preview + IDE side-by-side  
-5. Spreadsheet formulas / Mini App fidelity  
-6. WorkBuddys naming across UI  
+Update the main `README.md` “Implemented functionality” as each slice lands.
 
-Update the main `README.md` “Implemented functionality” section as each slice lands.
+---
+
+## One-line product definition
+
+**Helios is a simple M365-style work suite with a social feed and realtime collab — ordinary people use it without learning; WorkBuddys work together live.**
