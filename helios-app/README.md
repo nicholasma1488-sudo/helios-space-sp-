@@ -4,7 +4,7 @@ Helios Space is a React application for creating projects and sharing progress. 
 
 The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, Lifestyle uses a familiar social-feed information architecture while retaining the Helios graphite, solar, violet, and sky visual language. Chat Hub shows unread badges in navigation, Home has loading states, and error boundaries protect against unexpected crashes.
 
-**Product direction:** Helios becomes an everyday work-collab app anyone can use without training — **M365-simple** (professional light Fluent-like UI, not AI purple), keep most features behind plain labels, **Lifestyle** social + realtime live posts, iMessage-style Messages, projects on Home, free API, Helios as a calm file-preview buddy, IDE + Helios side by side, and friends as **WorkBuddys**. See [`REDESIGN.md`](./REDESIGN.md).
+**Product direction:** One together work/study app — few Mini Apps (each with its own **name**, **icon**, and **小姐姐**), M365-simple light UI, no hunting / no empty tools, easy writing, Lifestyle social + realtime live posts, Messages like iMessage, files on Home, Helios as a calm buddy, friends as **WorkBuddys**. See [`REDESIGN.md`](./REDESIGN.md).
 
 ## Run locally
 

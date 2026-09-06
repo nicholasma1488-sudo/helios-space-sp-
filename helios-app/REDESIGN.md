@@ -1,181 +1,167 @@
-# Helios → Everyday Work Collab (M365-simple + social + realtime)
+# Helios → One place, few apps, obvious icons, WorkBuddys
 
-Helios should feel like a **normal work app anyone can use without training** — as obvious as Microsoft 365 — while keeping **most existing power features**, plus a light **social feed** and **realtime collaborate**.
+Helios is a **single, together** work + study collab app. Users should **never spend time figuring the product out** — if they hunt around and still can’t do the job, the design failed.
 
-Not an “AI product.” Not a dark neon dashboard. A **正规协作平台**: clean, calm, office-grade.
+Tone: **M365-simple** (正规、浅色、好认) + light social + realtime collab. Not an AI demo. Not a warehouse of empty tools.
 
 ---
 
 ## North star
 
-> A collab work website/app that **ordinary people open once and already know how to use** — simple like Word / Excel / Teams — with social posts and live collaboration built in.
+> Open Helios → see everything that matters in one place → tap a clear icon → do school/work with WorkBuddys. No exploration tour required.
 
-### Design principles
+### Hard rules
 
-1. **一看就会用** — Labels in plain language. One primary action per screen. No jargon, no mode maze.
-2. **最简洁，功能大多保留** — Hide complexity behind progressive disclosure. Power stays; chrome goes.
-3. **正规项目观感（像 M365）** — Light, professional Office palette. No purple-glow “AI startup” look.
-4. **社交媒体 + 实时协作** — Feed for sharing progress / going live; realtime co-editing and live sessions with WorkBuddys.
-5. **编程也要更简单** — Code IDE stays, but beside Helios buddy and plain-language controls so non-experts can still open, ask, and collaborate.
-
----
-
-## Visual language (M365-like, not AI)
-
-Replace graphite / violet / neon AI aesthetics with an Office-family system:
-
-| Token idea | Direction |
-|------------|-----------|
-| Background | Soft light gray / white (`#f3f2f1` / `#ffffff`) — Fluent-like |
-| Surfaces | White cards / panes, subtle borders (`#edebe9`) |
-| Text | Near-black body (`#242424`), secondary gray (`#605e5c`) |
-| Primary accent | Professional blue (`#0f6cbd` / Fluent brand blue) — not violet |
-| Success / warn / danger | Standard Office semantic greens / oranges / reds |
-| Typography | Clear UI sans (Segoe-like / system UI), not display/AI fonts |
-| Motion | Short, purposeful; no glow, bloom, or orbit theatrics in-app |
-| Icons | Simple line icons; consistent size; avoid emoji as UI chrome |
-
-**Anti-patterns to remove:** purple-on-dark, neon accents, glassmorphism glow, cinematic orbit UI as the daily product shell, dense “dashboard widget walls.”
-
-Landing can stay expressive; **the logged-in app must look like a real productivity suite**.
+1. **一切都在一起** — Home is the hub. Files, Apps, Messages, Lifestyle, and “who’s online” sit in one calm shell. Don’t scatter the same job across five pages.
+2. **不要让用户找半天** — Every useful action is visible with a **small icon + short label**. If it isn’t findable in 5 seconds, hide it or delete it.
+3. **找得到就要能用** — No dead tiles, fake labs, or “coming soon” mazes. If it shows up, it works.
+4. **功能不要太多 / App 少一点** — Fewer apps, fewer buttons. Depth only where students and normal work need it.
+5. **写的话不要太难用** — Writing tools stay plain: type, title, share. No thesis-studio complexity on the first screen.
+6. **每个入口都有小图标** — Icons teach “这是干啥的” before the user reads a paragraph.
+7. **每个 Mini App 有自己的小姐姐 + 自己的名字** — Cute guide character under the app name so apps feel friendly and memorable, not like a generic Office clone list.
 
 ---
 
-## Keep most features — simplify how they appear
-
-| Keep (capability) | How ordinary users see it |
-|-------------------|---------------------------|
-| Documents, sheets, slides, notebooks, code | **Apps** — open like Office apps |
-| Projects | **My files / Recent** on Home (no separate Projects page) |
-| Posts, reactions, comments | **Lifestyle** social feed |
-| Live collab / going live | A **post + Join** in Lifestyle (no Live tab) |
-| Chat | **Messages** — iMessage-simple bubbles |
-| Helios AI | **Buddy** — “Ask about this file” without opening it |
-| Spaces / subjects | Soft grouping under Home / Apps, not a nav maze |
-| Explore | Optional search on Home / Lifestyle — not a required tab |
-| Free API | Documented, free core endpoints |
-
-**Rule:** If a feature needs a tutorial, the UI failed. Put advanced options behind “More” / overflow, not on the first screen.
-
----
-
-## Information architecture (max 5 places)
-
-1. **Home** — Recent files, projects section, “New”, WorkBuddys online, short tips (one sentence).
-2. **Lifestyle** — Social media feed + live collab posts.
-3. **Apps** — Mini Apps (Workbook, Document, Presentation, Notebook, Code, …).
-4. **Chat** — Messages with WorkBuddys (iMessage-style).
-5. **Me / Profile** — Account, theme, export, settings.
-
-**Remove from primary nav:** Live, Projects, and any extra hubs that duplicate Home / Lifestyle / Apps.
-
----
-
-## 1. Lifestyle = social + realtime live posts
-
-- Familiar social patterns: feed, composer, like/comment, follow.
-- **Go live** from Lifestyle → creates a **Live Collab post** in the feed.
-- Others tap **Join** on that post — no separate Live section.
-- Realtime: presence, cursors / comments / shared session where the product already supports live APIs.
-- Tone: work-social (share progress, ask for help, go live on a file) — not a generic meme network.
-
-## 2. Chat = simple Messages (iMessage-like)
-
-- Conversation list + bubble thread.
-- Plain “Message WorkBuddy” — minimize Project/Group/Private tab overload.
-- Attach a file / project lightly; don’t look like Slack admin.
-
-## 3. Home carries projects + free API + Helios buddy
-
-- **Projects live on Home** (recent, open, new) — delete the Projects page.
-- **Free API** for auth, files/projects, posts, chat, Helios-when-configured.
-- **Helios buddy:** preview / summarize a file **without opening the editor**; then optional “Open”.
-
-## 4. Apps, IDE, WorkBuddys, realtime collab
-
-### Mini Apps (real tools, plain names)
-
-- Clear names people already know: Document, Workbook, Presentation, Notebook, Code…
-- Workbook needs **cells, formulas, charts** — real spreadsheet behavior.
-- Same honesty for other apps: they must *work*, not only look like tiles.
-
-### Code = simple IDE + Helios side by side
+## One shell (everything together)
 
 ```
-┌──────────┬─────────────────────┬────────────┐
-│ files    │ editor / preview    │ Helios     │
-│          │                     │ buddy      │
-└──────────┴─────────────────────┴────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  Helios                          🔍  Search   👤 Me     │
+├──────────┬──────────────────────────────────────────────┤
+│ Home     │  Recent files · New · WorkBuddys online      │
+│ Lifestyle│  (social feed + live posts live here too)    │
+│ Apps     │  Few Mini Apps with 小姐姐 + icons           │
+│ Messages │  iMessage-simple chat                        │
+│ Me       │  Account                                     │
+└──────────┴──────────────────────────────────────────────┘
 ```
 
-Make coding *look* approachable: big Open / Share / Ask Helios / Invite WorkBuddy actions; advanced git/terminal behind secondary UI.
-
-### WorkBuddys
-
-- Friends / collaborators are **WorkBuddys**.
-- Invite to a file, chat, or live session in one obvious control: **Invite WorkBuddy**.
-- Realtime collaborate: co-presence on files + live sessions from Lifestyle posts.
+- **No separate Live page** — go live → Lifestyle post → Join.
+- **No separate Projects page** — files/projects live on **Home**.
+- Lifestyle / Messages / Apps are tabs in the **same** product, not different products.
 
 ---
 
-## Everyday-user UX checklist
+## Icons everywhere (teach by glance)
 
-Every primary screen must pass:
+Every nav item, Mini App, and primary action gets:
 
-- [ ] Can a non-technical adult find **New**, **Open**, **Share**, **Message** in under 5 seconds?
-- [ ] Is there **one** clear next action (not six equal CTAs)?
-- [ ] Are labels everyday words (Files, Messages, Apps) not product jargon?
-- [ ] Does color look like Office / Teams, not an AI demo?
-- [ ] Can they go live / join collab from Lifestyle without hunting a Live tab?
-- [ ] Can Helios explain a file before they open it?
+| Element | Pattern |
+|---------|---------|
+| Nav | Icon + 1 word (Home / Lifestyle / Apps / Messages / Me) |
+| Mini App tile | App icon + **原创名字** + **小姐姐** avatar under the name + 4–6 word job line |
+| Primary actions | Icon buttons: New · Open · Share · Invite · Go live · Ask Helios |
+| Empty states | One icon + one sentence + one button |
+
+No icon-only mystery controls. Icon + label always.
 
 ---
 
-## Implementation map (current → target)
+## Fewer Mini Apps (school + normal work)
 
-| Area | Current (approx.) | Target |
-|------|-------------------|--------|
-| Visual system | Dark graphite + violet AI look | Light M365 / Fluent-like suite |
-| Nav | Many hubs including Live + Projects | Home · Lifestyle · Apps · Chat · Me |
-| Live | Own page | Lifestyle live posts + Join |
-| Projects | Own page | Home “Files / Projects” section |
-| Chat | Chat Hub complexity | Simple Messages (iMessage-like) |
-| Helios | Floating AI panel energy | Calm buddy + IDE side column |
-| Mini Apps | Catalog heavy | Real tools, plain names, formulas |
-| People | Vague friends | **WorkBuddys** + realtime invite |
-| Copy / IA | Feature-dense | Ordinary-language, progressive disclosure |
+Cut the huge catalog. Ship a **short list** people actually need for class and everyday work:
 
-### Code touchpoints
+| App id | 原创名字 | 小姐姐 | Icon idea | What it does (plain) |
+|--------|----------|--------|-----------|----------------------|
+| `write` | **墨语** | 小墨 | document | Easy writing — essays, letters, notes. Not hard. |
+| `sheet` | **格间** | 小格 | table | Numbers, homework tables, simple formulas. |
+| `slides` | **光幕** | 小光 | slides | Class / meeting slides. Make → present. |
+| `notes` | **随身本** | 小本 | notebook | Class notes you keep adding to. |
+| `tasks` | **今日事** | 小办 | checklist | Homework / to-dos: due → doing → done. |
+| `cards` | **记卡** | 小记 | cards | Flashcards for vocab / facts. |
+| `code` | **搭子码** | 小码 | code | Simple IDE + Helios beside you. |
+| `chat` | *(nav Messages)* | — | message | Talk to WorkBuddys (not a Mini App tile). |
 
-- `src/index.css` — replace AI palette with Fluent-like light tokens
-- `src/components/GlobalShell.tsx` — slim nav + calm chrome
-- `src/App.tsx` — drop Live / Projects as primary views
-- `src/views/LifestyleView.tsx` — social + live posts
-- `src/views/LiveView.tsx` — session overlay only (entered from a post)
-- `src/views/ChatView.tsx` — Messages UI
-- `src/views/HomeView.tsx` — Files/Projects section, plain CTAs
-- `src/components/HeliosPanel.tsx` — buddy preview, no “AI theater”
-- `src/workspaces/CodeWorkspace.tsx` / `ProjectWorkspace.tsx` — IDE + Helios column
-- Suite / spreadsheet workspaces — formulas & real app behavior
-- `server/` — free API docs + live→Lifestyle post on go-live
-- Landing / marketing — can stay cinematic; **in-app shell must be suite-simple**
+**That’s the set.** No stocks, pitch decks, comic studios, lab museums, or 80 catalog clones on the home grid.
+
+Optional later (only if users ask): Quiz form, Reading list — still with their own 小姐姐 + name, still not dumped into a crowded grid.
+
+### Writing must stay easy (`墨语`)
+
+- Big text area, title, Share / Invite WorkBuddy.
+- Headings & lists are enough on day one.
+- Helios can help rewrite — optional, calm, not a wall of modes.
+
+### Spreadsheet must be real but approachable (`格间`)
+
+- Cells, a few common formulas (`SUM`, `AVERAGE`, basic arithmetic), simple chart.
+- Don’t expose every Excel power feature on first open.
+
+---
+
+## 小姐姐 system (per Mini App)
+
+Each Mini App tile and header shows:
+
+```
+  [app icon]
+   墨语
+  (小墨 avatar)     ← 小姐姐 under the name
+  “写作业、写信，随便写”
+```
+
+Rules:
+
+- One **小姐姐** per Mini App (name + simple portrait / avatar).
+- She is a **friendly guide**, not a chatbot wall — short tip under the name (“点这里开始写”).
+- Same character appears in empty states and light onboarding (one line, then gone).
+- Visual style: clean, cute, consistent — still fits a light M365-like product, not a game lobby.
+
+Suggested roster:
+
+| 小姐姐 | App | One-line tip |
+|--------|-----|--------------|
+| 小墨 | 墨语 | 想写就写，写完就能分享 |
+| 小格 | 格间 | 表格算数，作业账本都行 |
+| 小光 | 光幕 | 做几页幻灯片就上课/开会 |
+| 小本 | 随身本 | 课堂笔记放这里 |
+| 小办 | 今日事 | 今天要交的都列出来 |
+| 小记 | 记卡 | 背单词、背考点 |
+| 小码 | 搭子码 | 写代码时 Helios 坐旁边 |
+
+Helios itself stays the **work buddy** (not a competing 小姐姐 per screen): file preview without opening + side-by-side in 搭子码.
+
+---
+
+## Social + realtime (still together)
+
+- **Lifestyle**: social feed for progress, questions, and **live collab posts**.
+- Go live → auto post in feed → WorkBuddys tap **Join**.
+- **Messages**: iMessage-simple; invite WorkBuddy to a file from one Share button.
+- Realtime collab happens *from* the feed or the open file — users don’t learn a separate “Live product.”
+
+---
+
+## What we deliberately cut
+
+- Hunting through Explore / Spaces / Live / Projects as separate worlds  
+- Giant Mini App catalogs that don’t work or look the same  
+- Hard writing studios and feature checklists on first paint  
+- Purple AI glow / “explore our platform” tourism  
+- Anything that makes users **spend time learning Helios instead of doing homework/work**
+
+---
+
+## Visual language (unchanged direction)
+
+Light Fluent / M365 palette, professional blue, plain UI type, short motion. Icons + 小姐姐 give warmth; colors stay office-calm.
 
 ---
 
 ## Ship order
 
-1. **Visual + nav** — M365-like light theme; 5-item nav; remove Live/Projects from rail  
-2. **Home files section** + plain New / Open / Invite WorkBuddy  
-3. **Lifestyle** live collab posts (social + realtime entry)  
-4. **Messages** iMessage-style Chat  
-5. **Helios buddy** file preview + IDE side-by-side  
-6. **Workbook formulas** / Mini App fidelity  
-7. **WorkBuddys** naming + invite everywhere  
+1. **One shell + icons** — 5-tab nav; every action labeled with icon  
+2. **Cut Apps list** to the table above; invent names + 小姐姐 avatars on tiles  
+3. **Home** = recent files + New + WorkBuddys (everything together)  
+4. **Lifestyle** live posts; remove Live/Projects pages  
+5. **墨语** easy writing; **格间** basic formulas  
+6. **Messages** iMessage-style; Invite WorkBuddy  
+7. **搭子码** IDE + Helios side-by-side; Helios file preview buddy  
 
-Update the main `README.md` “Implemented functionality” as each slice lands.
+Update main `README.md` when each slice lands.
 
 ---
 
 ## One-line product definition
 
-**Helios is a simple M365-style work suite with a social feed and realtime collab — ordinary people use it without learning; WorkBuddys work together live.**
+**Helios is one simple place for school and everyday work — few Mini Apps, each with its own name, icon, and 小姐姐; social + live with WorkBuddys; no hunting, no empty tools.**
