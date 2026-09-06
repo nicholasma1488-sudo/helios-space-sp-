@@ -4,7 +4,17 @@ Helios Space is a React application for creating projects and sharing progress. 
 
 The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, Lifestyle uses a familiar social-feed information architecture while retaining the Helios graphite, solar, violet, and sky visual language. Chat Hub shows unread badges in navigation, Home has loading states, and error boundaries protect against unexpected crashes.
 
-**Product direction:** One together work/study app — few Mini Apps (each with its own **name**, **icon**, and **小姐姐**), M365-simple light UI, no hunting / no empty tools, easy writing, Lifestyle social + realtime live posts, Messages like iMessage, files on Home, Helios as a calm buddy, friends as **WorkBuddys**. See [`REDESIGN.md`](./REDESIGN.md).
+**Product direction (shipping now):** One together work/study app — few Mini Apps (each with its own **name**, **icon**, and **小姐姐**), M365-simple light UI, no hunting / no empty tools, easy writing, Lifestyle social + realtime live posts, Messages like iMessage, files on Home, Helios as a calm buddy, friends as **WorkBuddys**. See [`REDESIGN.md`](./REDESIGN.md).
+
+### Implemented in this redesign pass
+
+- Five-tab shell: Home · Lifestyle · Apps · Messages · Me (Live / Projects / Explore / Spaces folded away)
+- Light Fluent-like theme tokens (office blue, not AI purple)
+- Seven curated Mini Apps with original names + guide girls: 墨语/小墨, 格间/小格, 光幕/小光, 随身本/小本, 今日事/小办, 记卡/小记, 搭子码/小码
+- Home carries files/projects, WorkBuddys, and icon-labeled actions (打开 / 先看 / 邀请)
+- Lifestyle keeps social feed; going live is a feed post path (no separate Live nav)
+- Messages styled toward iMessage; Helios docked beside work as a file-preview buddy
+- 格间 supports `SUM` / `AVERAGE` formulas
 
 ## Run locally
 

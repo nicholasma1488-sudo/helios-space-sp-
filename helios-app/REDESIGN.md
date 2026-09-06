@@ -150,15 +150,15 @@ Light Fluent / M365 palette, professional blue, plain UI type, short motion. Ico
 
 ## Ship order
 
-1. **One shell + icons** — 5-tab nav; every action labeled with icon  
-2. **Cut Apps list** to the table above; invent names + 小姐姐 avatars on tiles  
-3. **Home** = recent files + New + WorkBuddys (everything together)  
-4. **Lifestyle** live posts; remove Live/Projects pages  
-5. **墨语** easy writing; **格间** basic formulas  
-6. **Messages** iMessage-style; Invite WorkBuddy  
-7. **搭子码** IDE + Helios side-by-side; Helios file preview buddy  
+1. ~~**One shell + icons**~~ — done  
+2. ~~**Cut Apps list**~~ — done (7 apps + 小姐姐)  
+3. ~~**Home**~~ — done (files + WorkBuddys)  
+4. ~~**Lifestyle** live posts~~ — done (no Live tab)  
+5. ~~**墨语 / 格间**~~ — writing kept simple; SUM/AVERAGE formulas  
+6. ~~**Messages**~~ — iMessage-oriented styling  
+7. ~~**搭子码 + Helios**~~ — Helios docked as file-preview buddy  
 
-Update main `README.md` when each slice lands.
+Main `README.md` lists what shipped in this pass.
 
 ---
 
