@@ -1,8 +1,8 @@
 # Helios Space
 
-Helios Space is a React application for creating projects and sharing progress. Accounts, projects, posts, audiences, and reactions are persisted in SQLite by the included Express server.
+Helios Space is a React + Express application for collaborating on work: projects, mini apps, chat, and a social Lifestyle feed. Accounts, projects, posts, audiences, and reactions persist in SQLite via the included Express server.
 
-The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, Lifestyle uses a familiar social-feed information architecture while retaining the Helios graphite, solar, violet, and sky visual language. Chat Hub shows unread badges in navigation, Home has loading states, and error boundaries protect against unexpected crashes.
+**Product direction:** a simpler collaboration platform built around **WorkBuddys**, Home-hosted projects, Lifestyle live-collab posts, iMessage-like chat, and a Helios buddy that can preview files without opening them. See the repo root [`README.md`](../README.md) for the full redesign plan.
 
 ## Run locally
 
@@ -30,7 +30,22 @@ For a reverse-proxy deployment, set `NODE_ENV=production`. The server binds to
 interface. `PORT` defaults to `8080`, and `DATA_DIR` can point SQLite at a
 dedicated persistent directory.
 
-## Implemented functionality
+## Redesign summary (target IA)
+
+| Change | Direction |
+| --- | --- |
+| **Navigation** | Keep **Apps** (mini apps). Remove separate **Live** and **Projects** pages. |
+| **Lifestyle** | Social media feed. Going live creates a **live-collab post** here. |
+| **Chat** | Keep Chat; UI/UX like **iMessage**. |
+| **Projects** | Section on **Home**, not a dedicated page. |
+| **Free API** | Public read endpoints under `/api/free/*`. |
+| **Helios** | Buddy agent — **view files without opening** them; side by side in the code **IDE**. |
+| **Mini apps** | Stay simple — not separate branded Excel-like products with full formula systems. |
+| **WorkBuddys** | Name for friends / collaborators on shared work. |
+
+Details and checklist: [root README — redesign plan](../README.md).
+
+## Current implemented functionality
 
 - Account signup, login, logout, and per-user sessions
 - Persistent code, document, design, and research projects
