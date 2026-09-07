@@ -34,15 +34,15 @@
   --s-collab: #b794ff;
 
   /* ── Semantic tokens — artistic liquid glass (Claude × Gemini × Codex) ── */
-  --helios-bg:       #f4f1ec;
-  --helios-surface:  rgba(255, 255, 255, 0.62);
-  --helios-surface2: rgba(255, 255, 255, 0.78);
-  --helios-surface3: rgba(245, 241, 235, 0.92);
-  --helios-border:   rgba(28, 25, 23, 0.10);
+  --helios-bg:       #eceff3;
+  --helios-surface:  rgba(255, 255, 255, 0.55);
+  --helios-surface2: rgba(255, 255, 255, 0.72);
+  --helios-surface3: rgba(236, 239, 243, 0.92);
+  --helios-border:   rgba(90, 98, 112, 0.16);
 
   --helios-text:  #1c1917;
-  --helios-text2: #57534e;
-  --helios-muted: #78716c;
+  --helios-text2: #4b5563;
+  --helios-muted: #6b7280;
 
   /* Claude warm terracotta + Gemini soft blue */
   --helios-accent:  #c96442;
@@ -59,13 +59,13 @@
   --helios-danger:  #c2414b;
   --helios-collab:  #7a8bb8;
 
-  /* Glass / Codex */
-  --glass-bg:        rgba(255, 255, 255, 0.48);
-  --glass-bg-strong: rgba(255, 255, 255, 0.72);
-  --glass-stroke:    rgba(255, 255, 255, 0.55);
-  --glass-shadow:    0 10px 40px rgba(28, 25, 23, 0.08), inset 0 1px 0 rgba(255,255,255,0.65);
-  --codex-gray:      rgba(90, 98, 112, 0.72);
-  --codex-gray-soft: rgba(120, 128, 140, 0.35);
+  /* Glass / Codex grey */
+  --glass-bg:        rgba(255, 255, 255, 0.42);
+  --glass-bg-strong: rgba(255, 255, 255, 0.68);
+  --glass-stroke:    rgba(255, 255, 255, 0.62);
+  --glass-shadow:    0 12px 40px rgba(90, 98, 112, 0.12), inset 0 1px 0 rgba(255,255,255,0.7);
+  --codex-gray:      rgba(90, 98, 112, 0.82);
+  --codex-gray-soft: rgba(120, 128, 140, 0.42);
 
   /* ── Radius scale (P361) ── */
   --radius-xs: 4px;
@@ -100,21 +100,23 @@
   --shadow-glass: var(--glass-shadow);
   --shadow-lift: 0 12px 28px rgba(28, 25, 23, 0.10), inset 0 1px 0 rgba(255,255,255,0.7);
 
-  /* ── Typography scale (P360) ── */
-  --type-display-lg: 600 40px/44px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-display-md: 600 32px/38px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-title-lg:   600 28px/34px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-title-md:   600 24px/30px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-heading-lg: 600 20px/26px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-heading-md: 600 17px/23px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-heading-sm: 600 15px/20px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-label:      600 13px/16px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-body-lg:    400 17px/25px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-body-md:    400 15px/22px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-body-sm:    400 13px/19px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-caption:    400 11px/16px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
-  --type-mono-md:    400 13px/19px 'Fira Code', monospace;
-  --type-mono-sm:    400 11px/16px 'Fira Code', monospace;
+  /* ── Typography scale ── */
+  --font-sans: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Source Serif 4', 'Source Sans 3', Georgia, serif;
+  --type-display-lg: 600 40px/44px var(--font-display);
+  --type-display-md: 600 32px/38px var(--font-display);
+  --type-title-lg:   600 28px/34px var(--font-display);
+  --type-title-md:   600 24px/30px var(--font-sans);
+  --type-heading-lg: 600 20px/26px var(--font-sans);
+  --type-heading-md: 600 17px/23px var(--font-sans);
+  --type-heading-sm: 600 15px/20px var(--font-sans);
+  --type-label:      600 13px/16px var(--font-sans);
+  --type-body-lg:    400 17px/25px var(--font-sans);
+  --type-body-md:    400 15px/22px var(--font-sans);
+  --type-body-sm:    400 13px/19px var(--font-sans);
+  --type-caption:    400 11px/16px var(--font-sans);
+  --type-mono-md:    400 13px/19px 'Fira Code', ui-monospace, monospace;
+  --type-mono-sm:    400 11px/16px 'Fira Code', ui-monospace, monospace;
 }
 
 /* ── High-contrast theme (P330, P357) ── */
@@ -162,7 +164,7 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   font: var(--type-body-md);
-  font-family: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   background: var(--helios-bg);
   color: var(--helios-text);
   overflow: hidden;
@@ -565,8 +567,9 @@ button, [role="button"], a, input, select, textarea {
 /* ── Liquid Glass surfaces & bounce buttons ── */
 body {
   background:
-    radial-gradient(1200px 600px at 12% -10%, rgba(201, 100, 66, 0.12), transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, rgba(91, 141, 239, 0.14), transparent 50%),
+    radial-gradient(1200px 600px at 12% -10%, rgba(201, 100, 66, 0.10), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(91, 141, 239, 0.12), transparent 50%),
+    linear-gradient(180deg, rgba(90, 98, 112, 0.06), transparent 42%),
     var(--helios-bg);
 }
 
@@ -575,7 +578,9 @@ body {
 .helios-mobile-nav,
 .suite-tile-guide,
 .home-section,
-.home-file-card {
+.home-file-card,
+.authenticated-topbar,
+.helios-internal-frame > .authenticated-topbar {
   background: var(--glass-bg);
   border: 1px solid var(--glass-stroke);
   box-shadow: var(--glass-shadow);

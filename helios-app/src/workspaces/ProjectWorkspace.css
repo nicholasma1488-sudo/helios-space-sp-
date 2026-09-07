@@ -214,7 +214,7 @@
 .repo-commit-form { display: flex; flex-direction: column; gap: 7px; padding: 10px; border-bottom: 1px solid var(--helios-border); }
 .repo-commit-form textarea { min-height: 64px; resize: vertical; }
 .repo-main { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: hidden; }
-.repo-code-split { display: grid; min-height: 0; flex: 1; grid-template-rows: minmax(0, 1fr) minmax(180px, .42fr); overflow: hidden; }
+.repo-code-split { display: grid; min-height: 0; flex: 1; grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr); overflow: hidden; }
 .repo-file-editor,
 .repo-file-editor .code-monaco { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .repo-file-meta { display: flex; min-height: 32px; flex-shrink: 0; align-items: center; gap: 7px; padding: 0 12px; border-bottom: 1px solid var(--helios-border); color: var(--helios-muted); font-size: 11px; }
@@ -241,14 +241,18 @@
 .code-file-tree > section strong { margin-bottom: 3px; color: var(--helios-muted); font-size: 7px; letter-spacing: .11em; }
 .code-file-tree > section button { display: flex; align-items: center; gap: 6px; padding: 7px; border-radius: 7px; font-size: 8px; text-align: left; }
 .code-file-tree > section button:hover { background: var(--helios-surface2); color: var(--helios-text); }
-.code-editor-zone { display: flex; min-width: 0; flex-direction: column; overflow: hidden; background: #0d0d10; }
-.code-tabs { display: flex; min-height: 37px; overflow-x: auto; border-bottom: 1px solid var(--helios-border); background: #111217; }
-.code-tabs button { display: flex; min-width: 110px; align-items: center; gap: 6px; padding: 0 10px; border: 0; border-right: 1px solid var(--helios-border); background: transparent; color: var(--helios-muted); font: inherit; font-size: 8px; cursor: pointer; }
-.code-tabs button.is-active { border-top: 2px solid var(--helios-accent2); background: #0d0d10; color: var(--helios-text); }
+.code-editor-zone { display: flex; min-width: 0; flex-direction: column; overflow: hidden; background: #12141a; }
+.code-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); }
+.code-language-switch { display: inline-flex; align-items: center; gap: 8px; color: var(--helios-muted); font-size: 12px; }
+.code-language-switch select { min-height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--glass-stroke); background: rgba(255,255,255,.08); color: var(--helios-text); }
+.code-toolbar .liquid-glass-btn { min-height: 32px; padding: 0 12px; font-size: 12px; }
+.code-tabs { display: flex; min-height: 40px; overflow-x: auto; border-bottom: 1px solid var(--helios-border); background: #171a22; }
+.code-tabs button { display: flex; min-width: 110px; align-items: center; gap: 6px; padding: 0 12px; border: 0; border-right: 1px solid var(--helios-border); background: transparent; color: var(--helios-muted); font: inherit; font-size: 12px; cursor: pointer; }
+.code-tabs button.is-active { border-top: 2px solid var(--helios-accent2); background: #12141a; color: var(--helios-text); }
 .code-monaco { flex: 1; min-height: 0; }
 .code-output-zone { display: flex; min-width: 0; flex-direction: column; border-left: 1px solid var(--helios-border); background: #101116; }
 .code-output-zone > nav { display: flex; min-height: 38px; border-bottom: 1px solid var(--helios-border); }
-.code-output-zone > nav button { display: flex; align-items: center; gap: 5px; padding: 0 9px; border: 0; background: transparent; color: var(--helios-muted); font: inherit; font-size: 8px; cursor: pointer; }
+.code-output-zone > nav button { display: flex; align-items: center; gap: 5px; padding: 0 9px; border: 0; background: transparent; color: var(--helios-muted); font: inherit; font-size: 12px; cursor: pointer; }
 .code-output-zone > nav button.is-active { color: var(--helios-accent2); }
 .code-output-zone > nav button:last-child { margin-left: auto; }
 .code-output-zone iframe { width: 100%; height: 100%; border: 0; background: #fff; }
@@ -539,7 +543,7 @@
   .code-output-zone { display: none; }
   .repo-body { grid-template-columns: 160px minmax(0,1fr); }
   .repo-history { display: none; }
-  .repo-code-split { grid-template-rows: 1fr; }
+  .repo-code-split { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(200px, 0.5fr); }
   .spreadsheet-layout { grid-template-columns: 1fr; }
   .sheet-chart { display: none; }
   .math-workspace { grid-template-columns: 1fr; }

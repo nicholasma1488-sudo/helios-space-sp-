@@ -59,7 +59,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   const [heroPhase, setHeroPhase] = useState<HeroPhase>('void')
   const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou')
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({ alex: true })
-  const [activeFile, setActiveFile] = useState('OrbitStage.tsx')
+  const [activeFile, setActiveFile] = useState('HeliosSpace.tsx')
   const rootRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<HTMLElement>(null)
   const stickyRef = useRef<HTMLDivElement>(null)
@@ -289,22 +289,22 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <section className="landing-mini-app-band" id="mini-app-preview" data-reveal>
           <div className="mini-band-orbit" aria-hidden="true"><Grid3X3 size={30} /></div>
           <div>
-            <span>APPS ARE A 365 SUITE</span>
-            <h2>Open Word, Excel or slides.<br />Keep working in the same file.</h2>
+            <span>CREATE SUITE</span>
+            <h2>Docs, Sheets, Slides, Code.<br />Make something, then share it in Space.</h2>
           </div>
           <div className="mini-band-list">
-            <span><MessageCircle size={15} /> Word</span>
-            <span><Compass size={15} /> Excel</span>
-            <span><Layers3 size={15} /> PowerPoint</span>
-            <span><Code2 size={15} /> OneNote</span>
+            <span><MessageCircle size={15} /> Docs</span>
+            <span><Compass size={15} /> Sheets</span>
+            <span><Layers3 size={15} /> Slides</span>
+            <span><Code2 size={15} /> Code</span>
           </div>
         </section>
 
         <section className="landing-pricing" id="pricing">
           <div className="pricing-intro" data-reveal>
-            <div className="landing-section-label"><span>03</span> PAYMENT</div>
-            <h2>One Helios.<br />Free or Orbit.</h2>
-            <p>Create an account, then open the payment page. Orbit jumps to Stripe so the bank card is entered on that site, not inside Helios.</p>
+            <div className="landing-section-label"><span>03</span> FREE</div>
+            <h2>One Helios.<br />Completely free.</h2>
+            <p>No plans, no upgrades, no card. Create an account and use the full social collaboration space.</p>
           </div>
           <div className="pricing-grid">
             <article className="pricing-card is-child" data-reveal>
@@ -313,10 +313,10 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
               <b>$0 <small>completely free</small></b>
               <p>No plans, no upgrades. Create an account and use everything.</p>
               <ul>
-                <li><Check size={13} /> Writing, Notebook, Sheets, Today Tasks, Buddy Code</li>
-                <li><Check size={13} /> Space feed and collaboration</li>
+                <li><Check size={13} /> Docs, Sheets, Slides, Notebook, Code, and more</li>
+                <li><Check size={13} /> Space feed and WorkBuddy collab</li>
                 <li><Check size={13} /> Messages</li>
-                <li><Check size={13} /> Unlimited documents and characters</li>
+                <li><Check size={13} /> Free Helios AI in your files</li>
                 <li><Check size={13} /> No card required</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
@@ -362,7 +362,7 @@ function HeroPageScreen({
   onFeedTab,
   likedPosts = {},
   onLike,
-  activeFile = 'OrbitStage.tsx',
+  activeFile = 'HeliosSpace.tsx',
   onFile,
 }: {
   page: StageMode
@@ -417,7 +417,7 @@ function HeroFeedScreen({
         <div>
           <header><strong>Alex Morgan</strong><small>@alexm · 2m</small></header>
           <p>Shipped the orbit camera. The feed now stays readable while the scene still moves like a trailer.</p>
-          <div className="hero-tweet-card"><Layers3 size={14} /> Project · Orbit interface</div>
+          <div className="hero-tweet-card"><Layers3 size={14} /> Project · Helios Space</div>
           <footer>
             <span><MessageCircle size={14} /> 11</span>
             <span><Repeat2 size={14} /> 24</span>
@@ -456,7 +456,7 @@ function HeroProjectScreen({
   activeFile: string
   onFile?: (file: string) => void
 }) {
-  const files = ['OrbitStage.tsx', 'FeedHome.tsx', 'LiveRoom.tsx', 'chat.ts']
+  const files = ['HeliosSpace.tsx', 'FeedHome.tsx', 'LiveRoom.tsx', 'chat.ts']
   return (
     <div className="hero-project-ui">
       <aside>
@@ -513,12 +513,12 @@ function HeroLiveScreen() {
     <div className="hero-live-ui">
       <header>
         <b>LIVE</b>
-        <strong>Watching Alex build Orbit interface</strong>
+        <strong>Watching Alex build Helios Space</strong>
         <span>12 viewers</span>
       </header>
       <div className="hero-live-stage">
         <em className="hero-cursor">Alex</em>
-        <p>Editing <b>OrbitStage.tsx</b> · line 42</p>
+        <p>Editing <b>HeliosSpace.tsx</b> · line 42</p>
         <div className="hero-live-bar" />
       </div>
       <ul>

@@ -368,6 +368,7 @@ export function resolveWorkspaceKind(appKind: string): 'code' | 'spreadsheet' | 
   if ([
     'project-board', 'sprint-board', 'kanban', 'roadmap', 'bug-tracker', 'research-board', 'content-calendar',
     'event-planner', 'game-strategy', 'club-planner', 'checklist', 'swot-board', 'practice-routine', 'goal-tracker',
+    'homework-board', 'calendar-plan', 'planner-board', 'lists',
   ].includes(appKind) || appKind.endsWith('-board') || appKind.includes('kanban') || appKind.includes('checklist')) return 'board'
 
   if (['reader', 'book-creator'].includes(appKind)) return 'reader'

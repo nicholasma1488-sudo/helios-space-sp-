@@ -590,7 +590,7 @@ export function LifestyleView({ currentUser }: Props) {
 
         <aside className="lifestyle-right" aria-label="Lifestyle overview">
           <section className="lifestyle-pulse-card liquid-glass">
-            <span className="right-card-eyebrow">Your rhythm</span>
+            <span className="right-card-eyebrow">Your space</span>
             <div className="pulse-summary">
               <Sun size={18} />
               <div>

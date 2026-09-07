@@ -1,15 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Editor from '@monaco-editor/react'
-import { BookOpen, FileCode2, Play, RefreshCw, Sparkles, TerminalSquare, X } from 'lucide-react'
+import { zipSync, strToU8 } from 'fflate'
+import {
+  BookOpen, Download, FileCode2, Play, RefreshCw, Sparkles, TerminalSquare, X,
+} from 'lucide-react'
 import type { Project } from '../api'
+import { api } from '../api'
 import { RepoEmptyState, RepoFrame, useProjectRepo } from './RepoFrame'
-import { isValidRepoPath, languageForFile, README_STARTER } from './repoModel'
+import {
+  isValidRepoPath,
+  LANGUAGE_OPTIONS,
+  languageForFile,
+  monacoLanguageFor,
+  README_STARTER,
+  replaceExtension,
+  type EditorLanguage,
+} from './repoModel'
 
 interface CodeData {
   files: Record<string, string>
   activeFile: string
   openFiles: string[]
   terminal: string[]
+  language?: EditorLanguage
 }
 
 interface Props {
@@ -21,6 +34,15 @@ interface Props {
   canEdit?: boolean
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = true }: Props) {
   const value = data as unknown as CodeData
   const workspaceFiles = useMemo(() => value.files || {}, [value.files])
@@ -28,6 +50,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   const [rightPanel, setRightPanel] = useState<'preview' | 'terminal' | 'readme'>('preview')
   const [terminalInput, setTerminalInput] = useState('')
   const [previewKey, setPreviewKey] = useState(0)
+  const [running, setRunning] = useState(false)
   const syncedRef = useRef(false)
 
   useEffect(() => {
@@ -56,9 +79,10 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   const files = repo.viewingCommit ? repo.files : (Object.keys(repo.workingFiles).length ? repo.workingFiles : workspaceFiles)
   const activeFile = files[value.activeFile] !== undefined ? value.activeFile : Object.keys(files)[0] || ''
   const openFiles = (value.openFiles || []).filter(name => files[name] !== undefined)
+  const activeLanguage = value.language || (activeFile ? languageForFile(activeFile) : 'javascript')
 
   const preview = useMemo(() => {
-    const html = files['index.html'] || '<main id="app"></main>'
+    const html = files['index.html'] || '<main id="app"><p>Add index.html to preview the web app.</p></main>'
     const css = files['styles.css'] || files['style.css'] || ''
     const js = files['app.js'] || files['index.js'] || ''
     return html
@@ -73,18 +97,32 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   }
 
   function openFile(name: string) {
-    patch({ activeFile: name, openFiles: openFiles.includes(name) ? openFiles : [...openFiles, name] })
+    patch({
+      activeFile: name,
+      openFiles: openFiles.includes(name) ? openFiles : [...openFiles, name],
+      language: languageForFile(name),
+    })
   }
 
   function closeFile(name: string) {
     const nextOpen = openFiles.filter(file => file !== name)
-    patch({ openFiles: nextOpen, activeFile: value.activeFile === name ? (nextOpen[0] || Object.keys(files)[0] || '') : value.activeFile })
+    const nextActive = value.activeFile === name ? (nextOpen[0] || Object.keys(files)[0] || '') : value.activeFile
+    patch({
+      openFiles: nextOpen,
+      activeFile: nextActive,
+      language: nextActive ? languageForFile(nextActive) : value.language,
+    })
   }
 
   function createFile(path: string, content = '') {
     const nextFiles = { ...files, [path]: content }
     void repo.createFile(path, content)
-    patch({ files: nextFiles, activeFile: path, openFiles: [...openFiles, path] })
+    patch({
+      files: nextFiles,
+      activeFile: path,
+      openFiles: [...openFiles, path],
+      language: languageForFile(path),
+    })
   }
 
   function renameFile(from: string, to: string) {
@@ -96,6 +134,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
       files: nextFiles,
       activeFile: value.activeFile === from ? to : value.activeFile,
       openFiles: openFiles.map(name => name === from ? to : name),
+      language: languageForFile(value.activeFile === from ? to : value.activeFile),
     })
   }
 
@@ -104,11 +143,92 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     delete nextFiles[name]
     void repo.deleteFile(name)
     const nextOpen = openFiles.filter(file => file !== name)
-    patch({ files: nextFiles, openFiles: nextOpen, activeFile: nextOpen[0] || Object.keys(nextFiles)[0] || '' })
+    const nextActive = nextOpen[0] || Object.keys(nextFiles)[0] || ''
+    patch({
+      files: nextFiles,
+      openFiles: nextOpen,
+      activeFile: nextActive,
+      language: nextActive ? languageForFile(nextActive) : value.language,
+    })
   }
 
   async function commit(message: string) {
     await repo.commit(message)
+  }
+
+  function switchLanguage(next: EditorLanguage) {
+    const option = LANGUAGE_OPTIONS.find(item => item.id === next)
+    if (!option) return
+    if (!activeFile) {
+      const path = `main.${option.extension}`
+      createFile(path, option.starter)
+      patch({ language: next })
+      return
+    }
+    const target = replaceExtension(activeFile, option.extension)
+    if (target !== activeFile && files[target] === undefined) {
+      renameFile(activeFile, target)
+      if (!files[activeFile]?.trim()) {
+        patch({
+          files: { ...files, [target]: option.starter },
+          activeFile: target,
+          openFiles: openFiles.map(name => name === activeFile ? target : name),
+          language: next,
+        })
+        return
+      }
+    }
+    patch({ language: next, activeFile: files[target] !== undefined ? target : activeFile })
+  }
+
+  function downloadCode() {
+    const entries = Object.entries(files)
+    if (entries.length === 0) return
+    const base = (project?.name || 'helios-code').replace(/[^\w.-]+/g, '-')
+    if (entries.length === 1) {
+      const [path, content] = entries[0]
+      downloadBlob(new Blob([content], { type: 'text/plain;charset=utf-8' }), path.split('/').pop() || `${base}.txt`)
+      return
+    }
+    const zipped = zipSync(
+      Object.fromEntries(entries.map(([path, content]) => [`${base}/${path}`, strToU8(content)])),
+      { level: 6 },
+    )
+    downloadBlob(new Blob([zipped], { type: 'application/zip' }), `${base}.zip`)
+  }
+
+  async function runActiveFile() {
+    if (!activeFile) return
+    const lang = languageForFile(activeFile)
+    const source = files[activeFile] || ''
+    const output = [...(value.terminal || []), `$ run ${activeFile}`]
+    setRightPanel('terminal')
+
+    if (lang === 'html' || lang === 'css' || lang === 'javascript' || activeFile.endsWith('.js')) {
+      output.push('Opening live preview from index.html / styles / app.js…')
+      setRightPanel('preview')
+      setPreviewKey(key => key + 1)
+      patch({ terminal: output.slice(-120) })
+      return
+    }
+
+    setRunning(true)
+    try {
+      const result = await api.codeRun({
+        language: lang,
+        filename: activeFile,
+        source,
+        files,
+      })
+      output.push(result.stdout || '(no stdout)')
+      if (result.stderr) output.push(result.stderr)
+      if (result.status) output.push(`[exit ${result.status}]`)
+    } catch (error) {
+      output.push(`Run failed: ${(error as Error).message}`)
+    } finally {
+      setRunning(false)
+      patch({ terminal: output.slice(-120) })
+    }
   }
 
   function runTerminal(event: React.FormEvent) {
@@ -117,13 +237,20 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     if (!command) return
     const output = [...(value.terminal || []), `$ ${command}`]
     const normalized = command.toLowerCase()
-    if (normalized === 'help') output.push('Supported: help, ls, clear, preview, commit')
+    if (normalized === 'help') output.push('Supported: help, ls, clear, preview, run, download, commit')
     else if (normalized === 'ls') output.push(Object.keys(files).join('   ') || '(empty repository)')
     else if (normalized === 'clear') output.splice(0, output.length)
     else if (['preview', 'npm run preview'].includes(normalized)) {
       output.push('Preview rebuilt from index.html, styles.css and app.js.')
       setRightPanel('preview')
       setPreviewKey(key => key + 1)
+    } else if (normalized === 'run') {
+      setTerminalInput('')
+      void runActiveFile()
+      return
+    } else if (normalized === 'download') {
+      downloadCode()
+      output.push(Object.keys(files).length > 1 ? 'Downloaded zip folder.' : 'Downloaded file.')
     } else if (normalized === 'commit') output.push('Use the Commit panel on the right to save a snapshot with a message.')
     else output.push(`Command not available in the browser sandbox: ${command}`)
     patch({ terminal: output.slice(-120) })
@@ -137,7 +264,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     <RepoEmptyState
       canEdit={canEdit && !repo.viewingCommit}
       onAddFile={() => {
-        const path = window.prompt('File name, including extension', 'src/app.ts')?.trim()
+        const path = window.prompt('File name, including extension', 'main.cpp')?.trim()
         if (path && isValidRepoPath(path) && files[path] === undefined) createFile(path)
       }}
       onAddReadme={() => createFile('README.md', README_STARTER)}
@@ -145,6 +272,30 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     />
   ) : (
     <section className="code-editor-zone">
+      <div className="code-toolbar liquid-glass">
+        <label className="code-language-switch">
+          <span>Language</span>
+          <select
+            value={activeLanguage}
+            disabled={!canEdit || Boolean(repo.viewingCommit)}
+            onChange={event => switchLanguage(event.target.value as EditorLanguage)}
+            aria-label="Code language"
+          >
+            {LANGUAGE_OPTIONS.map(option => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <button type="button" className="liquid-glass-btn" disabled={running || !activeFile} onClick={() => void runActiveFile()}>
+          <Play size={13} /> {running ? 'Running…' : 'Run'}
+        </button>
+        <button type="button" className="liquid-glass-btn" onClick={() => { setRightPanel('preview'); setPreviewKey(key => key + 1) }}>
+          <RefreshCw size={13} /> Preview
+        </button>
+        <button type="button" className="liquid-glass-btn is-primary" disabled={Object.keys(files).length === 0} onClick={downloadCode}>
+          <Download size={13} /> {Object.keys(files).length > 1 ? 'Download ZIP' : 'Download'}
+        </button>
+      </div>
       <div className="code-tabs">
         {openFiles.map(name => (
           <button type="button" key={name} className={activeFile === name ? 'is-active' : ''} onClick={() => openFile(name)}>
@@ -160,11 +311,12 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
           <div className="repo-file-meta">
             <FileCode2 size={13} />
             <span>{project?.name || 'repository'} / {activeFile}</span>
+            <small>{LANGUAGE_OPTIONS.find(item => item.id === activeLanguage)?.label || activeLanguage}</small>
             {!editorValue && <small>This file is empty. Start writing, then commit a snapshot.</small>}
           </div>
           <div className="code-monaco">
             <Editor
-              language={languageForFile(activeFile)}
+              language={monacoLanguageFor(activeLanguage)}
               value={editorValue}
               onChange={next => {
                 if (!canEdit || repo.viewingCommit || !activeFile) return
@@ -186,7 +338,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
       ) : (
         <RepoEmptyState
           canEdit={canEdit && !repo.viewingCommit}
-          onAddFile={() => createFile('src/app.ts')}
+          onAddFile={() => createFile('main.cpp', LANGUAGE_OPTIONS.find(item => item.id === 'cpp')!.starter)}
           onAddReadme={() => createFile('README.md', README_STARTER)}
           onCommit={() => { void commit('Initial commit') }}
         />
@@ -227,7 +379,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
             <button type="button" className={rightPanel === 'preview' ? 'is-active' : ''} onClick={() => setRightPanel('preview')}><Play size={12} /> Preview</button>
             <button type="button" className={rightPanel === 'terminal' ? 'is-active' : ''} onClick={() => setRightPanel('terminal')}><TerminalSquare size={12} /> Terminal</button>
             <button type="button" className={rightPanel === 'readme' ? 'is-active' : ''} onClick={() => setRightPanel('readme')}><BookOpen size={12} /> README</button>
-            <button type="button" onClick={() => onAskHelios(`Review ${activeFile || 'this repository'} and suggest the next useful change`)}><Sparkles size={12} /> Helios</button>
+            <button type="button" onClick={() => onAskHelios(`Review ${activeFile || 'this repository'} and write the next useful file changes as path-tagged code blocks`)}><Sparkles size={12} /> Helios</button>
             {rightPanel === 'preview' && <button type="button" onClick={() => setPreviewKey(key => key + 1)} aria-label="Refresh preview"><RefreshCw size={12} /></button>}
           </nav>
           {rightPanel === 'preview' && <iframe key={previewKey} title="Live project preview" sandbox="allow-scripts" srcDoc={preview} />}

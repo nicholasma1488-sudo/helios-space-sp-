@@ -559,4 +559,10 @@ export const api = {
         body: JSON.stringify({ messages, project_id, context }),
       }),
   },
+
+  codeRun: (data: { language: string; filename: string; source: string; files?: Record<string, string> }) =>
+    call<{ stdout: string; stderr: string; status: string | number }>('/api/code/run', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }

@@ -145,7 +145,7 @@ function paintScreen(kind: 'feed' | 'code' | 'chat') {
     ctx.fillText('FILES', 24, 72)
     ctx.fillStyle = '#d7e3ef'
     ctx.font = '400 15px ui-monospace, monospace'
-    ;['OrbitStage.tsx', 'FeedHome.tsx', 'LiveRoom.tsx'].forEach((file, index) => {
+    ;['HeliosSpace.tsx', 'FeedHome.tsx', 'LiveRoom.tsx'].forEach((file, index) => {
       if (index === 0) {
         ctx.fillStyle = 'rgba(79,195,247,.16)'
         ctx.fillRect(12, 88, 144, 28)

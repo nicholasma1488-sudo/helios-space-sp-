@@ -13,7 +13,7 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
         <p>No plans, no upgrades. Create an account and use all of Create, Space, and Messages.</p>
       </header>
       <ul className="payment-free-points">
-        <li><Check size={14} /> Writing, Notebook, Sheets, Today Tasks, Buddy Code</li>
+        <li><Check size={14} /> Docs, Sheets, Slides, Notebook, Code, and more</li>
         <li><Check size={14} /> Unlimited documents and characters</li>
         <li><Check size={14} /> No card required</li>
       </ul>
