@@ -249,13 +249,13 @@
 .notifications-popover > header strong { font-size: 13px; }
 .notifications-popover > header button { border: 0; background: transparent; color: var(--helios-accent); font: inherit; font-size: 10px; cursor: pointer; }
 .notifications-popover > div { max-height: 480px; overflow-y: auto; padding: 8px; }
-.notifications-popover > div > button.is-unread { background: rgba(133, 118, 245, .08); }
-.notifications-popover > div > button > i { display: grid; width: 30px; height: 30px; flex-shrink: 0; place-items: center; border-radius: 9px; background: rgba(133, 118, 245, .12); color: var(--helios-accent); font-style: normal; }
+.notifications-popover > div > button.is-unread { background: rgba(201, 100, 66, .08); }
+.notifications-popover > div > button > i { display: grid; width: 30px; height: 30px; flex-shrink: 0; place-items: center; border-radius: 9px; background: rgba(201, 100, 66, .12); color: var(--helios-accent); font-style: normal; }
 .notifications-popover time { display: block; margin-top: 4px; color: var(--helios-muted); font-size: 8px; }
 
 .profile-popover { width: 250px; padding: 8px; }
 .profile-popover-user { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; padding: 10px; border-bottom: 1px solid var(--helios-border); }
-.profile-popover-user > span { display: grid; width: 35px; height: 35px; place-items: center; border-radius: 50%; background: rgba(133, 118, 245, .18); color: var(--helios-accent); font-weight: 800; }
+.profile-popover-user > span { display: grid; width: 35px; height: 35px; place-items: center; border-radius: 50%; background: rgba(201, 100, 66, .18); color: var(--helios-accent); font-weight: 800; }
 .profile-popover-user strong { display: block; font-size: 12px; }
 .profile-popover-user small { display: block; margin-top: 2px; color: var(--helios-muted); font-size: 9px; }
 .profile-popover > button { display: flex; width: 100%; align-items: center; gap: 9px; padding: 10px; border: 0; border-radius: 9px; background: transparent; color: var(--helios-text2); font: inherit; font-size: 11px; cursor: pointer; }
