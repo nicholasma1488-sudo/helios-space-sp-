@@ -5,6 +5,7 @@
   Chapter 12 (Design System) + exact token reference pages 359-368
   Raw tokens are fixed; semantic tokens carry meaning across themes.
 */
+@import "./ui/primitives.css";
 
 :root {
   /* ── Raw graphite neutral scale (P359) ── */
@@ -126,8 +127,8 @@
   --helios-text:     #ffffff;
   --helios-text2:    #e4e4e4;
   --helios-muted:    #c0c0c0;
-  --helios-accent:   #a596ff;
-  --helios-accent2:  #7fd6ff;
+  --helios-accent:   #c96442;
+  --helios-accent2:  #5b8def;
   --helios-on-accent:  #000000;
   --helios-on-accent2: #000000;
   --helios-on-success: #000000;
@@ -394,7 +395,6 @@ button, [role="button"], a, input, select, textarea {
   min-width: 0;
   flex: 1;
   overflow: hidden;
-  will-change: transform, opacity;
 }
 
 .helios-view-frame.view-forward {

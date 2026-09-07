@@ -40,11 +40,13 @@ export function ChatView() {
   const fileInput = useRef<HTMLInputElement>(null)
   const messagesEnd = useRef<HTMLDivElement>(null)
   const initialSelectionDone = useRef(false)
+  const activeIdRef = useRef<number | null>(null)
+  activeIdRef.current = activeId
 
   const loadConversations = useCallback(async () => {
     try {
       const result = await api.chat.list()
-      setConversations(result.conversations)
+      setConversations(result.conversations || [])
       // Clear the global unread badge when user enters Chat Hub
       dispatch({ type: 'SET_CHAT_UNREAD', count: 0 })
       if (!initialSelectionDone.current) {
@@ -60,7 +62,15 @@ export function ChatView() {
   }, [dispatch])
 
   useEffect(() => { void loadConversations() }, [loadConversations])
-  useEffect(() => { void api.live.list().then(result => setLiveSessions(result.sessions)).catch(() => {}) }, [])
+  useEffect(() => {
+    let cancelled = false
+    void api.live.list().then(result => {
+      if (!cancelled) setLiveSessions(result.sessions || [])
+    }).catch(() => {
+      if (!cancelled) setLiveSessions([])
+    })
+    return () => { cancelled = true }
+  }, [])
 
   const active = conversations.find(item => item.id === activeId) ?? null
   const visibleConversations = useMemo(() => {
@@ -72,19 +82,35 @@ export function ChatView() {
     if (!quiet) setMessagesLoading(true)
     try {
       const result = await api.chat.messages(conversationId)
-      if (activeId === conversationId || !activeId) setMessages(result.messages)
-      await api.chat.read(conversationId)
-      setConversations(current => current.map(item => item.id === conversationId ? { ...item, unread: 0 } : item))
+      setMessages(current => {
+        if (activeIdRef.current !== conversationId) return current
+        return result.messages || []
+      })
+      // Only mark read / clear badge for the still-active conversation.
+      if (activeIdRef.current === conversationId) {
+        await api.chat.read(conversationId)
+        setConversations(current => current.map(item => item.id === conversationId ? { ...item, unread: 0 } : item))
+      }
     } catch (error) {
       if (!quiet) dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
     } finally { if (!quiet) setMessagesLoading(false) }
-  }, [activeId, dispatch])
+  }, [dispatch])
 
   useEffect(() => {
     if (!activeId) { setMessages([]); return }
-    void loadMessages(activeId)
-    const poll = window.setInterval(() => { void loadMessages(activeId, true); void loadConversations() }, 4500)
-    return () => window.clearInterval(poll)
+    let cancelled = false
+    void (async () => {
+      if (!cancelled) await loadMessages(activeId)
+    })()
+    const poll = window.setInterval(() => {
+      if (cancelled) return
+      void loadMessages(activeId, true)
+      void loadConversations()
+    }, 8000)
+    return () => {
+      cancelled = true
+      window.clearInterval(poll)
+    }
   }, [activeId, loadConversations, loadMessages])
 
   useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length])

@@ -104,8 +104,20 @@ export function LifestyleView({ currentUser }: Props) {
 
   useEffect(() => { void loadPosts() }, [loadPosts])
 
-  useEffect(() => { void api.solar().then(setSolar).catch(() => {}) }, [])
-  useEffect(() => { void api.live.list().then(result => setLiveSessions(result.sessions)).catch(() => {}) }, [])
+  useEffect(() => {
+    let cancelled = false
+    void api.solar().then(value => { if (!cancelled) setSolar(value) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  useEffect(() => {
+    let cancelled = false
+    void api.live.list().then(result => {
+      if (!cancelled) setLiveSessions(result.sessions || [])
+    }).catch(() => {
+      if (!cancelled) setLiveSessions([])
+    })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     if (loading || targetHandled.current) return
@@ -679,8 +691,8 @@ function PostCard({
   onCommentCountChange: (delta: number) => void
 }) {
   const liked = post.my_reactions.includes('❤️')
-  const likeCount = post.reactions['❤️'] || 0
-  const reactionTotal = Object.values(post.reactions).reduce((sum, count) => sum + count, 0)
+  const likeCount = post.reactions?.['❤️'] || 0
+  const reactionTotal = Object.values(post.reactions || {}).reduce((sum, count) => sum + count, 0)
 
   return (
     <article className="lifestyle-post tweet-post" data-lifestyle-post-id={post.id}>
