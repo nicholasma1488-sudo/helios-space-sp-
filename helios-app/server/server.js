@@ -2797,7 +2797,7 @@ function buildLocalHeliosReply(userText, project) {
     const isCpp = /c\+\+|cpp|\.cpp/i.test(text) || project?.app_kind === 'code'
     if (isCpp || wantsWrite) {
       return [
-        'I will write directly into the Buddy Code repo. After you click Approve, the files will be saved.',
+        'I will write directly into the Code workspace. After you click Approve, the files will be saved.',
         '',
         '```cpp:main.cpp',
         '#include <iostream>',
@@ -2824,7 +2824,7 @@ function buildLocalHeliosReply(userText, project) {
 
   if (/summar|总结|explain|解释|review|检查/.test(lower)) {
     return project
-      ? `I looked at "${project.name}". Open it in Buddy Code and I can propose path-based edits; click Approve to write the files. You can also switch to C++ and hit Run to try it.`
+      ? `I looked at "${project.name}". Open it in Code and I can propose path-based edits; click Approve to write the files. You can also switch to C++ and hit Run to try it.`
       : 'Open a Create file and I can help you write, edit, or explain the contents.'
   }
 
