@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AppWindow, Bookmark, BookOpen, ChevronDown, Code, Dumbbell, FileText, Image as ImageIcon,
-  Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal,
-  PenLine, Plus, Repeat2, Search, Send, Share, Sparkles, Sun, Trash2, Users, X, Zap,
+  AppWindow, Bookmark, ChevronDown, Code, FileText, Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal, PenLine, Plus, Repeat2, Search, Send, Share, Sparkles, Sun, Trash2, Users, X, Zap, Image as ImageIcon,
 } from 'lucide-react'
 import type { Comment, Post, SolarSummary, User } from '../api'
 import { api, type LiveSession } from '../api'
@@ -13,13 +11,11 @@ import { openCreatorProfile, openLiveSession, openProjectWorkspace } from '../pr
 import './LifestyleView.css'
 
 const CATEGORIES = [
-  { id: 'all', label: 'Everything', icon: <Sparkles size={14} />, color: '#8576f5' },
-  { id: 'code', label: 'Coding', icon: <Code size={14} />, color: '#4fc3f7' },
-  { id: 'study', label: 'Study', icon: <BookOpen size={14} />, color: '#b794ff' },
-  { id: 'activity', label: 'Activity', icon: <Dumbbell size={14} />, color: '#6ed69a' },
-  { id: 'reading', label: 'Reading', icon: <BookOpen size={14} />, color: '#f2b84b' },
-  { id: 'reflection', label: 'Reflection', icon: <PenLine size={14} />, color: '#ff9b6a' },
+  { id: 'all', label: '全部', icon: <Sparkles size={14} />, color: '#c96442' },
+  { id: 'reflection', label: '动态', icon: <PenLine size={14} />, color: '#5b8def' },
+  { id: 'activity', label: '开播', icon: <Zap size={14} />, color: '#3d8b6e' },
 ]
+
 
 const REACTIONS = [
   { emoji: '👍', label: 'Like', color: '#68b7ff' },
@@ -415,7 +411,7 @@ export function LifestyleView({ currentUser }: Props) {
             <button type="button" className={feedTab === 'following' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>Following</button>
           </nav>
 
-          <section className={'lifestyle-composer' + (composerOpen ? ' is-open' : '')}>
+          <section className={'lifestyle-composer liquid-glass' + (composerOpen ? ' is-open' : '')}>
             {!composerOpen ? (
               <>
                 <div className="composer-compact">
@@ -596,13 +592,13 @@ export function LifestyleView({ currentUser }: Props) {
           <section className="lifestyle-pulse-card">
             <span className="right-card-eyebrow">MEANINGFUL PROGRESSION</span>
             <div className="pulse-orbit">
-              <div><Sun size={16} /><strong>{solar.total}</strong><span>Solar · {solar.identity}</span></div>
+              <div><Sun size={16} /><strong>{solar.total}</strong><span>灵感 · {solar.identity}</span></div>
             </div>
             <div className="pulse-stats">
               <span><strong>{myPostCount}</strong> progress posts</span>
               <span><strong>{solar.next_threshold ? solar.next_threshold - solar.total : 0}</strong> to next identity</span>
             </div>
-            <p className="solar-integrity-note">Solar rewards genuine work, publishing and helping—not meaningless clicks.</p>
+            <p className="solar-integrity-note">在 Space 分享进度，邀请 WorkBuddy 一起开播协作。</p>
           </section>
 
           <section className="lifestyle-right-card">

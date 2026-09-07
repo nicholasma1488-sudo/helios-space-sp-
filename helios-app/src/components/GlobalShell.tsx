@@ -12,12 +12,13 @@ import { ErrorBoundary } from './ErrorBoundary'
 interface NavItem { id: NavView; label: string; icon: React.ReactNode; shortLabel?: string }
 
 const NAV: NavItem[] = [
-  { id: 'home', label: 'Home', icon: <Home size={20} /> },
-  { id: 'lifestyle', label: 'Lifestyle', icon: <Zap size={20} /> },
-  { id: 'apps', label: 'Apps', shortLabel: 'Apps', icon: <Grid3X3 size={20} /> },
+  { id: 'lifestyle', label: 'Space', shortLabel: 'Space', icon: <Zap size={20} /> },
+  { id: 'apps', label: 'Create', shortLabel: 'Create', icon: <Grid3X3 size={20} /> },
   { id: 'chat', label: 'Messages', shortLabel: 'Chat', icon: <MessageCircle size={20} /> },
+  { id: 'home', label: 'Home', icon: <Home size={20} /> },
   { id: 'profile', label: 'Me', shortLabel: 'Me', icon: <User size={20} /> },
 ]
+
 
 
 function RailBtn({
@@ -38,7 +39,7 @@ function RailBtn({
         title={label}
         aria-label={label}
         aria-current={active ? 'page' : undefined}
-        className={`helios-rail-btn w-12 h-12 rounded-xl flex items-center justify-center cursor-pointer ${active ? 'helios-rail-btn-active' : ''}`}
+        className={`helios-rail-btn liquid-glass-btn w-12 h-12 rounded-xl flex items-center justify-center cursor-pointer ${active ? 'helios-rail-btn-active' : ''}`}
         style={{
           background: active ? 'var(--helios-accent)' : 'transparent',
           color: active ? 'var(--helios-on-accent)' : 'var(--helios-muted)',

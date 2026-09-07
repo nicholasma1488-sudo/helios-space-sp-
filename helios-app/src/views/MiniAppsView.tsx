@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
-  BookOpen, CheckSquare, Clock3, Code2, FilePlus2, FileText, LayoutGrid,
-  Presentation, Search, Sheet, Sparkles, X,
+  BookOpen, CheckSquare, Clock3, Code2, FilePlus2, FileText,
+  Search, Sheet, Sparkles, X,
 } from 'lucide-react'
 import { useApp } from '../store/appStore'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -36,10 +36,8 @@ function AppIcon({ icon, size = 22 }: { icon: SuiteApp['icon']; size?: number })
   switch (icon) {
     case 'write': return <FileText {...props} />
     case 'sheet': return <Sheet {...props} />
-    case 'slides': return <Presentation {...props} />
     case 'notes': return <BookOpen {...props} />
     case 'tasks': return <CheckSquare {...props} />
-    case 'cards': return <LayoutGrid {...props} />
     case 'code': return <Code2 {...props} />
     default: return <Sparkles {...props} />
   }
@@ -131,18 +129,18 @@ export function MiniAppsView() {
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
-            placeholder="搜 墨语 / 格间 / 小墨…"
+            placeholder="搜 墨语 / 随身本 / 小墨…"
           />
         </label>
       </header>
 
       <div className="suite-welcome">
         <div>
-          <small>一眼就懂</small>
-          <strong>点图标开始 · 每个 App 都有小姐姐带你</strong>
-          <span>只有学生和日常工作真正用得到的工具，找得到就能用。</span>
+          <small>Social Create</small>
+          <strong>创作，然后分享到 Space</strong>
+          <span>没有科目，没有 hobbies —— 五个工具就够。</span>
         </div>
-        <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
+        <button type="button" className="liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
           找 WorkBuddy
         </button>
       </div>
@@ -158,7 +156,7 @@ export function MiniAppsView() {
               <button
                 key={app.id}
                 type="button"
-                className="suite-tile suite-tile-guide"
+                className="suite-tile suite-tile-guide liquid-glass-btn"
                 title={app.guideTip}
                 onClick={() => setActive(app)}
                 aria-label={`打开 ${app.name}（${app.guideName}）`}
@@ -188,7 +186,7 @@ export function MiniAppsView() {
             <div className="suite-empty">
               <Search size={22} />
               <strong>没有这个应用</strong>
-              <span>试试：墨语、格间、光幕、随身本、今日事、记卡、搭子码</span>
+              <span>试试：墨语、随身本、格间、今日事、搭子码</span>
             </div>
           )}
         </section>
@@ -252,7 +250,7 @@ export function MiniAppsView() {
               </span>
               <p>{active.guideTip} — {active.description}</p>
             </div>
-            <button type="button" className="suite-create" onClick={() => void createFile()} disabled={creating}>
+            <button type="button" className="suite-create liquid-glass-btn is-primary" onClick={() => void createFile()} disabled={creating}>
               <FilePlus2 size={16} />
               {creating ? '创建中…' : `新建${active.newName}`}
             </button>

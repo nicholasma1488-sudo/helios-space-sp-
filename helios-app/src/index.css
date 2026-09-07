@@ -32,32 +32,39 @@
   --s-danger: #ff6b6b;
   --s-collab: #b794ff;
 
-  /* ── Semantic tokens — M365-like light default (正规办公) ── */
-  --helios-bg:       #f3f2f1;
-  --helios-surface:  #ffffff;
-  --helios-surface2: #faf9f8;
-  --helios-surface3: #edebe9;
-  --helios-border:   #e1dfdd;
+  /* ── Semantic tokens — artistic liquid glass (Claude × Gemini × Codex) ── */
+  --helios-bg:       #f4f1ec;
+  --helios-surface:  rgba(255, 255, 255, 0.62);
+  --helios-surface2: rgba(255, 255, 255, 0.78);
+  --helios-surface3: rgba(245, 241, 235, 0.92);
+  --helios-border:   rgba(28, 25, 23, 0.10);
 
-  --helios-text:  #242424;
-  --helios-text2: #605e5c;
-  --helios-muted: #8a8886;
+  --helios-text:  #1c1917;
+  --helios-text2: #57534e;
+  --helios-muted: #78716c;
 
-  /* Primary accent: Fluent blue (not violet AI) */
-  --helios-accent:  #0f6cbd;
-  --helios-accent2: #115ea3;
+  /* Claude warm terracotta + Gemini soft blue */
+  --helios-accent:  #c96442;
+  --helios-accent2: #5b8def;
 
-  /* Foregrounds for filled semantic colours. */
-  --helios-on-accent:  #ffffff;
-  --helios-on-accent2: #ffffff;
+  --helios-on-accent:  #fffaf7;
+  --helios-on-accent2: #f8fbff;
   --helios-on-success: #ffffff;
 
-  --helios-solar:   #c19c00;
-  --helios-success: #0e700e;
-  --helios-info:    #0078d4;
-  --helios-warning: #8a3707;
-  --helios-danger:  #b10e1c;
-  --helios-collab:  #5b5fc7;
+  --helios-solar:   #d4a017;
+  --helios-success: #3d8b6e;
+  --helios-info:    #5b8def;
+  --helios-warning: #c47a2c;
+  --helios-danger:  #c2414b;
+  --helios-collab:  #7a8bb8;
+
+  /* Glass / Codex */
+  --glass-bg:        rgba(255, 255, 255, 0.48);
+  --glass-bg-strong: rgba(255, 255, 255, 0.72);
+  --glass-stroke:    rgba(255, 255, 255, 0.55);
+  --glass-shadow:    0 10px 40px rgba(28, 25, 23, 0.08), inset 0 1px 0 rgba(255,255,255,0.65);
+  --codex-gray:      rgba(90, 98, 112, 0.72);
+  --codex-gray-soft: rgba(120, 128, 140, 0.35);
 
   /* ── Radius scale (P361) ── */
   --radius-xs: 4px;
@@ -76,18 +83,18 @@
   --ease-move:   cubic-bezier(.4, 0, .2, 1);
 
   /* ── Typography scale (P360) ── */
-  --type-display-lg: 600 40px/44px 'Inter', system-ui, sans-serif;
-  --type-display-md: 600 32px/38px 'Inter', system-ui, sans-serif;
-  --type-title-lg:   600 28px/34px 'Inter', system-ui, sans-serif;
-  --type-title-md:   600 24px/30px 'Inter', system-ui, sans-serif;
-  --type-heading-lg: 600 20px/26px 'Inter', system-ui, sans-serif;
-  --type-heading-md: 600 17px/23px 'Inter', system-ui, sans-serif;
-  --type-heading-sm: 600 15px/20px 'Inter', system-ui, sans-serif;
-  --type-label:      600 13px/16px 'Inter', system-ui, sans-serif;
-  --type-body-lg:    400 17px/25px 'Inter', system-ui, sans-serif;
-  --type-body-md:    400 15px/22px 'Inter', system-ui, sans-serif;
-  --type-body-sm:    400 13px/19px 'Inter', system-ui, sans-serif;
-  --type-caption:    400 11px/16px 'Inter', system-ui, sans-serif;
+  --type-display-lg: 600 40px/44px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-display-md: 600 32px/38px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-title-lg:   600 28px/34px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-title-md:   600 24px/30px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-heading-lg: 600 20px/26px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-heading-md: 600 17px/23px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-heading-sm: 600 15px/20px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-label:      600 13px/16px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-body-lg:    400 17px/25px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-body-md:    400 15px/22px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-body-sm:    400 13px/19px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
+  --type-caption:    400 11px/16px 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, sans-serif;
   --type-mono-md:    400 13px/19px 'Fira Code', monospace;
   --type-mono-sm:    400 11px/16px 'Fira Code', monospace;
 }
@@ -137,7 +144,7 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   font: var(--type-body-md);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
   background: var(--helios-bg);
   color: var(--helios-text);
   overflow: hidden;
@@ -493,4 +500,86 @@ button, [role="button"], a, input, select, textarea {
 @media (max-width: 720px) {
   .helios-floating-agent,
   .helios-floating-agent.is-open { right: 14px; bottom: 14px; width: 45px; height: 45px; border-radius: 15px; }
+}
+
+
+/* ── Liquid Glass surfaces & bounce buttons ── */
+body {
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(201, 100, 66, 0.12), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(91, 141, 239, 0.14), transparent 50%),
+    var(--helios-bg);
+}
+
+.liquid-glass,
+.helios-shell nav,
+.helios-mobile-nav,
+.suite-tile-guide,
+.home-section,
+.home-file-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-stroke);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.liquid-glass-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-stroke);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.28)),
+    var(--glass-bg);
+  color: var(--helios-text);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  font: var(--type-label);
+  cursor: pointer;
+  transition:
+    transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease;
+  transform: translateZ(0) scale(1);
+  will-change: transform;
+}
+.liquid-glass-btn:hover {
+  border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--glass-stroke));
+  box-shadow: 0 14px 36px rgba(201, 100, 66, 0.12), inset 0 1px 0 rgba(255,255,255,0.75);
+}
+.liquid-glass-btn:active {
+  transform: scale(0.94);
+  transition-duration: 80ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
+}
+.liquid-glass-btn.is-primary,
+.liquid-glass-btn[data-variant="primary"] {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08)),
+    color-mix(in srgb, var(--helios-accent) 88%, white);
+  color: var(--helios-on-accent);
+  border-color: color-mix(in srgb, var(--helios-accent) 55%, white);
+}
+.liquid-glass-btn.is-primary:hover,
+.liquid-glass-btn[data-variant="primary"]:hover {
+  box-shadow: 0 14px 36px rgba(201, 100, 66, 0.22), inset 0 1px 0 rgba(255,255,255,0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass-btn,
+  .liquid-glass-btn:active {
+    transition: opacity 120ms ease !important;
+    transform: none !important;
+  }
+}
+
+.motion-reduced .liquid-glass-btn:active {
+  transform: none !important;
 }

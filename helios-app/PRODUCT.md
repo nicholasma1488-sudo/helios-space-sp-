@@ -153,28 +153,28 @@ Home 可并入 Space 顶部（「为你 / 关注 / 开播」），或保留极�
 
 ### B. 设计系统
 
-- [ ] `index.css`：Claude/Gemini 色 + glass token  
-- [ ] `.liquid-glass-btn` + spring 回弹  
-- [ ] Logo 半透明灰玻璃化  
+- [x] `index.css`：Claude/Gemini 色 + glass token  
+- [x] `.liquid-glass-btn` + spring 回弹  
+- [x] Logo 半透明灰玻璃化  
 
 ### C. 导航与文案
 
-- [ ] 四入口壳：Space / Messages / Create / Me（或 Home+Space）  
-- [ ] 去掉 Hobbies / Subjects 主路径  
+- [x] 四入口壳：Space / Messages / Create / Me（或 Home+Space）  
+- [x] 去掉 Hobbies / Subjects 主路径  
 
 ### D. Mini Apps
 
-- [ ] `miniApps.ts` 只导出 5 个  
-- [ ] Create 页去掉计费分区与冗余 copy  
+- [x] `miniApps.ts` 只导出 5 个  
+- [x] Create 页去掉计费分区与冗余 copy  
 
 ### E. Lifestyle
 
-- [ ] Instagram/X 布局与玻璃发帖条  
-- [ ] 简化分类；强化开播帖  
+- [x] Instagram/X 布局与玻璃发帖条  
+- [x] 简化分类；强化开播帖  
 
 ### F. 验证
 
-- [ ] `npm run build && npm run lint && npm run test:api`  
+- [x] `npm run build && npm run lint && npm run test:api`  
 
 ---
 

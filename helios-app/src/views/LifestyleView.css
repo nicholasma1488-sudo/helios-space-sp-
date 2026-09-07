@@ -1813,3 +1813,58 @@
   animation: none !important;
   transition: none !important;
 }
+
+
+/* helios-social-premium — Instagram × X glass feed */
+.lifestyle-page,
+.lifestyle-shell,
+.lifestyle-layout {
+  background: transparent !important;
+}
+.lifestyle-feed,
+.twitter-feed {
+  max-width: 640px;
+  margin-inline: auto;
+}
+.lifestyle-composer,
+.lifestyle-composer.liquid-glass {
+  border-radius: 22px !important;
+  border: 1px solid var(--glass-stroke) !important;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: var(--glass-shadow);
+}
+.lifestyle-post,
+.post-card,
+.feed-post {
+  border-radius: 20px !important;
+  border: 1px solid var(--glass-stroke) !important;
+  background: var(--glass-bg-strong) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 28px rgba(28, 25, 23, 0.06);
+  margin-bottom: 14px;
+}
+.lifestyle-tabs button.is-active,
+.feed-tabs button.is-active {
+  color: var(--helios-accent) !important;
+  border-bottom-color: var(--helios-accent) !important;
+}
+.composer-publish.liquid-glass-btn,
+button.liquid-glass-btn.is-primary {
+  border-radius: 999px;
+}
+/* Soften dense category chrome when present */
+.lifestyle-category-rail,
+.category-filters,
+.composer-category-row {
+  opacity: 0.72;
+}
+.home-solar,
+.solar-card,
+.lifestyle-solar {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-stroke) !important;
+  backdrop-filter: blur(14px);
+}

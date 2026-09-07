@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, BookOpen, ChevronDown, Compass, Dumbbell, FolderGit2, MessageCircle,
-  Plus, Radio, Search, Sparkles, User, Users, X,
+  Bell, Compass, FolderGit2, MessageCircle, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
-import { api, type ApiNotification, type SearchResults, type SpaceSummary } from '../api'
-import { HOBBIES, SUBJECTS, getSpaceDefinition } from '../product/catalog'
+import { api, type ApiNotification, type SearchResults } from '../api'
+import { getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
 import './AuthenticatedTopBar.css'
 
-type OpenMenu = 'subjects' | 'hobbies' | 'search' | 'notifications' | 'profile' | null
+type OpenMenu = 'search' | 'notifications' | 'profile' | null
 
 const EMPTY_RESULTS: SearchResults = { projects: [], people: [], posts: [], live: [], spaces: [] }
 
@@ -19,9 +18,6 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS)
   const [searching, setSearching] = useState(false)
   const [notifications, setNotifications] = useState<ApiNotification[]>([])
-  const [customSpaces, setCustomSpaces] = useState<SpaceSummary[]>([])
-  const [customHobby, setCustomHobby] = useState('')
-  const [addingHobby, setAddingHobby] = useState(false)
   const rootRef = useRef<HTMLElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -30,10 +26,9 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([api.spaces.list(), api.notifications.list()])
-      .then(([spaces, notificationResult]) => {
+    api.notifications.list()
+      .then(notificationResult => {
         if (cancelled) return
-        setCustomSpaces(spaces.spaces.filter(space => space.custom))
         setNotifications(notificationResult.notifications)
       })
       .catch(() => {})
@@ -124,23 +119,6 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
     setOpenMenu(null)
   }
 
-  async function addCustomHobby(event: React.FormEvent) {
-    event.preventDefault()
-    const name = customHobby.trim()
-    if (!name || addingHobby) return
-    setAddingHobby(true)
-    try {
-      const result = await api.spaces.create(name)
-      setCustomSpaces(current => [...current, result.space])
-      setCustomHobby('')
-      openSpace(result.space.id)
-    } catch (error) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
-    } finally {
-      setAddingHobby(false)
-    }
-  }
-
   async function signOut() {
     try {
       await api.logout()
@@ -166,13 +144,9 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         )}
       </div>
 
-      <nav className="topbar-context-nav" aria-label="Subject and hobby navigation">
-        <button type="button" className={openMenu === 'subjects' ? 'is-open' : ''} onClick={() => toggle('subjects')} aria-expanded={openMenu === 'subjects'}>
-          <BookOpen size={15} /><span>Subjects</span><ChevronDown size={13} />
-        </button>
-        <button type="button" className={openMenu === 'hobbies' ? 'is-open' : ''} onClick={() => toggle('hobbies')} aria-expanded={openMenu === 'hobbies'}>
-          <Dumbbell size={15} /><span>Hobbies</span><ChevronDown size={13} />
-        </button>
+      <nav className="topbar-context-nav" aria-label="Space">
+        <span className="topbar-space-brand" style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>Space</span>
+        <span style={{ color: 'var(--helios-muted)', fontSize: 12 }}>社交协作</span>
         <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
           <i />{activeSpace.name}
         </span>
@@ -193,36 +167,9 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         </button>
       </div>
 
-      {openMenu === 'subjects' && (
-        <div className="topbar-mega-menu" role="menu" aria-label="Subjects">
-          <div className="mega-menu-heading"><span><BookOpen size={16} /> Subjects</span><small>Choose a Space and keep its context as you move.</small></div>
-          <div className="mega-space-grid">
-            {SUBJECTS.map(space => (
-              <button type="button" role="menuitem" key={space.id} onClick={() => openSpace(space.id)} className={state.activeSpaceId === space.id ? 'is-active' : ''} style={{ '--space-accent': space.accent } as React.CSSProperties}>
-                <i>{space.name.slice(0, 1)}</i><span><strong>{space.name}</strong><small>{space.description}</small></span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      
 
-      {openMenu === 'hobbies' && (
-        <div className="topbar-mega-menu hobbies-menu" role="menu" aria-label="Hobbies">
-          <div className="mega-menu-heading"><span><Dumbbell size={16} /> Hobbies</span><small>Meaningful practice belongs beside school and creative work.</small></div>
-          <div className="mega-space-grid hobby-grid">
-            {[...HOBBIES, ...customSpaces.map(space => getSpaceDefinition(space.id))].map(space => (
-              <button type="button" role="menuitem" key={space.id} onClick={() => openSpace(space.id)} className={state.activeSpaceId === space.id ? 'is-active' : ''} style={{ '--space-accent': space.accent } as React.CSSProperties}>
-                <i>{space.name.slice(0, 1)}</i><span><strong>{space.name}</strong><small>{space.description}</small></span>
-              </button>
-            ))}
-          </div>
-          <form className="custom-hobby-form" onSubmit={addCustomHobby}>
-            <Plus size={15} /><label htmlFor="custom-hobby">Custom hobby</label>
-            <input id="custom-hobby" value={customHobby} maxLength={60} onChange={event => setCustomHobby(event.target.value)} placeholder="e.g. Woodworking" />
-            <button type="submit" disabled={!customHobby.trim() || addingHobby}>{addingHobby ? 'Adding…' : 'Add Space'}</button>
-          </form>
-        </div>
-      )}
+      
 
       {openMenu === 'search' && (
         <div className="topbar-popover topbar-search-popover" role="dialog" aria-label="Global search">

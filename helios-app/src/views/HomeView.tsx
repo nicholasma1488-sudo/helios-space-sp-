@@ -145,11 +145,11 @@ export function HomeView() {
               <p>文件、WorkBuddy、开播协作 —— 都在这一页。</p>
             </div>
             <div className="home-hero-actions">
-              <button type="button" className="home-btn-primary" onClick={() => setShowNewProject(true)}>
+              <button type="button" className="home-btn-primary liquid-glass-btn is-primary" onClick={() => setShowNewProject(true)}>
                 <Plus size={16} /> 新建
               </button>
               <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>
-                <FolderGit2 size={16} /> 打开 Apps
+                <FolderGit2 size={16} /> Create
               </button>
               <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
                 <MessageCircle size={16} /> Messages
@@ -196,8 +196,8 @@ export function HomeView() {
                 <div className="home-empty">
                   <FolderGit2 size={22} />
                   <strong>还没有文件</strong>
-                  <span>去 Apps 点一个小姐姐，新建就能用。</span>
-                  <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>去 Apps</button>
+                  <span>去 Create 点一个工具，做完分享到 Space。</span>
+                  <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>去 Create</button>
                 </div>
               )}
             </div>

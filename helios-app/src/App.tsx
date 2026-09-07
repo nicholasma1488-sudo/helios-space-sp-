@@ -87,8 +87,8 @@ function AppInner() {
   useEffect(() => {
     const VIEW_TITLES: Record<string, string> = {
       home: 'Home',
-      lifestyle: 'Lifestyle',
-      apps: 'Apps',
+      lifestyle: 'Space',
+      apps: 'Create',
       chat: 'Messages',
       profile: 'Me',
       live: 'Lifestyle',

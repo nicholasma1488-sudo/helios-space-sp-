@@ -22,11 +22,11 @@ export interface SuiteApp {
   /** Short emoji used as the guide avatar */
   guideEmoji: string
   /** Lucide-style icon key for the tile */
-  icon: 'write' | 'sheet' | 'slides' | 'notes' | 'tasks' | 'cards' | 'code'
+  icon: 'write' | 'sheet' | 'notes' | 'tasks' | 'code'
 }
 
 /**
- * Curated school + everyday work set only.
+ * Social collaboration Create set — single-digit only.
  * Each Mini App has its own name, icon, and 小姐姐.
  */
 export const SUITE_APPS: SuiteApp[] = [
@@ -34,111 +34,79 @@ export const SUITE_APPS: SuiteApp[] = [
     id: 'word-docs',
     name: '墨语',
     letter: '墨',
-    color: '#0F6CBD',
-    description: '写作业、写信、写笔记 —— 打开就能写。',
+    color: '#c96442',
+    description: '写一段话、一篇帖、一份分享 —— 写完就能发到 Space。',
     projectType: 'writing',
     spaceChild: 'english',
     spaceAdult: 'business',
-    newName: '文档',
+    newName: '文稿',
     track: 'core',
     guideName: '小墨',
-    guideTip: '想写就写，写完就能分享',
+    guideTip: '写完就能分享',
     guideEmoji: '📝',
     icon: 'write',
-  },
-  {
-    id: 'spreadsheet',
-    name: '格间',
-    letter: '格',
-    color: '#107C41',
-    description: '表格、作业账本、简单公式（SUM / AVERAGE）。',
-    projectType: 'spreadsheet',
-    spaceChild: 'maths',
-    spaceAdult: 'business',
-    newName: '表格',
-    track: 'core',
-    guideName: '小格',
-    guideTip: '表格算数，作业账本都行',
-    guideEmoji: '📊',
-    icon: 'sheet',
-  },
-  {
-    id: 'presentation',
-    name: '光幕',
-    letter: '光',
-    color: '#C43E1C',
-    description: '做几页幻灯片，上课或开会直接演示。',
-    projectType: 'presentation',
-    spaceChild: 'english',
-    spaceAdult: 'business',
-    newName: '幻灯片',
-    track: 'core',
-    guideName: '小光',
-    guideTip: '做几页幻灯片就上课/开会',
-    guideEmoji: '🎬',
-    icon: 'slides',
   },
   {
     id: 'notebook',
     name: '随身本',
     letter: '本',
-    color: '#5B5FC7',
-    description: '课堂笔记放这里，随时继续加。',
+    color: '#5b8def',
+    description: '随手记下灵感与协作要点。',
     projectType: 'notebook',
     spaceChild: 'science',
     spaceAdult: 'business',
     newName: '笔记',
     track: 'core',
     guideName: '小本',
-    guideTip: '课堂笔记放这里',
+    guideTip: '灵感先落这里',
     guideEmoji: '📓',
     icon: 'notes',
+  },
+  {
+    id: 'spreadsheet',
+    name: '格间',
+    letter: '格',
+    color: '#3d8b6e',
+    description: '轻量表格，SUM / AVERAGE 够用。',
+    projectType: 'spreadsheet',
+    spaceChild: 'maths',
+    spaceAdult: 'business',
+    newName: '表格',
+    track: 'core',
+    guideName: '小格',
+    guideTip: '简单算一下',
+    guideEmoji: '📊',
+    icon: 'sheet',
   },
   {
     id: 'homework-board',
     name: '今日事',
     letter: '事',
-    color: '#8764B8',
-    description: '今天要交的：待做 → 进行中 → 完成。',
+    color: '#7a8bb8',
+    description: '协作待办：待做 → 进行中 → 完成。',
     projectType: 'board',
     spaceChild: 'english',
     spaceAdult: 'english',
     newName: '待办',
     track: 'core',
     guideName: '小办',
-    guideTip: '今天要交的都列出来',
+    guideTip: '一起推进一件事',
     guideEmoji: '✅',
     icon: 'tasks',
-  },
-  {
-    id: 'flashcard-maker',
-    name: '记卡',
-    letter: '卡',
-    color: '#00A2AD',
-    description: '背单词、背考点 —— 正反面卡片。',
-    projectType: 'doc',
-    spaceChild: 'languages',
-    spaceAdult: 'languages',
-    newName: '记卡',
-    track: 'core',
-    guideName: '小记',
-    guideTip: '背单词、背考点',
-    guideEmoji: '🃏',
-    icon: 'cards',
   },
   {
     id: 'code',
     name: '搭子码',
     letter: '码',
-    color: '#0078D4',
-    description: '简单 IDE，Helios 坐在旁边帮你看文件。',
+    color: '#5a6270',
+    description: '轻 IDE，Helios 坐旁边帮你先看文件。',
     projectType: 'code',
     spaceChild: 'ai',
     spaceAdult: 'ai',
     newName: '代码',
     track: 'core',
     guideName: '小码',
-    guideTip: '写代码时 Helios 坐旁边',
+    guideTip: 'Helios 坐旁边',
     guideEmoji: '💻',
     icon: 'code',
   },
@@ -153,22 +121,22 @@ const LEGACY_APP_ALIASES: Record<string, string> = {
   'product-spec': 'word-docs',
   'report-writer': 'word-docs',
   'meeting-notes': 'notebook',
-  'study-guide': 'flashcard-maker',
+  'study-guide': 'notebook',
   spreadsheet: 'spreadsheet',
   gradebook: 'spreadsheet',
   'budget-sheet': 'spreadsheet',
   okrs: 'spreadsheet',
-  presentation: 'presentation',
-  'lesson-slides': 'presentation',
-  'pitch-deck': 'presentation',
+  presentation: 'word-docs',
+  'lesson-slides': 'word-docs',
+  'pitch-deck': 'word-docs',
   notebook: 'notebook',
   'lab-notebook': 'notebook',
   'homework-board': 'homework-board',
   'project-board': 'homework-board',
-  'flashcard-maker': 'flashcard-maker',
-  reader: 'flashcard-maker',
+  'flashcard-maker': 'notebook',
+  reader: 'notebook',
   'math-lab': 'spreadsheet',
-  'quiz-builder': 'flashcard-maker',
+  'quiz-builder': 'notebook',
   'business-planner': 'notebook',
   stocks: 'spreadsheet',
   code: 'code',
@@ -195,7 +163,7 @@ export const WRITING_LIMITS = {
 }
 
 export function editionBlurb(_edition: SuiteEdition) {
-  return '七个够用的工具：写、表、幻灯片、笔记、待办、记卡、代码。每个都有小姐姐带你，点图标就能用。'
+  return '五个创作工具。做完就分享到 Space —— 没有科目，没有 hobbies。'
 }
 
 export function suiteAppsForEdition(_edition: SuiteEdition) {
@@ -229,7 +197,7 @@ export function getSuiteApp(id: string) {
 }
 
 export function suiteHomeTitle(_edition: SuiteEdition) {
-  return '应用'
+  return 'Create'
 }
 
 function writingData(html: string) {
@@ -251,14 +219,6 @@ export function suiteStarterContent(app: SuiteApp) {
     while (cells.length < 24) cells.push(Array(8).fill(''))
     return { cells, selected: 'A2', chartColumn: 1 }
   }
-  if (app.id === 'presentation') {
-    const slides = [
-      { title: '主题', body: '一句话说清楚你要讲什么。', notes: '' },
-      { title: '内容', body: '两到三个要点就够。', notes: '' },
-      { title: '结尾', body: '下一步或作业要求。', notes: '' },
-    ]
-    return { slides: slides.map(slide => ({ id: crypto.randomUUID(), ...slide })), activeSlide: 0 }
-  }
   if (app.id === 'notebook') {
     return {
       title: '随身本',
@@ -276,11 +236,6 @@ export function suiteStarterContent(app: SuiteApp) {
         { id: 'done', title: '完成', cards: [] },
       ],
     }
-  }
-  if (app.id === 'flashcard-maker') {
-    return writingData(
-      '<h1>记卡</h1><p><strong>正面：</strong>单词或考点</p><p><strong>背面：</strong>解释或答案</p><hr><p><strong>正面：</strong></p><p><strong>背面：</strong></p>',
-    )
   }
   if (app.id === 'code') {
     return {
