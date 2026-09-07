@@ -24,7 +24,7 @@ export function PaymentPage() {
         <h1>Helios Space is completely free</h1>
         <p>No plans, no upgrades, and no bank card. Taking you back to the collaboration space…</p>
         <ul className="pay-free-list">
-          <li><Check size={14} /> All five Create tools available</li>
+          <li><Check size={14} /> Full Create suite available</li>
           <li><Check size={14} /> Space · Messages · Home</li>
           <li><Check size={14} /> Unlimited documents and characters</li>
         </ul>

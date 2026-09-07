@@ -9,7 +9,7 @@ export function PlanPicker() {
         <header>
           <span><Gift size={14} /> FREE FOREVER</span>
           <h1 id="plan-picker-title">Helios Space is completely free</h1>
-          <p>There are no plans to choose. All five Create tools, Space, and Messages are open.</p>
+          <p>There are no plans to choose. The full Create suite, Space, and Messages are open.</p>
         </header>
         <PaymentTool mode="onboarding" />
       </div>

@@ -138,7 +138,7 @@ export function MiniAppsView() {
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
-            placeholder="Search Write / Notes / Sheet…"
+            placeholder="Search Docs / Sheets / Code…"
           />
         </label>
       </header>
@@ -147,7 +147,7 @@ export function MiniAppsView() {
         <div>
           <small>Create</small>
           <strong>Pick a tool and start now</strong>
-          <span>Five real Create tools — finish something, then share it to Space.</span>
+          <span>A full Create suite — finish something, then share it to Space.</span>
         </div>
       </div>
 
