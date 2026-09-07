@@ -245,9 +245,14 @@ export function ChatView() {
 
 function CreateConversationDialog({ kind, projects, onClose, onCreated }: { kind: Conversation['kind']; projects: Project[]; onClose: () => void; onCreated: (id: number) => void }) {
   const [selectedKind, setSelectedKind] = useState(kind)
-  const [title, setTitle] = useState('')
+  const [title, setTitle] = useState(() => sessionStorage.getItem('helios-invite-name') ? `Collab with ${sessionStorage.getItem('helios-invite-name')}` : '')
   const [projectId, setProjectId] = useState(projects[0]?.id ?? 0)
-  const [handles, setHandles] = useState('')
+  const [handles, setHandles] = useState(() => {
+    const invite = sessionStorage.getItem('helios-invite-handle') || ''
+    sessionStorage.removeItem('helios-invite-handle')
+    sessionStorage.removeItem('helios-invite-name')
+    return invite
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: React.FormEvent) {
@@ -259,7 +264,7 @@ function CreateConversationDialog({ kind, projects, onClose, onCreated }: { kind
     } catch (reason) { setError((reason as Error).message) }
     finally { setSaving(false) }
   }
-  return <div className="chat-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><form className="chat-dialog" onSubmit={submit}><header><div><small>CONNECTED CONVERSATIONS</small><h2>New Chat</h2></div><button type="button" onClick={onClose}><X size={16} /></button></header><div className="chat-dialog-kinds">{TAB_COPY.map(item => <button type="button" key={item.id} className={selectedKind === item.id ? 'is-active' : ''} onClick={() => setSelectedKind(item.id)}>{item.icon}{item.label}</button>)}</div>{selectedKind === 'project' ? <label><span>Project</span><select value={projectId} onChange={event => setProjectId(Number(event.target.value))}>{projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}</select>{projects.length === 0 && <small>Create a Project before starting a Project Chat.</small>}</label> : <><label><span>{selectedKind === 'private' ? 'Conversation name' : 'Group name'}</span><input value={title} onChange={event => setTitle(event.target.value)} placeholder={selectedKind === 'private' ? 'Private chat' : 'Study group'} /></label><label><span>{selectedKind === 'private' ? 'Helios handle' : 'Member handles'}</span><input value={handles} onChange={event => setHandles(event.target.value)} placeholder={selectedKind === 'private' ? '@alex' : '@alex, @maya, @sam'} /><small>Only users with valid Helios handles are added.</small></label></>}{error && <div className="chat-dialog-error">{error}</div>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={saving || (selectedKind === 'project' && !projectId)}>{saving ? 'Creating…' : 'Create Chat'}</button></footer></form></div>
+  return <div className="chat-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><form className="chat-dialog" onSubmit={submit}><header><div><small>Collaboration chat</small><h2>New conversation</h2></div><button type="button" onClick={onClose}><X size={16} /></button></header><div className="chat-dialog-kinds">{TAB_COPY.map(item => <button type="button" key={item.id} className={selectedKind === item.id ? 'is-active' : ''} onClick={() => setSelectedKind(item.id)}>{item.icon}{item.label}</button>)}</div>{selectedKind === 'project' ? <label><span>Project</span><select value={projectId} onChange={event => setProjectId(Number(event.target.value))}>{projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}</select>{projects.length === 0 && <small>Create a Project before starting a Project Chat.</small>}</label> : <><label><span>{selectedKind === 'private' ? 'Conversation name' : 'Group name'}</span><input value={title} onChange={event => setTitle(event.target.value)} placeholder={selectedKind === 'private' ? 'Private chat' : 'Study group'} /></label><label><span>{selectedKind === 'private' ? 'Helios handle' : 'Member handles'}</span><input value={handles} onChange={event => setHandles(event.target.value)} placeholder={selectedKind === 'private' ? '@alex' : '@alex, @maya, @sam'} /><small>Only users with valid Helios handles are added.</small></label></>}{error && <div className="chat-dialog-error">{error}</div>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={saving || (selectedKind === 'project' && !projectId)}>{saving ? 'Creating…' : 'Create Chat'}</button></footer></form></div>
 }
 
 function ProjectChatContext({ conversation, project, live, messages, onOpenProject, onOpenLive, onOpenMiniApp }: {
@@ -315,20 +320,20 @@ function ChatWelcome({ projects, onCreate }: { projects: Project[]; onCreate: (k
     <div className="chat-welcome">
       <div className="chat-welcome-mark" aria-hidden="true"><MessageCircle size={26} /></div>
       <span>MESSAGES</span>
-      <h1>开始一段对话</h1>
-      <p>私聊、小组或项目讨论——保持简洁，连着你正在做的事。</p>
+      <h1>Start a conversation</h1>
+      <p>Private chat, group, or project discussion — keep it light and tied to what you are making.</p>
       <div>
         <button type="button" className="liquid-glass-btn is-primary" onClick={() => onCreate('private')}>
-          <AtSign size={15} /> 新私聊
+          <AtSign size={15} /> New private chat
         </button>
         <button type="button" className="liquid-glass-btn" onClick={() => onCreate('group')}>
-          <Users size={15} /> 建群
+          <Users size={15} /> New group
         </button>
         <button type="button" className="liquid-glass-btn" onClick={() => onCreate('project')} disabled={projects.length === 0}>
-          <FolderGit2 size={15} /> 项目聊天
+          <FolderGit2 size={15} /> Project chat
         </button>
       </div>
-      {projects.length === 0 && <small>还没有项目时，也可以先私聊或建群。</small>}
+      {projects.length === 0 && <small>No projects yet? You can still start a private chat or group.</small>}
     </div>
   )
 }
