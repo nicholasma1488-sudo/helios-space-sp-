@@ -206,9 +206,8 @@ function AppInner() {
     )
   }
 
-  if (onPayPage) {
-    leavePay('/')
-  }
+  // Legacy /pay URLs just return to the free app (effect above).
+  // Do not call leavePay during render — that is a side effect.
 
   // Not logged in — show auth screen
   if (!state.user) {

@@ -346,17 +346,17 @@ export function LifestyleView({ currentUser }: Props) {
       <header className="lifestyle-topbar">
         <div className="lifestyle-title">
           <span className="lifestyle-title-mark"><Zap size={17} /></span>
-          <div><strong>Home</strong><small>A Twitter-style feed for work, projects, and Live</small></div>
+          <div><strong>Space</strong><small>看看朋友在做什么，分享你正在推进的事</small></div>
         </div>
         <label className="lifestyle-search">
           <Search size={16} />
-          <span className="sr-only">Search progress updates</span>
+          <span className="sr-only">搜索动态</span>
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
-            placeholder="Search"
+            placeholder="搜索"
           />
-          {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}
+          {query && <button type="button" onClick={() => setQuery('')} aria-label="清除搜索"><X size={14} /></button>}
         </label>
         <button type="button" className="lifestyle-compose-top liquid-glass-btn is-primary" onClick={() => setComposerOpen(true)}>
           <Plus size={16} /> Post
@@ -505,7 +505,7 @@ export function LifestyleView({ currentUser }: Props) {
             </button>
           </section>
 
-          {loading && <FeedState icon={<Sparkles size={22} />} title="Gathering progress…" detail="Loading the latest signals from your space." />}
+          {loading && <FeedState icon={<Sparkles size={22} />} title="正在加载…" detail="把最近的动态拉过来。" />}
           {!loading && loadError && (
             <FeedState icon={<Zap size={22} />} title="动态暂时加载失败" detail={loadError}>
               <button type="button" className="liquid-glass-btn is-primary" onClick={() => void loadPosts()}>再试一次</button>
@@ -514,8 +514,8 @@ export function LifestyleView({ currentUser }: Props) {
           {!loading && !loadError && timeline.length === 0 && (
             <FeedState
               icon={savedOnly ? <Bookmark size={22} /> : <FileText size={22} />}
-              title={savedOnly ? 'Nothing saved yet' : feedTab === 'following' ? 'No following posts yet' : 'No updates match'}
-              detail={savedOnly ? 'Bookmark a post and it will wait here.' : feedTab === 'following' ? 'Posts from other people will appear here.' : 'Try another filter or share the first update.'}
+              title={savedOnly ? '还没有收藏' : feedTab === 'following' ? '关注流还是空的' : '还没有动态'}
+              detail={savedOnly ? '收藏一条动态，它会出现在这里。' : feedTab === 'following' ? '其他人的分享会出现在这里。' : '发第一条，或换个筛选看看。'}
             >
               {!savedOnly && <button type="button" onClick={() => setComposerOpen(true)}>Post</button>}
             </FeedState>
@@ -561,7 +561,7 @@ export function LifestyleView({ currentUser }: Props) {
             </button>
           )}
           {!loading && !loadError && timeline.length > 0 && !nextCursor && (
-            <div className="feed-end"><span>✦</span> You’re caught up.</div>
+            <div className="feed-end"><span>✦</span> 已经看完了。</div>
           )}
         </main>
 
