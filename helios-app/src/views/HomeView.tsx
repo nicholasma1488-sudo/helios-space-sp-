@@ -37,7 +37,7 @@ export function HomeView() {
   )
   const unread = notifications.filter(item => !item.read)
   const doneCount = tasks.filter(task => task.done).length
-  const firstName = state.user?.name?.split(' ')[0] || '朋友'
+  const firstName = state.user?.name?.split(' ')[0] || 'friend'
 
   useEffect(() => {
     if (!taskKey) return
@@ -72,7 +72,7 @@ export function HomeView() {
       setNotifications(notificationResult.notifications || [])
       setActivity(postResult.posts || [])
     }).catch(err => {
-      if (!cancelled) setError((err as Error).message || '首页加载失败')
+      if (!cancelled) setError((err as Error).message || 'Home could not load')
     }).finally(() => {
       if (!cancelled) setLoading(false)
     })
@@ -120,7 +120,7 @@ export function HomeView() {
       app_kind: project.app_kind,
       selected_content: (project.content || '').slice(0, 4000),
     }))
-    sessionStorage.setItem('helios-pending-prompt', `用白话告诉我「${project.name}」里有什么，不用打开文件也能听懂。`)
+    sessionStorage.setItem('helios-pending-prompt', `Explain what is in "${project.name}" in plain language, without opening the file.`)
     dispatch({ type: 'OPEN_HELIOS_PANEL' })
   }
 
@@ -128,11 +128,11 @@ export function HomeView() {
     <div className="home-page home-simple">
       {showNewProject && <NewProjectModal onClose={() => setShowNewProject(false)} />}
 
-      {loading && <div className="home-skeleton" role="status" aria-label="加载中" />}
+      {loading && <div className="home-skeleton" role="status" aria-label="Loading" />}
       {error && (
         <div role="alert" className="home-error">
           {error}
-          <button type="button" onClick={() => window.location.reload()}>重新加载</button>
+          <button type="button" onClick={() => window.location.reload()}>Reload</button>
         </div>
       )}
 
@@ -141,8 +141,8 @@ export function HomeView() {
           <header className="home-hero">
             <div>
               <span>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-              <h1>你好，{firstName}</h1>
-              <p>看看朋友在做什么，或者马上创造一点东西。</p>
+              <h1>Hi, {firstName}</h1>
+              <p>See what your buddies are doing, or create something and push it forward together.</p>
             </div>
             <div className="home-hero-actions">
               <button type="button" className="home-btn-primary liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>
@@ -154,10 +154,10 @@ export function HomeView() {
           <section className="home-section" aria-labelledby="home-files-title">
             <header>
               <div>
-                <span>文件 / 项目</span>
-                <h2 id="home-files-title">最近在做的事</h2>
+                <span>Files / Projects</span>
+                <h2 id="home-files-title">Recently in progress</h2>
               </div>
-              <button type="button" onClick={() => setShowNewProject(true)}><Plus size={14} /> 新建文件</button>
+              <button type="button" onClick={() => setShowNewProject(true)}><Plus size={14} /> New file</button>
             </header>
             <div className="home-file-grid">
               {recent.slice(0, 8).map(project => {
@@ -167,20 +167,20 @@ export function HomeView() {
                     <button type="button" className="home-file-main" onClick={() => openProject(project.id)}>
                       <i style={{ background: app?.color || 'var(--helios-accent)' }}>{app?.guideEmoji || app?.letter || '📄'}</i>
                       <span>
-                        <small>{app?.name || '文件'}{app ? ` · ${app.guideName}` : ''}</small>
+                        <small>{app?.name || 'File'}{app ? ` · ${app.guideName}` : ''}</small>
                         <strong>{project.name}</strong>
-                        <p>更新于 {new Date(project.updated_at).toLocaleString()}</p>
+                        <p>Updated {new Date(project.updated_at).toLocaleString()}</p>
                       </span>
                     </button>
                     <div className="home-file-actions">
                       <button type="button" onClick={() => openProject(project.id)}>
-                        <FolderGit2 size={14} /> 打开
+                        <FolderGit2 size={14} /> Open
                       </button>
                       <button type="button" onClick={() => askHeliosAbout(project.id)}>
-                        <Sparkles size={14} /> 先看
+                        <Sparkles size={14} /> Preview
                       </button>
                       <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
-                        <UserPlus size={14} /> 邀请
+                        <UserPlus size={14} /> Invite
                       </button>
                     </div>
                   </article>
@@ -189,9 +189,9 @@ export function HomeView() {
               {recent.length === 0 && (
                 <div className="home-empty">
                   <FolderGit2 size={22} />
-                  <strong>还没有文件</strong>
-                  <span>去 Create 点一个工具，做完分享到 Space。</span>
-                  <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>去 Create</button>
+                  <strong>No files yet</strong>
+                  <span>Pick a tool in Create, then share it to Space when you are done.</span>
+                  <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>Go to Create</button>
                 </div>
               )}
             </div>
@@ -201,8 +201,8 @@ export function HomeView() {
             <section className="home-section" aria-labelledby="home-tasks-title">
               <header>
                 <div>
-                  <span>今日事</span>
-                  <h2 id="home-tasks-title">{doneCount}/{tasks.length} 完成</h2>
+                  <span>Today</span>
+                  <h2 id="home-tasks-title">{doneCount}/{tasks.length} done</h2>
                 </div>
                 <Circle size={16} />
               </header>
@@ -210,28 +210,28 @@ export function HomeView() {
                 {tasksReady && tasks.length === 0 && (
                   <div className="home-empty compact">
                     <Check size={18} />
-                    <strong>今天还空着</strong>
-                    <span>加一件马上要做的事就好。</span>
+                    <strong>Nothing on the list yet</strong>
+                    <span>Add one thing you need to do today.</span>
                   </div>
                 )}
                 {tasks.map(task => (
                   <div key={task.id} className={task.done ? 'is-done' : ''}>
                     <button
                       type="button"
-                      aria-label={task.done ? '标为未完成' : '标为完成'}
+                      aria-label={task.done ? 'Mark as not done' : 'Mark as done'}
                       onClick={() => setTasks(current => current.map(item => item.id === task.id ? { ...item, done: !item.done } : item))}
                     >
                       {task.done && <Check size={12} />}
                     </button>
                     <span>{task.text}</span>
-                    <button type="button" aria-label="删除" onClick={() => setTasks(current => current.filter(item => item.id !== task.id))}>
+                    <button type="button" aria-label="Delete" onClick={() => setTasks(current => current.filter(item => item.id !== task.id))}>
                       <Trash2 size={12} />
                     </button>
                   </div>
                 ))}
               </div>
               <form onSubmit={addTask} className="home-task-form">
-                <input value={newTask} maxLength={200} onChange={event => setNewTask(event.target.value)} placeholder="加一件今日事" />
+                <input value={newTask} maxLength={200} onChange={event => setNewTask(event.target.value)} placeholder="Add a task for today" />
                 <button type="submit" disabled={!newTask.trim()}><Plus size={14} /></button>
               </form>
             </section>
@@ -239,10 +239,10 @@ export function HomeView() {
             <section className="home-section" aria-labelledby="home-buddies-title">
               <header>
                 <div>
-                  <span>WorkBuddys</span>
-                  <h2 id="home-buddies-title">一起干活的人</h2>
+                  <span>WorkBuddies</span>
+                  <h2 id="home-buddies-title">People you work with</h2>
                 </div>
-                <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'lifestyle' })}>看动态</button>
+                <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'lifestyle' })}>See updates</button>
               </header>
               <div className="home-buddy-list">
                 {live.slice(0, 5).map(session => (
@@ -250,7 +250,7 @@ export function HomeView() {
                     <span className="home-buddy-avatar">{session.owner_name.slice(0, 1)}</span>
                     <span>
                       <strong>{session.owner_name}</strong>
-                      <small><Radio size={11} /> 正在直播 · {session.project_name}</small>
+                      <small><Radio size={11} /> Live now · {session.project_name}</small>
                     </span>
                   </button>
                 ))}
@@ -273,8 +273,8 @@ export function HomeView() {
                 {live.length === 0 && activity.length === 0 && (
                   <div className="home-empty compact">
                     <Users size={18} />
-                    <strong>还没有 WorkBuddy 动态</strong>
-                    <span>去 Space 发一条，或邀请朋友一起协作。</span>
+                    <strong>No WorkBuddy activity yet</strong>
+                    <span>Post on Space, or invite a friend to collaborate.</span>
                   </div>
                 )}
               </div>
@@ -283,8 +283,8 @@ export function HomeView() {
             <section className="home-section" aria-labelledby="home-notes-title">
               <header>
                 <div>
-                  <span>提醒</span>
-                  <h2 id="home-notes-title">{unread.length} 条未读</h2>
+                  <span>Alerts</span>
+                  <h2 id="home-notes-title">{unread.length} unread</h2>
                 </div>
                 <Bell size={16} />
               </header>
@@ -304,7 +304,7 @@ export function HomeView() {
                   </button>
                 ))}
                 {notifications.length === 0 && (
-                  <div className="home-empty compact">你已看完所有提醒。</div>
+                  <div className="home-empty compact">You are caught up on alerts.</div>
                 )}
               </div>
             </section>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
-  BookOpen, CheckSquare, Clock3, Code2, FilePlus2, FileText,
-  Search, Sheet, Sparkles, X,
+  BookOpen, CalendarDays, CheckSquare, ClipboardList, Clock3, Code2, FilePlus2, FileText,
+  LayoutTemplate, ListTodo, Mail, PenLine, Presentation, Search, Sheet, Sparkles, StickyNote, X,
 } from 'lucide-react'
 import { useApp } from '../store/appStore'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -22,12 +22,12 @@ import './MiniAppsView.css'
 
 function relativeTime(value: string) {
   const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000)
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes} 分钟前`
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
   const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours} 小时前`
+  if (hours < 24) return `${hours}h ago`
   const days = Math.round(hours / 24)
-  if (days < 14) return `${days} 天前`
+  if (days < 14) return `${days}d ago`
   return new Date(value).toLocaleDateString()
 }
 
@@ -39,6 +39,15 @@ function AppIcon({ icon, size = 22 }: { icon: SuiteApp['icon']; size?: number })
     case 'notes': return <BookOpen {...props} />
     case 'tasks': return <CheckSquare {...props} />
     case 'code': return <Code2 {...props} />
+    case 'slides': return <Presentation {...props} />
+    case 'board': return <LayoutTemplate {...props} />
+    case 'mail': return <Mail {...props} />
+    case 'calendar': return <CalendarDays {...props} />
+    case 'draw': return <PenLine {...props} />
+    case 'read': return <BookOpen {...props} />
+    case 'plan': return <ClipboardList {...props} />
+    case 'list': return <ListTodo {...props} />
+    case 'loop': return <StickyNote {...props} />
     default: return <Sparkles {...props} />
   }
 }
@@ -125,11 +134,11 @@ export function MiniAppsView() {
         </div>
         <label className="suite-search">
           <Search size={16} aria-hidden="true" />
-          <span className="sr-only">搜索应用</span>
+          <span className="sr-only">Search apps</span>
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
-            placeholder="搜 墨语 / 随身本 / 小墨…"
+            placeholder="Search Write / Notes / Sheet…"
           />
         </label>
       </header>
@@ -137,16 +146,16 @@ export function MiniAppsView() {
       <div className="suite-welcome">
         <div>
           <small>Create</small>
-          <strong>选一个工具，马上开始</strong>
-          <span>五个真正能用的创作工具 —— 做完就能分享到 Space。</span>
+          <strong>Pick a tool and start now</strong>
+          <span>Five real Create tools — finish something, then share it to Space.</span>
         </div>
       </div>
 
       <div className="suite-body">
         <section className="suite-apps" aria-labelledby="suite-apps-title">
           <header>
-            <h2 id="suite-apps-title">{query ? '搜索结果' : 'Mini Apps'}</h2>
-            <span>{filtered.length} 个</span>
+            <h2 id="suite-apps-title">{query ? 'Search results' : 'Mini Apps'}</h2>
+            <span>{filtered.length}</span>
           </header>
           <div className="suite-grid suite-grid-guides">
             {filtered.map(app => (
@@ -156,7 +165,7 @@ export function MiniAppsView() {
                 className="suite-tile suite-tile-guide liquid-glass-btn"
                 title={app.guideTip}
                 onClick={() => setActive(app)}
-                aria-label={`打开 ${app.name}（${app.guideName}）`}
+                aria-label={`Open ${app.name} (${app.guideName})`}
               >
                 <span className="suite-tile-icon" style={{ background: app.color }} aria-hidden="true">
                   <AppIcon icon={app.icon} />
@@ -182,22 +191,22 @@ export function MiniAppsView() {
           {filtered.length === 0 && (
             <div className="suite-empty">
               <Search size={22} />
-              <strong>没有这个应用</strong>
-              <span>试试：墨语、随身本、格间、今日事、搭子码</span>
+              <strong>No matching app</strong>
+              <span>Try: Write, Notes, Sheet, Tasks, Code</span>
             </div>
           )}
         </section>
 
         <section className="suite-files" aria-labelledby="suite-recent-title">
           <header>
-            <h2 id="suite-recent-title">最近文件</h2>
-            <span>也在 Home 里</span>
+            <h2 id="suite-recent-title">Recent files</h2>
+            <span>Also on Home</span>
           </header>
           {recent.length === 0 ? (
             <div className="suite-empty">
               <FilePlus2 size={22} />
-              <strong>还没有文件</strong>
-              <span>点左边任一应用，新建就能用。</span>
+              <strong>No files yet</strong>
+              <span>Tap any app on the left to create a file and start.</span>
             </div>
           ) : (
             <div className="suite-file-list">
@@ -234,10 +243,10 @@ export function MiniAppsView() {
                 <AppIcon icon={active.icon} />
               </span>
               <div>
-                <small>{active.guideName} 说</small>
+                <small>{active.guideName} says</small>
                 <h2 id="suite-picker-title">{active.name}</h2>
               </div>
-              <button type="button" onClick={() => setActive(null)} aria-label="关闭">
+              <button type="button" onClick={() => setActive(null)} aria-label="Close">
                 <X size={16} />
               </button>
             </header>
@@ -249,7 +258,7 @@ export function MiniAppsView() {
             </div>
             <button type="button" className="suite-create liquid-glass-btn is-primary" onClick={() => void createFile()} disabled={creating}>
               <FilePlus2 size={16} />
-              {creating ? '创建中…' : `新建${active.newName}`}
+              {creating ? 'Creating…' : `New ${active.newName}`}
             </button>
             {activeFiles.length > 0 && (
               <div className="suite-file-list">

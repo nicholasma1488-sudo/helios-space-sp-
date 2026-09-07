@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AppWindow, Bookmark, ChevronDown, FileText, Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal, PenLine, Plus, Repeat2, Search, Send, Share, Sparkles, Sun, Trash2, Users, X, Zap, Image as ImageIcon,
+  AppWindow, Bookmark, ChevronDown, FileText, Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal, PenLine, Plus, Search, Send, Share, Sparkles, Sun, Trash2, UserPlus, Users, X, Zap, Image as ImageIcon,
 } from 'lucide-react'
 import type { Comment, Post, SolarSummary, User } from '../api'
 import { api, type LiveSession } from '../api'
@@ -11,9 +11,9 @@ import { openCreatorProfile, openLiveSession, openProjectWorkspace } from '../pr
 import './LifestyleView.css'
 
 const CATEGORIES = [
-  { id: 'all', label: '全部', icon: <Sparkles size={14} />, color: '#c96442' },
-  { id: 'reflection', label: '动态', icon: <PenLine size={14} />, color: '#5b8def' },
-  { id: 'activity', label: '开播', icon: <Zap size={14} />, color: '#3d8b6e' },
+  { id: 'all', label: 'All', icon: <Sparkles size={14} />, color: '#c96442' },
+  { id: 'reflection', label: 'Updates', icon: <PenLine size={14} />, color: '#5b8def' },
+  { id: 'activity', label: 'Go Live', icon: <Zap size={14} />, color: '#3d8b6e' },
 ]
 
 
@@ -47,7 +47,6 @@ export function LifestyleView({ currentUser }: Props) {
   const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null)
   const [postKind, setPostKind] = useState<'text' | 'project' | 'mini-app' | 'live'>('text')
   const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou')
-  const [reposted, setReposted] = useState<Set<number>>(new Set())
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
   const [linkedLiveId, setLinkedLiveId] = useState<number | null>(null)
   const [mediaData, setMediaData] = useState('')
@@ -309,23 +308,6 @@ export function LifestyleView({ currentUser }: Props) {
     await react(post, '❤️')
   }
 
-  function repostPost(post: Post) {
-    setReposted(current => {
-      const next = new Set(current)
-      if (next.has(post.id)) next.delete(post.id)
-      else next.add(post.id)
-      return next
-    })
-    dispatch({
-      type: 'PUSH_TOAST',
-      toast: {
-        id: String(Date.now()),
-        message: reposted.has(post.id) ? 'Repost removed' : 'Reposted to your timeline',
-        tone: 'success',
-      },
-    })
-  }
-
   function toggleComments(postId: number) {
     setOpenComments(current => {
       const next = new Set(current)
@@ -346,17 +328,17 @@ export function LifestyleView({ currentUser }: Props) {
       <header className="lifestyle-topbar">
         <div className="lifestyle-title">
           <span className="lifestyle-title-mark"><Zap size={17} /></span>
-          <div><strong>Space</strong><small>看看朋友在做什么，分享你正在推进的事</small></div>
+          <div><strong>Space</strong><small>See what friends are up to, and share what you are shipping</small></div>
         </div>
         <label className="lifestyle-search">
           <Search size={16} />
-          <span className="sr-only">搜索动态</span>
+          <span className="sr-only">Search updates</span>
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
-            placeholder="搜索"
+            placeholder="Search"
           />
-          {query && <button type="button" onClick={() => setQuery('')} aria-label="清除搜索"><X size={14} /></button>}
+          {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}
         </label>
         <button type="button" className="lifestyle-compose-top liquid-glass-btn is-primary" onClick={() => setComposerOpen(true)}>
           <Plus size={16} /> Post
@@ -375,18 +357,51 @@ export function LifestyleView({ currentUser }: Props) {
               <Globe2 size={17} /><span>For you</span>
             </button>
             <button type="button" className={!savedOnly && feedTab === 'following' ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>
-              <Users size={17} /><span>Following</span>
+              <Users size={17} /><span>Buddies</span>
             </button>
             <button type="button" className={savedOnly ? 'is-active' : ''} onClick={() => setSavedOnly(true)}>
-              <Bookmark size={17} /><span>Bookmarks</span>
+              <Bookmark size={17} /><span>Saved</span>
             </button>
           </nav>
         </aside>
 
         <main className="lifestyle-feed twitter-feed" aria-live="polite">
-          <nav className="feed-home-tabs" aria-label="Home timeline">
+          <section className="workbuddy-strip liquid-glass" aria-label="WorkBuddy activity">
+            <header>
+              <strong>WorkBuddy</strong>
+              <small>Collaborating / just updated</small>
+            </header>
+            <div className="workbuddy-strip-row">
+              <button type="button" className="workbuddy-chip is-you" onClick={() => setComposerOpen(true)}>
+                <Avatar name={currentUser.name} size="sm" />
+                <span>Share progress</span>
+              </button>
+              {timeline.slice(0, 8).map(post => (
+                <button
+                  type="button"
+                  key={`buddy-${post.id}`}
+                  className="workbuddy-chip"
+                  onClick={() => {
+                    const el = document.querySelector(`[data-lifestyle-post-id="${post.id}"]`)
+                    el?.scrollIntoView({ behavior: state.reducedMotion ? 'auto' : 'smooth', block: 'center' })
+                  }}
+                >
+                  <Avatar name={post.author_name} size="sm" />
+                  <span>{post.author_name.split(' ')[0]}</span>
+                </button>
+              ))}
+              {timeline.length === 0 && (
+                <button type="button" className="workbuddy-chip" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
+                  <Users size={14} />
+                  <span>Invite buddies</span>
+                </button>
+              )}
+            </div>
+          </section>
+
+          <nav className="feed-home-tabs" aria-label="Feed timeline">
             <button type="button" className={feedTab === 'foryou' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('foryou') }}>For you</button>
-            <button type="button" className={feedTab === 'following' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>Following</button>
+            <button type="button" className={feedTab === 'following' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>Buddies</button>
           </nav>
 
           <section className={'lifestyle-composer liquid-glass' + (composerOpen ? ' is-open' : '')}>
@@ -395,12 +410,12 @@ export function LifestyleView({ currentUser }: Props) {
                 <div className="composer-compact">
                   <Avatar name={currentUser.name} size="md" />
                   <button type="button" onClick={() => setComposerOpen(true)}>
-                    分享一点正在发生的事…
+                    Share something in progress…
                   </button>
                 </div>
                 <div className="composer-quick-actions">
-                  <button type="button" onClick={() => { setPostCategory('reflection'); setComposerOpen(true) }}><PenLine size={16} /> 动态</button>
-                  <button type="button" onClick={() => { setPostCategory('activity'); setComposerOpen(true) }}><Zap size={16} /> 开播</button>
+                  <button type="button" onClick={() => { setPostCategory('reflection'); setComposerOpen(true) }}><PenLine size={16} /> Update</button>
+                  <button type="button" onClick={() => { setPostCategory('activity'); setComposerOpen(true) }}><Zap size={16} /> Go Live</button>
                 </div>
               </>
             ) : (
@@ -418,8 +433,8 @@ export function LifestyleView({ currentUser }: Props) {
                     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') event.currentTarget.form?.requestSubmit()
                   }}
                   maxLength={2000}
-                  placeholder="What’s happening?"
-                  aria-label="Progress update"
+                  placeholder="Share something in progress…"
+                  aria-label="Post content"
                 />
                 <div className="composer-category-row" role="group" aria-label="Update category">
                   {CATEGORIES.slice(1).map(item => (
@@ -435,7 +450,7 @@ export function LifestyleView({ currentUser }: Props) {
                   ))}
                 </div>
                 <div className="composer-kind-row" role="group" aria-label="What you are sharing">
-                  {([['text', '文字'], ['project', '作品'], ['live', '开播']] as const).map(([id, label]) => (
+                  {([['text', 'Text'], ['project', 'Work'], ['live', 'Go Live']] as const).map(([id, label]) => (
                     <button type="button" key={id} aria-pressed={postKind === id} onClick={() => setPostKind(id)}>{label}</button>
                   ))}
                 </div>
@@ -469,7 +484,7 @@ export function LifestyleView({ currentUser }: Props) {
                         const session = liveSessions.find(item => item.id === id)
                         if (session) setLinkedProjectId(session.project_id)
                       }}>
-                        <option value="">Choose a 直播协作</option>
+                        <option value="">Choose a live session</option>
                         {liveSessions.map(session => <option key={session.id} value={session.id}>{session.title}</option>)}
                       </select>
                     </label>
@@ -480,7 +495,7 @@ export function LifestyleView({ currentUser }: Props) {
                 <footer>
                   <span>{postText.length}/2000 · ⌘ Enter to publish</span>
                   <button type="submit" className="liquid-glass-btn is-primary" disabled={!postText.trim() || submitting}>
-                    <Send size={15} /> {submitting ? '发送中…' : 'Post'}
+                    <Send size={15} /> {submitting ? 'Posting…' : 'Post'}
                   </button>
                 </footer>
               </form>
@@ -505,17 +520,17 @@ export function LifestyleView({ currentUser }: Props) {
             </button>
           </section>
 
-          {loading && <FeedState icon={<Sparkles size={22} />} title="正在加载…" detail="把最近的动态拉过来。" />}
+          {loading && <FeedState icon={<Sparkles size={22} />} title="Loading…" detail="Pulling in the latest updates." />}
           {!loading && loadError && (
-            <FeedState icon={<Zap size={22} />} title="动态暂时加载失败" detail={loadError}>
-              <button type="button" className="liquid-glass-btn is-primary" onClick={() => void loadPosts()}>再试一次</button>
+            <FeedState icon={<Zap size={22} />} title="Could not load updates" detail={loadError}>
+              <button type="button" className="liquid-glass-btn is-primary" onClick={() => void loadPosts()}>Try again</button>
             </FeedState>
           )}
           {!loading && !loadError && timeline.length === 0 && (
             <FeedState
               icon={savedOnly ? <Bookmark size={22} /> : <FileText size={22} />}
-              title={savedOnly ? '还没有收藏' : feedTab === 'following' ? '关注流还是空的' : '还没有动态'}
-              detail={savedOnly ? '收藏一条动态，它会出现在这里。' : feedTab === 'following' ? '其他人的分享会出现在这里。' : '发第一条，或换个筛选看看。'}
+              title={savedOnly ? 'Nothing saved yet' : feedTab === 'following' ? 'Your buddy feed is empty' : 'No updates yet'}
+              detail={savedOnly ? 'Save an update and it will show up here.' : feedTab === 'following' ? 'Posts from others will show up here.' : 'Post your first update, or try a different filter.'}
             >
               {!savedOnly && <button type="button" onClick={() => setComposerOpen(true)}>Post</button>}
             </FeedState>
@@ -529,11 +544,19 @@ export function LifestyleView({ currentUser }: Props) {
               busy={busyPost === post.id}
               pickerOpen={reactionPicker === post.id}
               commentsOpen={openComments.has(post.id)}
-              reposted={reposted.has(post.id)}
               onTogglePicker={() => setReactionPicker(current => current === post.id ? null : post.id)}
               onReact={emoji => void react(post, emoji)}
               onLike={() => void likePost(post)}
-              onRepost={() => repostPost(post)}
+              onInvite={() => {
+                if (post.author_id === currentUser.id) {
+                  dispatch({ type: 'SET_VIEW', view: 'chat' })
+                  return
+                }
+                sessionStorage.setItem('helios-invite-handle', post.author_handle || '')
+                sessionStorage.setItem('helios-invite-name', post.author_name || '')
+                dispatch({ type: 'SET_VIEW', view: 'chat' })
+                dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Invite ${post.author_name} to collaborate in Messages`, tone: 'success' } })
+              }}
               onToggleComments={() => toggleComments(post.id)}
               onToggleSave={() => void toggleSave(post)}
               onCopy={() => void copyPost(post)}
@@ -561,13 +584,13 @@ export function LifestyleView({ currentUser }: Props) {
             </button>
           )}
           {!loading && !loadError && timeline.length > 0 && !nextCursor && (
-            <div className="feed-end"><span>✦</span> 已经看完了。</div>
+            <div className="feed-end"><span>✦</span> You're all caught up.</div>
           )}
         </main>
 
         <aside className="lifestyle-right" aria-label="Lifestyle overview">
           <section className="lifestyle-pulse-card liquid-glass">
-            <span className="right-card-eyebrow">你的节奏</span>
+            <span className="right-card-eyebrow">Your rhythm</span>
             <div className="pulse-summary">
               <Sun size={18} />
               <div>
@@ -576,17 +599,17 @@ export function LifestyleView({ currentUser }: Props) {
               </div>
             </div>
             <div className="pulse-stats">
-              <span><strong>{myPostCount}</strong> 条动态</span>
-              <span><strong>{solar.next_threshold ? Math.max(0, solar.next_threshold - solar.total) : 0}</strong> 到下一阶</span>
+              <span><strong>{myPostCount}</strong> posts</span>
+              <span><strong>{solar.next_threshold ? Math.max(0, solar.next_threshold - solar.total) : 0}</strong> to next level</span>
             </div>
-            <p className="solar-integrity-note">在 Space 分享进度，邀请 WorkBuddy 一起协作。</p>
+            <p className="solar-integrity-note">Share progress on Space, and invite a WorkBuddy to collaborate.</p>
           </section>
 
           <section className="lifestyle-app-callout liquid-glass">
             <span><AppWindow size={16} /> CREATE</span>
             <strong>{contextualApp.name}</strong>
             <p>{contextualApp.description}</p>
-            <button type="button" className="liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>去 Create</button>
+            <button type="button" className="liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>Go to Create</button>
           </section>
         </aside>
       </div>
@@ -611,17 +634,17 @@ function relativeTime(value: string) {
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
   if (seconds < 60) return 'just now'
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return minutes + 'm'
+  if (minutes < 60) return minutes + 'm ago'
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return hours + 'h'
+  if (hours < 24) return hours + 'h ago'
   const days = Math.floor(hours / 24)
-  if (days < 7) return days + 'd'
+  if (days < 7) return days + 'd ago'
   return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 function PostCard({
-  post, currentUser, busy, pickerOpen, commentsOpen, reposted,
-  onTogglePicker, onReact, onLike, onRepost, onToggleComments, onToggleSave, onCopy, onDelete,
+  post, currentUser, busy, pickerOpen, commentsOpen,
+  onTogglePicker, onReact, onLike, onInvite, onToggleComments, onToggleSave, onCopy, onDelete,
   onOpenProject, onOpenMiniApp, onWatchLive, onOpenCreator, onCommentCountChange,
 }: {
   post: Post
@@ -629,11 +652,10 @@ function PostCard({
   busy: boolean
   pickerOpen: boolean
   commentsOpen: boolean
-  reposted: boolean
   onTogglePicker: () => void
   onReact: (emoji: string) => void
   onLike: () => void
-  onRepost: () => void
+  onInvite: () => void
   onToggleComments: () => void
   onToggleSave: () => void
   onCopy: () => void
@@ -659,12 +681,12 @@ function PostCard({
               <span>{post.author_handle}</span>
             </button>
             <time dateTime={post.created_at}>· {relativeTime(post.created_at)}</time>
-            {post.audience === 'private' ? <Lock size={13} aria-label="Only me" /> : null}
+            {post.audience === 'private' ? <Lock size={13} aria-label="Only visible to you" /> : null}
           </div>
           {post.can_delete ? (
-            <button type="button" className="post-more" onClick={onDelete} aria-label="Delete update"><Trash2 size={15} /></button>
+            <button type="button" className="post-more" onClick={onDelete} aria-label="Delete post"><Trash2 size={15} /></button>
           ) : (
-            <button type="button" className="post-more" aria-label="More options" disabled><MoreHorizontal size={17} /></button>
+            <button type="button" className="post-more" aria-label="More" disabled><MoreHorizontal size={17} /></button>
           )}
         </header>
 
@@ -672,34 +694,34 @@ function PostCard({
 
         {post.media_url && (post.media_url.startsWith('data:video/') || /\.(mp4|webm|mov)(\?|$)/i.test(post.media_url)
           ? <video className="post-media" src={post.media_url} controls preload="metadata" />
-          : <img className="post-media" src={post.media_url} alt="Shared progress" />)}
+          : <img className="post-media" src={post.media_url} alt="Collaboration post media" />)}
 
         {post.project_name && (
           <div className="post-project-row">
             <button type="button" onClick={onOpenProject} className="post-project">
-              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? '直播协作' : 'Project'}</span><strong>{post.project_name}</strong>
+              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? 'Live collab' : 'Work'}</span><strong>{post.project_name}</strong>
             </button>
-            {post.project_app_kind && <button type="button" onClick={onOpenMiniApp} className="post-project"><AppWindow size={14} /><span>Mini App</span><strong>{getMiniApp(post.project_app_kind).name}</strong></button>}
-            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>Watch</span><strong>直播协作</strong></button>}
+            {post.project_app_kind && <button type="button" onClick={onOpenMiniApp} className="post-project"><AppWindow size={14} /><span>Tool</span><strong>{getMiniApp(post.project_app_kind).name}</strong></button>}
+            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>Watch</span><strong>Live collab</strong></button>}
           </div>
         )}
 
-        <div className="post-actions tweet-actions">
-          <button type="button" onClick={onToggleComments} aria-expanded={commentsOpen}>
-            <MessageCircle size={18} /> {post.comment_count || ''}
+        <div className="post-actions tweet-actions collab-actions">
+          <button type="button" onClick={onToggleComments} aria-expanded={commentsOpen} title="Comment">
+            <MessageCircle size={18} /> <span>{post.comment_count || ''}</span>
           </button>
-          <button type="button" onClick={onRepost} aria-pressed={reposted} className={reposted ? 'is-reposted' : ''}>
-            <Repeat2 size={18} /> {reposted ? 1 : ''}
+          <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''} title="Like">
+            <Heart size={18} fill={liked ? 'currentColor' : 'none'} /> <span>{likeCount || reactionTotal || ''}</span>
           </button>
-          <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''}>
-            <Heart size={18} fill={liked ? 'currentColor' : 'none'} /> {likeCount || reactionTotal || ''}
+          <button type="button" onClick={onInvite} title="Invite to collaborate">
+            <UserPlus size={18} /> <span>Invite</span>
           </button>
-          <button type="button" onClick={onToggleSave} aria-pressed={post.is_saved} className={post.is_saved ? 'is-saved' : ''} disabled={busy}>
+          <button type="button" onClick={onToggleSave} aria-pressed={post.is_saved} className={post.is_saved ? 'is-saved' : ''} disabled={busy} title="Save">
             <Bookmark size={18} fill={post.is_saved ? 'currentColor' : 'none'} />
           </button>
-          <button type="button" onClick={onCopy}><Share size={17} /></button>
+          <button type="button" onClick={onCopy} title="Copy link"><Share size={17} /></button>
           <button type="button" className="tweet-more-react" onClick={onTogglePicker} aria-haspopup="menu" aria-expanded={pickerOpen}>
-            {pickerOpen ? 'Close' : 'More'}
+            {pickerOpen ? 'Close' : 'React'}
           </button>
         </div>
         {pickerOpen && (
@@ -845,7 +867,7 @@ function HighlightDialog({ post, onClose }: { post: Post; onClose: () => void })
         <button type="button" onClick={onClose} className="highlight-dialog-close" aria-label="Close highlight"><X size={17} /></button>
         <div className="highlight-dialog-mark" aria-hidden="true"><Sparkles size={22} /></div>
         <span className="highlight-dialog-category">{categoryLabel(post.category)}</span>
-        <h2 id="highlight-dialog-title">{post.author_name} 往前走了一步</h2>
+        <h2 id="highlight-dialog-title">{post.author_name} took a step forward</h2>
         <p>{post.body}</p>
         <footer><Avatar name={post.author_name} size="sm" /><span><strong>{post.author_name}</strong><small>{post.author_handle} · {relativeTime(post.created_at)}</small></span></footer>
       </div>
