@@ -257,7 +257,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
 
   // Helper: get border color for proposal card
   const proposalBorder = (applied?: boolean) => applied ? 'var(--helios-success)' : 'var(--helios-accent)'
-  const proposalHeaderBg = (applied?: boolean) => applied ? 'rgba(110,214,154,0.1)' : 'rgba(124,106,247,0.1)'
+  const proposalHeaderBg = (applied?: boolean) => applied ? 'rgba(61,139,110,0.1)' : 'rgba(201,100,66,0.1)'
   const proposalIconColor = (applied?: boolean) => applied ? 'var(--helios-success)' : 'var(--helios-accent)'
   const proposalTextColor = (applied?: boolean) => applied ? 'var(--helios-success)' : 'var(--helios-accent)'
   const safetyBg = (s: string) => s === 'safe' ? 'var(--helios-success)' : 'var(--helios-solar)'
@@ -271,12 +271,18 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: 'var(--helios-border)', flexShrink: 0 }}>
         <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, #7c6af7, #4fc3f7)', color: '#fff', fontSize: 16 }}
+          style={{
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.25))',
+            color: 'var(--codex-gray)',
+            fontSize: 16,
+            border: '1px solid var(--glass-stroke)',
+            boxShadow: 'var(--glass-shadow)',
+          }}
           aria-hidden="true">✦</div>
         <div className="flex-1 min-w-0">
           <div style={{ fontSize: 14, fontWeight: 700 }}>Helios</div>
           {contextPacket.project_name || activeProject
-            ? <div style={{ fontSize: 11, color: '#7c6af7' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
+            ? <div style={{ fontSize: 11, color: 'var(--helios-accent)' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
             : <div style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || 'Current Helios context'}</div>}
         </div>
         <button onClick={() => setShowContext(v => !v)} title="Context packet" aria-expanded={showContext}
@@ -293,7 +299,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       {/* Context packet */}
       {showContext && (
         <div className="mx-3 mt-2.5 mb-1 rounded-xl overflow-hidden" style={{ border: '1px solid var(--helios-border)', flexShrink: 0 }}>
-          <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'rgba(124,106,247,0.08)', borderBottom: '1px solid var(--helios-border)' }}>
+          <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'color-mix(in srgb, var(--helios-accent) 8%, transparent)', borderBottom: '1px solid var(--helios-border)' }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--helios-accent)', flex: 1 }}>Context packet</span>
             <span style={{ fontSize: 10, color: 'var(--helios-muted)' }}>minimal · permission-filtered</span>
           </div>
@@ -336,7 +342,11 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           <div key={msg.id} className={'flex items-end gap-2' + (msg.role === 'user' ? ' flex-row-reverse' : '')}>
             {msg.role === 'assistant' && (
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #7c6af7, #4fc3f7)', color: '#fff' }} aria-hidden="true">✦</div>
+                style={{
+                  background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.28))',
+                  color: 'var(--codex-gray)',
+                  border: '1px solid var(--glass-stroke)',
+                }} aria-hidden="true">✦</div>
             )}
             <div className={'flex flex-col gap-2' + (msg.role === 'user' ? ' items-end' : ' items-start')} style={{ maxWidth: 272 }}>
 
@@ -413,7 +423,12 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         {loading && (
           <div className="flex items-end gap-2">
             <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #7c6af7, #4fc3f7)', color: '#fff', fontSize: 12 }}>✦</div>
+              style={{
+                background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.28))',
+                color: 'var(--codex-gray)',
+                fontSize: 12,
+                border: '1px solid var(--glass-stroke)',
+              }}>✦</div>
             <div className="px-3 py-3 rounded-2xl flex items-center gap-1.5"
               style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)' }}>
               {[0, 1, 2].map(i => (

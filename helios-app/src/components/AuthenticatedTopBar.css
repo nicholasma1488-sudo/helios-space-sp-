@@ -114,9 +114,10 @@
   height: 31px;
   place-items: center;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--helios-accent), var(--helios-accent2));
-  color: #fff;
-  box-shadow: 0 7px 22px rgba(133, 118, 245, .2);
+  background: linear-gradient(145deg, rgba(255,255,255,.72), rgba(120,128,140,.28));
+  color: var(--codex-gray);
+  border: 1px solid var(--glass-stroke);
+  box-shadow: var(--glass-shadow);
 }
 
 .topbar-brand strong { font-size: 13px; letter-spacing: -.03em; }
@@ -186,9 +187,10 @@
   min-height: 34px !important;
   padding: 0 !important;
   border-radius: 50% !important;
-  background: linear-gradient(135deg, rgba(133, 118, 245, .28), rgba(79, 195, 247, .16)) !important;
+  background: linear-gradient(145deg, rgba(255,255,255,.7), rgba(201, 100, 66, .18)) !important;
   color: var(--helios-text) !important;
   font-weight: 750 !important;
+  border: 1px solid var(--glass-stroke) !important;
 }
 
 .topbar-mega-menu,

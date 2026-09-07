@@ -283,7 +283,26 @@ function ConversationAvatar({ conversation }: { conversation: Conversation }) {
 }
 
 function ChatWelcome({ projects, onCreate }: { projects: Project[]; onCreate: (kind: Conversation['kind']) => void }) {
-  return <div className="chat-welcome"><div className="chat-welcome-orbit"><MessageCircle size={27} /><i /><i /></div><span>YOUR CONVERSATIONS, ATTACHED TO THE WORK</span><h1>Build together without losing context.</h1><p>Keep Project decisions, files, Writing, code, drawings and progress updates connected as rich previews—not raw links.</p><div><button type="button" onClick={() => onCreate('project')} disabled={projects.length === 0}><FolderGit2 size={15} /> Start Project Chat</button><button type="button" onClick={() => onCreate('group')}><Users size={15} /> Create Group</button><button type="button" onClick={() => onCreate('private')}><AtSign size={15} /> Private Chat</button></div>{projects.length === 0 && <small>Create your first Project to unlock a connected Project Chat.</small>}</div>
+  return (
+    <div className="chat-welcome">
+      <div className="chat-welcome-mark" aria-hidden="true"><MessageCircle size={26} /></div>
+      <span>MESSAGES</span>
+      <h1>开始一段对话</h1>
+      <p>私聊、小组或项目讨论——保持简洁，连着你正在做的事。</p>
+      <div>
+        <button type="button" className="liquid-glass-btn is-primary" onClick={() => onCreate('private')}>
+          <AtSign size={15} /> 新私聊
+        </button>
+        <button type="button" className="liquid-glass-btn" onClick={() => onCreate('group')}>
+          <Users size={15} /> 建群
+        </button>
+        <button type="button" className="liquid-glass-btn" onClick={() => onCreate('project')} disabled={projects.length === 0}>
+          <FolderGit2 size={15} /> 项目聊天
+        </button>
+      </div>
+      {projects.length === 0 && <small>还没有项目时，也可以先私聊或建群。</small>}
+    </div>
+  )
 }
 
 function attachmentLabel(message: ChatMessage) { return message.attachment_type === 'project' ? 'Shared a Project' : message.attachment_type === 'file' ? 'Shared a file' : 'Shared progress' }

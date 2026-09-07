@@ -151,7 +151,7 @@
 .live-workspace-drawer { width: 315px; border-left-color: rgba(255,107,107,.3); background: color-mix(in srgb, var(--helios-surface) 96%, #241316); }
 .live-workspace-drawer > header > div { min-width: 0; }
 .live-workspace-drawer > header span { display: flex; align-items: center; gap: 5px; color: var(--helios-danger); font-size: 7px; font-weight: 800; letter-spacing: .13em; }
-.live-workspace-drawer > header span i { width: 6px; height: 6px; border-radius: 50%; background: var(--helios-danger); box-shadow: 0 0 9px var(--helios-danger); animation: liveblink 1.2s infinite; }
+.live-workspace-drawer > header span i { width: 6px; height: 6px; border-radius: 50%; background: var(--helios-danger); animation: liveblink 1.2s infinite; }
 .live-workspace-drawer > header strong { display: block; margin-top: 3px; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .live-workspace-drawer > header small { display: block; margin-top: 2px; color: var(--helios-muted); font-size: 7px; }
 .live-workspace-drawer > header > button { border: 0; background: transparent; color: var(--helios-danger); font: inherit; font-size: 8px; cursor: pointer; }
@@ -305,7 +305,7 @@
 .writing-page { width: min(790px, 100%); min-height: 1050px; margin: 0 auto; padding: 70px 78px; outline: 0; background: #f8f7f3; color: #1a1b1e; box-shadow: 0 20px 55px rgba(0,0,0,.3); font: 15px/1.75 Georgia, serif; }
 .writing-page h1 { font-size: 32px; line-height: 1.2; }
 .writing-page h2 { margin-top: 28px; font-size: 22px; }
-.writing-page blockquote { margin-left: 0; padding-left: 17px; border-left: 3px solid #8576f5; color: #555; }
+.writing-page blockquote { margin-left: 0; padding-left: 17px; border-left: 3px solid var(--helios-accent); color: #555; }
 .writing-page img { max-width: 100%; }
 .writing-page table,
 .reader-page table { width: 100%; border-collapse: collapse; }
@@ -472,7 +472,7 @@
 .survey-preview label > input,
 .survey-preview label textarea { min-height: 38px; padding: 8px; border: 1px solid #bbb; border-radius: 7px; }
 .survey-preview label > span { font-size: 10px; }
-.survey-preview > button { display: flex; align-items: center; gap: 6px; padding: 9px 13px; border: 0; border-radius: 8px; background: #8576f5; cursor: pointer; }
+.survey-preview > button { display: flex; align-items: center; gap: 6px; padding: 9px 13px; border: 0; border-radius: 8px; background: var(--helios-accent); color: var(--helios-on-accent); cursor: pointer; }
 
 /* Board */
 .board-workspace { display: flex; min-width: 0; flex: 1; flex-direction: column; overflow: hidden; background: #111217; }
@@ -498,7 +498,7 @@
 .workspace-collaborator-cursors > span { position: absolute; display: flex; align-items: center; gap: 4px; padding: 3px 6px 3px 4px; border-radius: 3px 7px 7px 7px; background: #755bd8; color: #fff; font-size: 7px; font-weight: 700; transform: translate(4px, 4px); transition: left 90ms linear, top 90ms linear; box-shadow: 0 6px 18px rgba(0,0,0,.28); }
 .workspace-collaborator-cursors > span i { width: 0; height: 0; border-top: 7px solid #755bd8; border-right: 5px solid transparent; transform: translate(-4px,-7px); }
 .live-setup-backdrop { position: fixed; z-index: 150; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(3,3,6,.76); backdrop-filter: blur(12px); animation: live-setup-fade .22s ease both; }
-.live-setup-dialog { width: min(590px,100%); overflow: hidden; border: 1px solid rgba(144,116,239,.3); border-radius: 22px; background: #17171e; box-shadow: 0 32px 110px rgba(0,0,0,.65); animation: live-setup-expand .36s cubic-bezier(.2,.8,.2,1) both; }
+.live-setup-dialog { width: min(590px,100%); overflow: hidden; border: 1px solid rgba(201,100,66,.3); border-radius: 22px; background: #17171e; box-shadow: 0 32px 110px rgba(0,0,0,.65); animation: live-setup-expand .36s cubic-bezier(.2,.8,.2,1) both; }
 .live-setup-dialog>header { display: flex; align-items: flex-start; justify-content: space-between; padding: 22px; border-bottom: 1px solid var(--helios-border); background: radial-gradient(circle at 85% 0,rgba(123,93,222,.18),transparent 42%); }
 .live-setup-dialog>header span { display: flex; align-items: center; gap: 6px; color: #ab98ec; font-size: 8px; font-weight: 800; letter-spacing: .12em; }
 .live-setup-dialog>header span i { width: 6px; height: 6px; border-radius: 50%; background: #ff5273; box-shadow: 0 0 0 4px rgba(255,82,115,.1); }

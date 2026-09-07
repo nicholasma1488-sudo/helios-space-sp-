@@ -176,7 +176,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
           <div className="global-search-input"><Search size={17} /><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Spaces, people, Projects and shared work" aria-label="Search" /><button type="button" onClick={() => setOpenMenu(null)} aria-label="Close search"><X size={15} /></button></div>
           <div className="global-search-results" aria-live="polite">
             {query.trim().length < 2 && <SearchEmpty icon={<Sparkles size={19} />} text="Search only returns work you are allowed to discover." />}
-            {query.trim().length >= 2 && searching && <SearchEmpty icon={<Sparkles size={19} />} text="Searching your permitted orbit…" />}
+            {query.trim().length >= 2 && searching && <SearchEmpty icon={<Sparkles size={19} />} text="正在搜索…" />}
             {query.trim().length >= 2 && !searching && searchCount === 0 && <SearchEmpty icon={<Search size={19} />} text="No permitted results found." />}
             {results.spaces.length > 0 && <ResultGroup title="Spaces">{results.spaces.map(space => <button key={space.id} onClick={() => openSpace(space.id)}><Users size={14} /><span><strong>{space.name}</strong><small>{space.kind}</small></span></button>)}</ResultGroup>}
             {results.projects.length > 0 && <ResultGroup title="Projects">{results.projects.map(project => <button key={project.id} onClick={() => void openProject(project.id)}><FolderGit2 size={14} /><span><strong>{project.name}</strong><small>{project.space_id} · {project.app_kind}</small></span></button>)}</ResultGroup>}

@@ -346,7 +346,7 @@ export function LifestyleView({ currentUser }: Props) {
           />
           {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}
         </label>
-        <button type="button" className="lifestyle-compose-top" onClick={() => setComposerOpen(true)}>
+        <button type="button" className="lifestyle-compose-top liquid-glass-btn is-primary" onClick={() => setComposerOpen(true)}>
           <Plus size={16} /> Post
         </button>
       </header>
@@ -368,8 +368,8 @@ export function LifestyleView({ currentUser }: Props) {
             <button type="button" className={savedOnly ? 'is-active' : ''} onClick={() => setSavedOnly(true)}>
               <Bookmark size={17} /><span>Bookmarks</span>
             </button>
-            <button type="button" onClick={() => dispatch({ type: 'OPEN_SPACE', spaceId: state.activeSpaceId, tab: 'apps' })}>
-              <AppWindow size={17} /><span>Mini Apps</span>
+            <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>
+              <AppWindow size={17} /><span>Create</span>
             </button>
           </nav>
 
@@ -417,7 +417,7 @@ export function LifestyleView({ currentUser }: Props) {
                 <div className="composer-compact">
                   <Avatar name={currentUser.name} size="md" />
                   <button type="button" onClick={() => setComposerOpen(true)}>
-                    What’s happening?
+                    分享一点正在发生的事…
                   </button>
                 </div>
                 <div className="composer-quick-actions">
@@ -502,8 +502,8 @@ export function LifestyleView({ currentUser }: Props) {
                 {submitError && <div className="composer-error" role="alert">{submitError}</div>}
                 <footer>
                   <span>{postText.length}/2000 · ⌘ Enter to publish</span>
-                  <button type="submit" disabled={!postText.trim() || submitting}>
-                    <Send size={15} /> {submitting ? 'Posting…' : 'Post'}
+                  <button type="submit" className="liquid-glass-btn is-primary" disabled={!postText.trim() || submitting}>
+                    <Send size={15} /> {submitting ? '发送中…' : 'Post'}
                   </button>
                 </footer>
               </form>
@@ -530,8 +530,8 @@ export function LifestyleView({ currentUser }: Props) {
 
           {loading && <FeedState icon={<Sparkles size={22} />} title="Gathering progress…" detail="Loading the latest signals from your space." />}
           {!loading && loadError && (
-            <FeedState icon={<Zap size={22} />} title="The feed missed its orbit" detail={loadError}>
-              <button type="button" onClick={() => void loadPosts()}>Try again</button>
+            <FeedState icon={<Zap size={22} />} title="动态暂时加载失败" detail={loadError}>
+              <button type="button" className="liquid-glass-btn is-primary" onClick={() => void loadPosts()}>再试一次</button>
             </FeedState>
           )}
           {!loading && !loadError && timeline.length === 0 && (
@@ -589,16 +589,20 @@ export function LifestyleView({ currentUser }: Props) {
         </main>
 
         <aside className="lifestyle-right" aria-label="Lifestyle overview">
-          <section className="lifestyle-pulse-card">
-            <span className="right-card-eyebrow">MEANINGFUL PROGRESSION</span>
-            <div className="pulse-orbit">
-              <div><Sun size={16} /><strong>{solar.total}</strong><span>灵感 · {solar.identity}</span></div>
+          <section className="lifestyle-pulse-card liquid-glass">
+            <span className="right-card-eyebrow">你的节奏</span>
+            <div className="pulse-summary">
+              <Sun size={18} />
+              <div>
+                <strong>{solar.total}</strong>
+                <span>{solar.identity}</span>
+              </div>
             </div>
             <div className="pulse-stats">
-              <span><strong>{myPostCount}</strong> progress posts</span>
-              <span><strong>{solar.next_threshold ? solar.next_threshold - solar.total : 0}</strong> to next identity</span>
+              <span><strong>{myPostCount}</strong> 条动态</span>
+              <span><strong>{solar.next_threshold ? Math.max(0, solar.next_threshold - solar.total) : 0}</strong> 到下一阶</span>
             </div>
-            <p className="solar-integrity-note">在 Space 分享进度，邀请 WorkBuddy 一起开播协作。</p>
+            <p className="solar-integrity-note">在 Space 分享进度，邀请 WorkBuddy 一起协作。</p>
           </section>
 
           <section className="lifestyle-right-card">
@@ -612,11 +616,11 @@ export function LifestyleView({ currentUser }: Props) {
             ))}
           </section>
 
-          <section className="lifestyle-app-callout">
-            <span><AppWindow size={16} /> CURRENT SPACE MINI APP</span>
+          <section className="lifestyle-app-callout liquid-glass">
+            <span><AppWindow size={16} /> CREATE</span>
             <strong>{contextualApp.name}</strong>
             <p>{contextualApp.description}</p>
-            <button type="button" onClick={() => dispatch({ type: 'OPEN_SPACE', spaceId: state.activeSpaceId, tab: 'apps' })}>Open Space Mini Apps</button>
+            <button type="button" className="liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>去 Create</button>
           </section>
         </aside>
       </div>
@@ -873,9 +877,9 @@ function HighlightDialog({ post, onClose }: { post: Post; onClose: () => void })
     <div className="highlight-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className={'highlight-dialog category-' + post.category} role="dialog" aria-modal="true" aria-labelledby="highlight-dialog-title" ref={dialogRef}>
         <button type="button" onClick={onClose} className="highlight-dialog-close" aria-label="Close highlight"><X size={17} /></button>
-        <div className="highlight-dialog-orbit"><Sparkles size={28} /></div>
+        <div className="highlight-dialog-mark" aria-hidden="true"><Sparkles size={22} /></div>
         <span className="highlight-dialog-category">{categoryLabel(post.category)}</span>
-        <h2 id="highlight-dialog-title">{post.author_name} moved something forward.</h2>
+        <h2 id="highlight-dialog-title">{post.author_name} 往前走了一步</h2>
         <p>{post.body}</p>
         <footer><Avatar name={post.author_name} size="sm" /><span><strong>{post.author_name}</strong><small>{post.author_handle} · {relativeTime(post.created_at)}</small></span></footer>
       </div>

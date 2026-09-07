@@ -23,6 +23,8 @@ export function ProfileView() {
   const [showNewProject, setShowNewProject] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     try {
@@ -38,13 +40,19 @@ export function ProfileView() {
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
+    setLoadError('')
     Promise.all([api.solar(), api.posts.list({ limit: 100 }), api.spaces.list()]).then(([solarResult, postResult, spaceResult]) => {
       if (cancelled) return
-      setSolar(solarResult)
+      setSolar(solarResult || EMPTY_SOLAR)
       const authorId = creator?.id && creator.id !== state.user?.id ? creator.id : state.user?.id
-      setPosts(postResult.posts.filter(post => post.author_id === authorId))
-      setSpaces(spaceResult.spaces)
-    }).catch(() => {})
+      setPosts((postResult?.posts || []).filter(post => post.author_id === authorId))
+      setSpaces(spaceResult?.spaces || [])
+    }).catch(err => {
+      if (!cancelled) setLoadError((err as Error).message || '资料加载失败')
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
     return () => { cancelled = true }
   }, [creator?.id, state.user?.id])
 
@@ -52,7 +60,7 @@ export function ProfileView() {
   const joinedSpaces = spaces.filter(space => joinedSpaceIds.has(space.id) || space.custom)
   const ownedProjects = state.projects.filter(project => project.user_id === state.user?.id)
   const contributions = state.projects.filter(project => project.user_id !== state.user?.id)
-  const helpEvents = solar.events.filter(event => event.source_type === 'help')
+  const helpEvents = (solar.events || []).filter(event => event.source_type === 'help')
   const previousThreshold = solar.identity === 'Dawn' ? 0 : solar.identity === 'Orbit' ? 100 : solar.identity === 'Radiant' ? 280 : solar.identity === 'Nova' ? 600 : solar.identity === 'Stellar' ? 1200 : 2400
   const progress = solar.next_threshold ? Math.max(0, Math.min(100, ((solar.total - previousThreshold) / (solar.next_threshold - previousThreshold)) * 100)) : 100
 
@@ -89,9 +97,34 @@ export function ProfileView() {
       {creator && creator.id !== state.user.id && <div className="space-readonly-banner" style={{ padding: 10, textAlign: 'center' }}>Viewing {creator.name}'s public work. <button type="button" onClick={() => setCreator(null)}>Back to your profile</button></div>}
       <header className="profile-hero">
         <div className="profile-avatar"><span>{user.name.slice(0, 1).toUpperCase()}</span><i /></div>
-        <div className="profile-identity"><span>CREATOR · STUDENT · COLLABORATOR{(!creator || creator.id === state.user.id) ? ` · ${state.user.plan === 'orbit' ? 'ORBIT' : 'FREE'}` : ''}</span><h1>{user.name}</h1><p>{user.handle} · Building across {joinedSpaces.length || 1} Space{joinedSpaces.length === 1 ? '' : 's'}</p><div><b>{ownedProjects.length}<small>Projects</small></b><b>{posts.length}<small>Progress posts</small></b><b>{contributions.length + helpEvents.length}<small>Contributions</small></b></div></div>
-        <div className="profile-solar-card"><div className="profile-solar-orbit" style={{ '--solar-progress': `${progress * 3.6}deg` } as React.CSSProperties}><span><Sun size={20} /><strong>{solar.total}</strong><small>Solar</small></span></div><div><span>CURRENT IDENTITY</span><strong>{solar.identity}</strong><small>{solar.next_threshold ? `${solar.next_threshold - solar.total} Solar until the next identity` : 'Highest Solar identity reached'}</small></div></div>
+        <div className="profile-identity">
+          <span>{(!creator || creator.id === state.user.id) ? (state.user.plan === 'orbit' ? 'ORBIT' : 'FREE') : 'CREATOR'}</span>
+          <h1>{user.name}</h1>
+          <p>{user.handle}</p>
+          <div>
+            <b>{ownedProjects.length}<small>Projects</small></b>
+            <b>{posts.length}<small>Posts</small></b>
+            <b>{contributions.length + helpEvents.length}<small>Collab</small></b>
+          </div>
+        </div>
+        <div className="profile-solar-card">
+          <div className="profile-solar-orbit" style={{ '--solar-progress': `${progress * 3.6}deg` } as React.CSSProperties}>
+            <span><Sun size={20} /><strong>{solar.total}</strong><small>Solar</small></span>
+          </div>
+          <div>
+            <span>当前身份</span>
+            <strong>{solar.identity}</strong>
+            <small>{solar.next_threshold ? `还差 ${Math.max(0, solar.next_threshold - solar.total)}` : '已达最高阶'}</small>
+          </div>
+        </div>
       </header>
+      {loading && <div className="profile-journey-empty" role="status">加载中…</div>}
+      {loadError && (
+        <div className="profile-journey-empty" role="alert">
+          {loadError}
+          <button type="button" className="liquid-glass-btn" onClick={() => window.location.reload()}>重新加载</button>
+        </div>
+      )}
       <nav className="profile-tabs" aria-label="Profile sections">{(['Journey', 'Projects', 'Posts', 'Spaces', 'Settings'] as const).map(item => <button type="button" key={item} className={tab === item ? 'is-active' : ''} onClick={() => setTab(item)}>{item}</button>)}</nav>
 
       <main className="profile-content">
@@ -107,13 +140,13 @@ export function ProfileView() {
 
 function JourneyTab({ solar, projects, posts, joinedSpaces, contributions, onOpenProject, onTab }: { solar: SolarSummary; projects: Project[]; posts: Post[]; joinedSpaces: SpaceSummary[]; contributions: Project[]; onOpenProject: (project: Project) => void; onTab: (tab: ProfileTab) => void }) {
   const current = [...projects].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]
-  const milestones = solar.events.slice(0, 8)
-  return <div className="profile-journey-grid"><section className="profile-current-work"><header><div><span>CURRENT WORK</span><h2>Keep the thread moving</h2></div>{current && <button type="button" onClick={() => onOpenProject(current)}>Resume <ChevronRight size={13} /></button>}</header>{current ? <button type="button" className="journey-project" onClick={() => onOpenProject(current)} style={{ '--journey-accent': getSpaceDefinition(current.space_id).accent } as React.CSSProperties}><i><FolderGit2 size={22} /></i><span><small>{getSpaceDefinition(current.space_id).name} · {getMiniApp(current.app_kind).name}</small><strong>{current.name}</strong><p>Updated {new Date(current.updated_at).toLocaleString()}</p></span><ChevronRight size={17} /></button> : <JourneyEmpty text="Start in a Space Mini App to create durable work." />}</section><section className="profile-story"><header><div><span>SOLAR STORY</span><h2>Meaningful milestones</h2></div></header><div className="profile-milestone-list">{milestones.map(event => <article key={event.id}><i>{event.source_type === 'help' ? <Users size={13} /> : event.source_type === 'project' ? <FolderGit2 size={13} /> : <Star size={13} />}</i><div><strong>{event.reason}</strong><small>{new Date(event.created_at).toLocaleDateString()} · +{event.amount} Solar</small></div></article>)}{milestones.length === 0 && <JourneyEmpty text="Create, finish, publish, help or complete a challenge to begin your Solar story." />}</div></section><section className="profile-journey-stats"><button type="button" onClick={() => onTab('Projects')}><FolderGit2 size={18} /><strong>{projects.length}</strong><span>Owned Projects</span></button><button type="button" onClick={() => onTab('Posts')}><MessageCircle size={18} /><strong>{posts.length}</strong><span>Progress posts</span></button><button type="button" onClick={() => onTab('Spaces')}><BookOpen size={18} /><strong>{joinedSpaces.length}</strong><span>Joined Spaces</span></button><div><Sparkles size={18} /><strong>{contributions.length}</strong><span>Shared Projects</span></div></section><section className="profile-achievements"><header><div><span>IDENTITIES, NOT LEADERBOARDS</span><h2>Solar progression</h2></div></header><div>{['Dawn', 'Orbit', 'Radiant', 'Nova', 'Stellar', 'Helios'].map((identity, index) => { const unlocked = ['Dawn', 'Orbit', 'Radiant', 'Nova', 'Stellar', 'Helios'].indexOf(solar.identity) >= index; return <article key={identity} className={unlocked ? 'is-unlocked' : ''}><i>{unlocked ? <Award size={15} /> : <span>·</span>}</i><strong>{identity}</strong><small>{[0, 100, 280, 600, 1200, 2400][index]} Solar</small></article> })}</div><p>Solar recognizes genuine creation, learning, publishing and help. Clicking and compulsive leaderboards do not earn it.</p></section></div>
+  const milestones = (solar.events || []).slice(0, 8)
+  return <div className="profile-journey-grid"><section className="profile-current-work"><header><div><span>CURRENT</span><h2>继续手上的事</h2></div>{current && <button type="button" onClick={() => onOpenProject(current)}>继续 <ChevronRight size={13} /></button>}</header>{current ? <button type="button" className="journey-project glass-lift" onClick={() => onOpenProject(current)} style={{ '--journey-accent': getSpaceDefinition(current.space_id).accent } as React.CSSProperties}><i><FolderGit2 size={22} /></i><span><small>{getSpaceDefinition(current.space_id).name} · {getMiniApp(current.app_kind).name}</small><strong>{current.name}</strong><p>Updated {new Date(current.updated_at).toLocaleString()}</p></span><ChevronRight size={17} /></button> : <JourneyEmpty text="去 Create 选一个工具，开始第一份作品。" />}</section><section className="profile-story"><header><div><span>SOLAR STORY</span><h2>Meaningful milestones</h2></div></header><div className="profile-milestone-list">{milestones.map(event => <article key={event.id}><i>{event.source_type === 'help' ? <Users size={13} /> : event.source_type === 'project' ? <FolderGit2 size={13} /> : <Star size={13} />}</i><div><strong>{event.reason}</strong><small>{new Date(event.created_at).toLocaleDateString()} · +{event.amount} Solar</small></div></article>)}{milestones.length === 0 && <JourneyEmpty text="Create, finish, publish, help or complete a challenge to begin your Solar story." />}</div></section><section className="profile-journey-stats"><button type="button" onClick={() => onTab('Projects')}><FolderGit2 size={18} /><strong>{projects.length}</strong><span>Owned Projects</span></button><button type="button" onClick={() => onTab('Posts')}><MessageCircle size={18} /><strong>{posts.length}</strong><span>Progress posts</span></button><button type="button" onClick={() => onTab('Spaces')}><BookOpen size={18} /><strong>{joinedSpaces.length}</strong><span>Joined Spaces</span></button><div><Sparkles size={18} /><strong>{contributions.length}</strong><span>Shared Projects</span></div></section><section className="profile-achievements"><header><div><span>IDENTITIES, NOT LEADERBOARDS</span><h2>Solar progression</h2></div></header><div>{['Dawn', 'Orbit', 'Radiant', 'Nova', 'Stellar', 'Helios'].map((identity, index) => { const unlocked = ['Dawn', 'Orbit', 'Radiant', 'Nova', 'Stellar', 'Helios'].indexOf(solar.identity) >= index; return <article key={identity} className={unlocked ? 'is-unlocked' : ''}><i>{unlocked ? <Award size={15} /> : <span>·</span>}</i><strong>{identity}</strong><small>{[0, 100, 280, 600, 1200, 2400][index]} Solar</small></article> })}</div><p>Solar recognizes genuine creation, learning, publishing and help. Clicking and compulsive leaderboards do not earn it.</p></section></div>
 }
 
-function ProjectsTab({ projects, deleting, onOpen, onDelete, onNew }: { projects: Project[]; deleting: number | null; onOpen: (project: Project) => void; onDelete: (project: Project) => void; onNew: () => void }) { return <section className="profile-tab-section"><header><div><span>DURABLE PORTFOLIO</span><h2>Projects and contributions</h2><p>The same work stays connected in Space feeds, Lifestyle, Chat, Live and Helios.</p></div><button type="button" onClick={onNew}><Plus size={14} /> New Project</button></header><div className="profile-project-grid">{projects.map(project => <article key={project.id}><div><i><FolderGit2 size={18} /></i><span>{project.can_manage ? 'Owned' : project.collaborator_role ? `Collaborator · ${project.collaborator_role}` : 'Shared'}</span></div><small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small><h3>{project.name}</h3><p>{project.visibility} · Updated {new Date(project.updated_at).toLocaleDateString()}</p><footer><button type="button" onClick={() => onOpen(project)}>Open actual Project</button>{project.can_manage && <button type="button" onClick={() => onDelete(project)} disabled={deleting === project.id} aria-label={`Delete ${project.name}`}><Trash2 size={13} /></button>}</footer></article>)}{projects.length === 0 && <JourneyEmpty text="No Projects yet. Open a Subject or Hobby Space to start." />}</div></section> }
-function PostsTab({ posts, onOpenProject }: { posts: Post[]; onOpenProject: (id: number) => void }) { return <section className="profile-tab-section"><header><div><span>PROGRESS, NOT APPEARANCE</span><h2>Lifestyle and Space posts</h2><p>Your meaningful progress across school, creative work and hobbies.</p></div></header><div className="profile-post-list">{posts.map(post => <article key={post.id}><header><span>{getSpaceDefinition(post.space_id).name}</span><time>{new Date(post.created_at).toLocaleDateString()}</time></header><p>{post.body}</p>{post.media_url && <img src={post.media_url} alt="Progress" />}{post.project_id && <button type="button" onClick={() => onOpenProject(post.project_id!)}><FolderGit2 size={14} /> {post.project_name}<ChevronRight size={13} /></button>}<footer><span><Sparkles size={12} /> {Object.values(post.reactions).reduce((sum, value) => sum + value, 0)}</span><span><MessageCircle size={12} /> {post.comment_count}</span></footer></article>)}{posts.length === 0 && <JourneyEmpty text="Share a genuine accomplishment from Lifestyle or a Space feed." />}</div></section> }
-function SpacesTab({ spaces, onOpen }: { spaces: SpaceSummary[]; onOpen: (id: string) => void }) { return <section className="profile-tab-section"><header><div><span>WHERE YOUR WORK LIVES</span><h2>Joined Spaces and interests</h2><p>Subjects and Hobbies become part of your creator/student journey through real work.</p></div></header><div className="profile-space-grid">{spaces.map(space => { const definition = getSpaceDefinition(space.id); return <button type="button" key={space.id} onClick={() => onOpen(space.id)} style={{ '--profile-accent': definition.accent } as React.CSSProperties}><i>{space.name.slice(0, 1)}</i><span>{space.kind}</span><h3>{space.name}</h3><p>{definition.description}</p><footer>{space.project_count} Projects · {space.live_count} Live <ChevronRight size={12} /></footer></button> })}{spaces.length === 0 && <JourneyEmpty text="Choose a Space from Subjects or Hobbies and begin meaningful work." />}</div></section> }
+function ProjectsTab({ projects, deleting, onOpen, onDelete, onNew }: { projects: Project[]; deleting: number | null; onOpen: (project: Project) => void; onDelete: (project: Project) => void; onNew: () => void }) { return <section className="profile-tab-section"><header><div><span>FILES</span><h2>项目与协作</h2><p>你的创作会出现在 Space、Messages 和 Home。</p></div><button type="button" className="liquid-glass-btn is-primary" onClick={onNew}><Plus size={14} /> 新建</button></header><div className="profile-project-grid">{projects.map(project => <article key={project.id} className="glass-lift"><div><i><FolderGit2 size={18} /></i><span>{project.can_manage ? 'Owned' : project.collaborator_role ? `Collaborator · ${project.collaborator_role}` : 'Shared'}</span></div><small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small><h3>{project.name}</h3><p>{project.visibility} · Updated {new Date(project.updated_at).toLocaleDateString()}</p><footer><button type="button" onClick={() => onOpen(project)}>打开</button>{project.can_manage && <button type="button" onClick={() => onDelete(project)} disabled={deleting === project.id} aria-label={`Delete ${project.name}`}><Trash2 size={13} /></button>}</footer></article>)}{projects.length === 0 && <JourneyEmpty text="还没有项目。去 Create 选一个工具开始。" />}</div></section> }
+function PostsTab({ posts, onOpenProject }: { posts: Post[]; onOpenProject: (id: number) => void }) { return <section className="profile-tab-section"><header><div><span>SPACE</span><h2>你的动态</h2><p>分享过的进度与瞬间。</p></div></header><div className="profile-post-list">{posts.map(post => <article key={post.id} className="glass-lift"><header><span>{getSpaceDefinition(post.space_id).name}</span><time>{new Date(post.created_at).toLocaleDateString()}</time></header><p>{post.body}</p>{post.media_url && <img src={post.media_url} alt="Progress" />}{post.project_id && <button type="button" onClick={() => onOpenProject(post.project_id!)}><FolderGit2 size={14} /> {post.project_name}<ChevronRight size={13} /></button>}<footer><span><Sparkles size={12} /> {Object.values(post.reactions || {}).reduce((sum, value) => sum + value, 0)}</span><span><MessageCircle size={12} /> {post.comment_count || 0}</span></footer></article>)}{posts.length === 0 && <JourneyEmpty text="去 Space 发第一条动态吧。" />}</div></section> }
+function SpacesTab({ spaces, onOpen }: { spaces: SpaceSummary[]; onOpen: (id: string) => void }) { return <section className="profile-tab-section"><header><div><span>SPACES</span><h2>你参与过的空间</h2><p>真实协作留下的痕迹。</p></div></header><div className="profile-space-grid">{spaces.map(space => { const definition = getSpaceDefinition(space.id); return <button type="button" key={space.id} className="glass-lift" onClick={() => onOpen(space.id)} style={{ '--profile-accent': definition.accent } as React.CSSProperties}><i>{space.name.slice(0, 1)}</i><span>{space.kind}</span><h3>{space.name}</h3><p>{definition.description}</p><footer>{space.project_count} Projects · {space.live_count} Live <ChevronRight size={12} /></footer></button> })}{spaces.length === 0 && <JourneyEmpty text="开始创作或发帖后，这里会出现你的空间。" />}</div></section> }
 function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExport, onLogout }: { theme: string; reducedMotion: boolean; exporting: boolean; onTheme: (theme: 'dark' | 'high-contrast') => void; onMotion: () => void; onExport: () => void; onLogout: () => void }) {
   return (
     <section className="profile-settings">

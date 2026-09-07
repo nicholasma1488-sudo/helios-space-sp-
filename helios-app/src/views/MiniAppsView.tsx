@@ -136,13 +136,10 @@ export function MiniAppsView() {
 
       <div className="suite-welcome">
         <div>
-          <small>Social Create</small>
-          <strong>创作，然后分享到 Space</strong>
-          <span>没有科目，没有 hobbies —— 五个工具就够。</span>
+          <small>Create</small>
+          <strong>选一个工具，马上开始</strong>
+          <span>五个真正能用的创作工具 —— 做完就能分享到 Space。</span>
         </div>
-        <button type="button" className="liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
-          找 WorkBuddy
-        </button>
       </div>
 
       <div className="suite-body">

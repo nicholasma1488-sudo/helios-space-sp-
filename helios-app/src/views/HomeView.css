@@ -3,10 +3,9 @@
   height: 100%;
   overflow: auto;
   padding: 24px clamp(16px, 3vw, 36px) 48px;
-  background:
-    radial-gradient(circle at top right, rgba(15, 108, 189, 0.08), transparent 40%),
-    var(--helios-bg);
+  background: transparent;
   color: var(--helios-text);
+  animation: helios-fade-in var(--dur-standard) var(--ease-enter) both;
 }
 .home-hero {
   display: flex;
@@ -18,7 +17,10 @@
 .home-hero span { color: var(--helios-muted); font-size: 13px; }
 .home-hero h1 { margin: 6px 0; font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.03em; }
 .home-hero p { margin: 0; color: var(--helios-text2); max-width: 42ch; }
-.home-hero-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.home-hero-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.home-hero-actions .home-btn-secondary {
+  opacity: 0.88;
+}
 .home-hero-actions button,
 .home-section header button,
 .home-file-actions button,
@@ -44,9 +46,15 @@
 .home-section {
   margin-bottom: 22px;
   padding: 18px;
-  border: 1px solid var(--helios-border);
+  border: 1px solid var(--glass-stroke);
   border-radius: 18px;
-  background: var(--helios-surface);
+  background: var(--glass-bg);
+}
+.home-file-card {
+  border: 1px solid var(--glass-stroke);
+  border-radius: 14px;
+  background: var(--glass-bg-strong);
+  overflow: hidden;
 }
 .home-section > header {
   display: flex;
@@ -67,12 +75,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
-}
-.home-file-card {
-  border: 1px solid var(--helios-border);
-  border-radius: 14px;
-  background: var(--helios-surface2);
-  overflow: hidden;
 }
 .home-file-main {
   display: flex;

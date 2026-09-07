@@ -201,14 +201,31 @@ function AppInner() {
     return () => mq.removeEventListener('change', h)
   }, [dispatch])
 
-  // Auth loading splash
+  // Auth loading splash — calm glass mark, no pulsing orb
   if (state.authLoading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center" style={{ background: 'var(--helios-bg)' }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #7c6af7, #4fc3f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, animation: 'pulse-fade 1.5s ease-in-out infinite' }}>
+        <div
+          aria-label="Loading Helios Space"
+          role="status"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 14,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--codex-gray)',
+            fontSize: 20,
+            fontWeight: 700,
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.72), rgba(120,128,140,0.22))',
+            border: '1px solid rgba(255,255,255,0.55)',
+            boxShadow: 'var(--glass-shadow)',
+            animation: 'helios-fade-in var(--dur-standard) var(--ease-enter) both',
+          }}
+        >
           ✦
         </div>
-        <style>{`@keyframes pulse-fade { 0%,100%{opacity:.4;transform:scale(.9)} 50%{opacity:1;transform:scale(1)} }`}</style>
       </div>
     )
   }

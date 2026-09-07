@@ -142,17 +142,14 @@ export function HomeView() {
             <div>
               <span>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
               <h1>你好，{firstName}</h1>
-              <p>文件、WorkBuddy、开播协作 —— 都在这一页。</p>
+              <p>看看朋友在做什么，或者马上创造一点东西。</p>
             </div>
             <div className="home-hero-actions">
-              <button type="button" className="home-btn-primary liquid-glass-btn is-primary" onClick={() => setShowNewProject(true)}>
-                <Plus size={16} /> 新建
+              <button type="button" className="home-btn-primary liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>
+                <Plus size={16} /> Create
               </button>
-              <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>
-                <FolderGit2 size={16} /> Create
-              </button>
-              <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
-                <MessageCircle size={16} /> Messages
+              <button type="button" className="liquid-glass-btn home-btn-secondary" onClick={() => setShowNewProject(true)}>
+                <FolderGit2 size={16} /> 新建文件
               </button>
             </div>
           </header>
@@ -169,7 +166,7 @@ export function HomeView() {
               {recent.slice(0, 8).map(project => {
                 const app = getSuiteApp(project.app_kind)
                 return (
-                  <article key={project.id} className="home-file-card">
+                  <article key={project.id} className="home-file-card glass-lift">
                     <button type="button" className="home-file-main" onClick={() => openProject(project.id)}>
                       <i style={{ background: app?.color || 'var(--helios-accent)' }}>{app?.guideEmoji || app?.letter || '📄'}</i>
                       <span>
@@ -280,7 +277,7 @@ export function HomeView() {
                   <div className="home-empty compact">
                     <Users size={18} />
                     <strong>还没有 WorkBuddy 动态</strong>
-                    <span>去 Lifestyle 发一条，或邀请朋友一起开播。</span>
+                    <span>去 Space 发一条，或邀请朋友一起协作。</span>
                   </div>
                 )}
               </div>

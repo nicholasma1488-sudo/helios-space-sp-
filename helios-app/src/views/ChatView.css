@@ -49,3 +49,131 @@
 .chat-conversation.is-active {
   background: #e8f2ff !important;
 }
+
+
+/* Calm liquid-glass Messages shell — override legacy purple/dark orbit chrome */
+.chat-hub {
+  background: transparent !important;
+  color: var(--helios-text) !important;
+  animation: helios-fade-in var(--dur-standard) var(--ease-enter) both;
+}
+.chat-hub-sidebar {
+  background: var(--glass-bg-strong) !important;
+  border-right: 1px solid var(--glass-stroke) !important;
+  backdrop-filter: blur(16px);
+}
+.chat-hub-sidebar > header > div > svg,
+.chat-hub-sidebar > footer { color: var(--helios-accent) !important; }
+.chat-hub-sidebar > header button,
+.chat-list-empty button {
+  background: var(--glass-bg) !important;
+  color: var(--helios-text) !important;
+  border-color: var(--glass-stroke) !important;
+}
+.chat-hub-search {
+  background: rgba(255,255,255,.55) !important;
+  border-color: var(--glass-stroke) !important;
+}
+.chat-kind-tabs button.is-active,
+.chat-kind-tabs button:hover {
+  background: color-mix(in srgb, var(--helios-accent) 10%, transparent) !important;
+  color: var(--helios-text) !important;
+}
+.chat-kind-tabs button b,
+.chat-conversation-list > button > b {
+  background: var(--helios-accent) !important;
+}
+.chat-conversation-list > button.is-active {
+  border-color: color-mix(in srgb, var(--helios-accent) 25%, var(--glass-stroke)) !important;
+  background: color-mix(in srgb, var(--helios-accent2) 10%, white) !important;
+}
+.chat-conversation-avatar {
+  background: color-mix(in srgb, var(--helios-accent) 12%, white) !important;
+  color: var(--helios-accent) !important;
+}
+.chat-thread {
+  background:
+    radial-gradient(circle at 88% 0, rgba(201,100,66,.04), transparent 34%),
+    transparent !important;
+}
+.chat-thread-header,
+.chat-composer,
+.chat-composer-box {
+  background: rgba(255,255,255,.88) !important;
+  border-color: var(--glass-stroke) !important;
+  backdrop-filter: blur(14px);
+}
+.chat-message-content > p {
+  background: rgba(255,255,255,.78) !important;
+  color: var(--helios-text) !important;
+  border-color: var(--glass-stroke) !important;
+  border-radius: 18px 18px 18px 6px !important;
+}
+.chat-message-row.is-mine .chat-message-content > p {
+  background: color-mix(in srgb, var(--helios-accent) 88%, white) !important;
+  color: var(--helios-on-accent) !important;
+  border: 0 !important;
+  border-radius: 18px 18px 6px 18px !important;
+}
+.chat-message-avatar {
+  background: linear-gradient(145deg, rgba(255,255,255,.75), rgba(120,128,140,.25)) !important;
+  color: var(--codex-gray) !important;
+}
+.chat-welcome {
+  color: var(--helios-text);
+}
+.chat-welcome-mark {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--glass-stroke);
+  background: var(--glass-bg);
+  color: var(--helios-accent);
+  box-shadow: var(--glass-shadow);
+}
+.chat-welcome-orbit { display: none !important; }
+.chat-welcome > span {
+  color: var(--helios-muted) !important;
+  letter-spacing: .08em;
+  font-size: 11px !important;
+}
+.chat-welcome h1 {
+  color: var(--helios-text);
+  font-size: clamp(24px, 4vw, 32px) !important;
+}
+.chat-welcome > div:nth-of-type(2) {
+  gap: 10px;
+  margin-top: 22px;
+}
+.chat-dialog {
+  background: var(--glass-bg-strong) !important;
+  border: 1px solid var(--glass-stroke) !important;
+  color: var(--helios-text) !important;
+  box-shadow: var(--shadow-lift) !important;
+}
+.chat-dialog > header small,
+.project-chat-context small,
+.chat-attach-label { color: var(--helios-muted) !important; }
+.chat-dialog input,
+.chat-dialog select {
+  background: rgba(255,255,255,.7) !important;
+  color: var(--helios-text) !important;
+  border-color: var(--glass-stroke) !important;
+}
+.chat-dialog-kinds button.is-active {
+  border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--glass-stroke)) !important;
+  background: color-mix(in srgb, var(--helios-accent) 10%, white) !important;
+  color: var(--helios-text) !important;
+}
+.chat-pinned,
+.project-chat-context {
+  background: color-mix(in srgb, var(--helios-accent2) 8%, white) !important;
+}
+.chat-list-empty > span {
+  background: color-mix(in srgb, var(--helios-accent) 10%, white) !important;
+  color: var(--helios-accent) !important;
+}
+.chat-thread-empty svg { color: var(--helios-accent) !important; }
