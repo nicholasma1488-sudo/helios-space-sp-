@@ -396,6 +396,8 @@ ensureColumn('users', 'plan_updated_at', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'birthdate', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'audience', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'plan_selected', 'INTEGER NOT NULL DEFAULT 0')
+try { db.prepare("UPDATE users SET plan = 'free', plan_selected = 1").run() } catch (_) {}
+// helios-free-forever-plan
 ensureColumn('users', 'stripe_customer_id', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'stripe_subscription_id', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('billing_methods', 'source', "TEXT NOT NULL DEFAULT 'card'")
@@ -541,74 +543,36 @@ const STRIPE_CANCEL_EVENTS = new Set([
 const mockStripeSessions = new Map()
 const PAY_METHODS = ['card']
 
-function envLimit(name, fallback) {
+function _envLimit(name, fallback) {
   const raw = process.env[name]
   if (raw === undefined || raw === '') return fallback
   const value = Number(raw)
   return Number.isFinite(value) && value >= 0 ? value : fallback
 }
 
-const FREE_DOCUMENT_LIMIT = envLimit('HELIOS_FREE_DOCUMENTS', 60)
-const FREE_CHARACTER_LIMIT = envLimit('HELIOS_FREE_CHARACTERS', 40_000)
-const ORBIT_CHARACTER_LIMIT = envLimit('HELIOS_ORBIT_CHARACTERS', 500_000)
-
+// Helios Space is completely free — no paid plans.
 const BILLING_PLANS = {
   free: {
     id: 'free',
-    name: 'Free',
+    name: 'Helios',
     price_cents: 0,
     currency: 'cny',
     interval: 'month',
-    description: 'Word, Excel, PowerPoint and OneNote stay included. Limits apply only to how much writing you create.',
-    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
-    limits: { documents: FREE_DOCUMENT_LIMIT, characters: FREE_CHARACTER_LIMIT },
+    description: 'Helios Space 完全免费。五个 Create 工具、Space、Messages 全部可用。',
+    mini_apps: ['墨语', '随身本', '格间', '今日事', '搭子码'],
+    limits: { documents: null, characters: null },
     features: [
-      'Create an account in under a minute — no card',
-      'Word, Excel, PowerPoint and OneNote — no paywall on tables or slides',
-      `${FREE_DOCUMENT_LIMIT} writing documents`,
-      `${FREE_CHARACTER_LIMIT.toLocaleString('en-US')} characters per document`,
-      'Work saves to Projects and stays in your Spaces',
-      'Every Subject and Hobby Space',
-      'Lifestyle, Chat Hub and Live',
-      'Helios AI when an administrator enables it',
-      'Upgrade to Orbit any time from the top-left banner',
-    ],
-  },
-  orbit: {
-    id: 'orbit',
-    name: 'Orbit',
-    price_cents: 6800,
-    currency: 'cny',
-    interval: 'month',
-    description: 'More writing room plus the rest of the suite. Pay with a card on Stripe.',
-    mini_apps: [
-      'Word', 'Excel', 'PowerPoint', 'OneNote', 'Stocks',
-      'Essay', 'Gradebook', 'Lesson Slides', 'Lab Notebook', 'Forms',
-      'Flashcards', 'Reader', 'Maths Lab', 'Homework Board', 'Study Guide',
-      'Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals',
-      'Product Spec', 'OKRs', 'Planner', 'Reports',
-    ],
-    limits: { documents: null, characters: ORBIT_CHARACTER_LIMIT },
-    features: [
-      'Everything in Free, including spreadsheets and slides',
-      'Unlimited writing documents',
-      `${ORBIT_CHARACTER_LIMIT.toLocaleString('en-US')} characters per document`,
-      'Stocks watchlist you can open any time',
-      'School and work apps in the same account',
-      'Docs, proposals, specs and reports',
-      'Budget and OKR workbooks with formulas',
-      'Pitch decks, meetings, planner and homework board',
-      'Essay studio, gradebook, labs and study tools',
-      'Priority Helios capacity when AI is configured',
-      '3× Live session visibility for collaborators',
-      'Pay with a bank card through Stripe',
-      'Switch back to Free any time',
+      '完全免费，无需绑卡',
+      '墨语、随身本、格间、今日事、搭子码',
+      '文稿不限篇数与字数',
+      'Space 动态、Messages、协作开播',
+      'Helios 助手（管理员启用时）',
     ],
   },
 }
 
-function normalizePlan(plan) {
-  return plan === 'orbit' || plan === 'alpha' ? 'orbit' : 'free'
+function normalizePlan(_plan) {
+  return 'free'
 }
 
 function userEdition(user) {
@@ -622,9 +586,9 @@ function publicUser(user) {
     name: user.name,
     handle: user.handle,
     email: user.email,
-    plan: normalizePlan(user.plan),
-    plan_selected: Boolean(user.plan_selected),
-    edition: userEdition(user),
+    plan: 'free',
+    plan_selected: true,
+    edition: 'free',
     usage: usageSnapshot(user),
   }
 }
@@ -682,14 +646,13 @@ function writingLimitError(user, code, characters = 0) {
   const usage = usageSnapshot(user)
   if (code === 'document_limit') {
     return {
-      error: `Free includes ${limits.documents} writing documents. Upgrade to Orbit for unlimited drafts. Spreadsheets and slides stay included.`,
+      error: 'Writing document limit reached.',
       code,
       usage,
     }
   }
-  const planName = normalizePlan(user.plan) === 'orbit' ? 'Orbit' : 'Free'
   return {
-    error: `This draft is ${characters.toLocaleString('en-US')} characters. ${planName} allows ${limits.characters.toLocaleString('en-US')} per document.`,
+    error: `This draft is ${characters.toLocaleString('en-US')} characters.`,
     code,
     usage: { ...usage, characters: { used: characters, limit: limits.characters } },
   }
@@ -712,7 +675,8 @@ function stripePublicConfig() {
 }
 
 function planEligibilityError(planId) {
-  if (planId === 'free' || planId === 'orbit') return null
+  if (planId === 'orbit' || planId === 'alpha') return 'Helios Space is completely free — there are no paid plans.'
+  if (planId === 'free') return null
   return 'Choose Free or Orbit'
 }
 
@@ -1331,7 +1295,7 @@ app.post('/api/signup', authRateLimit, (req, res) => {
     const info = db.prepare(
       'INSERT INTO users (name, handle, email, password_hash, created_at, plan, plan_updated_at, plan_selected) VALUES (?,?,?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', now, 0)
+          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', now, 1)
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
     res.json({
@@ -1342,7 +1306,7 @@ app.post('/api/signup', authRateLimit, (req, res) => {
         handle: '@' + h,
         email: normalizedEmail,
         plan: 'free',
-        plan_selected: 0,
+        plan_selected: 1,
       }),
     })
   } catch (e) {
@@ -1391,90 +1355,29 @@ app.get('/api/billing', requireUser, (req, res) => {
 
 app.post('/api/billing/checkout', requireUser, billingRateLimit, async (req, res) => {
   const planId = String(req.body?.plan || '').trim().toLowerCase()
-  const catalog = BILLING_PLANS[planId]
-  if (!catalog) return res.status(400).json({ error: 'Choose Free or Orbit' })
   const blocked = planEligibilityError(planId)
   if (blocked) return res.status(403).json({ error: blocked })
+  const catalog = BILLING_PLANS[planId]
+  if (!catalog) return res.status(400).json({ error: 'Helios Space is completely free — there are no paid plans.' })
 
   const now = new Date().toISOString()
-  if (planId === 'free') {
-    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
-    if (req.user.plan !== 'free')
-      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the Free edition')
-    const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
-    return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
-  }
-
-  if (!stripeConfigured())
-    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
-  try {
-    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
-    return res.json({ ok: true, method: 'card', ...session })
-  } catch (error) {
-    return res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
-  }
+  db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
+  const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
+  return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
 })
 
-app.post('/api/billing/stripe', requireUser, billingRateLimit, async (req, res) => {
-  const planId = String(req.body?.plan || '').trim().toLowerCase()
-  if (!BILLING_PLANS[planId] || planId === 'free')
-    return res.status(400).json({ error: 'Checkout is for Orbit' })
-  const blocked = planEligibilityError(planId)
-  if (blocked) return res.status(403).json({ error: blocked })
-  const payMethod = normalizePayMethod(req.body?.method)
-  if (!payMethod) return res.status(400).json({ error: 'Orbit is paid with a Stripe card only' })
-  if (!stripeConfigured())
-    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
-  try {
-    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
-    res.json({ ok: true, method: 'card', ...session })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
-  }
+app.post('/api/billing/stripe', requireUser, billingRateLimit, async (_req, res) => {
+  return res.status(400).json({ error: 'Helios Space is completely free — Stripe checkout is disabled.' })
 })
 
-app.post('/api/billing/stripe/webhook', async (req, res) => {
-  if (STRIPE_WEBHOOK_SECRET) {
-    const raw = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {})
-    if (!verifyStripeWebhook(raw, req.headers['stripe-signature'], STRIPE_WEBHOOK_SECRET))
-      return res.status(400).json({ error: 'Invalid Stripe signature' })
-  } else if (!STRIPE_MOCK) {
-    return res.status(503).json({ error: 'Stripe webhook is not configured', code: 'STRIPE_WEBHOOK_NOT_CONFIGURED' })
-  }
-  const event = req.body || {}
-  if (event.type && STRIPE_CANCEL_EVENTS.has(event.type)) {
-    const result = cancelStripeSubscription(event.data?.object || {})
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    return res.json({ received: true, ok: true, ...result })
-  }
-  if (event.type && !STRIPE_FULFILL_EVENTS.has(event.type))
-    return res.json({ received: true, ignored: true })
-  const sessionId = String(event.data?.object?.id || '').trim()
-  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
-  try {
-    const session = await retrieveStripeSession(sessionId) || event.data?.object || null
-    const result = fulfillPaidStripeSession(session, sessionId)
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    res.json({ received: true, ok: true, user: result.user, billing: result.billing })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Webhook failed' })
-  }
+app.post('/api/billing/stripe/webhook', async (_req, res) => {
+  return res.json({ received: true, ignored: true, reason: 'billing_disabled' })
 })
 
-app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (req, res) => {
-  const sessionId = String(req.body?.session_id || '').trim()
-  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
-  const pending = db.prepare('SELECT * FROM stripe_checkouts WHERE session_id = ? AND user_id = ?').get(sessionId, req.user.id)
-  if (!pending) return res.status(404).json({ error: 'Payment session not found' })
-  try {
-    const session = await retrieveStripeSession(sessionId)
-    const result = fulfillPaidStripeSession(session, sessionId)
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    res.json({ ok: true, user: result.user, billing: result.billing })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Payment confirmation failed' })
-  }
+app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (_req, res) => {
+  return res.status(400).json({ error: 'Helios Space is completely free — Stripe checkout is disabled.' })
 })
+
 
 function normalizeMarketSymbol(value) {
   const symbol = String(value || '').trim().toUpperCase()
@@ -1522,8 +1425,6 @@ async function fetchYahooQuotes(symbols) {
 }
 
 app.get('/api/markets/quotes', requireUser, marketsRateLimit, async (req, res) => {
-  if (normalizePlan(req.user.plan) !== 'orbit')
-    return res.status(403).json({ error: 'Stocks is included with Orbit' })
   const unique = [...new Set(String(req.query.symbols || '').split(',').map(normalizeMarketSymbol).filter(Boolean))].slice(0, 20)
   if (unique.length === 0) return res.status(400).json({ error: 'Add at least one ticker' })
   try {
@@ -1621,7 +1522,7 @@ app.post('/api/projects', requireUser, (req, res) => {
     if (limits.documents != null && countWritingDocuments(req.user.id) >= limits.documents)
       return res.status(403).json(writingLimitError(user, 'document_limit'))
     const characters = writingCharacterCount(checkedContent.value)
-    if (characters > limits.characters)
+    if (limits.characters != null && characters > limits.characters)
       return res.status(403).json(writingLimitError(user, 'character_limit', characters))
   }
   const now = new Date().toISOString()
@@ -1688,7 +1589,7 @@ app.put('/api/projects/:id', requireUser, (req, res) => {
       return res.status(403).json(writingLimitError(user, 'document_limit'))
     if (content !== undefined) {
       const characters = writingCharacterCount(checkedContent.value)
-      if (characters > limits.characters)
+      if (limits.characters != null && characters > limits.characters)
         return res.status(403).json(writingLimitError(user, 'character_limit', characters))
     }
   }

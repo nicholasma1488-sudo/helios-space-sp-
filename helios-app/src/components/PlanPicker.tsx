@@ -10,9 +10,9 @@ export function PlanPicker() {
           <span><Sparkles size={14} /> AFTER YOUR ACCOUNT</span>
           <h1 id="plan-picker-title">Use Free, or subscribe to Orbit.</h1>
           <p>
-            Word, Excel, PowerPoint and OneNote stay included. Free already has generous writing room.
-            Orbit adds unlimited drafts, 500,000 characters per document, and the extra Mini Apps.
-            Pay Orbit with a bank card on Stripe.
+            五个 Create 工具（墨语、随身本、格间、今日事、搭子码）一直可用。
+            Free 已有充足文稿额度；Orbit 提供不限篇数与每篇 50 万字。
+            Orbit 通过 Stripe 银行卡付款。
           </p>
         </header>
         <PaymentTool mode="onboarding" />

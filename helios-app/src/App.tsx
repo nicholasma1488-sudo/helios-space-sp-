@@ -15,8 +15,7 @@ import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
 import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
-import { PaymentPage } from './views/PaymentPage'
-import { goToPay, isPayPath } from './product/pay'
+import { leavePay, isPayPath } from './product/pay'
 import './App.css'
 
 function MainContent() {
@@ -97,7 +96,7 @@ function AppInner() {
       projects: 'Home',
     }
     if (onPayPage) {
-      document.title = '付款 — Helios Space'
+      leavePay('/')
       return
     }
     if (!state.user) {
@@ -128,32 +127,7 @@ function AppInner() {
           return
         }
         dispatch({ type: 'SET_USER', user: r.user })
-        const params = new URLSearchParams(window.location.search)
-        const stripeSession = params.get('session_id')
-        if (params.get('billing') === 'success' && stripeSession) {
-          api.billing.confirmStripe(stripeSession)
-            .then(result => {
-              if (cancelled) return
-              dispatch({ type: 'SET_USER', user: result.user })
-              dispatch({
-                type: 'PUSH_TOAST',
-                toast: { id: Date.now().toString(), message: 'Stripe 已确认银行卡付款，Orbit 已开通。', tone: 'success' },
-              })
-            })
-            .catch(err => {
-              if (!cancelled) dispatch({
-                type: 'PUSH_TOAST',
-                toast: { id: Date.now().toString(), message: (err as Error).message, tone: 'warning' },
-              })
-            })
-            .finally(() => {
-              params.delete('billing')
-              params.delete('session_id')
-              const next = params.toString()
-              window.history.replaceState({}, '', '/pay' + (next ? '?' + next : ''))
-              window.dispatchEvent(new PopStateEvent('popstate'))
-            })
-        }
+        if (isPayPath()) leavePay('/')
         api.projects.list()
           .then(projects => { if (!cancelled) dispatch({ type: 'SET_PROJECTS', projects: projects.projects }) })
           .catch(err => {
@@ -180,16 +154,18 @@ function AppInner() {
     else document.documentElement.classList.remove('motion-reduced')
   }, [state.reducedMotion])
 
+  // Legacy /pay URLs and upgrade actions just return to the free app.
   useEffect(() => {
-    if (state.user && state.user.plan_selected === false && !onPayPage && !state.authLoading) {
-      goToPay()
-    }
-  }, [state.user, onPayPage, state.authLoading])
+    if (onPayPage) leavePay('/')
+  }, [onPayPage])
 
   useEffect(() => {
     if (!state.upgradeOpen) return
     dispatch({ type: 'CLOSE_UPGRADE' })
-    goToPay()
+    dispatch({
+      type: 'PUSH_TOAST',
+      toast: { id: String(Date.now()), message: 'Helios Space 完全免费，无需升级。', tone: 'success' },
+    })
   }, [state.upgradeOpen, dispatch])
 
   // Respect OS reduced-motion
@@ -231,12 +207,7 @@ function AppInner() {
   }
 
   if (onPayPage) {
-    return (
-      <>
-        <PaymentPage />
-        <ToastLayer />
-      </>
-    )
+    leavePay('/')
   }
 
   // Not logged in — show auth screen

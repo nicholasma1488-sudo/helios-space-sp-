@@ -146,9 +146,9 @@ export function PaymentPage() {
               </div>
               <b>¥0 <em>永久</em></b>
             </header>
-            <p>Word、Excel、PowerPoint、OneNote 一直可用。表格不设付费门槛。</p>
+            <p>五个 Create 工具一直可用：墨语、随身本、格间、今日事、搭子码。</p>
             <ul>
-              <li><Check size={14} /> 核心 365 应用，含表格</li>
+              <li><Check size={14} /> 5 个创作工具，真正能用</li>
               <li><Check size={14} /> 60 篇文稿</li>
               <li><Check size={14} /> 每篇 40,000 字</li>
               <li><Check size={14} /> 不用绑定银行卡</li>
@@ -172,9 +172,9 @@ export function PaymentPage() {
               </div>
               <b>{formatPrice(orbitPlan?.price_cents ?? 6800, orbitPlan?.currency ?? 'cny')} <em>/ 月</em></b>
             </header>
-            <p>更多文稿额度，以及 Stocks 和学校 / 工作套件。</p>
+            <p>更多文稿额度，以及更从容的协作空间。</p>
             <ul>
-              <li><Check size={14} /> Free 的全部内容，含表格</li>
+              <li><Check size={14} /> Free 的全部内容</li>
               <li><Check size={14} /> 文稿不限篇数</li>
               <li><Check size={14} /> 每篇 500,000 字</li>
               <li><Check size={14} /> 完整 Mini Apps</li>

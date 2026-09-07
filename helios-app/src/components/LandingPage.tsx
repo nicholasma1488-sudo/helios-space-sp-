@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowRight, Bookmark, Check, Code2, Compass, CreditCard, Gift, Grid3X3, Heart, Layers3,
+  ArrowRight, Bookmark, Check, Code2, Compass, Gift, Grid3X3, Heart, Layers3,
   MessageCircle, Play, Radio, Repeat2, Share, Sparkles, Users,
 } from 'lucide-react'
 import { Logo } from './Logo'
-import { goToPay } from '../product/pay'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
 import './LandingPage.css'
 
@@ -309,35 +308,19 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           </div>
           <div className="pricing-grid">
             <article className="pricing-card is-child" data-reveal>
-              <span><Gift size={15} /> INCLUDED</span>
-              <h3>Free</h3>
-              <b>¥0 <small>永久免费</small></b>
-              <p>The included edition. No card required.</p>
+              <span><Gift size={15} /> FREE FOREVER</span>
+              <h3>Helios Space</h3>
+              <b>¥0 <small>完全免费</small></b>
+              <p>没有套餐，没有升级。创建即可使用全部能力。</p>
               <ul>
-                <li><Check size={13} /> Word, Excel, PowerPoint, OneNote</li>
-                <li><Check size={13} /> Spreadsheets stay included</li>
-                <li><Check size={13} /> 60 writing documents</li>
-                <li><Check size={13} /> 40,000 characters per document</li>
-                <li><Check size={13} /> Subjects, Hobbies, Live</li>
+                <li><Check size={13} /> 墨语、随身本、格间、今日事、搭子码</li>
+                <li><Check size={13} /> Space 动态与协作</li>
+                <li><Check size={13} /> Messages</li>
+                <li><Check size={13} /> 文稿不限篇数与字数</li>
+                <li><Check size={13} /> 无需绑卡</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                Start free <ArrowRight size={15} />
-              </button>
-            </article>
-            <article className="pricing-card is-orbit" data-reveal>
-              <span><CreditCard size={15} /> FULL SUITE</span>
-              <h3>Orbit</h3>
-              <b>¥68 <small>/ 月</small></b>
-              <p>More writing room plus every Mini App. Pay with a bank card on Stripe.</p>
-              <ul>
-                <li><Check size={13} /> Everything in Free, including tables</li>
-                <li><Check size={13} /> Unlimited writing documents</li>
-                <li><Check size={13} /> 500,000 characters per document</li>
-                <li><Check size={13} /> Stocks, school and work Mini Apps</li>
-                <li><Check size={13} /> Stripe 银行卡自动到账</li>
-              </ul>
-              <button type="button" onClick={() => goToPay()}>
-                打开付款页 <ArrowRight size={15} />
+                免费开始 <ArrowRight size={15} />
               </button>
             </article>
           </div>

@@ -5,7 +5,6 @@ import {
   Sparkles, Table2, Trash2,
 } from 'lucide-react'
 import { useApp } from '../store/appStore'
-import { WRITING_LIMITS } from '../product/miniApps'
 
 function writingCharacterCount(html: string) {
   return [...(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()].length
@@ -38,16 +37,15 @@ function sanitizeHtml(html: string) {
 }
 
 export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
-  const { state, dispatch } = useApp()
+  const { state } = useApp()
   const value = data as unknown as WritingData
   const editorRef = useRef<HTMLDivElement>(null)
   const [mode, setMode] = useState<'edit' | 'reader'>(value.readerMode ? 'reader' : 'edit')
   const [note, setNote] = useState('')
   const safeHtml = useMemo(() => sanitizeHtml(value.html || ''), [value.html])
-  const characterLimit = state.user?.usage?.characters.limit
-    ?? (state.user?.plan === 'orbit' ? WRITING_LIMITS.orbit.characters : WRITING_LIMITS.free.characters)
+  const characterLimit = state.user?.usage?.characters.limit ?? null
   const characterUsed = writingCharacterCount(value.html || '')
-  const characterRatio = characterUsed / Math.max(1, characterLimit)
+  const characterRatio = characterLimit == null ? 0 : characterUsed / Math.max(1, characterLimit)
   const headings = useMemo(() => {
     const documentValue = new DOMParser().parseFromString(safeHtml, 'text/html')
     return [...documentValue.querySelectorAll('h1,h2,h3')].map((heading, index) => heading.textContent?.trim() || `Section ${index + 1}`)
@@ -110,13 +108,8 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
           <button type="button" onClick={() => onAskHelios('Check this document for grammar, clarity, structure and citation gaps')} className="writing-helios-action"><Sparkles size={14} /> Grammar & clarity</button>
         </>}
         <span className={'writing-usage' + (characterRatio >= 1 ? ' is-over' : characterRatio >= 0.85 ? ' is-warn' : '')}>
-          {characterUsed.toLocaleString()} / {characterLimit.toLocaleString()} 字
+          {characterUsed.toLocaleString()} 字
         </span>
-        {characterRatio >= 1 && state.user?.plan !== 'orbit' && (
-          <button type="button" className="writing-helios-action" onClick={() => dispatch({ type: 'OPEN_UPGRADE' })}>
-            升级字数
-          </button>
-        )}
       </header>
 
       {mode === 'edit' ? (

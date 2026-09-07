@@ -17,15 +17,15 @@ const FALLBACK_PLANS: BillingPlan[] = [
     currency: 'cny',
     interval: 'month',
     eligible: true,
-    description: 'Word, Excel, PowerPoint and OneNote stay included. Limits apply only to writing volume.',
+    description: '五个 Create 工具一直可用。额度只限制文稿数量与字数。',
     features: [
-      'Create a Helios account for free',
-      'Word, Excel, PowerPoint and OneNote — no paywall on tables',
-      '60 writing documents',
-      '40,000 characters per document',
-      'Lifestyle, Chat Hub, and Live work',
+      '免费创建 Helios 账号',
+      '墨语、随身本、格间、今日事、搭子码',
+      '60 篇文稿',
+      '每篇 40,000 字',
+      'Space、Messages、协作开播',
     ],
-    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
+    mini_apps: ['墨语', '随身本', '格间', '今日事', '搭子码'],
     limits: { documents: 60, characters: 40_000 },
   },
   {
@@ -34,15 +34,15 @@ const FALLBACK_PLANS: BillingPlan[] = [
     price_cents: 6800,
     currency: 'cny',
     interval: 'month',
-    description: 'More writing room plus the rest of the suite. Pay with a bank card on Stripe.',
+    description: '更多文稿空间，以及更从容的协作。用银行卡在 Stripe 付款。',
     features: [
-      'Everything in Free, including spreadsheets',
-      'Unlimited writing documents',
-      '500,000 characters per document',
-      'Every extra Mini App, including Stocks',
-      'Stripe card checkout — Helios detects payment automatically',
+      '包含 Free 的全部内容',
+      '文稿不限篇数',
+      '每篇 500,000 字',
+      '完整 Create 体验',
+      'Stripe 银行卡付款 — Helios 自动检测开通',
     ],
-    mini_apps: ['Stocks', 'Docs', 'Budget', 'Pitch', 'Meetings', 'Essay', 'Gradebook', 'Planner'],
+    mini_apps: ['墨语', '随身本', '格间', '今日事', '搭子码'],
     limits: { documents: null, characters: 500_000 },
   },
 ]
@@ -166,7 +166,7 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
       <header>
         <span><CreditCard size={13} /> {mode === 'onboarding' ? 'PICK A PLAN' : 'PAYMENT'}</span>
         <h3 id="payment-tool-title">{mode === 'onboarding' ? 'Start on Free, or get more writing room with Orbit.' : 'Upgrade for more writing room. Pay with a Stripe card.'}</h3>
-        <p>Word, Excel, PowerPoint and OneNote stay on Free. Orbit is ¥68 a month for unlimited drafts, 500,000 characters per document, and the extra Mini Apps. Cards go through Stripe.</p>
+        <p>五个 Create 工具在 Free 可用。Orbit 每月 ¥68，文稿不限篇、每篇 50 万字。银行卡走 Stripe。</p>
       </header>
 
       {loading && <div className="payment-tool-status">Loading payment options…</div>}

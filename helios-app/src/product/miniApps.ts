@@ -149,17 +149,17 @@ export function editionFor(plan?: BillingPlanId | null): SuiteEdition {
   return plan === 'orbit' ? 'orbit' : 'free'
 }
 
-export function editionLabel(edition: SuiteEdition) {
-  return edition === 'orbit' ? 'Orbit' : 'Free'
+export function editionLabel(_edition: SuiteEdition) {
+  return 'Helios'
 }
 
-export function editionKicker(edition: SuiteEdition) {
-  return edition === 'orbit' ? 'ORBIT' : 'FREE'
+export function editionKicker(_edition: SuiteEdition) {
+  return 'FREE FOREVER'
 }
 
 export const WRITING_LIMITS = {
-  free: { documents: 60, characters: 40_000 },
-  orbit: { documents: null as number | null, characters: 500_000 },
+  free: { documents: null as number | null, characters: null as number | null },
+  orbit: { documents: null as number | null, characters: null as number | null },
 }
 
 export function editionBlurb(_edition: SuiteEdition) {
