@@ -10,8 +10,8 @@ export function UpgradeModal() {
       <div className="plan-picker-panel">
         <header>
           <span><Gift size={14} /> FREE FOREVER</span>
-          <h1 id="upgrade-title">无需升级</h1>
-          <p>Helios Space 完全免费。没有 Orbit，也没有付费墙。</p>
+          <h1 id="upgrade-title">No upgrade needed</h1>
+          <p>Helios Space is completely free. There is no Orbit, and no paywall.</p>
           <button
             type="button"
             className="upgrade-modal-close"

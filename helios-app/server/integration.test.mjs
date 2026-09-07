@@ -132,7 +132,7 @@ async function run() {
   )
   assert.match(
     normalizeHeliosAssistantReply('I am not real, so I cannot actually do that.', { hasProject: true, canEdit: true }),
-    /真实 AI 功能/,
+    /real AI feature/,
   )
   assert.match(
     normalizeHeliosAssistantReply('我只是一个语言模型，不能真正修改。', { hasConversation: true }),
@@ -550,7 +550,7 @@ async function run() {
     content: JSON.stringify({
       schema: 'helios-workspace-v1',
       appKind: 'word-docs',
-      data: { html: '<p>' + '字'.repeat(5000) + '</p>' },
+      data: { html: '<p>' + 'x'.repeat(5000) + '</p>' },
     }),
   })
   expectStatus(longDraft, 200, 'free forever has no writing character cap')

@@ -8,17 +8,17 @@ export function PaymentTool({ mode = 'settings' }: { mode?: 'settings' | 'onboar
       <header>
         <span><Gift size={13} /> FREE FOREVER</span>
         <h3 id="payment-tool-title">
-          {mode === 'onboarding' ? 'Helios Space 完全免费' : '无需付款'}
+          {mode === 'onboarding' ? 'Helios Space is completely free' : 'No payment needed'}
         </h3>
-        <p>没有套餐，没有升级。创建即可使用全部 Create、Space 与 Messages。</p>
+        <p>No plans, no upgrades. Create an account and use all of Create, Space, and Messages.</p>
       </header>
       <ul className="payment-free-points">
-        <li><Check size={14} /> 墨语、随身本、格间、今日事、搭子码</li>
-        <li><Check size={14} /> 文稿不限篇数与字数</li>
-        <li><Check size={14} /> 无需绑卡</li>
+        <li><Check size={14} /> Writing, Notebook, Sheets, Today Tasks, Buddy Code</li>
+        <li><Check size={14} /> Unlimited documents and characters</li>
+        <li><Check size={14} /> No card required</li>
       </ul>
       <div className="payment-current-note">
-        <Sparkles size={14} /> 你已经在免费的 Helios Space 里。
+        <Sparkles size={14} /> You are already in free Helios Space.
       </div>
     </div>
   )

@@ -310,17 +310,17 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
             <article className="pricing-card is-child" data-reveal>
               <span><Gift size={15} /> FREE FOREVER</span>
               <h3>Helios Space</h3>
-              <b>¥0 <small>完全免费</small></b>
-              <p>没有套餐，没有升级。创建即可使用全部能力。</p>
+              <b>$0 <small>completely free</small></b>
+              <p>No plans, no upgrades. Create an account and use everything.</p>
               <ul>
-                <li><Check size={13} /> 墨语、随身本、格间、今日事、搭子码</li>
-                <li><Check size={13} /> Space 动态与协作</li>
+                <li><Check size={13} /> Writing, Notebook, Sheets, Today Tasks, Buddy Code</li>
+                <li><Check size={13} /> Space feed and collaboration</li>
                 <li><Check size={13} /> Messages</li>
-                <li><Check size={13} /> 文稿不限篇数与字数</li>
-                <li><Check size={13} /> 无需绑卡</li>
+                <li><Check size={13} /> Unlimited documents and characters</li>
+                <li><Check size={13} /> No card required</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                免费开始 <ArrowRight size={15} />
+                Start free <ArrowRight size={15} />
               </button>
             </article>
           </div>

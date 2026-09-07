@@ -108,7 +108,7 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
           <button type="button" onClick={() => onAskHelios('Check this document for grammar, clarity, structure and citation gaps')} className="writing-helios-action"><Sparkles size={14} /> Grammar & clarity</button>
         </>}
         <span className={'writing-usage' + (characterRatio >= 1 ? ' is-over' : characterRatio >= 0.85 ? ' is-warn' : '')}>
-          {characterUsed.toLocaleString()} 字
+          {characterUsed.toLocaleString()} chars
         </span>
       </header>
 
