@@ -241,6 +241,19 @@ body {
   50%       { opacity: 1; transform: translateY(-3px); }
 }
 
+.helios-typing-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helios-typing-dot { animation: none; opacity: 0.7; }
+}
+
+.motion-reduced .helios-typing-dot {
+  animation: none;
+  opacity: 0.7;
+}
+
 /* ── Elevation (P339, P361) ── */
 .elevation-1 { border: 1px solid var(--helios-border); }
 .elevation-2 { box-shadow: 0 8px 24px rgba(0,0,0,.18); }

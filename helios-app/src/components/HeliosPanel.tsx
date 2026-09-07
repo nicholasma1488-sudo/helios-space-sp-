@@ -432,8 +432,11 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
             <div className="px-3 py-3 rounded-2xl flex items-center gap-1.5"
               style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)' }}>
               {[0, 1, 2].map(i => (
-                <div key={i} className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: 'var(--helios-muted)', animationName: 'pulse-dot', animationDuration: '1.2s', animationTimingFunction: 'ease-in-out', animationIterationCount: 'infinite', animationDelay: i === 0 ? '0s' : i === 1 ? '0.18s' : '0.36s' }} />
+                <div key={i} className="w-1.5 h-1.5 rounded-full helios-typing-dot"
+                  style={{
+                    background: 'var(--helios-muted)',
+                    animationDelay: i === 0 ? '0s' : i === 1 ? '0.18s' : '0.36s',
+                  }} />
               ))}
             </div>
             <span className="sr-only" aria-live="polite">Helios is thinking</span>

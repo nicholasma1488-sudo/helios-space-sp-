@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AppWindow, Bookmark, ChevronDown, Code, FileText, Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal, PenLine, Plus, Repeat2, Search, Send, Share, Sparkles, Sun, Trash2, Users, X, Zap, Image as ImageIcon,
+  AppWindow, Bookmark, ChevronDown, FileText, Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal, PenLine, Plus, Repeat2, Search, Send, Share, Sparkles, Sun, Trash2, Users, X, Zap, Image as ImageIcon,
 } from 'lucide-react'
 import type { Comment, Post, SolarSummary, User } from '../api'
 import { api, type LiveSession } from '../api'
@@ -380,41 +380,7 @@ export function LifestyleView({ currentUser }: Props) {
             <button type="button" className={savedOnly ? 'is-active' : ''} onClick={() => setSavedOnly(true)}>
               <Bookmark size={17} /><span>Bookmarks</span>
             </button>
-            <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>
-              <AppWindow size={17} /><span>Create</span>
-            </button>
           </nav>
-
-          <div className="lifestyle-side-section">
-            <span>EXPLORE BY MOMENT</span>
-            {CATEGORIES.slice(1).map(item => (
-              <button
-                key={item.id}
-                type="button"
-                className={categoryFilter === item.id ? 'is-active' : ''}
-                onClick={() => setCategoryFilter(categoryFilter === item.id ? 'all' : item.id)}
-              >
-                <i style={{ background: item.color + '20', color: item.color }}>{item.icon}</i>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {state.projects.length > 0 && (
-            <div className="lifestyle-side-section project-shortcuts">
-              <span>YOUR PROJECTS</span>
-              {state.projects.slice(0, 4).map(project => (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => dispatch({ type: 'OPEN_CODE_EDITOR', projectId: project.id })}
-                >
-                  <i><FolderGit2 size={14} /></i>
-                  <span>{project.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </aside>
 
         <main className="lifestyle-feed twitter-feed" aria-live="polite">
@@ -433,9 +399,8 @@ export function LifestyleView({ currentUser }: Props) {
                   </button>
                 </div>
                 <div className="composer-quick-actions">
-                  <button type="button" onClick={() => { setPostCategory('code'); setComposerOpen(true) }}><Code size={16} /> Milestone</button>
-                  <button type="button" onClick={() => { setPostCategory('activity'); setComposerOpen(true) }}><Heart size={16} /> Life moment</button>
-                  <button type="button" onClick={() => { setPostCategory('reflection'); setComposerOpen(true) }}><PenLine size={16} /> Reflection</button>
+                  <button type="button" onClick={() => { setPostCategory('reflection'); setComposerOpen(true) }}><PenLine size={16} /> 动态</button>
+                  <button type="button" onClick={() => { setPostCategory('activity'); setComposerOpen(true) }}><Zap size={16} /> 开播</button>
                 </div>
               </>
             ) : (
@@ -470,7 +435,7 @@ export function LifestyleView({ currentUser }: Props) {
                   ))}
                 </div>
                 <div className="composer-kind-row" role="group" aria-label="What you are sharing">
-                  {([['text', 'Text'], ['project', 'Project'], ['mini-app', 'Mini App'], ['live', '开播协作']] as const).map(([id, label]) => (
+                  {([['text', '文字'], ['project', '作品'], ['live', '开播']] as const).map(([id, label]) => (
                     <button type="button" key={id} aria-pressed={postKind === id} onClick={() => setPostKind(id)}>{label}</button>
                   ))}
                 </div>
@@ -615,17 +580,6 @@ export function LifestyleView({ currentUser }: Props) {
               <span><strong>{solar.next_threshold ? Math.max(0, solar.next_threshold - solar.total) : 0}</strong> 到下一阶</span>
             </div>
             <p className="solar-integrity-note">在 Space 分享进度，邀请 WorkBuddy 一起协作。</p>
-          </section>
-
-          <section className="lifestyle-right-card">
-            <header><strong>Explore a different rhythm</strong><small>Switch the feed moment</small></header>
-            {CATEGORIES.slice(1, 5).map(item => (
-              <button type="button" key={item.id} onClick={() => setCategoryFilter(item.id)}>
-                <i style={{ background: item.color + '1a', color: item.color }}>{item.icon}</i>
-                <span><strong>{item.label}</strong><small>See recent {item.label.toLowerCase()} updates</small></span>
-                <span>›</span>
-              </button>
-            ))}
           </section>
 
           <section className="lifestyle-app-callout liquid-glass">

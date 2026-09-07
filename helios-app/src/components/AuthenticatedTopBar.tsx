@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, Compass, FolderGit2, MessageCircle, Radio, Search, Sparkles, User, Users, X,
+  Bell, FolderGit2, MessageCircle, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults } from '../api'
 import { getSpaceDefinition } from '../product/catalog'
@@ -144,11 +144,6 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
           <i />{activeSpace.name}
         </span>
-      </nav>
-
-      <nav className="topbar-destination-nav" aria-label="Fast destinations">
-        <button type="button" className={state.view === 'apps' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}><Compass size={15} /><span>Create</span></button>
-        <button type="button" className={state.view === 'lifestyle' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'lifestyle' })}><Radio size={15} /><span>Space</span></button>
       </nav>
 
       <div className="topbar-actions">

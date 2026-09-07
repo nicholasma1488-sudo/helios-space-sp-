@@ -113,7 +113,9 @@ export function ChatView() {
     }
   }, [activeId, loadConversations, loadMessages])
 
-  useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length])
+  useEffect(() => {
+    messagesEnd.current?.scrollIntoView({ behavior: state.reducedMotion ? 'auto' : 'smooth' })
+  }, [messages.length, state.reducedMotion])
 
   function selectTab(next: Conversation['kind']) {
     setTab(next)

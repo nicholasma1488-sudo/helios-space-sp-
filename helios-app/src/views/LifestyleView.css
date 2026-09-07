@@ -1767,7 +1767,11 @@
 .solar-integrity-note { margin: 12px 0 0; color: var(--helios-muted); font-size: 8px; line-height: 1.5; text-align: center; }
 .composer-kind-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 8px; }
 .composer-kind-row button { min-height: 30px; padding: 0 10px; border: 1px solid var(--helios-border); border-radius: 999px; background: transparent; color: var(--helios-muted); font: inherit; font-size: 9px; cursor: pointer; }
-.composer-kind-row button[aria-pressed='true'] { border-color: rgba(133,118,245,.4); background: rgba(133,118,245,.12); color: var(--helios-text); }
+.composer-kind-row button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--helios-accent) 40%, var(--glass-stroke));
+  background: color-mix(in srgb, var(--helios-accent) 12%, white);
+  color: var(--helios-text);
+}
 .post-project-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .post-author-button { padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
 

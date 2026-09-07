@@ -148,9 +148,6 @@ export function HomeView() {
               <button type="button" className="home-btn-primary liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>
                 <Plus size={16} /> Create
               </button>
-              <button type="button" className="liquid-glass-btn home-btn-secondary" onClick={() => setShowNewProject(true)}>
-                <FolderGit2 size={16} /> 新建文件
-              </button>
             </div>
           </header>
 
