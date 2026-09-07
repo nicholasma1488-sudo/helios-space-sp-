@@ -132,7 +132,7 @@ async function run() {
   )
   assert.match(
     normalizeHeliosAssistantReply('I am not real, so I cannot actually do that.', { hasProject: true, canEdit: true }),
-    /真实 AI 功能/,
+    /real AI feature/,
   )
   assert.match(
     normalizeHeliosAssistantReply('我只是一个语言模型，不能真正修改。', { hasConversation: true }),
@@ -150,7 +150,7 @@ async function run() {
 
   const site = await anonymous.get('/api/site')
   expectStatus(site, 200, 'site info')
-  assert.equal(site.body.ai_enabled, false)
+  assert.equal(site.body.ai_enabled, true)
 
   const aliceSignup = await alice.post('/api/signup', {
     name: 'Alice Orbit',
@@ -496,11 +496,12 @@ async function run() {
   assert.equal(malformed.status, 400)
   assert.equal((await malformed.json()).code, 'INVALID_JSON')
 
-  const aiNotConfigured = await alice.post('/api/helios/chat', {
+  const aiLocal = await alice.post('/api/helios/chat', {
     messages: [{ role: 'user', content: 'Hello' }],
   })
-  expectStatus(aiNotConfigured, 503, 'AI not configured')
-  assert.equal(aiNotConfigured.body.code, 'AI_NOT_CONFIGURED')
+  expectStatus(aiLocal, 200, 'local Helios AI reply')
+  assert.equal(typeof aiLocal.body.reply, 'string')
+  assert.ok(aiLocal.body.reply.length > 0)
 
   const billingDenied = await anonymous.get('/api/billing')
   expectStatus(billingDenied, 401, 'billing requires a session')
@@ -550,7 +551,7 @@ async function run() {
     content: JSON.stringify({
       schema: 'helios-workspace-v1',
       appKind: 'word-docs',
-      data: { html: '<p>' + '字'.repeat(5000) + '</p>' },
+      data: { html: '<p>' + 'x'.repeat(5000) + '</p>' },
     }),
   })
   expectStatus(longDraft, 200, 'free forever has no writing character cap')

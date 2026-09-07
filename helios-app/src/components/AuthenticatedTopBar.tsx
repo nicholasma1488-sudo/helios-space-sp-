@@ -140,7 +140,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
 
       <nav className="topbar-context-nav" aria-label="Space">
         <span className="topbar-space-brand" style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>Space</span>
-        <span style={{ color: 'var(--helios-muted)', fontSize: 12 }}>社交协作</span>
+        <span style={{ color: 'var(--helios-muted)', fontSize: 12 }}>Social collaboration</span>
         <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
           <i />{activeSpace.name}
         </span>
@@ -165,7 +165,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
           <div className="global-search-input"><Search size={17} /><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Spaces, people, Projects and shared work" aria-label="Search" /><button type="button" onClick={() => setOpenMenu(null)} aria-label="Close search"><X size={15} /></button></div>
           <div className="global-search-results" aria-live="polite">
             {query.trim().length < 2 && <SearchEmpty icon={<Sparkles size={19} />} text="Search only returns work you are allowed to discover." />}
-            {query.trim().length >= 2 && searching && <SearchEmpty icon={<Sparkles size={19} />} text="正在搜索…" />}
+            {query.trim().length >= 2 && searching && <SearchEmpty icon={<Sparkles size={19} />} text="Searching…" />}
             {query.trim().length >= 2 && !searching && searchCount === 0 && <SearchEmpty icon={<Search size={19} />} text="No permitted results found." />}
             {results.spaces.length > 0 && <ResultGroup title="Spaces">{results.spaces.map(space => <button key={space.id} onClick={() => openSpace(space.id)}><Users size={14} /><span><strong>{space.name}</strong><small>{space.kind}</small></span></button>)}</ResultGroup>}
             {results.projects.length > 0 && <ResultGroup title="Projects">{results.projects.map(project => <button key={project.id} onClick={() => void openProject(project.id)}><FolderGit2 size={14} /><span><strong>{project.name}</strong><small>{project.space_id} · {project.app_kind}</small></span></button>)}</ResultGroup>}

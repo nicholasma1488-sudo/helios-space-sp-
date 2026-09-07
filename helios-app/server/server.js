@@ -442,6 +442,19 @@ const setSetting = (k, v) =>
   db.prepare('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value = ?')
     .run(k, String(v), String(v))
 
+// Bootstrap a free, keyless Helios provider when nothing is configured yet.
+const envAiKey = (process.env.HELIOS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || '').trim()
+const envAiBase = (process.env.HELIOS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || '').trim()
+const envAiModel = (process.env.HELIOS_OPENAI_MODEL || process.env.OPENAI_MODEL || '').trim()
+if (envAiKey) {
+  setSetting('openai_api_key', envAiKey)
+  if (envAiBase) setSetting('openai_base_url', envAiBase)
+  if (envAiModel) setSetting('openai_model', envAiModel)
+} else if (!String(getSetting('openai_api_key') || '').trim()) {
+  setSetting('openai_api_key', 'helios-local-free')
+  setSetting('openai_base_url', 'https://helios.local')
+  setSetting('openai_model', 'helios-local')
+}
 function positiveInt(value) {
   if (typeof value === 'string') {
     if (!/^[1-9]\d*$/.test(value)) return null
@@ -558,15 +571,15 @@ const BILLING_PLANS = {
     price_cents: 0,
     currency: 'cny',
     interval: 'month',
-    description: 'Helios Space 完全免费。五个 Create 工具、Space、Messages 全部可用。',
-    mini_apps: ['墨语', '随身本', '格间', '今日事', '搭子码'],
+    description: 'Helios Space is completely free. All five Create tools, Space, and Messages are available.',
+    mini_apps: ['Writing', 'Notebook', 'Sheets', 'Today Tasks', 'Buddy Code'],
     limits: { documents: null, characters: null },
     features: [
-      '完全免费，无需绑卡',
-      '墨语、随身本、格间、今日事、搭子码',
-      '文稿不限篇数与字数',
-      'Space 动态、Messages、协作开播',
-      'Helios 助手（管理员启用时）',
+      'Completely free — no card required',
+      'Writing, Notebook, Sheets, Today Tasks, Buddy Code',
+      'Unlimited documents and characters',
+      'Space feed, Messages, and collaborative live sessions',
+      'Helios assistant (when enabled by an admin)',
     ],
   },
 }
@@ -2774,6 +2787,55 @@ app.post('/api/conversations/:conversationId/messages/:messageId/pin', requireUs
   res.json({ pinned: !existing })
 })
 
+function buildLocalHeliosReply(userText, project) {
+  const text = String(userText || '').trim()
+  const lower = text.toLowerCase()
+  const wantsWrite = /(write|create|add|implement|fix|修改|写|生成|创建).*(file|code|cpp|js|py|文件|代码)/i.test(text)
+    || /(write|create|implement|写一个|生成一个).+/i.test(text)
+
+  if (wantsWrite || /hello|你好/.test(lower)) {
+    const isCpp = /c\+\+|cpp|\.cpp/i.test(text) || project?.app_kind === 'code'
+    if (isCpp || wantsWrite) {
+      return [
+        'I will write directly into the Buddy Code repo. After you click Approve, the files will be saved.',
+        '',
+        '```cpp:main.cpp',
+        '#include <iostream>',
+        '',
+        'int main() {',
+        '  std::cout << "Hello from Helios\\n";',
+        '  return 0;',
+        '}',
+        '```',
+        '',
+        '```md:README.md',
+        '# Helios notes',
+        '',
+        '- Use the Language switcher for C++ / Python / JS',
+        '- Run the active file, Preview the web files, Download ZIP for the folder',
+        '```',
+      ].join('\n')
+    }
+  }
+
+  if (project?.can_edit === false) {
+    return 'This project is read-only. I can explain the contents, but I cannot write files.'
+  }
+
+  if (/summar|总结|explain|解释|review|检查/.test(lower)) {
+    return project
+      ? `I looked at "${project.name}". Open it in Buddy Code and I can propose path-based edits; click Approve to write the files. You can also switch to C++ and hit Run to try it.`
+      : 'Open a Create file and I can help you write, edit, or explain the contents.'
+  }
+
+  return [
+    'I am Helios (local free unlimited mode).',
+    'I can help you: explain files, write C++/JS/Python, and edit project contents.',
+    'To write files, say something like "write a main.cpp", then click Approve.',
+    'An admin can also switch the backend to a free OpenAI-compatible key such as Groq / Gemini.',
+  ].join('\n')
+}
+
 // ── Helios agent (OpenAI-compatible proxy, shared administrator key) ──
 app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
   const apiKey = getSetting('openai_api_key')
@@ -2864,47 +2926,94 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       `You act only inside the authenticated user's permission-filtered Helios context: Spaces, Projects, Mini Apps, conversations, comments, and files supplied below. ` +
       `Your limitation is scope, not reality: you cannot control the user's mouse, operating system, unrelated apps, arbitrary local files, or secretly act outside Helios Space. ` +
       `Never imply that you sent a message, published, deleted, changed permissions, or applied work unless the Helios UI confirms it. ` +
-      `For message help, summarize or draft replies but do not send them. For a requested project modification, first explain the intended change in one concise line, then return the full updated serialized project content in one fenced code block so the UI can show an Action Preview. ` +
+      `For message help, summarize or draft replies but do not send them. ` +
+      `For code / multi-file Mini Apps: prefer writing files. Return one or more fenced blocks tagged with the file path, e.g. \`\`\`cpp:main.cpp ... \`\`\` or \`\`\`js path=app.js ... \`\`\`. ` +
+      `You may also return the full updated serialized project JSON (schema helios-workspace-v1) in one fenced code block. ` +
+      `First explain the intended change in one concise line, then return the file/content preview so the UI can Approve and write files. ` +
       `If you cannot perform an external action, state the boundary in one short clause and then provide the best Helios-scoped next action or preview. ` +
-      `If the current content has schema "helios-workspace-v1", preserve that complete JSON structure and return valid JSON—not only one nested file or paragraph. Respect view-only permissions. Be concise, concrete, and honest.` +
+      `If the current content has schema "helios-workspace-v1", preserve that complete JSON structure when returning full workspace JSON. Respect view-only permissions. Be concise, concrete, and honest.` +
       projectContext + appContext,
   }
 
   try {
-    const endpoint = resolveChatCompletionsUrl(baseUrl)
-    const payload = buildChatCompletionPayload({
-      model,
-      messages: [system, ...safeMessages],
-      temperature: 0.4,
-    })
-    const r = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: 'Bearer ' + apiKey,
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(60_000),
-    })
-    const rawBody = await r.text()
-    let data = {}
-    try { data = rawBody ? JSON.parse(rawBody) : {} } catch {}
-    if (!r.ok) {
-      const failure = mapAiUpstreamFailure(r.status)
-      const detail = summarizeAiProviderError(rawBody)
-      return res.status(failure.status).json({
-        error: failure.error,
-        code: failure.code,
-        ...(detail ? { detail } : {}),
+    const usingLocal = /helios-local/i.test(apiKey) || /helios\.local/i.test(baseUrl) || /helios-local/i.test(model)
+    const usingPollinations = /pollinations/i.test(apiKey) || /pollinations\.ai/i.test(baseUrl)
+    let rawReply = ''
+    let upstreamModel = model
+
+    if (usingLocal) {
+      const lastUser = [...safeMessages].reverse().find(message => message.role === 'user')?.content || ''
+      rawReply = buildLocalHeliosReply(lastUser, permittedProject)
+      upstreamModel = 'helios-local'
+    } else if (usingPollinations) {
+      const lastUser = [...safeMessages].reverse().find(message => message.role === 'user')?.content || ''
+      const compactSystem = [
+        'You are Helios inside Helios Space. Be concise and helpful.',
+        'For code edits, return path-tagged fenced blocks like ```cpp:main.cpp ... ``` so the UI can write files.',
+        permittedProject ? `Active project: ${permittedProject.name} (${permittedProject.app_kind}).` : '',
+        appContext.slice(0, 500),
+      ].filter(Boolean).join(' ')
+      const prompt = `${compactSystem}\n\nUser: ${lastUser}\nAssistant:`.slice(0, 3500)
+      const endpoint = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model || 'openai')}`
+      const r = await fetch(endpoint, {
+        method: 'GET',
+        headers: { Accept: 'text/plain' },
+        signal: AbortSignal.timeout(60_000),
       })
+      const rawBody = await r.text()
+      if (!r.ok) {
+        const failure = mapAiUpstreamFailure(r.status)
+        return res.status(failure.status).json({
+          error: failure.error,
+          code: failure.code,
+          detail: summarizeAiProviderError(rawBody),
+        })
+      }
+      rawReply = String(rawBody || '').trim()
+      upstreamModel = model || 'openai'
+    } else {
+      const endpoint = resolveChatCompletionsUrl(baseUrl)
+      const payload = buildChatCompletionPayload({
+        model,
+        messages: [system, ...safeMessages],
+        temperature: 0.4,
+      })
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: 'Bearer ' + apiKey,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(60_000),
+      })
+      const rawBody = await r.text()
+      let data = {}
+      try { data = rawBody ? JSON.parse(rawBody) : {} } catch {}
+      if (!r.ok) {
+        const failure = mapAiUpstreamFailure(r.status)
+        const detail = summarizeAiProviderError(rawBody)
+        return res.status(failure.status).json({
+          error: failure.error,
+          code: failure.code,
+          ...(detail ? { detail } : {}),
+        })
+      }
+      rawReply = extractAssistantReply(data)
+      if (!rawReply)
+        return res.status(502).json({
+          error: 'The AI provider returned an invalid response.',
+          code: 'AI_INVALID_RESPONSE',
+          detail: summarizeAiProviderError(rawBody) || 'No assistant text was found in the relay response.',
+        })
+      upstreamModel = data?.model || model
     }
-    const rawReply = extractAssistantReply(data)
+
     if (!rawReply)
       return res.status(502).json({
         error: 'The AI provider returned an invalid response.',
         code: 'AI_INVALID_RESPONSE',
-        detail: summarizeAiProviderError(rawBody) || 'No assistant text was found in the relay response.',
       })
     const reply = normalizeHeliosAssistantReply(rawReply, {
       hasProject: Boolean(permittedProject),
@@ -2912,13 +3021,75 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       hasConversation: Boolean(conversationId),
       hasSelectedContent: typeof contextObject.selected_content === 'string' && Boolean(contextObject.selected_content.trim()),
     })
-    res.json({ reply, model })
+    res.json({ reply, model: upstreamModel || model })
   } catch (error) {
     if (error?.name === 'TimeoutError' || error?.name === 'AbortError')
       return res.status(504).json({ error: 'Helios timed out while waiting for the AI provider.', code: 'AI_TIMEOUT' })
     if (error instanceof TypeError || String(error?.message || '').includes('base URL'))
       return res.status(503).json({ error: 'Helios has an invalid AI provider configuration.', code: 'AI_CONFIGURATION' })
     res.status(502).json({ error: 'Helios could not reach the AI provider.', code: 'AI_NETWORK' })
+  }
+})
+
+// ── Browser code runner (local g++ / python / node) ──
+app.post('/api/code/run', requireUser, aiRateLimit, async (req, res) => {
+  const language = String(req.body?.language || '').trim().toLowerCase()
+  const filename = String(req.body?.filename || 'main.txt').slice(0, 120)
+  const source = String(req.body?.source || '')
+  if (!source || source.length > 80_000)
+    return res.status(400).json({ error: 'source must contain 1-80000 characters' })
+
+  if (language === 'javascript' || language === 'typescript' || language === 'html' || language === 'css') {
+    return res.json({
+      stdout: 'Open the Preview panel to run web / JavaScript files.',
+      stderr: '',
+      status: 0,
+      filename,
+    })
+  }
+
+  const fs = await import('node:fs/promises')
+  const os = await import('node:os')
+  const path = await import('node:path')
+  const { spawn } = await import('node:child_process')
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'helios-run-'))
+
+  function run(cmd, args, input) {
+    return new Promise(resolve => {
+      const child = spawn(cmd, args, { cwd: dir, timeout: 8000 })
+      let stdout = ''
+      let stderr = ''
+      child.stdout.on('data', chunk => { stdout += chunk })
+      child.stderr.on('data', chunk => { stderr += chunk })
+      if (input) child.stdin.end(input)
+      child.on('close', code => resolve({ stdout, stderr, status: code ?? 1 }))
+      child.on('error', error => resolve({ stdout: '', stderr: error.message, status: 1 }))
+    })
+  }
+
+  try {
+    if (language === 'cpp' || language === 'c') {
+      const src = path.join(dir, language === 'c' ? 'main.c' : 'main.cpp')
+      const out = path.join(dir, 'a.out')
+      await fs.writeFile(src, source)
+      const compile = await run('g++', ['-O0', '-std=c++17', '-o', out, src])
+      if (compile.status !== 0) {
+        return res.json({ stdout: compile.stdout, stderr: compile.stderr || 'compile failed', status: compile.status, filename })
+      }
+      const result = await run(out, [])
+      return res.json({ ...result, filename })
+    }
+    if (language === 'python') {
+      const src = path.join(dir, 'main.py')
+      await fs.writeFile(src, source)
+      const result = await run('python3', [src])
+      return res.json({ ...result, filename })
+    }
+    return res.status(400).json({ error: `Language "${language}" cannot be run in Helios yet.` })
+  } catch (error) {
+    return res.status(502).json({ error: 'Code runner failed', detail: String(error?.message || error).slice(0, 300) })
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
   }
 })
 

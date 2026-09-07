@@ -164,7 +164,7 @@ function AppInner() {
     dispatch({ type: 'CLOSE_UPGRADE' })
     dispatch({
       type: 'PUSH_TOAST',
-      toast: { id: String(Date.now()), message: 'Helios Space 完全免费，无需升级。', tone: 'success' },
+      toast: { id: String(Date.now()), message: 'Helios Space is completely free — no upgrade needed.', tone: 'success' },
     })
   }, [state.upgradeOpen, dispatch])
 
