@@ -21,10 +21,11 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: var(--helios-solar);
+  color: var(--helios-muted);
   font-size: 11px;
-  font-weight: 750;
-  letter-spacing: .14em;
+  font-weight: 650;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .suite-top h1 {
@@ -460,4 +461,135 @@
   color: var(--helios-text2);
   font-size: 13px;
   line-height: 1.45;
+}
+
+/* Expanding Mini App picker (iPhone-model-style sheet) */
+.suite-hero-open {
+  display: flex;
+  width: calc(100% - 72px);
+  max-width: 720px;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 36px 10px;
+  padding: 16px 18px;
+  text-align: left;
+}
+.suite-hero-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--helios-accent) 14%, white);
+  color: var(--helios-accent);
+}
+.suite-hero-open span:last-child {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+.suite-hero-open strong { font-size: 16px; }
+.suite-hero-open small {
+  color: var(--helios-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.suite-picker {
+  backdrop-filter: blur(10px);
+  animation: suite-picker-fade 200ms var(--ease-enter, ease) both;
+}
+.suite-picker-panel {
+  width: min(720px, 100%) !important;
+  max-height: min(820px, calc(100vh - 48px));
+  overflow: auto;
+  padding: 20px !important;
+  border: 1px solid var(--glass-stroke, var(--helios-border)) !important;
+  border-radius: 22px !important;
+  background: var(--glass-bg-strong, var(--helios-surface)) !important;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, .34) !important;
+  animation: suite-picker-expand 340ms cubic-bezier(.2, .8, .2, 1) both;
+}
+.suite-picker-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.suite-picker-head h2 {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+.suite-picker-head small {
+  color: var(--helios-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+.suite-picker-head > button:last-child,
+.suite-picker-back {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--helios-muted);
+  cursor: pointer;
+}
+.suite-picker-head > button:last-child { margin-left: auto; }
+.suite-picker-lead {
+  margin: 12px 0 16px;
+  color: var(--helios-text2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.suite-picker-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.suite-picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 12px;
+  border: 1px solid var(--glass-stroke, var(--helios-border));
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .55);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+.suite-picker-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--helios-border));
+}
+.suite-picker-card strong { font-size: 14px; }
+.suite-picker-card small {
+  color: var(--helios-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.suite-guide-avatar { display: none !important; }
+.suite-create {
+  background: var(--helios-accent) !important;
+}
+@keyframes suite-picker-fade { from { opacity: 0; } }
+@keyframes suite-picker-expand {
+  from { opacity: 0; transform: scale(.88) translateY(18px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@media (max-width: 900px) {
+  .suite-hero-open {
+    width: calc(100% - 36px);
+    margin-left: 18px;
+    margin-right: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .suite-picker,
+  .suite-picker-panel,
+  .suite-picker-card { animation: none; transition: none; }
 }

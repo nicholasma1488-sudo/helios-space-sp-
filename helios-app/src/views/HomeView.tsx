@@ -165,9 +165,9 @@ export function HomeView() {
                 return (
                   <article key={project.id} className="home-file-card glass-lift">
                     <button type="button" className="home-file-main" onClick={() => openProject(project.id)}>
-                      <i style={{ background: app?.color || 'var(--helios-accent)' }}>{app?.guideEmoji || app?.letter || '📄'}</i>
+                      <i style={{ background: app?.color || 'var(--helios-accent)' }}>{app?.letter || '·'}</i>
                       <span>
-                        <small>{app?.name || 'File'}{app ? ` · ${app.guideName}` : ''}</small>
+                        <small>{app?.name || 'File'}</small>
                         <strong>{project.name}</strong>
                         <p>Updated {new Date(project.updated_at).toLocaleString()}</p>
                       </span>

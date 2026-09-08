@@ -177,3 +177,150 @@
   color: var(--helios-accent) !important;
 }
 .chat-thread-empty svg { color: var(--helios-accent) !important; }
+
+/* Attach as a real window (not a clipped absolute menu) */
+.chat-attach-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: end center;
+  padding: 16px 16px max(88px, env(safe-area-inset-bottom, 0px));
+  background: rgba(12, 14, 18, 0.34);
+  backdrop-filter: blur(8px);
+  animation: chat-attach-fade 180ms var(--ease-enter, ease) both;
+}
+.chat-composer {
+  position: relative;
+  isolation: isolate;
+}
+.chat-attach-window {
+  width: min(400px, calc(100vw - 32px));
+  max-height: min(440px, 68vh);
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--glass-stroke, var(--helios-border));
+  border-radius: 18px;
+  background: var(--glass-bg-strong, #f7f8fa);
+  box-shadow: var(--shadow-lift, 0 18px 48px rgba(0,0,0,.28));
+  color: var(--helios-text);
+  animation: chat-attach-expand 280ms cubic-bezier(.2,.8,.2,1) both;
+}
+.chat-attach-window > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.chat-attach-window > header small {
+  display: block;
+  color: var(--helios-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.chat-attach-window > header strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+}
+.chat-attach-window > header button {
+  border: 0;
+  background: transparent;
+  color: var(--helios-muted);
+  cursor: pointer;
+}
+.chat-attach-upload {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--glass-stroke, var(--helios-border));
+  border-radius: 12px;
+  background: rgba(255,255,255,.55);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.chat-attach-upload span { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
+.chat-attach-upload strong { font-size: 13px; }
+.chat-attach-upload small { color: var(--helios-muted); font-size: 11px; }
+.chat-attach-label {
+  margin: 0 0 6px;
+  color: var(--helios-muted) !important;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.chat-attach-list {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  overflow: auto;
+}
+.chat-attach-list > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.chat-attach-list > button:hover {
+  background: color-mix(in srgb, var(--helios-accent) 8%, transparent);
+}
+.chat-attach-list > button span {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-attach-list strong {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-attach-list small {
+  color: var(--helios-muted);
+  font-size: 11px;
+}
+.chat-attach-empty {
+  padding: 12px;
+  color: var(--helios-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.chat-project-attachment {
+  min-width: 0 !important;
+  max-width: 100%;
+  width: min(100%, 360px);
+}
+.chat-composer-box > button.is-active {
+  background: color-mix(in srgb, var(--helios-accent) 14%, transparent) !important;
+  color: var(--helios-accent) !important;
+}
+@keyframes chat-attach-fade { from { opacity: 0; } }
+@keyframes chat-attach-expand {
+  from { opacity: 0; transform: translateY(12px) scale(.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-attach-backdrop,
+  .chat-attach-window { animation: none; }
+}

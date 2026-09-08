@@ -1,7 +1,8 @@
 # Helios Space — Next Slice Plan
 
-Status: **plan only** (implementation follows this doc).  
-Goal: keep Lifestyle as the social core, fix the attachment UI bug, replace emoji/AI-feeling Create chrome with a calm Apple-style mini-app picker window.
+## Status: **in progress**
+
+Keep Lifestyle as the social core. Attachment UI is a real window. Create opens an expanding Mini App picker (iPhone-model style), without guide emojis.
 
 ---
 

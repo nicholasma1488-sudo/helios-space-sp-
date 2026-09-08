@@ -139,11 +139,13 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
       </div>
 
       <nav className="topbar-context-nav" aria-label="Space">
-        <span className="topbar-space-brand" style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>Space</span>
-        <span style={{ color: 'var(--helios-muted)', fontSize: 12 }}>Social collaboration</span>
-        <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
-          <i />{activeSpace.name}
-        </span>
+        <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })} aria-label="Open Create suite">
+          <span className="topbar-space-brand" style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>Space</span>
+          <span style={{ color: 'var(--helios-muted)', fontSize: 12 }}>Social collaboration</span>
+          <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
+            <i />{activeSpace.name}
+          </span>
+        </button>
       </nav>
 
       <div className="topbar-actions">

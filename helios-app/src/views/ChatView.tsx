@@ -7,6 +7,7 @@ import {
 import { api, type ChatMessage, type Conversation, type LiveSession, type Project } from '../api'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { askHeliosWithContext, openLiveSession, openProjectWorkspace } from '../product/flow'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
 import './ChatView.css'
 
@@ -39,9 +40,23 @@ export function ChatView() {
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
   const fileInput = useRef<HTMLInputElement>(null)
   const messagesEnd = useRef<HTMLDivElement>(null)
+  const attachPanelRef = useFocusTrap<HTMLDivElement>(showAttachments)
   const initialSelectionDone = useRef(false)
   const activeIdRef = useRef<number | null>(null)
   activeIdRef.current = activeId
+
+  useEffect(() => {
+    if (!showAttachments) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShowAttachments(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showAttachments])
+
+  useEffect(() => {
+    setShowAttachments(false)
+  }, [activeId])
 
   const loadConversations = useCallback(async () => {
     try {
@@ -232,10 +247,97 @@ export function ChatView() {
           </div>
 
           <form className="chat-composer" onSubmit={submit}>
-            {pending && <div className="chat-pending-attachment">{pending.type === 'project' ? <FolderGit2 size={15} /> : <File size={15} />}<span><small>{pending.type === 'project' ? 'PROJECT' : 'FILE'}</small><strong>{pending.label}</strong></span><button type="button" onClick={() => setPending(null)}><X size={14} /></button></div>}
-            {showAttachments && <div className="chat-attachment-menu"><header><strong>Share into this conversation</strong><button type="button" onClick={() => setShowAttachments(false)}><X size={13} /></button></header><button type="button" onClick={() => fileInput.current?.click()}><Paperclip size={15} /><span><strong>Upload a file</strong><small>Documents, images or project materials · up to 1 MB</small></span></button><p className="chat-attach-label">Shared Projects</p>{state.projects.slice(0, 6).map(project => <button type="button" key={project.id} onClick={() => { setPending({ type: 'project', id: project.id, label: project.name }); setShowAttachments(false) }}><FolderGit2 size={15} /><span><strong>{project.name}</strong><small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small></span></button>)}<p className="chat-attach-label">Shared Mini Apps</p>{state.projects.slice(0, 6).map(project => <button type="button" key={`app-${project.id}`} onClick={() => { setPending({ type: 'project', id: project.id, label: `${getMiniApp(project.app_kind).name} · ${project.name}` }); setShowAttachments(false) }}><Hash size={15} /><span><strong>{getMiniApp(project.app_kind).name}</strong><small>Opens the {project.name} workspace</small></span></button>)}</div>}
-            <div className="chat-composer-box"><button type="button" className={showAttachments ? 'is-active' : ''} onClick={() => setShowAttachments(value => !value)} aria-label="Attach file or Project"><Plus size={17} /></button><textarea value={draft} maxLength={4000} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} placeholder={`Message ${active.title}…`} /><button type="submit" disabled={sending || (!draft.trim() && !pending)}><Send size={15} /></button></div>
-            <small>Enter to send · Shift + Enter for a new line · significant Helios actions always require approval</small>
+            {pending && (
+              <div className="chat-pending-attachment">
+                {pending.type === 'project' ? <FolderGit2 size={15} /> : <File size={15} />}
+                <span>
+                  <small>{pending.type === 'project' ? 'PROJECT' : 'FILE'}</small>
+                  <strong>{pending.label}</strong>
+                </span>
+                <button type="button" onClick={() => setPending(null)} aria-label="Remove attachment"><X size={14} /></button>
+              </div>
+            )}
+            {showAttachments && (
+              <div
+                className="chat-attach-backdrop"
+                role="presentation"
+                onMouseDown={event => { if (event.target === event.currentTarget) setShowAttachments(false) }}
+              >
+                <div
+                  className="chat-attach-window"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="chat-attach-title"
+                  ref={attachPanelRef}
+                >
+                  <header>
+                    <div>
+                      <small>Attach</small>
+                      <strong id="chat-attach-title">Share into this conversation</strong>
+                    </div>
+                    <button type="button" onClick={() => setShowAttachments(false)} aria-label="Close attach window"><X size={15} /></button>
+                  </header>
+                  <button
+                    type="button"
+                    className="chat-attach-upload"
+                    onClick={() => { fileInput.current?.click(); setShowAttachments(false) }}
+                  >
+                    <Paperclip size={16} />
+                    <span>
+                      <strong>Upload a file</strong>
+                      <small>Documents or images · up to 1 MB</small>
+                    </span>
+                  </button>
+                  <p className="chat-attach-label">Projects</p>
+                  <div className="chat-attach-list">
+                    {state.projects.slice(0, 8).map(project => (
+                      <button
+                        type="button"
+                        key={project.id}
+                        onClick={() => {
+                          setPending({ type: 'project', id: project.id, label: project.name })
+                          setShowAttachments(false)
+                        }}
+                      >
+                        <FolderGit2 size={15} />
+                        <span>
+                          <strong>{project.name}</strong>
+                          <small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small>
+                        </span>
+                      </button>
+                    ))}
+                    {state.projects.length === 0 && (
+                      <div className="chat-attach-empty">No projects yet — create one in Create, then attach it here.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="chat-composer-box">
+              <button
+                type="button"
+                className={showAttachments ? 'is-active' : ''}
+                onClick={() => setShowAttachments(value => !value)}
+                aria-label="Attach file or Project"
+                aria-expanded={showAttachments}
+              >
+                <Plus size={17} />
+              </button>
+              <textarea
+                value={draft}
+                maxLength={4000}
+                onChange={event => setDraft(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                    event.currentTarget.form?.requestSubmit()
+                  }
+                }}
+                placeholder={`Message ${active.title}…`}
+              />
+              <button type="submit" disabled={sending || (!draft.trim() && !pending)}><Send size={15} /></button>
+            </div>
+            <small>Enter to send · Shift + Enter for a new line</small>
           </form>
         </>}
       </main>
