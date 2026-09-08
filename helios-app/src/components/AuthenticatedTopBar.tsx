@@ -5,6 +5,7 @@ import {
 import { api, type ApiNotification, type SearchResults } from '../api'
 import { getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
+import { TopBarCreatePanel, TopBarCreateTrigger } from './TopBarCreatePanel'
 import './AuthenticatedTopBar.css'
 
 type OpenMenu = 'search' | 'notifications' | 'profile' | null
@@ -14,6 +15,8 @@ const EMPTY_RESULTS: SearchResults = { projects: [], people: [], posts: [], live
 export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) {
   const { state, dispatch } = useApp()
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createAppId, setCreateAppId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS)
   const [searching, setSearching] = useState(false)
@@ -36,11 +39,27 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   }, [])
 
   useEffect(() => {
+    function onOpenCreate(event: Event) {
+      const detail = (event as CustomEvent<{ appId?: string }>).detail
+      setOpenMenu(null)
+      setCreateAppId(detail?.appId || null)
+      setCreateOpen(true)
+    }
+    window.addEventListener('helios-open-create-panel', onOpenCreate)
+    return () => window.removeEventListener('helios-open-create-panel', onOpenCreate)
+  }, [])
+
+  useEffect(() => {
     function closeOnOutside(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpenMenu(null)
+      if (!rootRef.current?.contains(event.target as Node) && !(event.target as HTMLElement)?.closest?.('.topbar-create-panel, .topbar-create-scrim')) {
+        setOpenMenu(null)
+      }
     }
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpenMenu(null)
+      if (event.key === 'Escape') {
+        if (createOpen) setCreateOpen(false)
+        else setOpenMenu(null)
+      }
     }
     window.addEventListener('pointerdown', closeOnOutside)
     window.addEventListener('keydown', closeOnEscape)
@@ -48,7 +67,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
       window.removeEventListener('pointerdown', closeOnOutside)
       window.removeEventListener('keydown', closeOnEscape)
     }
-  }, [])
+  }, [createOpen])
 
   useEffect(() => {
     if (openMenu === 'search') window.setTimeout(() => searchRef.current?.focus(), 80)
@@ -73,7 +92,19 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   }, [query])
 
   function toggle(menu: Exclude<OpenMenu, null>) {
+    setCreateOpen(false)
     setOpenMenu(current => current === menu ? null : menu)
+  }
+
+  function toggleCreate() {
+    setOpenMenu(null)
+    setCreateAppId(null)
+    setCreateOpen(current => !current)
+  }
+
+  function closeCreate() {
+    setCreateOpen(false)
+    setCreateAppId(null)
   }
 
   function openSpace(spaceId: string) {
@@ -138,14 +169,14 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         </button>
       </div>
 
-      <nav className="topbar-context-nav" aria-label="Space">
-        <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })} aria-label="Open Create suite">
-          <span className="topbar-space-brand" style={{ fontWeight: 700, letterSpacing: '-0.02em' }}>Space</span>
-          <span style={{ color: 'var(--helios-muted)', fontSize: 12 }}>Social collaboration</span>
-          <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
-            <i />{activeSpace.name}
-          </span>
-        </button>
+      <nav className="topbar-context-nav" aria-label="Mini Apps">
+        <TopBarCreateTrigger
+          open={createOpen}
+          onToggle={toggleCreate}
+          label="Create"
+          chip={activeSpace.name}
+          accent={activeSpace.accent}
+        />
       </nav>
 
       <div className="topbar-actions">
@@ -158,9 +189,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         </button>
       </div>
 
-      
-
-      
+      <TopBarCreatePanel open={createOpen} onClose={closeCreate} initialAppId={createAppId} />
 
       {openMenu === 'search' && (
         <div className="topbar-popover topbar-search-popover" role="dialog" aria-label="Global search">
