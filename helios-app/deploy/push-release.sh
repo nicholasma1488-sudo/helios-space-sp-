@@ -48,6 +48,7 @@ rsync -az --delete \
 
 echo "==> installing and activating"
 "${SSH[@]}" "$REMOTE" "set -e
+export PATH=/usr/local/bin:\$PATH
 cd /opt/helios-space/releases/${RELEASE}/server
 npm ci --omit=dev
 ln -sfn /opt/helios-space/releases/${RELEASE} /opt/helios-space/current
