@@ -108,9 +108,9 @@ function paintScreen(kind: 'feed' | 'code' | 'chat') {
   canvas.height = 480
   const ctx = canvas.getContext('2d')
   if (!ctx) return canvas
-  ctx.fillStyle = '#10151c'
+  ctx.fillStyle = '#f7f8fb'
   ctx.fillRect(0, 0, 768, 480)
-  ctx.fillStyle = '#161c24'
+  ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, 768, 44)
   ctx.fillStyle = '#ff5f57'
   ctx.beginPath(); ctx.arc(22, 22, 6, 0, Math.PI * 2); ctx.fill()
@@ -118,58 +118,60 @@ function paintScreen(kind: 'feed' | 'code' | 'chat') {
   ctx.beginPath(); ctx.arc(42, 22, 6, 0, Math.PI * 2); ctx.fill()
   ctx.fillStyle = '#28c840'
   ctx.beginPath(); ctx.arc(62, 22, 6, 0, Math.PI * 2); ctx.fill()
-  ctx.fillStyle = '#f4f6fb'
-  ctx.font = '600 18px Inter, sans-serif'
+  ctx.fillStyle = '#1c1917'
+  ctx.font = '600 18px Source Sans 3, sans-serif'
   ctx.fillText(kind === 'feed' ? 'Home' : kind === 'code' ? 'Web Code Editor' : 'Project Chat', 86, 28)
 
   if (kind === 'feed') {
     ;['Alex Morgan  @alexm', 'Lea Stone  @lea', 'Jordan  @jd'].forEach((name, index) => {
       const y = 78 + index * 128
-      ctx.fillStyle = '#1d9bf0'
+      ctx.fillStyle = index === 0 ? '#c96442' : '#5b8def'
       ctx.beginPath(); ctx.arc(48, y + 18, 18, 0, Math.PI * 2); ctx.fill()
-      ctx.fillStyle = '#f4f6fb'
-      ctx.font = '700 20px Inter, sans-serif'
+      ctx.fillStyle = '#1c1917'
+      ctx.font = '700 20px Source Sans 3, sans-serif'
       ctx.fillText(name, 78, y + 12)
-      ctx.fillStyle = '#c9d3de'
-      ctx.font = '400 18px Inter, sans-serif'
+      ctx.fillStyle = '#4b5563'
+      ctx.font = '400 18px Source Sans 3, sans-serif'
       ctx.fillText(index === 0 ? 'Shipped the orbit camera. The feed stays readable.' : 'Testing the uncomfortable assumption today.', 78, y + 42)
-      ctx.fillStyle = '#8b98a5'
-      ctx.font = '400 15px Inter, sans-serif'
+      ctx.fillStyle = '#6b7280'
+      ctx.font = '400 15px Source Sans 3, sans-serif'
       ctx.fillText('Reply   Repost   Like   Bookmark', 78, y + 74)
     })
   } else if (kind === 'code') {
-    ctx.fillStyle = '#0b0f14'
+    ctx.fillStyle = '#eef1f5'
     ctx.fillRect(0, 44, 168, 436)
-    ctx.fillStyle = '#8fd4ff'
-    ctx.font = '600 13px Inter, sans-serif'
+    ctx.fillStyle = '#c96442'
+    ctx.font = '600 13px Source Sans 3, sans-serif'
     ctx.fillText('FILES', 24, 72)
-    ctx.fillStyle = '#d7e3ef'
+    ctx.fillStyle = '#4b5563'
     ctx.font = '400 15px ui-monospace, monospace'
     ;['HeliosSpace.tsx', 'FeedHome.tsx', 'LiveRoom.tsx'].forEach((file, index) => {
       if (index === 0) {
-        ctx.fillStyle = 'rgba(79,195,247,.16)'
+        ctx.fillStyle = 'rgba(201,100,66,.12)'
         ctx.fillRect(12, 88, 144, 28)
       }
-      ctx.fillStyle = index === 0 ? '#8fd4ff' : '#8b98a5'
+      ctx.fillStyle = index === 0 ? '#c96442' : '#6b7280'
       ctx.fillText(file, 24, 108 + index * 34)
     })
-    ctx.fillStyle = '#c792ea'
+    ctx.fillStyle = '#c96442'
     ctx.font = '500 16px ui-monospace, monospace'
     ctx.fillText('export function HeliosSpace() {', 196, 96)
-    ctx.fillStyle = '#82aaff'
+    ctx.fillStyle = '#5b8def'
     ctx.fillText('  return <Feed />', 196, 128)
     ctx.fillText('}', 196, 160)
   } else {
-    ctx.fillStyle = '#1b2733'
+    ctx.fillStyle = '#eef1f5'
     ctx.fillRect(24, 72, 420, 64)
-    ctx.fillStyle = '#1d4f73'
+    ctx.fillStyle = '#5b8def'
     ctx.fillRect(300, 156, 440, 64)
-    ctx.fillStyle = '#1b2733'
+    ctx.fillStyle = '#eef1f5'
     ctx.fillRect(24, 240, 480, 64)
-    ctx.fillStyle = '#f4f6fb'
-    ctx.font = '400 16px Inter, sans-serif'
+    ctx.fillStyle = '#1c1917'
+    ctx.font = '400 16px Source Sans 3, sans-serif'
     ctx.fillText('Can we keep the drill notes next to the clip?', 40, 110)
+    ctx.fillStyle = '#fffaf7'
     ctx.fillText('Yes — I linked File tree → session-04.md', 318, 194)
+    ctx.fillStyle = '#1c1917'
     ctx.fillText('Helios summary: 2 tasks, 1 Live blocker.', 40, 278)
   }
   return canvas
@@ -183,15 +185,15 @@ function makePanel(kind: 'feed' | 'code' | 'chat', width: number, height: number
   const group = new THREE.Group()
   const plateMaterial = new THREE.MeshBasicMaterial({ map: texture, toneMapped: false, transparent: true, opacity: 0 })
   const plate = new THREE.Mesh(new THREE.PlaneGeometry(width, height), plateMaterial)
-  const frameMaterial = new THREE.LineBasicMaterial({ color: 0x8fd4ff, transparent: true, opacity: 0 })
+  const frameMaterial = new THREE.LineBasicMaterial({ color: 0x5b8def, transparent: true, opacity: 0 })
   const frame = new THREE.LineSegments(
     new THREE.EdgesGeometry(new THREE.BoxGeometry(width + 0.08, height + 0.08, 0.12)),
     frameMaterial,
   )
   const backMaterial = new THREE.MeshStandardMaterial({
-    color: 0x0b0f14,
-    metalness: 0.3,
-    roughness: 0.45,
+    color: 0xf7f8fb,
+    metalness: 0.08,
+    roughness: 0.62,
     transparent: true,
     opacity: 0,
   })
@@ -271,7 +273,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
 
     host.dataset.webgl = 'ready'
     try {
-    renderer.setClearColor(0x04060b, 1)
+    renderer.setClearColor(0xeceff3, 1)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.domElement.className = 'interactive-orbit-canvas'
@@ -290,10 +292,10 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const look = new THREE.Vector3(PATH[0].lx, PATH[0].ly, PATH[0].lz)
     camera.lookAt(look)
 
-    const ambient = new THREE.AmbientLight(0xb8c4ff, 0.42)
-    const keyLight = new THREE.PointLight(0x4fc3f7, 36, 140)
-    const fill = new THREE.PointLight(0x8576f5, 22, 110)
-    const rim = new THREE.PointLight(0xf2b84b, 14, 90)
+    const ambient = new THREE.AmbientLight(0xf4f6f8, 0.78)
+    const keyLight = new THREE.PointLight(0xc96442, 22, 140)
+    const fill = new THREE.PointLight(0x5b8def, 18, 110)
+    const rim = new THREE.PointLight(0xffffff, 10, 90)
     keyLight.position.set(-8, 6, 18)
     fill.position.set(10, -3, 8)
     rim.position.set(0, 8, -12)
@@ -302,10 +304,10 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const nebula = new THREE.Mesh(
       new THREE.SphereGeometry(160, 24, 24),
       new THREE.MeshBasicMaterial({
-        color: 0x140c28,
+        color: 0xeceff3,
         side: THREE.BackSide,
         transparent: true,
-        opacity: 0.94,
+        opacity: 0.98,
       }),
     )
     scene.add(nebula)
@@ -313,7 +315,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const rings = [8.5, 13, 19].map((radius, index) => {
       const ring = new THREE.Mesh(
         new THREE.TorusGeometry(radius, 0.016, 8, 96),
-        new THREE.MeshBasicMaterial({ color: index === 1 ? 0x8576f5 : 0x4fc3f7, transparent: true, opacity: 0.2 }),
+        new THREE.MeshBasicMaterial({ color: index === 1 ? 0xc96442 : 0x5b8def, transparent: true, opacity: 0.14 }),
       )
       ring.rotation.x = 1.22 + index * 0.16
       ring.rotation.y = index * 0.45
@@ -339,7 +341,7 @@ export function InteractiveOrbitScene({ phase, hostRef, windowRef, onInteract, c
     const glow = new THREE.Mesh(
       new THREE.PlaneGeometry(8.4, 5.6),
       new THREE.MeshBasicMaterial({
-        color: 0x4fc3f7,
+        color: 0x5b8def,
         transparent: true,
         opacity: 0,
         blending: THREE.AdditiveBlending,
