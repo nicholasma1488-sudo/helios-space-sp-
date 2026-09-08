@@ -1,8 +1,8 @@
 # Helios Space — Next Slice Plan
 
-## Status: **in progress**
+## Status: **ready to deploy**
 
-Keep Lifestyle as the social core. Attachment UI is a real window. Create opens an expanding Mini App picker (iPhone-model style), without guide emojis.
+Keep Lifestyle as the social core. Attachment UI is a real window. Create opens from the **top bar** as a docked half-screen expand (not a floating modal), without guide emojis.
 
 ---
 
