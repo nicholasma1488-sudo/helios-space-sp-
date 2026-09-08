@@ -53,45 +53,48 @@
   right: 0;
   bottom: 0;
   left: 72px;
-  z-index: 44;
+  z-index: 34;
   border: 0;
   background: rgba(16, 18, 24, 0);
   cursor: pointer;
-  transition: background 520ms cubic-bezier(.22, 1, .36, 1);
+  transition: background 640ms cubic-bezier(.22, 1, .36, 1);
 }
 
+.authenticated-topbar.is-create-open ~ * .topbar-create-scrim,
 .topbar-create-scrim.is-open {
-  background: rgba(16, 18, 24, 0.28);
-  backdrop-filter: blur(2px);
+  background: rgba(16, 18, 24, 0.22);
+  backdrop-filter: blur(1.5px);
 }
 
 .topbar-create-panel {
-  position: fixed;
-  top: 64px;
-  right: 0;
-  left: 72px;
-  z-index: 45;
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 36;
   height: 0;
+  margin: 0 -20px;
   overflow: hidden;
-  border-bottom: 1px solid transparent;
+  border-top: 1px solid transparent;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(236, 239, 243, 0.94)),
-    radial-gradient(900px 280px at 12% 0%, rgba(201, 100, 66, 0.12), transparent 55%),
-    radial-gradient(700px 240px at 88% 10%, rgba(91, 141, 239, 0.14), transparent 50%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 239, 243, 0.96)),
+    radial-gradient(900px 280px at 12% 0%, rgba(201, 100, 66, 0.10), transparent 55%),
+    radial-gradient(700px 240px at 88% 10%, rgba(91, 141, 239, 0.12), transparent 50%);
   box-shadow: none;
+  border-radius: 0;
   transform-origin: top center;
   transition:
-    height 680ms cubic-bezier(.22, 1, .36, 1),
-    border-color 480ms ease,
-    box-shadow 680ms cubic-bezier(.22, 1, .36, 1);
+    height 760ms cubic-bezier(.22, 1, .36, 1),
+    border-color 520ms ease;
 }
 
 .topbar-create-panel.is-open {
   height: min(50vh, 520px);
-  border-bottom-color: var(--glass-stroke, var(--helios-border));
-  box-shadow:
-    0 28px 60px rgba(28, 25, 23, 0.12),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.55);
+  border-top-color: color-mix(in srgb, var(--helios-border) 80%, transparent);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.authenticated-topbar.is-create-open {
+  z-index: 46;
+  box-shadow: 0 18px 40px rgba(28, 25, 23, 0.08);
 }
 
 .topbar-create-glow {
@@ -314,8 +317,7 @@
 }
 
 @media (max-width: 900px) {
-  .topbar-create-scrim,
-  .topbar-create-panel {
+  .topbar-create-scrim {
     left: 0;
   }
 

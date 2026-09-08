@@ -122,7 +122,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
         aria-label="Close Mini Apps"
         onClick={onClose}
       />
-      <div
+      <section
         className={'topbar-create-panel' + (entered ? ' is-open' : '')}
         id="topbar-create-panel"
         role="dialog"
@@ -217,7 +217,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
             </>
           )}
         </div>
-      </div>
+      </section>
     </>
   )
 }

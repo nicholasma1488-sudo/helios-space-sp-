@@ -162,7 +162,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   const searchCount = results.projects.length + results.people.length + results.posts.length + results.live.length + results.spaces.length
 
   return (
-    <header className={'authenticated-topbar' + (compact ? ' is-compact' : '')} ref={rootRef}>
+    <header className={'authenticated-topbar' + (compact ? ' is-compact' : '') + (createOpen ? ' is-create-open' : '')} ref={rootRef}>
       <div className="topbar-brand-cluster">
         <button type="button" className="topbar-brand" onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })} aria-label="Helios Space home">
           <span>✦</span><strong>helios<span>space</span></strong>
