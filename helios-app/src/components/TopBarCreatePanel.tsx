@@ -294,14 +294,10 @@ export function TopBarCreateTrigger({
   open,
   onToggle,
   label,
-  chip,
-  accent,
 }: {
   open: boolean
   onToggle: () => void
   label: string
-  chip: string
-  accent: string
 }) {
   return (
     <button
@@ -316,11 +312,6 @@ export function TopBarCreateTrigger({
       <span className="topbar-create-trigger-chevron" aria-hidden="true">
         {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
       </span>
-      {chip ? (
-        <span className="topbar-context-chip" style={{ '--space-accent': accent } as React.CSSProperties}>
-          <i />{chip}
-        </span>
-      ) : null}
     </button>
   )
 }

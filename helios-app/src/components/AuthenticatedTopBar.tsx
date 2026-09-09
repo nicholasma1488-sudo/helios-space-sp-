@@ -3,7 +3,6 @@ import {
   Bell, ChevronDown, ChevronUp, FolderGit2, MessageCircle, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults } from '../api'
-import { getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
 import { TopBarCreatePanel, TopBarCreateTrigger } from './TopBarCreatePanel'
 import './AuthenticatedTopBar.css'
@@ -35,7 +34,6 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   const rootRef = useRef<HTMLElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const activeSpace = getSpaceDefinition(state.activeSpaceId)
   const unread = notifications.filter(item => !item.read).length
 
   function setTopbarCollapsedPersist(next: boolean) {
@@ -225,8 +223,6 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
           open={createOpen}
           onToggle={toggleCreate}
           label="Mini App"
-          chip={activeSpace.name}
-          accent={activeSpace.accent}
         />
       </nav>
 
