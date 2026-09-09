@@ -2,9 +2,9 @@
 
 Helios Space is a React application for creating projects and sharing progress. Accounts, projects, posts, audiences, and reactions are persisted in SQLite by the included Express server.
 
-The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, **Lifestyle (nav: Space)** is the social feed core. Create opens real Mini Apps (Docs, Sheets, Code, and more). Helios Space is **completely free** — no Orbit / Stripe paywall in the product UI.
+The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, **Lifestyle (nav: Space)** is the social feed core. Helios Space is **completely free** — no Orbit / Stripe paywall in the product UI.
 
-**Active product plan:** [`PLAN.md`](./PLAN.md) — keep Lifestyle, fix attachment UI as a real window, Apple-style expanding Mini App picker, remove Create emojis, less AI-like chrome.  
+**Active product plan (read before coding):** [`PLAN.md`](./PLAN.md) — approved rebuild for Mini App (no Create nav), Lifestyle social-only, M365-depth tools, friend requests, Cursor-style Helios IDE, and inline Helios edits. **Implementation waits on plan approval.**  
 Design blueprint: [`PRODUCT.md`](./PRODUCT.md). Earlier WorkBuddy notes: [`REDESIGN.md`](./REDESIGN.md).
 
 ## Run locally
@@ -59,10 +59,14 @@ dedicated persistent directory.
 
 ## Next slice (see PLAN.md)
 
-- Keep Lifestyle / Space feed as the social core
-- Fix Messages/Lifestyle **attachment** UI as a proper window (bug: clipped absolute menu, duplicate lists, overflow)
-- Expanding **Mini App picker** window (iPhone generation–style animation → select Docs / Sheets / Code / …)
-- Remove Create guide emojis; quieter, less AI-like chrome
+Planning-only until approved. Intended rebuild:
+
+- Remove Lifestyle “Your space” + CREATE / Web Code Editor cards
+- Drop Create nav; **Mini App** text + arrow expands/collapses the panel
+- Lifestyle = social only (friend requests; no Mini App / Business / Coding hobby chrome)
+- M365-shaped apps with real Word / PowerPoint / Excel hot features
+- Cursor-style Helios IDE (git + Helios side-by-side)
+- Inline Helios patches without opening full workspace; operator-owned free-tier AI key (never commit secrets)
 
 ## Deliberately not represented as available
 
