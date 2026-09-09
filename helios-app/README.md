@@ -4,7 +4,7 @@ Helios Space is a React application for creating projects and sharing progress. 
 
 The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, **Lifestyle (nav: Space)** is the social feed core. Helios Space is **completely free** — no Orbit / Stripe paywall in the product UI.
 
-**Active product plan (read before coding):** [`PLAN.md`](./PLAN.md) — approved rebuild for Mini App (no Create nav), Lifestyle social-only, M365-depth tools, friend requests, Cursor-style Helios IDE, and inline Helios edits. **Implementation waits on plan approval.**  
+**Active product plan (read before coding):** [`PLAN.md`](./PLAN.md) — v2 rebuild: Instagram-packed Lifestyle, Mini App (no Create), chrome collapse, M365 depth, friend requests, Helios IDE autosave (no commit-as-save), inline Helios edits. **Implementation waits on plan approval.**  
 Design blueprint: [`PRODUCT.md`](./PRODUCT.md). Earlier WorkBuddy notes: [`REDESIGN.md`](./REDESIGN.md).
 
 ## Run locally
@@ -59,13 +59,15 @@ dedicated persistent directory.
 
 ## Next slice (see PLAN.md)
 
-Planning-only until approved. Intended rebuild:
+Planning-only until approved (**PLAN.md v2**). Intended rebuild:
 
 - Remove Lifestyle “Your space” + CREATE / Web Code Editor cards
-- Drop Create nav; **Mini App** text + arrow expands/collapses the panel
-- Lifestyle = social only (friend requests; no Mini App / Business / Coding hobby chrome)
-- M365-shaped apps with real Word / PowerPoint / Excel hot features
-- Cursor-style Helios IDE (git + Helios side-by-side)
+- Lifestyle packed like **Instagram** (dense feed, no scattered promo widgets / Mini App chrome)
+- Drop Create nav; **Mini App** text + arrow expands/collapses the panel (liquid-glass colours)
+- **Collapse** left sidebar + top bar via arrow; hover edge → peek arrow → expand
+- Friend requests: Chat username search + Lifestyle direct request
+- No Business / Coding hobby maze; **M365** apps + Word/PPT/Excel hot features (PPT: photos + Designer)
+- Web Code → **Helios IDE** (Cursor layout, git connection, Helios side-by-side, **autosave**, no commit-as-save)
 - Inline Helios patches without opening full workspace; operator-owned free-tier AI key (never commit secrets)
 
 ## Deliberately not represented as available

@@ -1,323 +1,295 @@
 # Helios Space — Product rebuild plan (pre-code)
 
 **Status:** planning only — **do not implement until this doc is approved**  
-**Date:** 2026-09-09  
-**Branch:** `cursor/collab-redesign-readme-779e`  
-**Supersedes:** previous “ready to deploy” slice in this file’s earlier revisions
+**Updated:** 2026-09-09 (v2 — Instagram Lifestyle + chrome collapse + IDE autosave)  
+**Branch:** `cursor/collab-redesign-readme-779e`
 
-This is the README the product asked for **before** code changes. It turns the screenshot + chat feedback into a concrete build plan.
-
----
-
-## 0. What the screenshot is pointing at
-
-The mobile Space (Lifestyle) right rail currently shows:
-
-1. **“Your space”** Solar card (Dawn / posts / level)  
-2. **CREATE → Web Code Editor** promo card with **Go to Create**
-
-**Decision:** both cards **leave Lifestyle**. Space is a social feed, not a Create warehouse and not a Solar scoreboard.
-
-Related rule: Lifestyle must **not** embed Mini App promo, Mini App post kinds, or “open this tool” callouts. Work can still be *linked* from a post later, but the feed chrome itself stays social.
+This README is required **before** any product code. It merges the latest screenshot feedback with the earlier rebuild brief.
 
 ---
 
-## 1. Product shape after this rebuild
+## 0. Screenshot: what must leave
 
-### Navigation (logged-in)
+Space (Lifestyle) still shows cards that **must not exist**:
+
+1. **“Your space”** Solar card (Dawn / posts / level — e.g. 60 Dawn)  
+2. **CREATE → Web Code Editor** promo + **Go to Create**  
+3. Any similar Mini App / Create marketing in the Lifestyle chrome  
+
+**Rule:** Lifestyle is a **social feed only**. No Mini App features, no Create funnel, no Solar scoreboard.
+
+---
+
+## 1. Product shape
+
+### Navigation
 
 | Before | After |
 |--------|-------|
 | Space · **Create** · Messages · Home · Me | Space · **Mini App ▾** · Messages · Home · Me |
 
-- **Remove the Create nav destination** (`view: 'apps'` / Create page as a primary rail item).
-- **Mini App** is **not** a Lucide grid icon. It is the words **“Mini App”** plus a **chevron/arrow** that expands or collapses a docked panel (same half-screen top-bar expand we already have, but labeled correctly).
-- Collapsed: `Mini App ▾`  
-- Expanded: `Mini App ▴` (or rotated arrow) + panel open under the top bar.
-
-Home may keep a quiet “continue a file” list, but **no “Go to Create” / Web Code Editor marketing cards**.
-
-### Visual / colour
-
-- Mini App panel colours must match the **landing + auth liquid-glass** tone:
-  - bg atmosphere `#eceff3`
-  - terracotta `#c96442`
-  - Gemini blue `#5b8def`
-  - Codex grey glass surfaces  
-- Drop mismatched per-app rainbow that fights the shell (re-map suite accents into terracotta / blue / grey family).
+- **Delete Create** as a rail / primary destination.
+- Trigger is the words **“Mini App”** + an **arrow** (not a grid icon):
+  - Collapsed: `Mini App ▾`
+  - Expanded: `Mini App ▴` + docked half-screen panel under the top bar
+- Panel colours match landing/auth liquid glass: `#eceff3`, terracotta `#c96442`, blue `#5b8def`, Codex grey glass — **no loud rainbow launcher**.
 
 ---
 
 ## 2. Kill Create as a product concept
 
-| Remove / quiet | Keep (renamed) |
-|----------------|----------------|
-| Nav label **Create** | Trigger label **Mini App** |
-| Lifestyle **CREATE** card + Web Code Editor promo | — |
-| Home hero **Create** CTA copy | “Open a file” / “Continue” if needed |
-| Marketing copy “Create suite” | “Mini Apps” / “Microsoft 365–style tools” |
-| Default space hobby **coding** driving Web Code Editor | Neutral social default (no subject maze) |
+| Remove | Keep (renamed) |
+|--------|----------------|
+| Nav **Create** | **Mini App** label + arrow |
+| Lifestyle CREATE / Web Code Editor cards | — |
+| Home “Go to Create” marketing | Quiet “Continue a file” if needed |
+| Default hobby **coding** driving Web Code | Neutral social default |
 
-`MiniAppsView` either becomes the panel content only, or a rare deep-link — **not** a bottom-rail tab.
+`MiniAppsView` = panel content only, not a bottom-rail tab.
 
 ---
 
-## 3. Lifestyle / Space — social only
+## 3. Lifestyle — Instagram-packed social feed
 
-### Remove from Lifestyle UI
+### Remove
 
-- “Your space” Solar pulse card  
+- Your space / Solar / Dawn level card  
 - CREATE / contextual Mini App card  
-- Any hobby / subject chips that surface **Business**, **Coding**, etc. as first-class feed filters  
-- Composer branches that treat Mini App as a post type  
-- Dead `mini-app` postKind state
+- Business / Coding (and similar) hobby / subject chips as feed structure  
+- Mini App post kinds / “open tool” callouts in the feed chrome  
 
-### Keep / improve
+### Add / keep
 
 - For you · Buddies · Saved  
-- Composer: text / work update / Go Live / photo  
-- Invite WorkBuddy  
-- **New:** send a **friend request** directly from a profile/post affordance on Lifestyle (one tap → request), without bouncing through Create
+- Composer (text / photo / work update / Go Live) — compact  
+- **Add friend** on posts / avatars  
+- Invite WorkBuddy stays social, not Create  
 
-### Data cleanup (catalog)
+### Layout: packed like Instagram (not scattered words)
 
-In `src/product/catalog.ts` (and any SpaceView leftovers):
+Current Lifestyle feels airy and “random scattered” (big cards, sparse captions, right-rail widgets). Rebuild toward a **dense social feed**:
 
-- Stop promoting subject spaces like **business / coding** as required Lifestyle structure  
-- Prefer a flat social graph (friends + feed), not a subject maze  
-- Orphaned `SpaceView` / Explore subject UI can stay unlinked until deleted in a later cleanup PR
+| Instagram pattern | Helios mapping |
+|-------------------|----------------|
+| Full-bleed / tight media | Post media edge-to-edge inside the feed column; less side padding on mobile |
+| Avatar + handle + · time on one row | Compact post header; no long essay chrome |
+| Caption under media, truncated | Short body; “more” expand — not large scattered paragraphs |
+| Action row (like / comment / share) | One tight icon row; reactions stay but quieter |
+| Stories / buddies strip on top | Horizontal WorkBuddy / friends strip (optional), not Solar XP |
+| Single column focus | **Remove right rail** on Space (or collapse it entirely) so the feed is the only column |
+| Consistent card rhythm | Same post card template; drop one-off promo cards |
+
+**Acceptance:** Opening Space feels like scrolling a packed social feed, not a marketing dashboard with orphan widgets.
 
 ---
 
-## 4. Friend requests (new social primitive)
-
-Today: follows exist on orphaned Space/Explore; Chat creates threads by handle; **no friend-request API/UI**.
+## 4. Friend requests
 
 ### Chat hub
 
-- Search by **username / handle** (server directory search, not only local conversation filter)
-- From a result: **Add friend** / **Message** / **Cancel pending**
-- Friend request inbox (incoming / outgoing) inside Messages or a small requests sheet
+- Search by **username / handle** (server directory)  
+- From result: **Add friend** / Message / cancel pending  
+- Requests inbox (in / out)  
 
 ### Lifestyle
 
-- On another user’s post or avatar menu: **Add friend**
-- Optimistic pending state; toast on accept
+- Direct **Add friend** on another user’s post or avatar  
 
-### Server sketch
+### API sketch
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /api/users/search?q=` | Username search (privacy-safe fields) |
-| `POST /api/friends/request` `{ handle \| user_id }` | Send request |
+| `GET /api/users/search?q=` | Username search |
+| `POST /api/friends/request` | Send |
 | `GET /api/friends/requests` | Inbox |
-| `POST /api/friends/requests/:id/respond` `{ accept \| decline }` | Respond |
-| `GET /api/friends` | Accepted friends (Buddies tab can later use real graph) |
-
-Reuse rate limits similar to follow. Do **not** invent “friends” by silently following.
+| `POST /api/friends/requests/:id/respond` | Accept / decline |
+| `GET /api/friends` | Graph for Buddies tab |
 
 ---
 
-## 5. Mini Apps = Microsoft 365 set (only)
+## 5. Mini Apps = M365 set (+ Helios IDE)
 
-Replace the sprawling suite + huge `MINI_APP_CATALOG` *as the product surface* with **M365-shaped apps people actually use**. Legacy catalog IDs may alias for old files.
-
-### In scope (v1 surface)
+Product surface only:
 
 | App | Role |
 |-----|------|
-| **Word** (Docs) | Documents |
-| **Excel** (Sheets) | Spreadsheets |
-| **PowerPoint** (Slides) | Presentations |
-| **Outlook** (Mail) | Mail drafts / threads UI |
-| **Calendar** | Schedule |
-| **OneNote** (Notebook) | Notes |
-| **To Do / Tasks** | Tasks |
-| **Planner** | Boards |
-| **Loop** (optional if capacity) | Collaborative pages |
-| **Lists** (optional) | Simple lists |
-| **Teams-lite chat link** | Deep-link to Messages, not a fake Teams clone |
-| **Helios IDE** (replaces Web Code Editor) | Cursor-style coding — see §7 |
+| Word | Documents |
+| Excel | Spreadsheets |
+| PowerPoint | Presentations |
+| Outlook | Mail |
+| Calendar | Schedule |
+| OneNote | Notes |
+| To Do / Tasks | Tasks |
+| Planner | Boards |
+| Loop / Lists | Optional if capacity |
+| Helios IDE | Replaces Web Code Editor (§7) |
 
-**Out of product surface:** random hobby mini-apps, duplicate “Web Code Editor” promo, Business/Coding subject apps as Lifestyle features.
-
-### Colour
-
-Unified glass chrome; each app gets a **subtle** accent only (Word terracotta, Excel green-muted→grey-green within token set, PPT warm terracotta variant, IDE blue) — no loud multi-hue launcher.
+Alias legacy IDs; do not show Business/Coding hobby apps in the launcher.
 
 ---
 
-## 6. Word / PowerPoint / Excel — “every hot feature” people use
+## 6. Word / PPT / Excel — pro hot features
 
-We cannot ship bit-for-bit Microsoft Office. We **can** ship the **daily hot path** features so Helios feels like a **pro working platform**, not a toy contentEditable.
+Not bit-perfect Office — **daily hot path** so it feels like a working platform.
 
-### Word (priority hot features)
+### Word
 
-- Styles: Normal, Title, Heading 1–3  
-- Font family / size / bold / italic / underline / highlight  
-- Alignment, lists, indent, line spacing  
-- Insert: image (upload + URL), table, link, page break, comment  
-- Find / replace  
-- Header / footer + page numbers  
-- Spell / grammar assist via Helios (inline)  
-- Track-changes *lite* (suggest mode) if time  
-- Export: `.docx` (best effort) + PDF print  
-- **Inline Helios edit:** rewrite selection / whole doc **without** leaving the soft panel (see §8)
+Styles, fonts, lists, spacing, insert image/table/link/break/comment, find/replace, header/footer, Helios grammar, export docx/PDF, inline Helios rewrite.
 
-### PowerPoint (current PPT is too thin — rebuild)
+### PowerPoint (rebuild — current is too thin)
 
-Today: title + body + notes only. **Not acceptable.**
+- Layouts (title, title+content, two-column, blank, section)  
+- **Insert photos** (upload, drag-drop, URL)  
+- Shapes + text boxes  
+- **Designer** pane (themes / colour ideas; Helios-assisted)  
+- Transitions + simple animations  
+- Presenter + notes, reorder/duplicate, crop/z-order, export  
 
-Must add:
+### Excel
 
-- Slide **layouts** (title, title+content, two-column, blank, section)  
-- **Insert photos** (upload, drag-drop, stock/unsplash URL)  
-- Shapes (rect, ellipse, line, arrow) + text boxes  
-- Designer-style **Design ideas** pane (template themes / colour variants — Helios-assisted)  
-- Master / theme colours + fonts  
-- Transitions (fade / push) + simple appear animations  
-- Presenter view + speaker notes  
-- Reorder / duplicate slides  
-- Image crop / z-order  
-- Export PDF / images  
+`SUM` / `AVERAGE` / `IF` / `XLOOKUP` lite / `COUNTIF`, formats, freeze, sort/filter, charts, CSV.
 
-### Excel hot path
+### Shared
 
-- Richer formula set (`SUM`, `AVERAGE`, `IF`, `VLOOKUP`/`XLOOKUP` lite, `COUNTIF`)  
-- Number formats, freeze header, sort/filter  
-- Charts (bar/line/pie)  
-- Insert image in sheet (optional)  
-- CSV import/export  
-
-### Shared “pro platform” chrome
-
-- File menu: New / Open recent / Rename / Duplicate / Share to Space / Invite collaborator  
-- Version history (reuse project versions where present)  
-- Presence / collaborators list  
-- Helios side panel docked (not a modal chatbot)
+File menu, share to Space, collaborators, docked Helios panel, **autosave** (no manual “save ritual” as the primary model).
 
 ---
 
-## 7. Replace Web Code Editor → Cursor-style Helios IDE
-
-**Goal:** side-by-side **editor + Helios**, with **Git connection**, feeling closer to Cursor than to a single Monaco demo.
-
-### Layout
+## 7. Web Code → Cursor-style Helios IDE
 
 ```
-┌────────────┬──────────────────────────┬─────────────────┐
-│ File tree  │ Monaco editor / tabs     │ Helios panel    │
-│ + Git      │                          │ chat / edits    │
-│ status     │ terminal / preview       │ apply patches   │
-└────────────┴──────────────────────────┴─────────────────┘
+┌──────────┬─────────────────────┬──────────────┐
+│ Files    │ Monaco + tabs       │ Helios       │
+│ (+ git   │ terminal / preview  │ apply diffs  │
+│  status) │                     │              │
+└──────────┴─────────────────────┴──────────────┘
 ```
 
-### Features
+### Must
 
-- Multi-file project (keep)  
-- **Git:** init / status / diff / commit / branch (local in project storage first; remote URL + token optional)  
-- Helios **side-by-side** always available (not only a floating orb)  
-- Apply code edits as diffs into the open file  
-- Terminal + preview for web stacks  
-- Rename surface: **Helios IDE** (kill “Web Code Editor” product name)
+- Side-by-side **editor + Helios**  
+- **Git connection** (remote URL / status / pull / branch awareness)  
+- Kill product name **Web Code Editor** → **Helios IDE**  
 
-Primary files today: `CodeWorkspace.tsx`, `RepoFrame.tsx`, `repoModel.ts`, `HeliosPanel.tsx` — extend rather than invent a second editor.
+### Autosave — get rid of the commit thing
 
----
+User direction: **auto-saves work** and **remove the commit-centric UX**.
 
-## 8. Helios AI that actually changes stuff (without opening the full app)
+| Do | Don’t |
+|----|-------|
+| Debounced autosave of every file edit to the server | Primary “Commit” button as how you save work |
+| Optional silent local history / versions | Force users through git commit to keep work |
+| Git for **connect / sync / status** (and optional push later) | Teach “commit” as Helios’s save model |
 
-**User ask:** fetch an API key for a free unlimited site; let Helios change Word/PPT/etc. without opening the heavy workspace chrome.
+Interpretation: Helios IDE behaves like Cursor/docs — **edits persist automatically**. Git is connection infrastructure, not a commit homework loop in the UI.
 
-### Honest constraint (must stay in plan)
-
-- There is **no legitimate “free unlimited forever”** third-party API key we can scrape or invent.  
-- Keys must come from a **provider account** (or local free helper) and live in **server env**, never in git.
-
-### Recommended approach
-
-1. Keep OpenAI-compatible admin config (`HELIOS_AI_*` / site settings).  
-2. Prefer a **generous free tier** provider the operator can register (e.g. Groq / Google AI Studio / OpenRouter free models) — document signup steps in deploy README; **do not commit secrets**.  
-3. Local fallback (`buildLocalHeliosReply`) remains when no key.  
-4. **Inline actions** from Mini App panel, Messages Helios, and Lifestyle compose assist:
-   - “Rewrite selection”  
-   - “Apply design idea to this slide”  
-   - “Fill 5 Excel rows from this prompt”  
-   - Returns a **patch / structured JSON** the client applies in-place  
-
-### “Without opening the actual function”
-
-Interpretation we will build:
-
-- From the **Mini App expand panel** or a **lightweight inspector**, Helios can mutate the **last/selected file** via API (`PATCH` content) and show a preview strip  
-- Full Word/PPT UI is optional for that edit — user can Accept / Reject the patch in the panel  
-
-If a true key is required for production, the human operator pastes it into admin/site settings after signup. The agent will wire the plumbing + docs, not fabricate unlimited keys.
+Primary files: `CodeWorkspace.tsx`, `RepoFrame.tsx`, `repoModel.ts`, `HeliosPanel.tsx`.
 
 ---
 
-## 9. More interesting features (additive, after core)
+## 8. Shell chrome: collapse sidebar + top bar
 
-Priority after §§1–8:
+Same interaction language for **left rail** and **top bar**.
 
-1. **Friend graph → Buddies feed** uses real friends, not “everyone except me”  
-2. **@mention** friends in Lifestyle composer  
-3. **Shared folder** per friendship / small group  
-4. **Live cursor** on Word/PPT when collaborators are in the same file (lite)  
-5. **Design system templates** marketplace inside PPT Designer  
-6. **Command palette** actions: “New Word”, “Invite @handle”, “Commit IDE”  
-7. **Activity digest** on Home (friends’ docs + posts), still no Solar XP card
+### Collapse
+
+- Click an **arrow** control on the chrome edge → sidebar / top bar **collapses** (more canvas for feed or IDE).  
+- Persist preference in `localStorage` (per surface if needed).
+
+### Expand (hover reveal)
+
+- When collapsed, the chrome is a thin hit zone at the edge.  
+- **Hover** that area → a **peek arrow** appears.  
+- **Click** the arrow → expand again.  
+- Keyboard: optional `[` / `]` or Escape-to-expand later.  
+- Touch: swipe / tap the peek arrow (no hover) on mobile.
+
+### Scope
+
+| Chrome | Collapsed behaviour |
+|--------|---------------------|
+| Left nav rail (`GlobalShell`) | Icons/labels gone; ~0–12px edge + peek arrow |
+| Top bar (`AuthenticatedTopBar`) | Height collapses; Mini App / search / profile available via peek or a slim strip |
+
+Do not break Mini App expand panel: if top bar is collapsed, opening Mini App can temporarily expand the top bar or dock the panel from the peek control.
 
 ---
 
-## 10. Implementation order (when approved)
+## 9. Helios AI that changes stuff without opening the full app
 
-Do **not** start coding until the user says to proceed.
+### Constraint
 
-| Step | Work | Primary files |
-|------|------|----------------|
-| A | Remove Lifestyle Your space + CREATE cards; strip Mini App promo from feed | `LifestyleView.tsx` / `.css` |
-| B | Nav: drop Create; Mini App text + arrow expand/collapse | `GlobalShell.tsx`, `AuthenticatedTopBar.tsx`, `TopBarCreatePanel.*` |
-| C | Recolour Mini App panel to liquid-glass tokens | `TopBarCreatePanel.css`, `miniApps.ts` accents |
-| D | Narrow suite to M365 + Helios IDE; alias legacy IDs | `miniApps.ts`, `flow.ts`, `catalog.ts` |
-| E | Friend request API + Chat search + Lifestyle Add friend | `server.js`, `api.ts`, `ChatView.tsx`, `LifestyleView.tsx` |
-| F | PPT rebuild (layouts, photos, designer) | `ProductivityWorkspaces.tsx` (+ split files if needed) |
-| G | Word / Excel hot-feature pass | same + CSS |
-| H | Helios IDE Cursor layout + git | `CodeWorkspace.tsx`, `RepoFrame.tsx`, git helper module |
-| I | Inline Helios patch apply without full workspace | `HeliosPanel.tsx`, server AI routes, project file PATCH |
-| J | README / PRODUCT sync + deploy | `README.md`, `PRODUCT.md`, `deploy/README.md` |
+No legitimate **free unlimited forever** API key can be scraped or invented. Keys stay in **server env / admin settings**, never git.
+
+### Build
+
+1. OpenAI-compatible config + free-tier provider docs (Groq / Google AI Studio / OpenRouter, etc.).  
+2. Local helper fallback when no key.  
+3. Inline actions return **patches** (rewrite selection, design idea, fill sheet rows) applied from Mini App panel / lightweight inspector **without** opening full Word/PPT chrome.  
+4. Accept / Reject preview strip.
+
+Operator pastes their own free-tier key after signup.
+
+---
+
+## 10. Interesting extras (after core)
+
+1. Buddies tab = real friends graph  
+2. @mention in composer  
+3. Shared folder per friendship  
+4. Live cursors lite on Word/PPT  
+5. PPT Designer template packs  
+6. Command palette (no “Commit IDE” as primary — use “Open IDE”, “Add friend”)  
+7. Home activity digest (still no Solar XP card)
+
+---
+
+## 11. Implementation order (when approved)
+
+**No feature coding until approval.**
+
+| Step | Work |
+|------|------|
+| A | Remove Lifestyle Your space + CREATE cards; Instagram-pack the feed; drop right-rail promos |
+| B | Drop Create nav; **Mini App** text + arrow panel; liquid-glass colours |
+| C | Sidebar + top bar collapse / hover-peek expand |
+| D | M365-only suite + aliases; retire coding/business hobby launcher paths |
+| E | Friend request API + Chat username search + Lifestyle Add friend |
+| F | PPT rebuild (photos, Designer, layouts) |
+| G | Word / Excel hot features + autosave everywhere |
+| H | Helios IDE Cursor layout; git connection; **remove commit-as-save**; autosave |
+| I | Inline Helios patches without full workspace |
+| J | Docs / deploy sync |
 
 ### Acceptance checklist
 
-- [ ] Screenshot cards (“Your space”, CREATE / Web Code Editor) gone from Space  
-- [ ] No Create rail item; **Mini App** label + arrow toggles panel  
-- [ ] Lifestyle has no Mini App feature chrome; hobbies like Business/Coding not required  
-- [ ] Chat can search username and send friend request; Lifestyle can too  
-- [ ] Mini App colours match landing/auth  
-- [ ] PPT supports insert photos + designer-style themes  
-- [ ] Word/Excel expose daily hot features listed above  
-- [ ] Web Code Editor renamed/replaced by Helios IDE with git + Helios side-by-side  
-- [ ] Helios can apply an edit patch without opening full workspace chrome  
-- [ ] No API secrets in git; free-tier provider documented for operators  
+- [ ] Screenshot cards gone from Space  
+- [ ] Lifestyle packed like Instagram; no Mini App / Create / Solar widgets  
+- [ ] No Create nav; **Mini App** + arrow toggles panel; colours match landing  
+- [ ] Friend request from Chat search + Lifestyle  
+- [ ] No Business/Coding hobby requirement  
+- [ ] M365 apps + deep Word/PPT/Excel hot features  
+- [ ] Helios IDE: side-by-side Helios, git connection, **autosave**, no commit homework UX  
+- [ ] Sidebar + top bar: arrow collapse; hover edge → peek arrow → expand  
+- [ ] Helios can patch files without opening full app chrome  
+- [ ] No API secrets in git  
 
 ---
 
-## 11. Explicit non-goals (this rebuild)
+## 12. Non-goals
 
-- Bit-perfect Microsoft Office / Windows desktop parity  
-- Real Microsoft account OAuth / Graph sync (unless separately requested)  
-- Claiming unlimited free hosted AI without an operator-owned key  
-- Bringing back Orbit / Stripe paywalls  
-- Keeping Solar XP / Dawn level as a Lifestyle primary card  
+- Bit-perfect Microsoft Office  
+- Microsoft Graph OAuth (unless separately requested)  
+- Fake “unlimited free” hosted AI keys in the repo  
+- Orbit / Stripe paywalls  
+- Solar XP as Lifestyle primary UI  
+- Commit-driven save as the main IDE workflow  
 
 ---
 
-## 12. How to approve
+## 13. How to approve
 
-Reply with one of:
+- **「按这个 PLAN 做」** — implement in the order above  
+- **「改 PLAN：…」** — adjust first  
 
-- **“按这个 PLAN 做”** — implement in the order above  
-- **“改 PLAN：…”** — adjust scope first  
-- Call out must-haves vs defer (especially Loop/Lists, track-changes, remote Git hosting)
-
-Until then: **no feature code changes** beyond updating this plan and the root README pointer.
+Until then: **documentation only** (this file + README pointer).
