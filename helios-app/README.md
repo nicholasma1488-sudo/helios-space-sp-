@@ -59,16 +59,13 @@ dedicated persistent directory.
 
 ## Next slice (see PLAN.md)
 
-Planning-only until approved (**PLAN.md v2**). Intended rebuild:
+**Implementing** approved PLAN.md v2:
 
-- Remove Lifestyle “Your space” + CREATE / Web Code Editor cards
-- Lifestyle packed like **Instagram** (dense feed, no scattered promo widgets / Mini App chrome)
-- Drop Create nav; **Mini App** text + arrow expands/collapses the panel (liquid-glass colours)
-- **Collapse** left sidebar + top bar via arrow; hover edge → peek arrow → expand
-- Friend requests: Chat username search + Lifestyle direct request
-- No Business / Coding hobby maze; **M365** apps + Word/PPT/Excel hot features (PPT: photos + Designer)
-- Web Code → **Helios IDE** (Cursor layout, git connection, Helios side-by-side, **autosave**, no commit-as-save)
-- Inline Helios patches without opening full workspace; operator-owned free-tier AI key (never commit secrets)
+- Lifestyle Instagram-packed; Your space / CREATE cards removed
+- **Mini App** text + arrow panel; Create nav removed; chrome collapse
+- Friend requests (Chat username search + Lifestyle)
+- M365 Mini Apps + PowerPoint Designer/photos + Helios IDE autosave
+- Inline Helios patch without opening full workspace
 
 ## Deliberately not represented as available
 
