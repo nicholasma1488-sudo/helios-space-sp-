@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AppWindow, Bookmark, ChevronDown, FileText, Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal, PenLine, Plus, Search, Send, Share, Sparkles, Sun, Trash2, UserPlus, Users, X, Zap, Image as ImageIcon,
+  AppWindow, Bookmark, ChevronDown, FileText, Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal, PenLine, Plus, Search, Send, Share, Sparkles, Trash2, UserPlus, Users, X, Zap, Image as ImageIcon,
 } from 'lucide-react'
-import type { Comment, Post, SolarSummary, User } from '../api'
+import type { Comment, Post, User } from '../api'
 import { api, type LiveSession } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
-import { getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { getMiniApp } from '../product/catalog'
 import { openCreatorProfile, openLiveSession, openProjectWorkspace } from '../product/flow'
 import './LifestyleView.css'
 
@@ -27,7 +27,6 @@ const REACTIONS = [
 ]
 
 interface Props { currentUser: User }
-const EMPTY_SOLAR: SolarSummary = { total: 0, identity: 'Dawn', next_threshold: 100, events: [] }
 
 export function LifestyleView({ currentUser }: Props) {
   const { state, dispatch } = useApp()
@@ -45,16 +44,17 @@ export function LifestyleView({ currentUser }: Props) {
   const [postCategory, setPostCategory] = useState('reflection')
   const [audience, setAudience] = useState<'public' | 'private'>('public')
   const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null)
-  const [postKind, setPostKind] = useState<'text' | 'project' | 'mini-app' | 'live'>('text')
+  const [postKind, setPostKind] = useState<'text' | 'project' | 'live'>('text')
   const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou')
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
   const [linkedLiveId, setLinkedLiveId] = useState<number | null>(null)
   const [mediaData, setMediaData] = useState('')
   const [mediaName, setMediaName] = useState('')
-  const [solar, setSolar] = useState<SolarSummary>(EMPTY_SOLAR)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [busyPost, setBusyPost] = useState<number | null>(null)
+  const [friendPending, setFriendPending] = useState<Record<number, boolean>>({})
+  const [friendBusyUser, setFriendBusyUser] = useState<number | null>(null)
   const [reactionPicker, setReactionPicker] = useState<number | null>(null)
   const [openComments, setOpenComments] = useState<Set<number>>(new Set())
   const [activeHighlight, setActiveHighlight] = useState<Post | null>(null)
@@ -103,11 +103,6 @@ export function LifestyleView({ currentUser }: Props) {
 
   useEffect(() => { void loadPosts() }, [loadPosts])
 
-  useEffect(() => {
-    let cancelled = false
-    void api.solar().then(value => { if (!cancelled) setSolar(value) }).catch(() => {})
-    return () => { cancelled = true }
-  }, [])
   useEffect(() => {
     let cancelled = false
     void api.live.list().then(result => {
@@ -159,8 +154,6 @@ export function LifestyleView({ currentUser }: Props) {
     if (feedTab === 'following') return posts.filter(post => post.author_id !== currentUser.id)
     return posts
   }, [posts, feedTab, currentUser.id])
-  const contextualApp = getMiniApp(getSpaceDefinition(state.activeSpaceId).miniApps[0])
-  const myPostCount = posts.filter(post => post.author_id === currentUser.id).length
 
   async function submitPost(event: React.FormEvent) {
     event.preventDefault()
@@ -175,7 +168,7 @@ export function LifestyleView({ currentUser }: Props) {
         audience,
         project_id: linkedProjectId ?? undefined,
         space_id: state.projects.find(project => project.id === linkedProjectId)?.space_id ?? state.activeSpaceId,
-        post_type: postKind === 'live' ? 'live-watch' : postKind === 'mini-app' ? 'mini-app' : linkedProjectId ? 'project-progress' : 'meaningful-progress',
+        post_type: postKind === 'live' ? 'live-watch' : linkedProjectId ? 'project-progress' : 'meaningful-progress',
         media_url: mediaData,
       })
       const visibleInFilter = !savedOnly &&
@@ -187,7 +180,6 @@ export function LifestyleView({ currentUser }: Props) {
       setMediaData('')
       setMediaName('')
       setComposerOpen(false)
-      void api.solar().then(setSolar).catch(() => {})
       dispatch({
         type: 'PUSH_TOAST',
         toast: {
@@ -306,6 +298,26 @@ export function LifestyleView({ currentUser }: Props) {
 
   async function likePost(post: Post) {
     await react(post, '❤️')
+  }
+
+  async function addFriend(userId: number, name: string) {
+    if (!userId || friendBusyUser !== null || friendPending[userId]) return
+    setFriendBusyUser(userId)
+    try {
+      await api.friends.request({ user_id: userId })
+      setFriendPending(current => ({ ...current, [userId]: true }))
+      dispatch({
+        type: 'PUSH_TOAST',
+        toast: { id: String(Date.now()), message: `Friend request sent to ${name}`, tone: 'success' },
+      })
+    } catch (error) {
+      dispatch({
+        type: 'PUSH_TOAST',
+        toast: { id: String(Date.now()), message: (error as Error).message || 'Could not send friend request', tone: 'warning' },
+      })
+    } finally {
+      setFriendBusyUser(null)
+    }
   }
 
   function toggleComments(postId: number) {
@@ -469,7 +481,7 @@ export function LifestyleView({ currentUser }: Props) {
                       <FolderGit2 size={14} />
                       <span className="sr-only">Link a project</span>
                       <select value={linkedProjectId ?? ''} onChange={event => setLinkedProjectId(event.target.value ? Number(event.target.value) : null)}>
-                        <option value="">{postKind === 'mini-app' ? 'Choose Mini App Project' : 'No linked project'}</option>
+                        <option value="">No linked project</option>
                         {state.projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}
                       </select>
                       <ChevronDown size={13} />
@@ -544,9 +556,15 @@ export function LifestyleView({ currentUser }: Props) {
               busy={busyPost === post.id}
               pickerOpen={reactionPicker === post.id}
               commentsOpen={openComments.has(post.id)}
+              friendPending={Boolean(post.author_id && friendPending[post.author_id])}
+              friendBusy={friendBusyUser === post.author_id}
               onTogglePicker={() => setReactionPicker(current => current === post.id ? null : post.id)}
               onReact={emoji => void react(post, emoji)}
               onLike={() => void likePost(post)}
+              onAddFriend={() => {
+                if (!post.author_id || post.author_id === currentUser.id) return
+                void addFriend(post.author_id, post.author_name)
+              }}
               onInvite={() => {
                 if (post.author_id === currentUser.id) {
                   dispatch({ type: 'SET_VIEW', view: 'chat' })
@@ -587,31 +605,6 @@ export function LifestyleView({ currentUser }: Props) {
             <div className="feed-end"><span>✦</span> You're all caught up.</div>
           )}
         </main>
-
-        <aside className="lifestyle-right" aria-label="Lifestyle overview">
-          <section className="lifestyle-pulse-card liquid-glass">
-            <span className="right-card-eyebrow">Your space</span>
-            <div className="pulse-summary">
-              <Sun size={18} />
-              <div>
-                <strong>{solar.total}</strong>
-                <span>{solar.identity}</span>
-              </div>
-            </div>
-            <div className="pulse-stats">
-              <span><strong>{myPostCount}</strong> posts</span>
-              <span><strong>{solar.next_threshold ? Math.max(0, solar.next_threshold - solar.total) : 0}</strong> to next level</span>
-            </div>
-            <p className="solar-integrity-note">Share progress on Space, and invite a WorkBuddy to collaborate.</p>
-          </section>
-
-          <section className="lifestyle-app-callout liquid-glass">
-            <span><AppWindow size={16} /> CREATE</span>
-            <strong>{contextualApp.name}</strong>
-            <p>{contextualApp.description}</p>
-            <button type="button" className="liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>Go to Create</button>
-          </section>
-        </aside>
       </div>
 
       {activeHighlight && <HighlightDialog post={activeHighlight} onClose={() => setActiveHighlight(null)} />}
@@ -643,8 +636,8 @@ function relativeTime(value: string) {
 }
 
 function PostCard({
-  post, currentUser, busy, pickerOpen, commentsOpen,
-  onTogglePicker, onReact, onLike, onInvite, onToggleComments, onToggleSave, onCopy, onDelete,
+  post, currentUser, busy, pickerOpen, commentsOpen, friendPending, friendBusy,
+  onTogglePicker, onReact, onLike, onAddFriend, onInvite, onToggleComments, onToggleSave, onCopy, onDelete,
   onOpenProject, onOpenMiniApp, onWatchLive, onOpenCreator, onCommentCountChange,
 }: {
   post: Post
@@ -652,9 +645,12 @@ function PostCard({
   busy: boolean
   pickerOpen: boolean
   commentsOpen: boolean
+  friendPending: boolean
+  friendBusy: boolean
   onTogglePicker: () => void
   onReact: (emoji: string) => void
   onLike: () => void
+  onAddFriend: () => void
   onInvite: () => void
   onToggleComments: () => void
   onToggleSave: () => void
@@ -669,6 +665,7 @@ function PostCard({
   const liked = post.my_reactions.includes('❤️')
   const likeCount = post.reactions?.['❤️'] || 0
   const reactionTotal = Object.values(post.reactions || {}).reduce((sum, count) => sum + count, 0)
+  const showAddFriend = Boolean(post.author_id && post.author_id !== currentUser.id)
 
   return (
     <article className="lifestyle-post tweet-post" data-lifestyle-post-id={post.id}>
@@ -713,6 +710,17 @@ function PostCard({
           <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''} title="Like">
             <Heart size={18} fill={liked ? 'currentColor' : 'none'} /> <span>{likeCount || reactionTotal || ''}</span>
           </button>
+          {showAddFriend && (
+            <button
+              type="button"
+              onClick={onAddFriend}
+              disabled={friendBusy || friendPending}
+              className={friendPending ? 'is-friend-pending' : ''}
+              title={friendPending ? 'Friend request pending' : 'Add friend'}
+            >
+              <UserPlus size={18} /> <span>{friendPending ? 'Pending' : 'Add friend'}</span>
+            </button>
+          )}
           <button type="button" onClick={onInvite} title="Invite to collaborate">
             <UserPlus size={18} /> <span>Invite</span>
           </button>

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AtSign, Bot, ChevronRight, Download, File, FolderGit2, Hash, Image,
+  AtSign, Bot, Check, ChevronRight, Download, File, FolderGit2, Hash, Image,
   MessageCircle, MoreHorizontal, Paperclip, Pin, Plus, Search, Send, Sparkles,
-  Users, X,
+  UserPlus, Users, X,
 } from 'lucide-react'
 import { api, type ChatMessage, type Conversation, type LiveSession, type Project } from '../api'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
@@ -14,6 +14,10 @@ import './ChatView.css'
 type PendingAttachment =
   | { type: 'project'; id: number; label: string }
   | { type: 'file'; file: { name: string; mime: string; size: number; data: string }; label: string }
+
+type FriendStatus = 'none' | 'friends' | 'outgoing' | 'incoming'
+type PeopleResult = { id: number; name: string; handle: string; friend_status: FriendStatus }
+type FriendRequestRow = { id: number; user_id: number; name: string; handle: string; created_at: string }
 
 const TAB_COPY: Array<{ id: Conversation['kind']; label: string; icon: React.ReactNode }> = [
   { id: 'project', label: 'Project Chats', icon: <FolderGit2 size={15} /> },
@@ -28,6 +32,11 @@ export function ChatView() {
   const [activeId, setActiveId] = useState<number | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [query, setQuery] = useState('')
+  const [peopleQuery, setPeopleQuery] = useState('')
+  const [peopleResults, setPeopleResults] = useState<PeopleResult[]>([])
+  const [peopleSearching, setPeopleSearching] = useState(false)
+  const [incomingRequests, setIncomingRequests] = useState<FriendRequestRow[]>([])
+  const [friendBusyId, setFriendBusyId] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
   const [pending, setPending] = useState<PendingAttachment | null>(null)
   const [loading, setLoading] = useState(true)
@@ -43,6 +52,7 @@ export function ChatView() {
   const attachPanelRef = useFocusTrap<HTMLDivElement>(showAttachments)
   const initialSelectionDone = useRef(false)
   const activeIdRef = useRef<number | null>(null)
+  const peopleSearchId = useRef(0)
   activeIdRef.current = activeId
 
   useEffect(() => {
@@ -77,6 +87,41 @@ export function ChatView() {
   }, [dispatch])
 
   useEffect(() => { void loadConversations() }, [loadConversations])
+
+  const loadFriendRequests = useCallback(async () => {
+    try {
+      const result = await api.friends.requests()
+      setIncomingRequests(result.incoming || [])
+    } catch {
+      setIncomingRequests([])
+    }
+  }, [])
+
+  useEffect(() => { void loadFriendRequests() }, [loadFriendRequests])
+
+  useEffect(() => {
+    const needle = peopleQuery.trim()
+    if (needle.length < 1) {
+      setPeopleResults([])
+      setPeopleSearching(false)
+      return
+    }
+    const id = ++peopleSearchId.current
+    setPeopleSearching(true)
+    const timeout = window.setTimeout(() => {
+      void api.users.search(needle).then(result => {
+        if (id !== peopleSearchId.current) return
+        setPeopleResults(result.people || [])
+      }).catch(() => {
+        if (id !== peopleSearchId.current) return
+        setPeopleResults([])
+      }).finally(() => {
+        if (id === peopleSearchId.current) setPeopleSearching(false)
+      })
+    }, 220)
+    return () => window.clearTimeout(timeout)
+  }, [peopleQuery])
+
   useEffect(() => {
     let cancelled = false
     void api.live.list().then(result => {
@@ -86,6 +131,63 @@ export function ChatView() {
     })
     return () => { cancelled = true }
   }, [])
+
+  function patchPersonStatus(userId: number, status: FriendStatus) {
+    setPeopleResults(current => current.map(person => person.id === userId ? { ...person, friend_status: status } : person))
+  }
+
+  async function sendFriendRequest(person: PeopleResult) {
+    if (friendBusyId !== null) return
+    setFriendBusyId(person.id)
+    try {
+      await api.friends.request({ user_id: person.id })
+      patchPersonStatus(person.id, 'outgoing')
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Friend request sent to ${person.name}`, tone: 'success' } })
+    } catch (error) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
+    } finally {
+      setFriendBusyId(null)
+    }
+  }
+
+  async function respondFriendRequest(requestId: number, decision: 'accept' | 'decline', userId?: number) {
+    if (friendBusyId !== null) return
+    setFriendBusyId(requestId)
+    try {
+      await api.friends.respond(requestId, decision)
+      setIncomingRequests(current => current.filter(item => item.id !== requestId))
+      if (userId) patchPersonStatus(userId, decision === 'accept' ? 'friends' : 'none')
+      dispatch({
+        type: 'PUSH_TOAST',
+        toast: {
+          id: String(Date.now()),
+          message: decision === 'accept' ? 'Friend request accepted' : 'Friend request declined',
+          tone: decision === 'accept' ? 'success' : 'info',
+        },
+      })
+    } catch (error) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
+    } finally {
+      setFriendBusyId(null)
+    }
+  }
+
+  async function acceptIncomingFromSearch(person: PeopleResult) {
+    const match = incomingRequests.find(item => item.user_id === person.id)
+    if (match) {
+      await respondFriendRequest(match.id, 'accept', person.id)
+      return
+    }
+    try {
+      const result = await api.friends.requests()
+      setIncomingRequests(result.incoming || [])
+      const found = (result.incoming || []).find(item => item.user_id === person.id)
+      if (found) await respondFriendRequest(found.id, 'accept', person.id)
+      else dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'Incoming request not found. Refresh and try again.', tone: 'warning' } })
+    } catch (error) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
+    }
+  }
 
   const active = conversations.find(item => item.id === activeId) ?? null
   const visibleConversations = useMemo(() => {
@@ -222,6 +324,56 @@ export function ChatView() {
       <aside className="chat-hub-sidebar">
         <header><div><MessageCircle size={19} /><span><strong>Chat Hub</strong><small>Work stays connected</small></span></div><button type="button" onClick={() => openCreate(tab)} aria-label="New conversation"><Plus size={16} /></button></header>
         <label className="chat-hub-search"><Search size={14} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search conversations" /></label>
+        <label className="chat-hub-search chat-people-search"><UserPlus size={14} /><input value={peopleQuery} onChange={event => setPeopleQuery(event.target.value)} placeholder="Search username" aria-label="Search username" /></label>
+        {(peopleQuery.trim() || peopleResults.length > 0) && (
+          <div className="chat-people-results" aria-live="polite">
+            {peopleSearching && <div className="chat-people-empty">Searching…</div>}
+            {!peopleSearching && peopleResults.length === 0 && peopleQuery.trim() && <div className="chat-people-empty">No people found</div>}
+            {!peopleSearching && peopleResults.map(person => (
+              <div key={person.id} className="chat-people-row">
+                <span className="chat-people-avatar" aria-hidden="true">{person.name.slice(0, 1)}</span>
+                <span className="chat-people-meta">
+                  <strong>{person.name}</strong>
+                  <small>{person.handle}</small>
+                </span>
+                {person.friend_status === 'friends' && <span className="chat-friend-badge">Friends</span>}
+                {person.friend_status === 'outgoing' && <span className="chat-friend-badge is-pending">Pending</span>}
+                {person.friend_status === 'incoming' && (
+                  <button type="button" className="chat-friend-action is-accept" disabled={friendBusyId !== null} onClick={() => void acceptIncomingFromSearch(person)}>
+                    <Check size={12} /> Accept
+                  </button>
+                )}
+                {person.friend_status === 'none' && (
+                  <button type="button" className="chat-friend-action" disabled={friendBusyId === person.id} onClick={() => void sendFriendRequest(person)}>
+                    <UserPlus size={12} /> Add friend
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {incomingRequests.length > 0 && (
+          <section className="chat-friend-requests" aria-label="Friend requests">
+            <header><UserPlus size={12} /><span>Friend requests</span><b>{incomingRequests.length}</b></header>
+            <div>
+              {incomingRequests.map(request => (
+                <div key={request.id} className="chat-people-row">
+                  <span className="chat-people-avatar" aria-hidden="true">{request.name.slice(0, 1)}</span>
+                  <span className="chat-people-meta">
+                    <strong>{request.name}</strong>
+                    <small>{request.handle}</small>
+                  </span>
+                  <button type="button" className="chat-friend-action is-accept" disabled={friendBusyId === request.id} onClick={() => void respondFriendRequest(request.id, 'accept', request.user_id)}>
+                    Accept
+                  </button>
+                  <button type="button" className="chat-friend-action is-decline" disabled={friendBusyId === request.id} onClick={() => void respondFriendRequest(request.id, 'decline', request.user_id)}>
+                    Decline
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         <nav className="chat-kind-tabs" aria-label="Conversation types">{TAB_COPY.map(item => <button type="button" key={item.id} className={tab === item.id ? 'is-active' : ''} onClick={() => selectTab(item.id)}>{item.icon}<span>{item.label}</span>{conversations.filter(conversation => conversation.kind === item.id).reduce((sum, conversation) => sum + conversation.unread, 0) > 0 && <b>{conversations.filter(conversation => conversation.kind === item.id).reduce((sum, conversation) => sum + conversation.unread, 0)}</b>}</button>)}</nav>
         <div className="chat-conversation-list">
           {loading && <><ConversationSkeleton /><ConversationSkeleton /><ConversationSkeleton /></>}

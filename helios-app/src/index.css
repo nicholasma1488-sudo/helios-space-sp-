@@ -491,11 +491,26 @@ button, [role="button"], a, input, select, textarea {
 }
 
 /* ── Authenticated shell additions ── */
+.helios-shell {
+  position: relative;
+}
+
 .helios-internal-frame {
   background:
     radial-gradient(circle at 82% -18%, rgba(201, 100, 66, .05), transparent 38%),
     radial-gradient(circle at 8% 0%, rgba(91, 141, 239, .05), transparent 34%),
     var(--helios-bg);
+}
+
+.helios-side-rail {
+  position: relative;
+  z-index: 40;
+}
+
+.helios-shell.is-rail-collapsed .helios-internal-frame {
+  /* main content fills after rail collapses */
+  min-width: 0;
+  flex: 1;
 }
 
 .helios-rail-space-context {

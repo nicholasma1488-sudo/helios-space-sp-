@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, Clock3, FilePlus2, Grid3X3, X } from 'lucide-react'
+import { ChevronLeft, ChevronDown, ChevronUp, Clock3, FilePlus2, Sparkles, X } from 'lucide-react'
+import { api } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { createSuiteProject, openProjectWorkspace } from '../product/flow'
 import {
@@ -41,12 +42,17 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
   const [view, setView] = useState<PanelView>({ mode: 'gallery' })
   const [creating, setCreating] = useState(false)
   const [entered, setEntered] = useState(false)
+  const [patchProjectId, setPatchProjectId] = useState<number | null>(null)
+  const [patchInstruction, setPatchInstruction] = useState('')
+  const [patching, setPatching] = useState(false)
   const panelRef = useFocusTrap<HTMLDivElement>(open)
 
   useEffect(() => {
     if (!open) {
       setEntered(false)
       setView({ mode: 'gallery' })
+      setPatchProjectId(null)
+      setPatchInstruction('')
       return
     }
     const matched = initialAppId ? apps.find(app => app.id === initialAppId) : null
@@ -78,7 +84,20 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
     [active, state.projects],
   )
 
+  useEffect(() => {
+    if (view.mode !== 'app') {
+      setPatchProjectId(null)
+      setPatchInstruction('')
+      return
+    }
+    setPatchProjectId(current => {
+      if (current && activeFiles.some(project => project.id === current)) return current
+      return activeFiles[0]?.id ?? null
+    })
+  }, [view, activeFiles])
+
   async function openExisting(projectId: number) {
+    setPatchProjectId(projectId)
     try {
       await openProjectWorkspace(projectId, state.projects, dispatch)
       onClose()
@@ -87,6 +106,27 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
         type: 'PUSH_TOAST',
         toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' },
       })
+    }
+  }
+
+  async function applyHeliosPatch(event: React.FormEvent) {
+    event.preventDefault()
+    if (!patchProjectId || !patchInstruction.trim() || patching) return
+    setPatching(true)
+    try {
+      await api.heliosPatch(patchProjectId, patchInstruction.trim())
+      setPatchInstruction('')
+      dispatch({
+        type: 'PUSH_TOAST',
+        toast: { id: String(Date.now()), message: 'Helios patch applied', tone: 'success' },
+      })
+    } catch (error) {
+      dispatch({
+        type: 'PUSH_TOAST',
+        toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' },
+      })
+    } finally {
+      setPatching(false)
     }
   }
 
@@ -136,7 +176,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
             <>
               <header className="topbar-create-head">
                 <div>
-                  <small>Create</small>
+                  <small>Tools</small>
                   <h2 id="topbar-create-title">Mini Apps</h2>
                 </div>
                 <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
@@ -197,22 +237,50 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                 {creating ? 'Creating…' : `New ${view.app.newName}`}
               </button>
               {activeFiles.length > 0 && (
-                <div className="topbar-create-files">
-                  {activeFiles.map((project, index) => (
-                    <button
-                      key={project.id}
-                      type="button"
-                      style={{ '--stagger': `${60 + index * 35}ms` } as React.CSSProperties}
-                      onClick={() => void openExisting(project.id)}
-                    >
-                      <span style={{ background: view.app.color }}>{view.app.letter}</span>
-                      <span>
-                        <strong>{project.name}</strong>
-                        <small><Clock3 size={11} /> {relativeTime(project.updated_at)}</small>
-                      </span>
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="topbar-create-files">
+                    {activeFiles.map((project, index) => (
+                      <button
+                        key={project.id}
+                        type="button"
+                        className={patchProjectId === project.id ? 'is-selected' : ''}
+                        style={{ '--stagger': `${60 + index * 35}ms` } as React.CSSProperties}
+                        title="Select for Helios patch · double-click to open"
+                        onClick={() => setPatchProjectId(project.id)}
+                        onDoubleClick={() => void openExisting(project.id)}
+                      >
+                        <span style={{ background: view.app.color }}>{view.app.letter}</span>
+                        <span>
+                          <strong>{project.name}</strong>
+                          <small><Clock3 size={11} /> {relativeTime(project.updated_at)}</small>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  {patchProjectId && (
+                    <form className="topbar-helios-patch" onSubmit={event => void applyHeliosPatch(event)}>
+                      <Sparkles size={14} />
+                      <input
+                        value={patchInstruction}
+                        onChange={event => setPatchInstruction(event.target.value)}
+                        placeholder="Tell Helios what to change…"
+                        aria-label="Helios patch instruction"
+                        maxLength={500}
+                      />
+                      <button type="submit" disabled={patching || !patchInstruction.trim()}>
+                        {patching ? 'Applying…' : 'Apply'}
+                      </button>
+                    </form>
+                  )}
+                  <button
+                    type="button"
+                    className="topbar-create-open-selected"
+                    disabled={!patchProjectId}
+                    onClick={() => patchProjectId && void openExisting(patchProjectId)}
+                  >
+                    Open selected
+                  </button>
+                </>
               )}
             </>
           )}
@@ -241,15 +309,18 @@ export function TopBarCreateTrigger({
       className={'topbar-create-trigger' + (open ? ' is-open' : '')}
       aria-expanded={open}
       aria-controls="topbar-create-panel"
-      aria-label="Open Mini Apps"
+      aria-label={open ? 'Close Mini App panel' : 'Open Mini App panel'}
       onClick={onToggle}
     >
-      <span className="topbar-space-brand">Space</span>
-      <span className="topbar-create-trigger-sub">Social collaboration</span>
-      <span className="topbar-context-chip" style={{ '--space-accent': accent } as React.CSSProperties}>
-        <i />{chip || label}
+      <span className="topbar-create-trigger-label">{label || 'Mini App'}</span>
+      <span className="topbar-create-trigger-chevron" aria-hidden="true">
+        {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
       </span>
-      <span className="topbar-create-trigger-glyph" aria-hidden="true"><Grid3X3 size={13} /></span>
+      {chip ? (
+        <span className="topbar-context-chip" style={{ '--space-accent': accent } as React.CSSProperties}>
+          <i />{chip}
+        </span>
+      ) : null}
     </button>
   )
 }

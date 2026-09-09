@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, FolderGit2, MessageCircle, Radio, Search, Sparkles, User, Users, X,
+  Bell, ChevronDown, ChevronUp, FolderGit2, MessageCircle, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults } from '../api'
 import { getSpaceDefinition } from '../product/catalog'
@@ -11,6 +11,15 @@ import './AuthenticatedTopBar.css'
 type OpenMenu = 'search' | 'notifications' | 'profile' | null
 
 const EMPTY_RESULTS: SearchResults = { projects: [], people: [], posts: [], live: [], spaces: [] }
+const TOPBAR_COLLAPSED_KEY = 'helios-topbar-collapsed'
+
+function readCollapsed(key: string) {
+  try { return localStorage.getItem(key) === '1' } catch { return false }
+}
+
+function writeCollapsed(key: string, value: boolean) {
+  try { localStorage.setItem(key, value ? '1' : '0') } catch { /* ignore */ }
+}
 
 export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) {
   const { state, dispatch } = useApp()
@@ -21,11 +30,23 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS)
   const [searching, setSearching] = useState(false)
   const [notifications, setNotifications] = useState<ApiNotification[]>([])
+  const [topbarCollapsed, setTopbarCollapsed] = useState(() => readCollapsed(TOPBAR_COLLAPSED_KEY))
+  const [topbarPeek, setTopbarPeek] = useState(false)
   const rootRef = useRef<HTMLElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const activeSpace = getSpaceDefinition(state.activeSpaceId)
   const unread = notifications.filter(item => !item.read).length
+
+  function setTopbarCollapsedPersist(next: boolean) {
+    setTopbarCollapsed(next)
+    writeCollapsed(TOPBAR_COLLAPSED_KEY, next)
+    if (!next) setTopbarPeek(false)
+    if (next) {
+      setOpenMenu(null)
+      setCreateOpen(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -41,6 +62,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   useEffect(() => {
     function onOpenCreate(event: Event) {
       const detail = (event as CustomEvent<{ appId?: string }>).detail
+      setTopbarCollapsedPersist(false)
       setOpenMenu(null)
       setCreateAppId(detail?.appId || null)
       setCreateOpen(true)
@@ -161,11 +183,40 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
 
   const searchCount = results.projects.length + results.people.length + results.posts.length + results.live.length + results.spaces.length
 
+  if (topbarCollapsed) {
+    return (
+      <div
+        className={'authenticated-topbar-peek-zone' + (topbarPeek ? ' is-visible' : '') + (compact ? ' is-compact' : '')}
+        onMouseEnter={() => setTopbarPeek(true)}
+        onMouseLeave={() => setTopbarPeek(false)}
+      >
+        <button
+          type="button"
+          className="helios-chrome-peek-arrow helios-topbar-peek-arrow"
+          onClick={() => setTopbarCollapsedPersist(false)}
+          aria-label="Expand top bar"
+          title="Expand top bar"
+        >
+          <ChevronDown size={16} />
+        </button>
+      </div>
+    )
+  }
+
   return (
     <header className={'authenticated-topbar' + (compact ? ' is-compact' : '') + (createOpen ? ' is-create-open' : '')} ref={rootRef}>
       <div className="topbar-brand-cluster">
         <button type="button" className="topbar-brand" onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })} aria-label="Helios Space home">
           <span>✦</span><strong>helios<span>space</span></strong>
+        </button>
+        <button
+          type="button"
+          className="helios-topbar-collapse-btn"
+          onClick={() => setTopbarCollapsedPersist(true)}
+          aria-label="Collapse top bar"
+          title="Collapse top bar"
+        >
+          <ChevronUp size={15} />
         </button>
       </div>
 
@@ -173,7 +224,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         <TopBarCreateTrigger
           open={createOpen}
           onToggle={toggleCreate}
-          label="Create"
+          label="Mini App"
           chip={activeSpace.name}
           accent={activeSpace.accent}
         />

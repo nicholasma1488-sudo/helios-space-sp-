@@ -1,6 +1,6 @@
 # Helios Space — Product rebuild plan (pre-code)
 
-**Status:** planning only — **do not implement until this doc is approved**  
+**Status:** approved — **implementing** (user: Ok)  
 **Updated:** 2026-09-09 (v2 — Instagram Lifestyle + chrome collapse + IDE autosave)  
 **Branch:** `cursor/collab-redesign-readme-779e`
 

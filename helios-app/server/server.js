@@ -294,6 +294,25 @@ db.exec(`
     FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (followed_id) REFERENCES users(id) ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS friend_requests (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_user_id INTEGER NOT NULL,
+    to_user_id   INTEGER NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    UNIQUE(from_user_id, to_user_id),
+    FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE TABLE IF NOT EXISTS friends (
+    user_id     INTEGER NOT NULL,
+    friend_id   INTEGER NOT NULL,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (user_id, friend_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
+  );
   CREATE TABLE IF NOT EXISTS collaboration_requests (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id  INTEGER NOT NULL,
@@ -324,6 +343,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_solar_events_user ON solar_events(user_id, id DESC);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, id DESC);
   CREATE INDEX IF NOT EXISTS idx_collaboration_requests_project ON collaboration_requests(project_id, status, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_friend_requests_to ON friend_requests(to_user_id, status, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_friend_requests_from ON friend_requests(from_user_id, status, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_friends_user ON friends(user_id, friend_id);
   CREATE TABLE IF NOT EXISTS project_files (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id  INTEGER NOT NULL,
@@ -1974,6 +1996,138 @@ app.post('/api/users/:id/follow', requireUser, socialRateLimit, (req, res) => {
     createNotification(followedId, req.user.id, 'follow', `${req.user.name} followed your work`, '', 'profile', req.user.id)
   }
   res.json({ following: !existing })
+})
+
+function normalizeHandle(raw) {
+  return String(raw || '').trim().replace(/^@+/, '').toLowerCase()
+}
+
+function friendStatusBetween(a, b) {
+  if (db.prepare('SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ?').get(a, b)) return 'friends'
+  const outgoing = db.prepare("SELECT id FROM friend_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'").get(a, b)
+  if (outgoing) return 'outgoing'
+  const incoming = db.prepare("SELECT id FROM friend_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'").get(b, a)
+  if (incoming) return 'incoming'
+  return 'none'
+}
+
+app.get('/api/users/search', requireUser, (req, res) => {
+  const checked = checkedString(req.query.q ?? '', 'Search query', 64, { required: true, trim: true })
+  if (checked.error) return res.status(400).json({ error: checked.error })
+  const q = checked.value.toLowerCase().replace(/^@+/, '')
+  const like = `%${q}%`
+  const rows = db.prepare(
+    "SELECT id, name, handle FROM users WHERE status = 'active' AND id != ? AND (lower(handle) LIKE ? OR lower(name) LIKE ?) ORDER BY handle LIMIT 20"
+  ).all(req.user.id, like, like)
+  res.json({
+    people: rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      handle: row.handle,
+      friend_status: friendStatusBetween(req.user.id, row.id),
+    })),
+  })
+})
+
+app.post('/api/friends/request', requireUser, socialRateLimit, (req, res) => {
+  let toId = positiveInt(req.body?.user_id)
+  const handle = normalizeHandle(req.body?.handle)
+  if (!toId && handle) {
+    const user = db.prepare("SELECT id FROM users WHERE lower(handle) = ? AND status = 'active'").get(handle)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+    toId = user.id
+  }
+  if (!toId || toId === req.user.id) return res.status(400).json({ error: 'Invalid friend request' })
+  const target = db.prepare("SELECT id, name FROM users WHERE id = ? AND status = 'active'").get(toId)
+  if (!target) return res.status(404).json({ error: 'User not found' })
+  if (friendStatusBetween(req.user.id, toId) === 'friends') return res.json({ ok: true, status: 'friends' })
+  const now = new Date().toISOString()
+  const incoming = db.prepare("SELECT id FROM friend_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'").get(toId, req.user.id)
+  if (incoming) {
+    db.prepare("UPDATE friend_requests SET status = 'accepted', updated_at = ? WHERE id = ?").run(now, incoming.id)
+    db.prepare('INSERT OR IGNORE INTO friends (user_id, friend_id, created_at) VALUES (?,?,?)').run(req.user.id, toId, now)
+    db.prepare('INSERT OR IGNORE INTO friends (user_id, friend_id, created_at) VALUES (?,?,?)').run(toId, req.user.id, now)
+    createNotification(toId, req.user.id, 'friend', `${req.user.name} accepted your friend request`, '', 'profile', req.user.id)
+    return res.json({ ok: true, status: 'friends' })
+  }
+  db.prepare(
+    "INSERT INTO friend_requests (from_user_id, to_user_id, status, created_at, updated_at) VALUES (?,?, 'pending', ?, ?) " +
+    "ON CONFLICT(from_user_id, to_user_id) DO UPDATE SET status = 'pending', updated_at = excluded.updated_at"
+  ).run(req.user.id, toId, now, now)
+  createNotification(toId, req.user.id, 'friend_request', `${req.user.name} sent you a friend request`, '', 'profile', req.user.id)
+  res.json({ ok: true, status: 'outgoing' })
+})
+
+app.get('/api/friends/requests', requireUser, (req, res) => {
+  const incoming = db.prepare(
+    "SELECT fr.id, fr.status, fr.created_at, u.id AS user_id, u.name, u.handle FROM friend_requests fr " +
+    "JOIN users u ON u.id = fr.from_user_id WHERE fr.to_user_id = ? AND fr.status = 'pending' ORDER BY fr.id DESC"
+  ).all(req.user.id)
+  const outgoing = db.prepare(
+    "SELECT fr.id, fr.status, fr.created_at, u.id AS user_id, u.name, u.handle FROM friend_requests fr " +
+    "JOIN users u ON u.id = fr.to_user_id WHERE fr.from_user_id = ? AND fr.status = 'pending' ORDER BY fr.id DESC"
+  ).all(req.user.id)
+  res.json({ incoming, outgoing })
+})
+
+app.post('/api/friends/requests/:id/respond', requireUser, socialRateLimit, (req, res) => {
+  const id = positiveInt(req.params.id)
+  const decision = String(req.body?.decision || '')
+  if (!id || !['accept', 'decline'].includes(decision)) return res.status(400).json({ error: 'Invalid decision' })
+  const row = db.prepare("SELECT * FROM friend_requests WHERE id = ? AND to_user_id = ? AND status = 'pending'").get(id, req.user.id)
+  if (!row) return res.status(404).json({ error: 'Request not found' })
+  const now = new Date().toISOString()
+  if (decision === 'decline') {
+    db.prepare("UPDATE friend_requests SET status = 'declined', updated_at = ? WHERE id = ?").run(now, id)
+    return res.json({ ok: true, status: 'declined' })
+  }
+  db.prepare("UPDATE friend_requests SET status = 'accepted', updated_at = ? WHERE id = ?").run(now, id)
+  db.prepare('INSERT OR IGNORE INTO friends (user_id, friend_id, created_at) VALUES (?,?,?)').run(req.user.id, row.from_user_id, now)
+  db.prepare('INSERT OR IGNORE INTO friends (user_id, friend_id, created_at) VALUES (?,?,?)').run(row.from_user_id, req.user.id, now)
+  createNotification(row.from_user_id, req.user.id, 'friend', `${req.user.name} accepted your friend request`, '', 'profile', req.user.id)
+  res.json({ ok: true, status: 'friends' })
+})
+
+app.get('/api/friends', requireUser, (req, res) => {
+  const friends = db.prepare(
+    'SELECT u.id, u.name, u.handle, f.created_at FROM friends f JOIN users u ON u.id = f.friend_id WHERE f.user_id = ? ORDER BY u.name'
+  ).all(req.user.id)
+  res.json({ friends })
+})
+
+// Inline Helios content patch without opening full workspace chrome
+app.post('/api/projects/:id/helios-patch', requireUser, socialRateLimit, async (req, res) => {
+  const projectId = positiveInt(req.params.id)
+  const project = projectId ? getProjectForUser(projectId, req.user.id, { edit: true }) : null
+  if (!project) return res.status(404).json({ error: 'Project not found' })
+  const instruction = String(req.body?.instruction || '').trim().slice(0, 2000)
+  if (!instruction) return res.status(400).json({ error: 'Instruction required' })
+  let content
+  try { content = JSON.parse(project.content || '{}') } catch { content = {} }
+  const path = String(req.body?.path || '').trim()
+  let before = ''
+  let after = ''
+  if (path && content.files && typeof content.files === 'object') {
+    before = String(content.files[path] || '')
+    after = `${before}\n\n// Helios: ${instruction}\n`.slice(0, 200000)
+    content.files[path] = after
+  } else if (content.html != null) {
+    before = String(content.html)
+    after = before.includes('</p>')
+      ? before.replace('</p>', ` <em data-helios-edit="1">(${instruction})</em></p>`)
+      : `${before}<p><em data-helios-edit="1">${instruction}</em></p>`
+    content.html = after
+  } else if (Array.isArray(content.slides) && content.slides.length) {
+    const idx = Math.min(Number(content.activeSlide) || 0, content.slides.length - 1)
+    before = String(content.slides[idx].body || '')
+    after = `${before}\n${instruction}`.slice(0, 8000)
+    content.slides[idx] = { ...content.slides[idx], body: after }
+  } else {
+    return res.status(400).json({ error: 'Unsupported project content for patch' })
+  }
+  const now = new Date().toISOString()
+  db.prepare('UPDATE projects SET content = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(content), now, projectId)
+  res.json({ ok: true, project: serializeProject(getProjectForUser(projectId, req.user.id), req.user.id), preview: { before: before.slice(0, 400), after: after.slice(0, 400) } })
 })
 
 // ── Posts, comments, reactions, and saves (Lifestyle) ──

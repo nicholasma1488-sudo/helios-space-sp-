@@ -4,8 +4,8 @@
   display: inline-flex;
   min-height: 38px;
   align-items: center;
-  gap: 8px;
-  padding: 0 11px;
+  gap: 6px;
+  padding: 0 12px;
   border: 0;
   border-radius: 11px;
   background: transparent;
@@ -25,26 +25,21 @@
   transform: scale(.97);
 }
 
-.topbar-create-trigger .topbar-space-brand {
+.topbar-create-trigger-label {
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: -.02em;
   color: var(--helios-text);
 }
 
-.topbar-create-trigger-sub {
-  color: var(--helios-muted);
-  font-size: 12px;
+.topbar-create-trigger-chevron {
+  display: inline-flex;
+  align-items: center;
+  color: var(--codex-gray, var(--helios-muted));
 }
 
-.topbar-create-trigger-glyph {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  margin-left: 2px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--helios-accent) 12%, transparent);
-  color: var(--helios-accent);
+.topbar-create-trigger .topbar-context-chip {
+  margin-left: 4px;
 }
 
 .topbar-create-scrim {
@@ -57,7 +52,11 @@
   border: 0;
   background: rgba(16, 18, 24, 0);
   cursor: pointer;
-  transition: background 640ms cubic-bezier(.22, 1, .36, 1);
+  transition: background 640ms cubic-bezier(.22, 1, .36, 1), left 280ms ease;
+}
+
+.helios-shell.is-rail-collapsed .topbar-create-scrim {
+  left: 8px;
 }
 
 .authenticated-topbar.is-create-open ~ * .topbar-create-scrim,
@@ -76,8 +75,8 @@
   border-top: 1px solid transparent;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(236, 239, 243, 0.96)),
-    radial-gradient(900px 280px at 12% 0%, rgba(201, 100, 66, 0.10), transparent 55%),
-    radial-gradient(700px 240px at 88% 10%, rgba(91, 141, 239, 0.12), transparent 50%);
+    radial-gradient(900px 280px at 12% 0%, rgba(201, 100, 66, 0.12), transparent 55%),
+    radial-gradient(700px 240px at 88% 10%, rgba(91, 141, 239, 0.14), transparent 50%);
   box-shadow: none;
   border-radius: 0;
   transform-origin: top center;
@@ -305,6 +304,73 @@
   font-size: 11px;
 }
 
+.topbar-create-files > button.is-selected {
+  border-color: color-mix(in srgb, var(--helios-accent) 40%, var(--glass-stroke, transparent));
+  background: color-mix(in srgb, var(--helios-accent) 10%, white);
+}
+
+.topbar-helios-patch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--glass-stroke, rgba(0, 0, 0, 0.08));
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--helios-accent);
+}
+
+.topbar-helios-patch input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.topbar-helios-patch button {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--helios-accent);
+  color: var(--helios-on-accent, #fff);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.topbar-helios-patch button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.topbar-create-open-selected {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.topbar-create-open-selected:disabled {
+  opacity: 0.4;
+  cursor: default;
+  text-decoration: none;
+}
+
 @keyframes topbar-create-card-in {
   from {
     opacity: 0;
@@ -327,10 +393,6 @@
 
   .topbar-create-inner {
     padding: 14px 16px 18px;
-  }
-
-  .topbar-create-trigger-sub {
-    display: none;
   }
 }
 

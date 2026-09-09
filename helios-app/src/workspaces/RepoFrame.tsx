@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Editor from '@monaco-editor/react'
 import {
   ChevronRight, FileCode2, FilePlus2, FolderGit2, GitCommitHorizontal,
-  History, Pencil, Trash2,
+  History, Link2, Pencil, Trash2,
 } from 'lucide-react'
 import { api, type Project, type ProjectCommit } from '../api'
 import { artifactPathForKind, filesFromList, isValidRepoPath, languageForFile, README_STARTER, sortFilePaths } from './repoModel'
@@ -20,6 +20,9 @@ interface RepoFrameProps {
   committing?: boolean
   children?: React.ReactNode
   nativeLabel?: string
+  productLabel?: string
+  remoteUrl?: string
+  onRemoteUrlChange?: (url: string) => void
   onOpenFile: (path: string) => void
   onCreateFile: (path: string, content?: string) => void
   onRenameFile?: (from: string, to: string) => void
@@ -31,16 +34,27 @@ interface RepoFrameProps {
 
 export function RepoFrame({
   project, canEdit, files, activeFile, dirtyPaths = [], uncommitted = false, commits, viewingCommit,
-  creating = false, committing = false, children, nativeLabel, onOpenFile, onCreateFile, onRenameFile,
+  creating = false, committing = false, children, nativeLabel, productLabel = 'Helios IDE',
+  remoteUrl = '', onRemoteUrlChange, onOpenFile, onCreateFile, onRenameFile,
   onDeleteFile, onCommit, onViewCommit, onRestoreCommit,
 }: RepoFrameProps) {
   const [newPath, setNewPath] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [message, setMessage] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
+  const [remoteDraft, setRemoteDraft] = useState(remoteUrl)
+  const [gitStatus, setGitStatus] = useState(remoteUrl.trim() ? 'Connected' : 'Not connected')
   const names = sortFilePaths(Object.keys(files))
   const empty = names.length === 0
   const handle = project.owner_handle || 'repo'
   const slug = project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project'
+  const branch = 'main'
+  const autosaveLabel = dirtyPaths.length > 0 ? 'Saving…' : 'Autosaved'
+
+  useEffect(() => {
+    setRemoteDraft(remoteUrl)
+    setGitStatus(remoteUrl.trim() ? 'Connected' : 'Not connected')
+  }, [remoteUrl])
 
   function submitNew(event: React.FormEvent) {
     event.preventDefault()
@@ -59,32 +73,62 @@ export function RepoFrame({
     setMessage('')
   }
 
+  function connectRemote(event: React.FormEvent) {
+    event.preventDefault()
+    const next = remoteDraft.trim()
+    onRemoteUrlChange?.(next)
+    setGitStatus(next ? 'Connected' : 'Not connected')
+  }
+
   return (
-    <div className="repo-workspace">
+    <div className="repo-workspace helios-ide">
       <header className="repo-toolbar">
         <div className="repo-identity">
           <FolderGit2 size={15} />
-          <strong>{handle}/{slug}</strong>
-          <span className="repo-branch">main</span>
-          {uncommitted && <i className="repo-dirty-dot" title="Uncommitted changes" />}
+          <div className="repo-product-chrome">
+            <small>{productLabel}</small>
+            <strong>{handle}/{slug}</strong>
+          </div>
+          <span className="repo-branch">{branch}</span>
+          {(uncommitted || dirtyPaths.length > 0) && <i className="repo-dirty-dot" title="Unsaved local changes pending autosave" />}
+          <small className="repo-autosave-status">{autosaveLabel}</small>
           <small>{names.length} {names.length === 1 ? 'file' : 'files'}</small>
         </div>
         <div className="repo-toolbar-actions">
           {canEdit && <button type="button" onClick={() => setShowNew(true)} disabled={creating}><FilePlus2 size={13} /> Add file</button>}
+          <button type="button" className={showHistory ? 'is-active' : ''} onClick={() => setShowHistory(open => !open)} aria-pressed={showHistory}>
+            <History size={13} /> History
+          </button>
         </div>
       </header>
+
+      <form className="repo-git-strip" onSubmit={connectRemote}>
+        <Link2 size={13} />
+        <label>
+          <span>Remote URL</span>
+          <input
+            value={remoteDraft}
+            onChange={event => setRemoteDraft(event.target.value)}
+            placeholder="https://github.com/org/repo.git"
+            aria-label="Git remote URL"
+            disabled={!canEdit && !onRemoteUrlChange}
+          />
+        </label>
+        <button type="submit" disabled={!onRemoteUrlChange}>Connect</button>
+        <small className={gitStatus === 'Connected' ? 'is-connected' : ''}>{gitStatus} · {branch}</small>
+      </form>
 
       {viewingCommit && (
         <div className="repo-commit-banner">
           <History size={13} />
-          <span>Viewing commit · {viewingCommit.message}</span>
+          <span>Viewing snapshot · {viewingCommit.message}</span>
           <small>{viewingCommit.author_name} · {new Date(viewingCommit.created_at).toLocaleString()}</small>
           <button type="button" onClick={() => onViewCommit(null)}>Back to current</button>
           {canEdit && onRestoreCommit && <button type="button" onClick={() => onRestoreCommit(viewingCommit)}>Restore this snapshot</button>}
         </div>
       )}
 
-      <div className="repo-body">
+      <div className={'repo-body' + (showHistory ? ' has-history' : '')}>
         <aside className="repo-tree">
           <header>
             <span>Files</span>
@@ -126,28 +170,31 @@ export function RepoFrame({
           {children}
         </section>
 
-        <aside className="repo-history">
-          <header>
-            <span><GitCommitHorizontal size={13} /> Commits</span>
-            <small>main</small>
-          </header>
-          {canEdit && !viewingCommit && (
-            <form className="repo-commit-form" onSubmit={submitCommit}>
-              <textarea value={message} maxLength={200} onChange={event => setMessage(event.target.value)} placeholder="Commit message, like on GitHub" />
-              <button type="submit" disabled={!message.trim() || committing}><GitCommitHorizontal size={13} /> {committing ? 'Committing…' : 'Commit to main'}</button>
-            </form>
-          )}
-          <div>
-            {commits.map(commit => (
-              <button type="button" key={commit.id} className={viewingCommit?.id === commit.id ? 'is-active' : ''} onClick={() => onViewCommit(commit)}>
-                <strong>{commit.message}</strong>
-                <small>{commit.author_name} · {new Date(commit.created_at).toLocaleString()}</small>
-                <em>{commit.file_count} files</em>
-              </button>
-            ))}
-            {commits.length === 0 && <p className="repo-tree-empty">No commits yet. Save a snapshot when the files look right.</p>}
-          </div>
-        </aside>
+        {showHistory && (
+          <aside className="repo-history">
+            <header>
+              <span><History size={13} /> Advanced history</span>
+              <small>{branch}</small>
+            </header>
+            {canEdit && !viewingCommit && (
+              <form className="repo-commit-form" onSubmit={submitCommit}>
+                <p>Optional snapshot. Edits already autosave.</p>
+                <textarea value={message} maxLength={200} onChange={event => setMessage(event.target.value)} placeholder="Snapshot message" />
+                <button type="submit" disabled={!message.trim() || committing}><GitCommitHorizontal size={13} /> {committing ? 'Saving snapshot…' : 'Save snapshot'}</button>
+              </form>
+            )}
+            <div>
+              {commits.map(commit => (
+                <button type="button" key={commit.id} className={viewingCommit?.id === commit.id ? 'is-active' : ''} onClick={() => onViewCommit(commit)}>
+                  <strong>{commit.message}</strong>
+                  <small>{commit.author_name} · {new Date(commit.created_at).toLocaleString()}</small>
+                  <em>{commit.file_count} files</em>
+                </button>
+              ))}
+              {commits.length === 0 && <p className="repo-tree-empty">No snapshots yet. Work autosaves as you edit.</p>}
+            </div>
+          </aside>
+        )}
       </div>
       {nativeLabel && <span className="sr-only">{nativeLabel}</span>}
     </div>
@@ -366,6 +413,7 @@ export function RepoBoundWorkspace({
       viewingCommit={repo.viewingCommit}
       committing={repo.committing}
       nativeLabel={`${kind} repository`}
+      productLabel="Helios IDE"
       onOpenFile={setActiveFile}
       onCreateFile={(path, content) => { void repo.createFile(path, content); setActiveFile(path) }}
       onRenameFile={(from, to) => { void repo.renameFile(from, to); if (activeFile === from) setActiveFile(to) }}
@@ -384,7 +432,6 @@ export function RepoBoundWorkspace({
             }
           }}
           onAddReadme={() => { void repo.createFile('README.md', README_STARTER); setActiveFile('README.md') }}
-          onCommit={() => void repo.commit('Initial commit')}
           canEdit={canEdit}
         />
       ) : showNative ? children : (
@@ -411,24 +458,22 @@ export function RepoBoundWorkspace({
 }
 
 export function RepoEmptyState({
-  onAddFile, onAddReadme, onCommit, canEdit,
+  onAddFile, onAddReadme, canEdit,
 }: {
   onAddFile: () => void
   onAddReadme: () => void
-  onCommit: () => void
+  onCommit?: () => void
   canEdit: boolean
 }) {
   return (
     <div className="repo-empty">
       <FolderGit2 size={28} />
-      <h2>Quick setup</h2>
-      <p>This Project is a repository. Create a file, write a README, then make the first commit. Work stays on the server after refresh.</p>
+      <h2>Helios IDE</h2>
+      <p>Create a file or README to get started. Edits autosave to this Project — no commit required to keep your work.</p>
       <div className="repo-empty-actions">
         <button type="button" onClick={onAddFile} disabled={!canEdit}><FilePlus2 size={14} /> Create a new file</button>
         <button type="button" onClick={onAddReadme} disabled={!canEdit}>Add a README</button>
-        <button type="button" onClick={onCommit} disabled={!canEdit}><GitCommitHorizontal size={14} /> First commit</button>
       </div>
     </div>
   )
 }
-

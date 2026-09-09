@@ -145,8 +145,12 @@ export function HomeView() {
               <p>See what your buddies are doing, or create something and push it forward together.</p>
             </div>
             <div className="home-hero-actions">
-              <button type="button" className="home-btn-primary liquid-glass-btn is-primary" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>
-                <Plus size={16} /> Create
+              <button
+                type="button"
+                className="home-btn-primary liquid-glass-btn is-primary"
+                onClick={() => window.dispatchEvent(new CustomEvent('helios-open-create-panel'))}
+              >
+                <Plus size={16} /> Continue
               </button>
             </div>
           </header>
@@ -190,8 +194,8 @@ export function HomeView() {
                 <div className="home-empty">
                   <FolderGit2 size={22} />
                   <strong>No files yet</strong>
-                  <span>Pick a tool in Create, then share it to Space when you are done.</span>
-                  <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'apps' })}>Go to Create</button>
+                  <span>Pick a Mini App, then share it to Space when you are done.</span>
+                  <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('helios-open-create-panel'))}>Open Mini App</button>
                 </div>
               )}
             </div>

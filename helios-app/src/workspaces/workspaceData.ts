@@ -111,7 +111,15 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
     const slides = (decks[appKind] || [
       { title: 'Untitled presentation', body: 'A clear idea, one slide at a time.' },
       { title: 'The important context', body: 'Add the evidence your audience needs.' },
-    ]).map(slide => ({ id: crypto.randomUUID(), notes: '', ...slide }))
+    ]).map(slide => ({
+      id: crypto.randomUUID(),
+      notes: '',
+      layout: 'title-content' as const,
+      theme: 'terracotta-glass' as const,
+      shapes: [],
+      transition: 'none' as const,
+      ...slide,
+    }))
     return { slides, activeSlide: 0 }
   }
 

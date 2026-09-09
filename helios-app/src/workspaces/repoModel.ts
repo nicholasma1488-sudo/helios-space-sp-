@@ -98,8 +98,8 @@ Describe what this repository is for, how to run it, and what to try next.
 ## Quick start
 
 1. Add the files you need
-2. Write a first commit
-3. Keep working in this Project
+2. Keep editing — Helios IDE autosaves your work
+3. Optional snapshots live under History
 `
 
 export function isValidRepoPath(path: string) {

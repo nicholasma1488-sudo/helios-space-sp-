@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  BarChart3, Bold, BookOpen, Bookmark, ChevronLeft, ChevronRight, Columns3,
-  Heading2, Image, Italic, List, Maximize2, Plus, Presentation, Quote,
-  Sparkles, Table2, Trash2,
+  ArrowDown, ArrowUp, BarChart3, Bold, BookOpen, Bookmark, ChevronLeft, ChevronRight, Columns3,
+  Copy, Heading1, Heading2, Heading3, Highlighter, Image, Italic, List, Maximize2, Plus,
+  Presentation, Quote, Search, Sparkles, Square, Table2, Trash2, Type,
 } from 'lucide-react'
 import { useApp } from '../store/appStore'
 
@@ -42,6 +42,9 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   const editorRef = useRef<HTMLDivElement>(null)
   const [mode, setMode] = useState<'edit' | 'reader'>(value.readerMode ? 'reader' : 'edit')
   const [note, setNote] = useState('')
+  const [fontSize, setFontSize] = useState('3')
+  const [findQuery, setFindQuery] = useState('')
+  const [findOpen, setFindOpen] = useState(false)
   const safeHtml = useMemo(() => sanitizeHtml(value.html || ''), [value.html])
   const characterLimit = state.user?.usage?.characters.limit ?? null
   const characterUsed = writingCharacterCount(value.html || '')
@@ -84,6 +87,38 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
     if (editorRef.current) update({ html: sanitizeHtml(editorRef.current.innerHTML) })
   }
 
+  function findInDocument() {
+    const query = findQuery.trim()
+    if (!query || !editorRef.current) return
+    const text = editorRef.current.innerText || ''
+    const index = text.toLowerCase().indexOf(query.toLowerCase())
+    if (index < 0) {
+      window.alert('No matches found')
+      return
+    }
+    editorRef.current.focus()
+    const selection = window.getSelection()
+    if (!selection) return
+    const walker = document.createTreeWalker(editorRef.current, NodeFilter.SHOW_TEXT)
+    let walked = 0
+    let node = walker.nextNode()
+    while (node) {
+      const length = node.textContent?.length || 0
+      if (walked + length > index) {
+        const start = index - walked
+        const range = document.createRange()
+        range.setStart(node, start)
+        range.setEnd(node, Math.min(start + query.length, length))
+        selection.removeAllRanges()
+        selection.addRange(range)
+        ;(node.parentElement as HTMLElement | null)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        return
+      }
+      walked += length
+      node = walker.nextNode()
+    }
+  }
+
   function addNote(event: React.FormEvent) {
     event.preventDefault()
     if (!note.trim()) return
@@ -99,18 +134,38 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
           <span />
           <button type="button" onClick={() => command('bold')} title="Bold"><Bold size={14} /></button>
           <button type="button" onClick={() => command('italic')} title="Italic"><Italic size={14} /></button>
-          <button type="button" onClick={() => command('formatBlock', 'h2')} title="Heading"><Heading2 size={14} /></button>
+          <button type="button" onClick={() => command('hiliteColor', '#ffe08a')} title="Highlight"><Highlighter size={14} /></button>
+          <button type="button" onClick={() => command('formatBlock', 'h1')} title="Heading 1"><Heading1 size={14} /></button>
+          <button type="button" onClick={() => command('formatBlock', 'h2')} title="Heading 2"><Heading2 size={14} /></button>
+          <button type="button" onClick={() => command('formatBlock', 'h3')} title="Heading 3"><Heading3 size={14} /></button>
+          <label className="writing-font-size" title="Font size">
+            <Type size={13} />
+            <select value={fontSize} onChange={event => { setFontSize(event.target.value); command('fontSize', event.target.value) }} aria-label="Font size">
+              <option value="2">Small</option>
+              <option value="3">Normal</option>
+              <option value="4">Large</option>
+              <option value="5">XL</option>
+            </select>
+          </label>
           <button type="button" onClick={() => command('insertUnorderedList')} title="List"><List size={14} /></button>
           <button type="button" onClick={() => command('formatBlock', 'blockquote')} title="Quote"><Quote size={14} /></button>
           <button type="button" onClick={insertImage} title="Image"><Image size={14} /></button>
           <button type="button" onClick={insertTable} title="Table"><Table2 size={14} /></button>
           <button type="button" onClick={addCitation} title="Citation"><BookOpen size={14} /></button>
+          <button type="button" onClick={() => setFindOpen(open => !open)} title="Find" className={findOpen ? 'is-active' : ''}><Search size={14} /></button>
           <button type="button" onClick={() => onAskHelios('Check this document for grammar, clarity, structure and citation gaps')} className="writing-helios-action"><Sparkles size={14} /> Grammar & clarity</button>
         </>}
         <span className={'writing-usage' + (characterRatio >= 1 ? ' is-over' : characterRatio >= 0.85 ? ' is-warn' : '')}>
           {characterUsed.toLocaleString()} chars
         </span>
       </header>
+      {mode === 'edit' && findOpen && (
+        <form className="writing-find-bar" onSubmit={event => { event.preventDefault(); findInDocument() }}>
+          <Search size={13} />
+          <input value={findQuery} onChange={event => setFindQuery(event.target.value)} placeholder="Find in document…" aria-label="Find in document" autoFocus />
+          <button type="submit">Find</button>
+        </form>
+      )}
 
       {mode === 'edit' ? (
         <div className="writing-editor-scroll">
@@ -213,36 +268,411 @@ export function SpreadsheetWorkspace({ data, onChange, onAskHelios }: EditorProp
   )
 }
 
-interface Slide { id: string; title: string; body: string; notes: string }
+type SlideLayout = 'title' | 'title-content' | 'two-column' | 'blank' | 'section'
+type SlideTransition = 'none' | 'fade' | 'push'
+type SlideThemeId = 'terracotta-glass' | 'blue-glass' | 'charcoal' | 'warm-sand'
+
+interface SlideShape {
+  id: string
+  type: 'text' | 'rect'
+  x: number
+  y: number
+  w: number
+  h: number
+  text?: string
+  fill?: string
+}
+
+interface Slide {
+  id: string
+  title: string
+  body: string
+  notes: string
+  layout: SlideLayout
+  theme: SlideThemeId
+  imageUrl?: string
+  shapes?: SlideShape[]
+  transition?: SlideTransition
+  secondary?: string
+}
+
 interface PresentationData { slides: Slide[]; activeSlide: number }
+
+const SLIDE_THEMES: Record<SlideThemeId, { label: string; bg: string; text: string; muted: string; accent: string }> = {
+  'terracotta-glass': {
+    label: 'Terracotta glass',
+    bg: 'linear-gradient(145deg, rgba(255,255,255,.92), rgba(236,239,243,.88)), linear-gradient(160deg, #fff7f2, #eceff3)',
+    text: '#1c1917',
+    muted: '#6b635c',
+    accent: '#c96442',
+  },
+  'blue-glass': {
+    label: 'Blue glass',
+    bg: 'linear-gradient(145deg, rgba(255,255,255,.9), rgba(219,232,255,.85)), linear-gradient(160deg, #eef5ff, #eceff3)',
+    text: '#132033',
+    muted: '#5a6b82',
+    accent: '#5b8def',
+  },
+  charcoal: {
+    label: 'Charcoal',
+    bg: 'linear-gradient(145deg, #1c1f26, #12141a)',
+    text: '#eceff3',
+    muted: '#9aa3b2',
+    accent: '#5b8def',
+  },
+  'warm-sand': {
+    label: 'Warm sand',
+    bg: 'linear-gradient(145deg, #f7f1e8, #eceff3)',
+    text: '#2a241c',
+    muted: '#7a6f62',
+    accent: '#c96442',
+  },
+}
+
+const LAYOUT_OPTIONS: Array<{ id: SlideLayout; label: string }> = [
+  { id: 'title', label: 'Title' },
+  { id: 'title-content', label: 'Title + content' },
+  { id: 'two-column', label: 'Two column' },
+  { id: 'blank', label: 'Blank' },
+  { id: 'section', label: 'Section' },
+]
+
+function normalizeSlide(slide: Partial<Slide> & { id?: string; title?: string; body?: string; notes?: string }): Slide {
+  return {
+    id: slide.id || crypto.randomUUID(),
+    title: slide.title || 'Untitled slide',
+    body: slide.body || '',
+    notes: slide.notes || '',
+    layout: slide.layout || 'title-content',
+    theme: slide.theme || 'terracotta-glass',
+    imageUrl: slide.imageUrl,
+    shapes: slide.shapes || [],
+    transition: slide.transition || 'none',
+    secondary: slide.secondary || '',
+  }
+}
+
+function createBlankSlide(partial?: Partial<Slide>): Slide {
+  return normalizeSlide({
+    id: crypto.randomUUID(),
+    title: 'New slide',
+    body: 'Add one clear idea.',
+    notes: '',
+    layout: 'title-content',
+    theme: 'terracotta-glass',
+    shapes: [],
+    transition: 'none',
+    ...partial,
+  })
+}
 
 export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   const value = data as unknown as PresentationData
   const [presenting, setPresenting] = useState(false)
-  const slides = value.slides || []
+  const [imageUrlDraft, setImageUrlDraft] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const slides = useMemo(
+    () => (value.slides || []).map(slide => normalizeSlide(slide)),
+    [value.slides],
+  )
   const activeIndex = Math.min(value.activeSlide || 0, Math.max(0, slides.length - 1))
   const active = slides[activeIndex]
 
+  function commitSlides(nextSlides: Slide[], activeSlide = activeIndex) {
+    onChange({ ...value, slides: nextSlides, activeSlide })
+  }
+
   function patchSlide(patch: Partial<Slide>) {
-    onChange({ ...value, slides: slides.map((slide, index) => index === activeIndex ? { ...slide, ...patch } : slide) })
+    commitSlides(slides.map((slide, index) => index === activeIndex ? { ...slide, ...patch } : slide))
   }
 
   function addSlide() {
-    const next = [...slides, { id: crypto.randomUUID(), title: 'New slide', body: 'Add one clear idea.', notes: '' }]
-    onChange({ ...value, slides: next, activeSlide: next.length - 1 })
+    const next = [...slides, createBlankSlide({ theme: active?.theme || 'terracotta-glass' })]
+    commitSlides(next, next.length - 1)
+  }
+
+  function duplicateSlide() {
+    if (!active) return
+    const copy = createBlankSlide({
+      ...active,
+      id: crypto.randomUUID(),
+      title: `${active.title} (copy)`,
+      shapes: (active.shapes || []).map(shape => ({ ...shape, id: crypto.randomUUID() })),
+    })
+    const next = [...slides.slice(0, activeIndex + 1), copy, ...slides.slice(activeIndex + 1)]
+    commitSlides(next, activeIndex + 1)
   }
 
   function deleteSlide() {
     if (slides.length <= 1) return
     const next = slides.filter((_, index) => index !== activeIndex)
-    onChange({ ...value, slides: next, activeSlide: Math.max(0, activeIndex - 1) })
+    commitSlides(next, Math.max(0, activeIndex - 1))
+  }
+
+  function moveSlide(direction: -1 | 1) {
+    const target = activeIndex + direction
+    if (target < 0 || target >= slides.length) return
+    const next = [...slides]
+    const [item] = next.splice(activeIndex, 1)
+    next.splice(target, 0, item)
+    commitSlides(next, target)
+  }
+
+  function applyTheme(themeId: SlideThemeId) {
+    patchSlide({ theme: themeId })
+  }
+
+  function insertPhotoFromFile(file: File | undefined) {
+    if (!file || !file.type.startsWith('image/')) return
+    const url = URL.createObjectURL(file)
+    patchSlide({ imageUrl: url })
+  }
+
+  function insertPhotoFromUrl() {
+    const url = imageUrlDraft.trim()
+    if (!url) return
+    if (!/^https?:\/\//i.test(url) && !url.startsWith('data:') && !url.startsWith('blob:')) return
+    patchSlide({ imageUrl: url })
+    setImageUrlDraft('')
+  }
+
+  function addShape(type: 'text' | 'rect') {
+    const shapes = [...(active?.shapes || [])]
+    shapes.push({
+      id: crypto.randomUUID(),
+      type,
+      x: 12 + shapes.length * 4,
+      y: 18 + shapes.length * 5,
+      w: type === 'text' ? 36 : 28,
+      h: type === 'text' ? 14 : 18,
+      text: type === 'text' ? 'Text box' : '',
+      fill: type === 'rect' ? 'rgba(201,100,66,.28)' : 'rgba(255,255,255,.72)',
+    })
+    patchSlide({ shapes })
+  }
+
+  function patchShape(id: string, patch: Partial<SlideShape>) {
+    patchSlide({
+      shapes: (active?.shapes || []).map(shape => shape.id === id ? { ...shape, ...patch } : shape),
+    })
+  }
+
+  function removeShape(id: string) {
+    patchSlide({ shapes: (active?.shapes || []).filter(shape => shape.id !== id) })
+  }
+
+  function renderCanvas(slide: Slide, editable: boolean) {
+    const palette = SLIDE_THEMES[slide.theme]
+    const layout = slide.layout
+    return (
+      <div
+        className={`slide-canvas layout-${layout} theme-${slide.theme}`}
+        style={{ background: palette.bg, color: palette.text, ['--slide-accent' as string]: palette.accent, ['--slide-muted' as string]: palette.muted }}
+      >
+        {layout !== 'blank' && (
+          editable ? (
+            <input
+              className="slide-title-field"
+              value={slide.title}
+              onChange={event => patchSlide({ title: event.target.value })}
+              aria-label="Slide title"
+              placeholder={layout === 'section' ? 'Section title' : 'Slide title'}
+            />
+          ) : (
+            <h1 className="slide-title-field">{slide.title}</h1>
+          )
+        )}
+        {(layout === 'title-content' || layout === 'title' || layout === 'section') && (
+          editable ? (
+            <textarea
+              className="slide-body-field"
+              value={slide.body}
+              onChange={event => patchSlide({ body: event.target.value })}
+              aria-label="Slide body"
+              placeholder={layout === 'title' ? 'Supporting line' : 'Body'}
+            />
+          ) : (
+            <p className="slide-body-field">{slide.body}</p>
+          )
+        )}
+        {layout === 'two-column' && (
+          <div className="slide-two-column">
+            {editable ? (
+              <>
+                <textarea value={slide.body} onChange={event => patchSlide({ body: event.target.value })} aria-label="Left column" placeholder="Left column" />
+                <textarea value={slide.secondary || ''} onChange={event => patchSlide({ secondary: event.target.value })} aria-label="Right column" placeholder="Right column" />
+              </>
+            ) : (
+              <>
+                <p>{slide.body}</p>
+                <p>{slide.secondary}</p>
+              </>
+            )}
+          </div>
+        )}
+        {slide.imageUrl && (
+          <figure className="slide-media">
+            <img src={slide.imageUrl} alt="" />
+            {editable && (
+              <button type="button" onClick={() => patchSlide({ imageUrl: undefined })} aria-label="Remove image">
+                <Trash2 size={12} />
+              </button>
+            )}
+          </figure>
+        )}
+        {(slide.shapes || []).map(shape => (
+          <div
+            key={shape.id}
+            className={`slide-shape is-${shape.type}`}
+            style={{
+              left: `${shape.x}%`,
+              top: `${shape.y}%`,
+              width: `${shape.w}%`,
+              height: `${shape.h}%`,
+              background: shape.fill || (shape.type === 'rect' ? 'rgba(91,141,239,.28)' : 'rgba(255,255,255,.75)'),
+            }}
+          >
+            {shape.type === 'text' && (
+              editable ? (
+                <textarea
+                  value={shape.text || ''}
+                  onChange={event => patchShape(shape.id, { text: event.target.value })}
+                  aria-label="Shape text"
+                />
+              ) : (
+                <span>{shape.text}</span>
+              )
+            )}
+            {editable && (
+              <button type="button" className="slide-shape-remove" onClick={() => removeShape(shape.id)} aria-label="Remove shape">
+                <Trash2 size={11} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
     <div className="presentation-workspace">
-      <aside className="slide-thumbnails"><header><strong>SLIDES</strong><button type="button" onClick={addSlide}><Plus size={13} /></button></header>{slides.map((slide, index) => <button type="button" key={slide.id} className={activeIndex === index ? 'is-active' : ''} onClick={() => onChange({ ...value, activeSlide: index })}><span>{index + 1}</span><i><strong>{slide.title}</strong><small>{slide.body}</small></i></button>)}</aside>
-      <section className="slide-editor"><header><button type="button" onClick={() => setPresenting(true)}><Presentation size={14} /> Present</button><button type="button" onClick={() => onAskHelios('Improve this presentation structure and make each slide clearer')}><Sparkles size={14} /> Improve</button><button type="button" onClick={deleteSlide} aria-label="Delete slide"><Trash2 size={14} /></button></header>{active && <><div className="slide-canvas"><input value={active.title} onChange={event => patchSlide({ title: event.target.value })} aria-label="Slide title" /><textarea value={active.body} onChange={event => patchSlide({ body: event.target.value })} aria-label="Slide body" /></div><label className="slide-notes">Speaker notes<textarea value={active.notes} onChange={event => patchSlide({ notes: event.target.value })} /></label></>}</section>
-      {presenting && active && <div className="presentation-mode" role="dialog" aria-modal="true" aria-label="Presenting slides"><button type="button" onClick={() => setPresenting(false)}><Maximize2 size={15} /> Exit</button><article><h1>{active.title}</h1><p>{active.body}</p></article><footer><button type="button" onClick={() => onChange({ ...value, activeSlide: Math.max(0, activeIndex - 1) })} disabled={activeIndex === 0}><ChevronLeft /></button><span>{activeIndex + 1} / {slides.length}</span><button type="button" onClick={() => onChange({ ...value, activeSlide: Math.min(slides.length - 1, activeIndex + 1) })} disabled={activeIndex === slides.length - 1}><ChevronRight /></button></footer></div>}
+      <aside className="slide-thumbnails">
+        <header>
+          <strong>SLIDES</strong>
+          <button type="button" onClick={addSlide} aria-label="Add slide"><Plus size={13} /></button>
+        </header>
+        {slides.map((slide, index) => (
+          <button
+            type="button"
+            key={slide.id}
+            className={activeIndex === index ? 'is-active' : ''}
+            onClick={() => onChange({ ...value, slides, activeSlide: index })}
+          >
+            <span>{index + 1}</span>
+            <i style={{ background: SLIDE_THEMES[slide.theme].bg, color: SLIDE_THEMES[slide.theme].text }}>
+              <strong>{slide.title}</strong>
+              <small>{slide.body}</small>
+            </i>
+          </button>
+        ))}
+      </aside>
+
+      <section className="slide-editor">
+        <header className="slide-editor-toolbar">
+          <button type="button" onClick={() => setPresenting(true)}><Presentation size={14} /> Present</button>
+          <button type="button" onClick={duplicateSlide} disabled={!active}><Copy size={14} /> Duplicate</button>
+          <button type="button" onClick={() => moveSlide(-1)} disabled={activeIndex === 0} aria-label="Move slide up"><ArrowUp size={14} /></button>
+          <button type="button" onClick={() => moveSlide(1)} disabled={activeIndex >= slides.length - 1} aria-label="Move slide down"><ArrowDown size={14} /></button>
+          <button type="button" onClick={() => onAskHelios('Improve this presentation structure and make each slide clearer')}><Sparkles size={14} /> Improve</button>
+          <button type="button" onClick={deleteSlide} aria-label="Delete slide"><Trash2 size={14} /></button>
+        </header>
+
+        {active && (
+          <div className="slide-editor-body">
+            <div className="slide-stage">
+              {renderCanvas(active, true)}
+              <label className="slide-notes">
+                Speaker notes
+                <textarea value={active.notes} onChange={event => patchSlide({ notes: event.target.value })} />
+              </label>
+            </div>
+
+            <aside className="slide-designer liquid-glass">
+              <strong>Designer</strong>
+              <label>
+                Layout
+                <select value={active.layout} onChange={event => patchSlide({ layout: event.target.value as SlideLayout })} aria-label="Slide layout">
+                  {LAYOUT_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                </select>
+              </label>
+              <label>
+                Transition
+                <select value={active.transition || 'none'} onChange={event => patchSlide({ transition: event.target.value as SlideTransition })} aria-label="Slide transition">
+                  <option value="none">None</option>
+                  <option value="fade">Fade</option>
+                  <option value="push">Push</option>
+                </select>
+              </label>
+              <div className="slide-theme-presets">
+                <span>Theme</span>
+                {(Object.keys(SLIDE_THEMES) as SlideThemeId[]).map(themeId => (
+                  <button
+                    type="button"
+                    key={themeId}
+                    className={active.theme === themeId ? 'is-active' : ''}
+                    onClick={() => applyTheme(themeId)}
+                    style={{ ['--theme-swatch' as string]: SLIDE_THEMES[themeId].accent }}
+                  >
+                    {SLIDE_THEMES[themeId].label}
+                  </button>
+                ))}
+              </div>
+              <div className="slide-insert-photo">
+                <span>Insert photo</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={event => {
+                    insertPhotoFromFile(event.target.files?.[0])
+                    event.target.value = ''
+                  }}
+                />
+                <button type="button" onClick={() => fileInputRef.current?.click()}><Image size={13} /> Upload image</button>
+                <div>
+                  <input
+                    value={imageUrlDraft}
+                    onChange={event => setImageUrlDraft(event.target.value)}
+                    placeholder="https://… or data URL"
+                    aria-label="Image URL"
+                  />
+                  <button type="button" onClick={insertPhotoFromUrl}>Add URL</button>
+                </div>
+              </div>
+              <div className="slide-shape-actions">
+                <span>Shapes</span>
+                <button type="button" onClick={() => addShape('text')}><Type size={13} /> Text box</button>
+                <button type="button" onClick={() => addShape('rect')}><Square size={13} /> Rectangle</button>
+              </div>
+            </aside>
+          </div>
+        )}
+      </section>
+
+      {presenting && active && (
+        <div className={`presentation-mode transition-${active.transition || 'none'}`} role="dialog" aria-modal="true" aria-label="Presenting slides">
+          <button type="button" onClick={() => setPresenting(false)}><Maximize2 size={15} /> Exit</button>
+          <article className="presentation-mode-stage">
+            {renderCanvas(active, false)}
+          </article>
+          <footer>
+            <button type="button" onClick={() => onChange({ ...value, slides, activeSlide: Math.max(0, activeIndex - 1) })} disabled={activeIndex === 0}><ChevronLeft /></button>
+            <span>{activeIndex + 1} / {slides.length}</span>
+            <button type="button" onClick={() => onChange({ ...value, slides, activeSlide: Math.min(slides.length - 1, activeIndex + 1) })} disabled={activeIndex === slides.length - 1}><ChevronRight /></button>
+          </footer>
+        </div>
+      )}
     </div>
   )
 }

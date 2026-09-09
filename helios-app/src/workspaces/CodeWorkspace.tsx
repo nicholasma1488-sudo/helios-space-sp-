@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Editor from '@monaco-editor/react'
 import { zipSync, strToU8 } from 'fflate'
 import {
-  BookOpen, Download, FileCode2, Play, RefreshCw, Sparkles, TerminalSquare, X,
+  Download, FileCode2, Play, RefreshCw, Sparkles, TerminalSquare, X,
 } from 'lucide-react'
 import type { Project } from '../api'
 import { api } from '../api'
@@ -23,6 +23,7 @@ interface CodeData {
   openFiles: string[]
   terminal: string[]
   language?: EditorLanguage
+  remoteUrl?: string
 }
 
 interface Props {
@@ -47,10 +48,11 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   const value = data as unknown as CodeData
   const workspaceFiles = useMemo(() => value.files || {}, [value.files])
   const repo = useProjectRepo(project?.id, canEdit)
-  const [rightPanel, setRightPanel] = useState<'preview' | 'terminal' | 'readme'>('preview')
+  const [rightPanel, setRightPanel] = useState<'preview' | 'terminal' | 'helios'>('preview')
   const [terminalInput, setTerminalInput] = useState('')
   const [previewKey, setPreviewKey] = useState(0)
   const [running, setRunning] = useState(false)
+  const [heliosPrompt, setHeliosPrompt] = useState('')
   const syncedRef = useRef(false)
 
   useEffect(() => {
@@ -237,7 +239,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     if (!command) return
     const output = [...(value.terminal || []), `$ ${command}`]
     const normalized = command.toLowerCase()
-    if (normalized === 'help') output.push('Supported: help, ls, clear, preview, run, download, commit')
+    if (normalized === 'help') output.push('Supported: help, ls, clear, preview, run, download')
     else if (normalized === 'ls') output.push(Object.keys(files).join('   ') || '(empty repository)')
     else if (normalized === 'clear') output.splice(0, output.length)
     else if (['preview', 'npm run preview'].includes(normalized)) {
@@ -251,10 +253,18 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     } else if (normalized === 'download') {
       downloadCode()
       output.push(Object.keys(files).length > 1 ? 'Downloaded zip folder.' : 'Downloaded file.')
-    } else if (normalized === 'commit') output.push('Use the Commit panel on the right to save a snapshot with a message.')
+    } else if (normalized === 'commit') output.push('Edits autosave. Optional snapshots live under History.')
     else output.push(`Command not available in the browser sandbox: ${command}`)
     patch({ terminal: output.slice(-120) })
     setTerminalInput('')
+  }
+
+  function askHeliosFromPanel(event?: React.FormEvent) {
+    event?.preventDefault()
+    const prompt = heliosPrompt.trim() || `Review ${activeFile || 'this repository'} and write the next useful file changes as path-tagged code blocks`
+    setRightPanel('helios')
+    onAskHelios(prompt)
+    setHeliosPrompt('')
   }
 
   const empty = Object.keys(files).length === 0
@@ -268,11 +278,11 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
         if (path && isValidRepoPath(path) && files[path] === undefined) createFile(path)
       }}
       onAddReadme={() => createFile('README.md', README_STARTER)}
-      onCommit={() => { void commit('Initial commit') }}
     />
   ) : (
     <section className="code-editor-zone">
       <div className="code-toolbar liquid-glass">
+        <strong className="code-ide-label">Helios IDE</strong>
         <label className="code-language-switch">
           <span>Language</span>
           <select
@@ -312,7 +322,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
             <FileCode2 size={13} />
             <span>{project?.name || 'repository'} / {activeFile}</span>
             <small>{LANGUAGE_OPTIONS.find(item => item.id === activeLanguage)?.label || activeLanguage}</small>
-            {!editorValue && <small>This file is empty. Start writing, then commit a snapshot.</small>}
+            {!editorValue && <small>This file is empty. Start writing — changes autosave.</small>}
           </div>
           <div className="code-monaco">
             <Editor
@@ -340,14 +350,59 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
           canEdit={canEdit && !repo.viewingCommit}
           onAddFile={() => createFile('main.cpp', LANGUAGE_OPTIONS.find(item => item.id === 'cpp')!.starter)}
           onAddReadme={() => createFile('README.md', README_STARTER)}
-          onCommit={() => { void commit('Initial commit') }}
         />
       )}
     </section>
   )
 
+  const sidePanel = (
+    <section className="code-output-zone helios-ide-side">
+      <nav>
+        <button type="button" className={rightPanel === 'preview' ? 'is-active' : ''} onClick={() => setRightPanel('preview')}><Play size={12} /> Preview</button>
+        <button type="button" className={rightPanel === 'terminal' ? 'is-active' : ''} onClick={() => setRightPanel('terminal')}><TerminalSquare size={12} /> Terminal</button>
+        <button type="button" className={rightPanel === 'helios' ? 'is-active' : ''} onClick={() => setRightPanel('helios')}><Sparkles size={12} /> Helios</button>
+        {rightPanel === 'preview' && <button type="button" onClick={() => setPreviewKey(key => key + 1)} aria-label="Refresh preview"><RefreshCw size={12} /></button>}
+      </nav>
+      {rightPanel === 'preview' && <iframe key={previewKey} title="Live project preview" sandbox="allow-scripts" srcDoc={preview} />}
+      {rightPanel === 'terminal' && (
+        <div className="browser-terminal">
+          <div>{(value.terminal || []).map((line, index) => <p key={index}>{line}</p>)}</div>
+          <form onSubmit={runTerminal}><span>$</span><input value={terminalInput} onChange={event => setTerminalInput(event.target.value)} aria-label="Terminal command" /></form>
+        </div>
+      )}
+      {rightPanel === 'helios' && (
+        <div className="helios-ide-panel">
+          <Sparkles size={22} />
+          <h3>Helios</h3>
+          <p>Ask Helios about the open file, missing tests, or the next useful change. The side panel stays docked while you edit.</p>
+          <form onSubmit={askHeliosFromPanel}>
+            <textarea
+              value={heliosPrompt}
+              onChange={event => setHeliosPrompt(event.target.value)}
+              placeholder={`Review ${activeFile || 'this repository'}…`}
+              aria-label="Ask Helios"
+            />
+            <button type="submit" className="liquid-glass-btn is-primary"><Sparkles size={13} /> Ask Helios</button>
+          </form>
+          <button
+            type="button"
+            className="liquid-glass-btn"
+            onClick={() => onAskHelios(`Review ${activeFile || 'this repository'} and write the next useful file changes as path-tagged code blocks`)}
+          >
+            Quick review of {activeFile || 'repo'}
+          </button>
+        </div>
+      )}
+    </section>
+  )
+
   if (!project) {
-    return <div className="code-workspace">{editor}</div>
+    return (
+      <div className="code-workspace helios-ide is-standalone">
+        {editor}
+        {sidePanel}
+      </div>
+    )
   }
 
   return (
@@ -361,6 +416,9 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
       commits={repo.commits}
       viewingCommit={repo.viewingCommit}
       committing={repo.committing}
+      productLabel="Helios IDE"
+      remoteUrl={value.remoteUrl || ''}
+      onRemoteUrlChange={url => patch({ remoteUrl: url })}
       onOpenFile={openFile}
       onCreateFile={createFile}
       onRenameFile={renameFile}
@@ -374,32 +432,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     >
       <div className="repo-code-split">
         {editor}
-        <section className="code-output-zone">
-          <nav>
-            <button type="button" className={rightPanel === 'preview' ? 'is-active' : ''} onClick={() => setRightPanel('preview')}><Play size={12} /> Preview</button>
-            <button type="button" className={rightPanel === 'terminal' ? 'is-active' : ''} onClick={() => setRightPanel('terminal')}><TerminalSquare size={12} /> Terminal</button>
-            <button type="button" className={rightPanel === 'readme' ? 'is-active' : ''} onClick={() => setRightPanel('readme')}><BookOpen size={12} /> README</button>
-            <button type="button" onClick={() => onAskHelios(`Review ${activeFile || 'this repository'} and write the next useful file changes as path-tagged code blocks`)}><Sparkles size={12} /> Helios</button>
-            {rightPanel === 'preview' && <button type="button" onClick={() => setPreviewKey(key => key + 1)} aria-label="Refresh preview"><RefreshCw size={12} /></button>}
-          </nav>
-          {rightPanel === 'preview' && <iframe key={previewKey} title="Live project preview" sandbox="allow-scripts" srcDoc={preview} />}
-          {rightPanel === 'terminal' && (
-            <div className="browser-terminal">
-              <div>{(value.terminal || []).map((line, index) => <p key={index}>{line}</p>)}</div>
-              <form onSubmit={runTerminal}><span>$</span><input value={terminalInput} onChange={event => setTerminalInput(event.target.value)} aria-label="Terminal command" /></form>
-            </div>
-          )}
-          {rightPanel === 'readme' && (
-            <div className="code-docs">
-              <BookOpen size={22} />
-              <h3>README</h3>
-              <p>Every repository should explain itself. Create <code>README.md</code>, write the purpose, then commit it.</p>
-              <button type="button" onClick={() => files['README.md'] !== undefined ? openFile('README.md') : createFile('README.md', README_STARTER)}>
-                {files['README.md'] !== undefined ? 'Open README.md' : 'Add README.md'}
-              </button>
-            </div>
-          )}
-        </section>
+        {sidePanel}
       </div>
     </RepoFrame>
   )

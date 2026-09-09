@@ -127,26 +127,29 @@
 .lifestyle-layout {
   display: grid;
   width: 100%;
-  max-width: min(1280px, 100%);
+  max-width: min(920px, 100%);
   margin: 0 auto;
   min-height: 0;
   flex: 1;
   align-items: start;
-  gap: 18px;
-  padding: 12px 18px 28px;
+  gap: 12px;
+  padding: 8px 12px 24px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr) minmax(220px, 280px);
+  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
 }
 
-.lifestyle-left,
-.lifestyle-right {
+.lifestyle-left {
   position: sticky;
   top: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+}
+
+.lifestyle-right {
+  display: none !important;
 }
 
 .lifestyle-profile-shortcut {
@@ -205,9 +208,9 @@
 }
 
 .avatar-md {
-  width: 41px;
-  height: 41px;
-  font-size: 11px;
+  width: 36px;
+  height: 36px;
+  font-size: 10px;
 }
 
 .lifestyle-side-nav {
@@ -325,9 +328,9 @@
 
 .tweet-post {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 12px;
-  padding: 14px 16px 10px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 12px 8px;
   border: 0;
   border-bottom: 1px solid var(--helios-border);
   border-radius: 0;
@@ -362,17 +365,17 @@
   cursor: pointer;
 }
 
-.tweet-main .post-author strong { font-size: 15px; }
+.tweet-main .post-author strong { font-size: 13px; }
 .tweet-main .post-author span,
 .tweet-main time {
   color: var(--helios-muted);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .tweet-post .post-body {
-  margin: 4px 0 10px;
-  font-size: 15px;
-  line-height: 1.45;
+  margin: 2px 0 8px;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .tweet-actions {
@@ -863,7 +866,7 @@
 
 .lifestyle-post {
   position: relative;
-  padding: 15px 15px 10px;
+  padding: 10px 12px 8px;
   animation: post-enter 360ms var(--ease-enter) both;
 }
 
@@ -1617,17 +1620,9 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 1180px) {
-  .lifestyle-layout {
-    max-width: 1030px;
-    grid-template-columns: 210px minmax(0, 1fr);
-  }
-  .lifestyle-right { display: none; }
-}
-
 @media (max-width: 930px) {
   .lifestyle-layout {
-    max-width: 730px;
+    max-width: 640px;
     grid-template-columns: minmax(0, 1fr);
   }
   .lifestyle-left { display: none; }
@@ -1755,13 +1750,20 @@
 
 .post-media {
   display: block;
-  width: 100%;
-  max-height: 520px;
-  margin: 0 0 14px;
-  border: 1px solid var(--helios-border);
-  border-radius: 14px;
+  width: calc(100% + 24px);
+  max-width: none;
+  max-height: 560px;
+  margin: 0 -12px 10px;
+  border: 0;
+  border-radius: 0;
   background: #09090d;
   object-fit: cover;
+}
+
+.tweet-post .post-media {
+  width: calc(100% + 62px);
+  margin-left: -50px;
+  margin-right: -12px;
 }
 
 .lifestyle-post.is-targeted { animation: lifestyle-target 2.2s ease both; }
@@ -1808,7 +1810,7 @@
 }
 
 
-/* helios-social-premium — Instagram × X glass feed */
+/* helios-social-premium — Instagram-packed feed column */
 .lifestyle-page,
 .lifestyle-shell,
 .lifestyle-layout {
@@ -1816,41 +1818,42 @@
 }
 .lifestyle-feed,
 .twitter-feed {
-  max-width: 640px;
+  max-width: 580px;
   margin-inline: auto;
 }
 .lifestyle-composer,
 .lifestyle-composer.liquid-glass {
-  border-radius: 22px !important;
+  border-radius: 14px !important;
   border: 1px solid var(--glass-stroke) !important;
   background: var(--glass-bg) !important;
   backdrop-filter: blur(18px) saturate(1.2);
   -webkit-backdrop-filter: blur(18px) saturate(1.2);
   box-shadow: var(--glass-shadow);
+  margin-bottom: 8px;
 }
 .lifestyle-post,
 .post-card,
 .feed-post {
-  border-radius: 20px !important;
-  border: 1px solid var(--glass-stroke) !important;
-  background: var(--glass-bg-strong) !important;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 8px 28px rgba(28, 25, 23, 0.06);
-  margin-bottom: 14px;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--glass-stroke) !important;
+  background: transparent !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none !important;
+  margin-bottom: 0;
   transition:
-    transform var(--dur-quick) var(--ease-enter),
-    box-shadow var(--dur-quick) var(--ease-move),
-    border-color var(--dur-quick) var(--ease-move),
+    background var(--dur-quick) var(--ease-move),
     filter var(--dur-quick) var(--ease-move);
 }
 .lifestyle-post:hover,
 .post-card:hover,
 .feed-post:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--helios-accent) 20%, var(--glass-stroke)) !important;
-  box-shadow: var(--shadow-lift);
-  filter: brightness(1.015);
+  transform: none;
+  border-color: var(--glass-stroke) !important;
+  box-shadow: none !important;
+  filter: brightness(1.01);
+  background: color-mix(in srgb, var(--helios-surface) 55%, transparent) !important;
 }
 .lifestyle-tabs button.is-active,
 .feed-tabs button.is-active {
@@ -1895,16 +1898,16 @@ button.liquid-glass-btn.is-primary {
 
 .feed-home-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 6px;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 4px;
   border: 1px solid var(--glass-stroke);
   border-radius: 999px;
   background: var(--glass-bg);
 }
 .feed-home-tabs button {
   flex: 1;
-  min-height: 36px;
+  min-height: 32px;
   border: 0 !important;
   border-radius: 999px !important;
   background: transparent !important;
@@ -1921,10 +1924,11 @@ button.liquid-glass-btn.is-primary {
 
 .tweet-post,
 .lifestyle-post.tweet-post {
-  border-radius: 22px !important;
-  border: 1px solid var(--glass-stroke) !important;
-  background: var(--glass-bg-strong) !important;
-  padding: 16px 18px !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--glass-stroke) !important;
+  background: transparent !important;
+  padding: 10px 12px 8px !important;
 }
 .tweet-actions button,
 .post-actions button {
@@ -1967,45 +1971,47 @@ button.liquid-glass-btn.is-primary {
 }
 
 .lifestyle-left,
-.lifestyle-right,
 .lifestyle-side-nav,
-.lifestyle-pulse-card,
-.lifestyle-app-callout,
 .lifestyle-profile-shortcut {
   background: var(--glass-bg) !important;
   border: 1px solid var(--glass-stroke) !important;
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: var(--glass-shadow);
   backdrop-filter: blur(14px);
 }
 .lifestyle-profile-shortcut,
-.lifestyle-side-nav,
-.lifestyle-pulse-card,
-.lifestyle-app-callout {
-  padding: 12px;
+.lifestyle-side-nav {
+  padding: 8px;
 }
-.lifestyle-side-nav { gap: 4px; }
-.lifestyle-feed.twitter-feed { max-width: none; width: min(720px, 100%); }
+.lifestyle-side-nav { gap: 2px; }
+.lifestyle-feed.twitter-feed {
+  max-width: none;
+  width: min(580px, 100%);
+  border-left: 1px solid var(--glass-stroke);
+  border-right: 1px solid var(--glass-stroke);
+}
 
-@media (max-width: 1180px) {
-  .lifestyle-layout { grid-template-columns: minmax(0, 1fr) minmax(200px, 260px); }
-  .lifestyle-left { display: none; }
-}
 @media (max-width: 900px) {
-  .lifestyle-layout { grid-template-columns: minmax(0, 1fr); padding: 10px 12px 88px; }
-  .lifestyle-right { display: none; }
+  .lifestyle-layout { grid-template-columns: minmax(0, 1fr); padding: 6px 0 88px; }
+  .lifestyle-left { display: none; }
   .lifestyle-topbar { grid-template-columns: 1fr auto; }
   .lifestyle-search { grid-column: 1 / -1; }
+  .lifestyle-feed.twitter-feed { border-left: 0; border-right: 0; width: 100%; }
+  .tweet-post .post-media {
+    width: calc(100% + 62px);
+    margin-left: -50px;
+    margin-right: -12px;
+  }
 }
 
 /* WorkBuddy collaboration strip */
 .workbuddy-strip {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 14px;
-  padding: 12px 14px;
-  border-radius: 20px;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
 }
 .workbuddy-strip > header {
   display: flex;
@@ -2047,4 +2053,8 @@ button.liquid-glass-btn.is-primary {
 }
 .collab-actions button span {
   font-size: 12px;
+}
+.collab-actions button.is-friend-pending {
+  color: var(--helios-accent);
+  opacity: 0.85;
 }
