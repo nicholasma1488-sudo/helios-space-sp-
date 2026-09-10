@@ -1,25 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AppWindow, Bookmark, BookOpen, ChevronDown, Code, Dumbbell, FileText, Image as ImageIcon,
-  Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal,
-  PenLine, Plus, Repeat2, Search, Send, Share, Sparkles, Sun, Trash2, Users, X, Zap,
+  AppWindow, Bookmark, ChevronDown, FileText, Filter, FolderGit2, Globe2, Heart, Lock, MessageCircle, MoreHorizontal, PenLine, Plus, Search, Send, Share, Sparkles, Trash2, UserPlus, Users, X, Zap, Image as ImageIcon,
 } from 'lucide-react'
-import type { Comment, Post, SolarSummary, User } from '../api'
+import type { Comment, Post, User } from '../api'
 import { api, type LiveSession } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
-import { getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { getMiniApp } from '../product/catalog'
 import { openCreatorProfile, openLiveSession, openProjectWorkspace } from '../product/flow'
 import './LifestyleView.css'
 
 const CATEGORIES = [
-  { id: 'all', label: 'Everything', icon: <Sparkles size={14} />, color: '#8576f5' },
-  { id: 'code', label: 'Coding', icon: <Code size={14} />, color: '#4fc3f7' },
-  { id: 'study', label: 'Study', icon: <BookOpen size={14} />, color: '#b794ff' },
-  { id: 'activity', label: 'Activity', icon: <Dumbbell size={14} />, color: '#6ed69a' },
-  { id: 'reading', label: 'Reading', icon: <BookOpen size={14} />, color: '#f2b84b' },
-  { id: 'reflection', label: 'Reflection', icon: <PenLine size={14} />, color: '#ff9b6a' },
+  { id: 'all', label: 'All', icon: <Sparkles size={14} />, color: '#c96442' },
+  { id: 'reflection', label: 'Updates', icon: <PenLine size={14} />, color: '#5b8def' },
+  { id: 'activity', label: 'Go Live', icon: <Zap size={14} />, color: '#3d8b6e' },
 ]
+
 
 const REACTIONS = [
   { emoji: '👍', label: 'Like', color: '#68b7ff' },
@@ -31,7 +27,6 @@ const REACTIONS = [
 ]
 
 interface Props { currentUser: User }
-const EMPTY_SOLAR: SolarSummary = { total: 0, identity: 'Dawn', next_threshold: 100, events: [] }
 
 export function LifestyleView({ currentUser }: Props) {
   const { state, dispatch } = useApp()
@@ -49,17 +44,17 @@ export function LifestyleView({ currentUser }: Props) {
   const [postCategory, setPostCategory] = useState('reflection')
   const [audience, setAudience] = useState<'public' | 'private'>('public')
   const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null)
-  const [postKind, setPostKind] = useState<'text' | 'project' | 'mini-app' | 'live'>('text')
+  const [postKind, setPostKind] = useState<'text' | 'project' | 'live'>('text')
   const [feedTab, setFeedTab] = useState<'foryou' | 'following'>('foryou')
-  const [reposted, setReposted] = useState<Set<number>>(new Set())
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
   const [linkedLiveId, setLinkedLiveId] = useState<number | null>(null)
   const [mediaData, setMediaData] = useState('')
   const [mediaName, setMediaName] = useState('')
-  const [solar, setSolar] = useState<SolarSummary>(EMPTY_SOLAR)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [busyPost, setBusyPost] = useState<number | null>(null)
+  const [friendPending, setFriendPending] = useState<Record<number, boolean>>({})
+  const [friendBusyUser, setFriendBusyUser] = useState<number | null>(null)
   const [reactionPicker, setReactionPicker] = useState<number | null>(null)
   const [openComments, setOpenComments] = useState<Set<number>>(new Set())
   const [activeHighlight, setActiveHighlight] = useState<Post | null>(null)
@@ -108,8 +103,15 @@ export function LifestyleView({ currentUser }: Props) {
 
   useEffect(() => { void loadPosts() }, [loadPosts])
 
-  useEffect(() => { void api.solar().then(setSolar).catch(() => {}) }, [])
-  useEffect(() => { void api.live.list().then(result => setLiveSessions(result.sessions)).catch(() => {}) }, [])
+  useEffect(() => {
+    let cancelled = false
+    void api.live.list().then(result => {
+      if (!cancelled) setLiveSessions(result.sessions || [])
+    }).catch(() => {
+      if (!cancelled) setLiveSessions([])
+    })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     if (loading || targetHandled.current) return
@@ -152,8 +154,6 @@ export function LifestyleView({ currentUser }: Props) {
     if (feedTab === 'following') return posts.filter(post => post.author_id !== currentUser.id)
     return posts
   }, [posts, feedTab, currentUser.id])
-  const contextualApp = getMiniApp(getSpaceDefinition(state.activeSpaceId).miniApps[0])
-  const myPostCount = posts.filter(post => post.author_id === currentUser.id).length
 
   async function submitPost(event: React.FormEvent) {
     event.preventDefault()
@@ -168,7 +168,7 @@ export function LifestyleView({ currentUser }: Props) {
         audience,
         project_id: linkedProjectId ?? undefined,
         space_id: state.projects.find(project => project.id === linkedProjectId)?.space_id ?? state.activeSpaceId,
-        post_type: postKind === 'live' ? 'live-watch' : postKind === 'mini-app' ? 'mini-app' : linkedProjectId ? 'project-progress' : 'meaningful-progress',
+        post_type: postKind === 'live' ? 'live-watch' : linkedProjectId ? 'project-progress' : 'meaningful-progress',
         media_url: mediaData,
       })
       const visibleInFilter = !savedOnly &&
@@ -180,7 +180,6 @@ export function LifestyleView({ currentUser }: Props) {
       setMediaData('')
       setMediaName('')
       setComposerOpen(false)
-      void api.solar().then(setSolar).catch(() => {})
       dispatch({
         type: 'PUSH_TOAST',
         toast: {
@@ -301,21 +300,24 @@ export function LifestyleView({ currentUser }: Props) {
     await react(post, '❤️')
   }
 
-  function repostPost(post: Post) {
-    setReposted(current => {
-      const next = new Set(current)
-      if (next.has(post.id)) next.delete(post.id)
-      else next.add(post.id)
-      return next
-    })
-    dispatch({
-      type: 'PUSH_TOAST',
-      toast: {
-        id: String(Date.now()),
-        message: reposted.has(post.id) ? 'Repost removed' : 'Reposted to your timeline',
-        tone: 'success',
-      },
-    })
+  async function addFriend(userId: number, name: string) {
+    if (!userId || friendBusyUser !== null || friendPending[userId]) return
+    setFriendBusyUser(userId)
+    try {
+      await api.friends.request({ user_id: userId })
+      setFriendPending(current => ({ ...current, [userId]: true }))
+      dispatch({
+        type: 'PUSH_TOAST',
+        toast: { id: String(Date.now()), message: `Friend request sent to ${name}`, tone: 'success' },
+      })
+    } catch (error) {
+      dispatch({
+        type: 'PUSH_TOAST',
+        toast: { id: String(Date.now()), message: (error as Error).message || 'Could not send friend request', tone: 'warning' },
+      })
+    } finally {
+      setFriendBusyUser(null)
+    }
   }
 
   function toggleComments(postId: number) {
@@ -338,11 +340,11 @@ export function LifestyleView({ currentUser }: Props) {
       <header className="lifestyle-topbar">
         <div className="lifestyle-title">
           <span className="lifestyle-title-mark"><Zap size={17} /></span>
-          <div><strong>Home</strong><small>A Twitter-style feed for work, projects, and Live</small></div>
+          <div><strong>Space</strong><small>See what friends are up to, and share what you are shipping</small></div>
         </div>
         <label className="lifestyle-search">
           <Search size={16} />
-          <span className="sr-only">Search progress updates</span>
+          <span className="sr-only">Search updates</span>
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
@@ -350,7 +352,7 @@ export function LifestyleView({ currentUser }: Props) {
           />
           {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}
         </label>
-        <button type="button" className="lifestyle-compose-top" onClick={() => setComposerOpen(true)}>
+        <button type="button" className="lifestyle-compose-top liquid-glass-btn is-primary" onClick={() => setComposerOpen(true)}>
           <Plus size={16} /> Post
         </button>
       </header>
@@ -367,67 +369,65 @@ export function LifestyleView({ currentUser }: Props) {
               <Globe2 size={17} /><span>For you</span>
             </button>
             <button type="button" className={!savedOnly && feedTab === 'following' ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>
-              <Users size={17} /><span>Following</span>
+              <Users size={17} /><span>Buddies</span>
             </button>
             <button type="button" className={savedOnly ? 'is-active' : ''} onClick={() => setSavedOnly(true)}>
-              <Bookmark size={17} /><span>Bookmarks</span>
-            </button>
-            <button type="button" onClick={() => dispatch({ type: 'OPEN_SPACE', spaceId: state.activeSpaceId, tab: 'apps' })}>
-              <AppWindow size={17} /><span>Mini Apps</span>
+              <Bookmark size={17} /><span>Saved</span>
             </button>
           </nav>
-
-          <div className="lifestyle-side-section">
-            <span>EXPLORE BY MOMENT</span>
-            {CATEGORIES.slice(1).map(item => (
-              <button
-                key={item.id}
-                type="button"
-                className={categoryFilter === item.id ? 'is-active' : ''}
-                onClick={() => setCategoryFilter(categoryFilter === item.id ? 'all' : item.id)}
-              >
-                <i style={{ background: item.color + '20', color: item.color }}>{item.icon}</i>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {state.projects.length > 0 && (
-            <div className="lifestyle-side-section project-shortcuts">
-              <span>YOUR PROJECTS</span>
-              {state.projects.slice(0, 4).map(project => (
-                <button
-                  key={project.id}
-                  type="button"
-                  onClick={() => dispatch({ type: 'OPEN_CODE_EDITOR', projectId: project.id })}
-                >
-                  <i><FolderGit2 size={14} /></i>
-                  <span>{project.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
         </aside>
 
         <main className="lifestyle-feed twitter-feed" aria-live="polite">
-          <nav className="feed-home-tabs" aria-label="Home timeline">
+          <section className="workbuddy-strip liquid-glass" aria-label="WorkBuddy activity">
+            <header>
+              <strong>WorkBuddy</strong>
+              <small>Collaborating / just updated</small>
+            </header>
+            <div className="workbuddy-strip-row">
+              <button type="button" className="workbuddy-chip is-you" onClick={() => setComposerOpen(true)}>
+                <Avatar name={currentUser.name} size="sm" />
+                <span>Share progress</span>
+              </button>
+              {timeline.slice(0, 8).map(post => (
+                <button
+                  type="button"
+                  key={`buddy-${post.id}`}
+                  className="workbuddy-chip"
+                  onClick={() => {
+                    const el = document.querySelector(`[data-lifestyle-post-id="${post.id}"]`)
+                    el?.scrollIntoView({ behavior: state.reducedMotion ? 'auto' : 'smooth', block: 'center' })
+                  }}
+                >
+                  <Avatar name={post.author_name} size="sm" />
+                  <span>{post.author_name.split(' ')[0]}</span>
+                </button>
+              ))}
+              {timeline.length === 0 && (
+                <button type="button" className="workbuddy-chip" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
+                  <Users size={14} />
+                  <span>Invite buddies</span>
+                </button>
+              )}
+            </div>
+          </section>
+
+          <nav className="feed-home-tabs" aria-label="Feed timeline">
             <button type="button" className={feedTab === 'foryou' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('foryou') }}>For you</button>
-            <button type="button" className={feedTab === 'following' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>Following</button>
+            <button type="button" className={feedTab === 'following' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>Buddies</button>
           </nav>
 
-          <section className={'lifestyle-composer' + (composerOpen ? ' is-open' : '')}>
+          <section className={'lifestyle-composer liquid-glass' + (composerOpen ? ' is-open' : '')}>
             {!composerOpen ? (
               <>
                 <div className="composer-compact">
                   <Avatar name={currentUser.name} size="md" />
                   <button type="button" onClick={() => setComposerOpen(true)}>
-                    What’s happening?
+                    Share something in progress…
                   </button>
                 </div>
                 <div className="composer-quick-actions">
-                  <button type="button" onClick={() => { setPostCategory('code'); setComposerOpen(true) }}><Code size={16} /> Milestone</button>
-                  <button type="button" onClick={() => { setPostCategory('activity'); setComposerOpen(true) }}><Heart size={16} /> Life moment</button>
-                  <button type="button" onClick={() => { setPostCategory('reflection'); setComposerOpen(true) }}><PenLine size={16} /> Reflection</button>
+                  <button type="button" onClick={() => { setPostCategory('reflection'); setComposerOpen(true) }}><PenLine size={16} /> Update</button>
+                  <button type="button" onClick={() => { setPostCategory('activity'); setComposerOpen(true) }}><Zap size={16} /> Go Live</button>
                 </div>
               </>
             ) : (
@@ -445,8 +445,8 @@ export function LifestyleView({ currentUser }: Props) {
                     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') event.currentTarget.form?.requestSubmit()
                   }}
                   maxLength={2000}
-                  placeholder="What’s happening?"
-                  aria-label="Progress update"
+                  placeholder="Share something in progress…"
+                  aria-label="Post content"
                 />
                 <div className="composer-category-row" role="group" aria-label="Update category">
                   {CATEGORIES.slice(1).map(item => (
@@ -462,7 +462,7 @@ export function LifestyleView({ currentUser }: Props) {
                   ))}
                 </div>
                 <div className="composer-kind-row" role="group" aria-label="What you are sharing">
-                  {([['text', 'Text'], ['project', 'Project'], ['mini-app', 'Mini App'], ['live', 'Live Project']] as const).map(([id, label]) => (
+                  {([['text', 'Text'], ['project', 'Work'], ['live', 'Go Live']] as const).map(([id, label]) => (
                     <button type="button" key={id} aria-pressed={postKind === id} onClick={() => setPostKind(id)}>{label}</button>
                   ))}
                 </div>
@@ -481,7 +481,7 @@ export function LifestyleView({ currentUser }: Props) {
                       <FolderGit2 size={14} />
                       <span className="sr-only">Link a project</span>
                       <select value={linkedProjectId ?? ''} onChange={event => setLinkedProjectId(event.target.value ? Number(event.target.value) : null)}>
-                        <option value="">{postKind === 'mini-app' ? 'Choose Mini App Project' : 'No linked project'}</option>
+                        <option value="">No linked project</option>
                         {state.projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}
                       </select>
                       <ChevronDown size={13} />
@@ -496,7 +496,7 @@ export function LifestyleView({ currentUser }: Props) {
                         const session = liveSessions.find(item => item.id === id)
                         if (session) setLinkedProjectId(session.project_id)
                       }}>
-                        <option value="">Choose a Live Project</option>
+                        <option value="">Choose a live session</option>
                         {liveSessions.map(session => <option key={session.id} value={session.id}>{session.title}</option>)}
                       </select>
                     </label>
@@ -506,7 +506,7 @@ export function LifestyleView({ currentUser }: Props) {
                 {submitError && <div className="composer-error" role="alert">{submitError}</div>}
                 <footer>
                   <span>{postText.length}/2000 · ⌘ Enter to publish</span>
-                  <button type="submit" disabled={!postText.trim() || submitting}>
+                  <button type="submit" className="liquid-glass-btn is-primary" disabled={!postText.trim() || submitting}>
                     <Send size={15} /> {submitting ? 'Posting…' : 'Post'}
                   </button>
                 </footer>
@@ -532,17 +532,17 @@ export function LifestyleView({ currentUser }: Props) {
             </button>
           </section>
 
-          {loading && <FeedState icon={<Sparkles size={22} />} title="Gathering progress…" detail="Loading the latest signals from your space." />}
+          {loading && <FeedState icon={<Sparkles size={22} />} title="Loading…" detail="Pulling in the latest updates." />}
           {!loading && loadError && (
-            <FeedState icon={<Zap size={22} />} title="The feed missed its orbit" detail={loadError}>
-              <button type="button" onClick={() => void loadPosts()}>Try again</button>
+            <FeedState icon={<Zap size={22} />} title="Could not load updates" detail={loadError}>
+              <button type="button" className="liquid-glass-btn is-primary" onClick={() => void loadPosts()}>Try again</button>
             </FeedState>
           )}
           {!loading && !loadError && timeline.length === 0 && (
             <FeedState
               icon={savedOnly ? <Bookmark size={22} /> : <FileText size={22} />}
-              title={savedOnly ? 'Nothing saved yet' : feedTab === 'following' ? 'No following posts yet' : 'No updates match'}
-              detail={savedOnly ? 'Bookmark a post and it will wait here.' : feedTab === 'following' ? 'Posts from other people will appear here.' : 'Try another filter or share the first update.'}
+              title={savedOnly ? 'Nothing saved yet' : feedTab === 'following' ? 'Your buddy feed is empty' : 'No updates yet'}
+              detail={savedOnly ? 'Save an update and it will show up here.' : feedTab === 'following' ? 'Posts from others will show up here.' : 'Post your first update, or try a different filter.'}
             >
               {!savedOnly && <button type="button" onClick={() => setComposerOpen(true)}>Post</button>}
             </FeedState>
@@ -556,11 +556,25 @@ export function LifestyleView({ currentUser }: Props) {
               busy={busyPost === post.id}
               pickerOpen={reactionPicker === post.id}
               commentsOpen={openComments.has(post.id)}
-              reposted={reposted.has(post.id)}
+              friendPending={Boolean(post.author_id && friendPending[post.author_id])}
+              friendBusy={friendBusyUser === post.author_id}
               onTogglePicker={() => setReactionPicker(current => current === post.id ? null : post.id)}
               onReact={emoji => void react(post, emoji)}
               onLike={() => void likePost(post)}
-              onRepost={() => repostPost(post)}
+              onAddFriend={() => {
+                if (!post.author_id || post.author_id === currentUser.id) return
+                void addFriend(post.author_id, post.author_name)
+              }}
+              onInvite={() => {
+                if (post.author_id === currentUser.id) {
+                  dispatch({ type: 'SET_VIEW', view: 'chat' })
+                  return
+                }
+                sessionStorage.setItem('helios-invite-handle', post.author_handle || '')
+                sessionStorage.setItem('helios-invite-name', post.author_name || '')
+                dispatch({ type: 'SET_VIEW', view: 'chat' })
+                dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Invite ${post.author_name} to collaborate in Messages`, tone: 'success' } })
+              }}
               onToggleComments={() => toggleComments(post.id)}
               onToggleSave={() => void toggleSave(post)}
               onCopy={() => void copyPost(post)}
@@ -570,7 +584,7 @@ export function LifestyleView({ currentUser }: Props) {
               onWatchLive={() => {
                 const session = liveSessions.find(item => item.project_id === post.project_id)
                 if (session) openLiveSession(session.id, dispatch)
-                else dispatch({ type: 'SET_VIEW', view: 'live' })
+                else dispatch({ type: 'SET_VIEW', view: 'lifestyle' })
               }}
               onOpenCreator={() => openCreatorProfile({ id: post.author_id || 0, name: post.author_name, handle: post.author_handle }, dispatch)}
               onCommentCountChange={delta => updateCommentCount(post.id, delta)}
@@ -588,41 +602,9 @@ export function LifestyleView({ currentUser }: Props) {
             </button>
           )}
           {!loading && !loadError && timeline.length > 0 && !nextCursor && (
-            <div className="feed-end"><span>✦</span> You’re caught up.</div>
+            <div className="feed-end"><span>✦</span> You're all caught up.</div>
           )}
         </main>
-
-        <aside className="lifestyle-right" aria-label="Lifestyle overview">
-          <section className="lifestyle-pulse-card">
-            <span className="right-card-eyebrow">MEANINGFUL PROGRESSION</span>
-            <div className="pulse-orbit">
-              <div><Sun size={16} /><strong>{solar.total}</strong><span>Solar · {solar.identity}</span></div>
-            </div>
-            <div className="pulse-stats">
-              <span><strong>{myPostCount}</strong> progress posts</span>
-              <span><strong>{solar.next_threshold ? solar.next_threshold - solar.total : 0}</strong> to next identity</span>
-            </div>
-            <p className="solar-integrity-note">Solar rewards genuine work, publishing and helping—not meaningless clicks.</p>
-          </section>
-
-          <section className="lifestyle-right-card">
-            <header><strong>Explore a different rhythm</strong><small>Switch the feed moment</small></header>
-            {CATEGORIES.slice(1, 5).map(item => (
-              <button type="button" key={item.id} onClick={() => setCategoryFilter(item.id)}>
-                <i style={{ background: item.color + '1a', color: item.color }}>{item.icon}</i>
-                <span><strong>{item.label}</strong><small>See recent {item.label.toLowerCase()} updates</small></span>
-                <span>›</span>
-              </button>
-            ))}
-          </section>
-
-          <section className="lifestyle-app-callout">
-            <span><AppWindow size={16} /> CURRENT SPACE MINI APP</span>
-            <strong>{contextualApp.name}</strong>
-            <p>{contextualApp.description}</p>
-            <button type="button" onClick={() => dispatch({ type: 'OPEN_SPACE', spaceId: state.activeSpaceId, tab: 'apps' })}>Open Space Mini Apps</button>
-          </section>
-        </aside>
       </div>
 
       {activeHighlight && <HighlightDialog post={activeHighlight} onClose={() => setActiveHighlight(null)} />}
@@ -645,17 +627,17 @@ function relativeTime(value: string) {
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
   if (seconds < 60) return 'just now'
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return minutes + 'm'
+  if (minutes < 60) return minutes + 'm ago'
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return hours + 'h'
+  if (hours < 24) return hours + 'h ago'
   const days = Math.floor(hours / 24)
-  if (days < 7) return days + 'd'
+  if (days < 7) return days + 'd ago'
   return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 function PostCard({
-  post, currentUser, busy, pickerOpen, commentsOpen, reposted,
-  onTogglePicker, onReact, onLike, onRepost, onToggleComments, onToggleSave, onCopy, onDelete,
+  post, currentUser, busy, pickerOpen, commentsOpen, friendPending, friendBusy,
+  onTogglePicker, onReact, onLike, onAddFriend, onInvite, onToggleComments, onToggleSave, onCopy, onDelete,
   onOpenProject, onOpenMiniApp, onWatchLive, onOpenCreator, onCommentCountChange,
 }: {
   post: Post
@@ -663,11 +645,13 @@ function PostCard({
   busy: boolean
   pickerOpen: boolean
   commentsOpen: boolean
-  reposted: boolean
+  friendPending: boolean
+  friendBusy: boolean
   onTogglePicker: () => void
   onReact: (emoji: string) => void
   onLike: () => void
-  onRepost: () => void
+  onAddFriend: () => void
+  onInvite: () => void
   onToggleComments: () => void
   onToggleSave: () => void
   onCopy: () => void
@@ -679,8 +663,9 @@ function PostCard({
   onCommentCountChange: (delta: number) => void
 }) {
   const liked = post.my_reactions.includes('❤️')
-  const likeCount = post.reactions['❤️'] || 0
-  const reactionTotal = Object.values(post.reactions).reduce((sum, count) => sum + count, 0)
+  const likeCount = post.reactions?.['❤️'] || 0
+  const reactionTotal = Object.values(post.reactions || {}).reduce((sum, count) => sum + count, 0)
+  const showAddFriend = Boolean(post.author_id && post.author_id !== currentUser.id)
 
   return (
     <article className="lifestyle-post tweet-post" data-lifestyle-post-id={post.id}>
@@ -693,12 +678,12 @@ function PostCard({
               <span>{post.author_handle}</span>
             </button>
             <time dateTime={post.created_at}>· {relativeTime(post.created_at)}</time>
-            {post.audience === 'private' ? <Lock size={13} aria-label="Only me" /> : null}
+            {post.audience === 'private' ? <Lock size={13} aria-label="Only visible to you" /> : null}
           </div>
           {post.can_delete ? (
-            <button type="button" className="post-more" onClick={onDelete} aria-label="Delete update"><Trash2 size={15} /></button>
+            <button type="button" className="post-more" onClick={onDelete} aria-label="Delete post"><Trash2 size={15} /></button>
           ) : (
-            <button type="button" className="post-more" aria-label="More options" disabled><MoreHorizontal size={17} /></button>
+            <button type="button" className="post-more" aria-label="More" disabled><MoreHorizontal size={17} /></button>
           )}
         </header>
 
@@ -706,34 +691,45 @@ function PostCard({
 
         {post.media_url && (post.media_url.startsWith('data:video/') || /\.(mp4|webm|mov)(\?|$)/i.test(post.media_url)
           ? <video className="post-media" src={post.media_url} controls preload="metadata" />
-          : <img className="post-media" src={post.media_url} alt="Shared progress" />)}
+          : <img className="post-media" src={post.media_url} alt="Collaboration post media" />)}
 
         {post.project_name && (
           <div className="post-project-row">
             <button type="button" onClick={onOpenProject} className="post-project">
-              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? 'Live Project' : 'Project'}</span><strong>{post.project_name}</strong>
+              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? 'Live collab' : 'Work'}</span><strong>{post.project_name}</strong>
             </button>
-            {post.project_app_kind && <button type="button" onClick={onOpenMiniApp} className="post-project"><AppWindow size={14} /><span>Mini App</span><strong>{getMiniApp(post.project_app_kind).name}</strong></button>}
-            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>Watch</span><strong>Live Project</strong></button>}
+            {post.project_app_kind && <button type="button" onClick={onOpenMiniApp} className="post-project"><AppWindow size={14} /><span>Tool</span><strong>{getMiniApp(post.project_app_kind).name}</strong></button>}
+            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>Watch</span><strong>Live collab</strong></button>}
           </div>
         )}
 
-        <div className="post-actions tweet-actions">
-          <button type="button" onClick={onToggleComments} aria-expanded={commentsOpen}>
-            <MessageCircle size={18} /> {post.comment_count || ''}
+        <div className="post-actions tweet-actions collab-actions">
+          <button type="button" onClick={onToggleComments} aria-expanded={commentsOpen} title="Comment">
+            <MessageCircle size={18} /> <span>{post.comment_count || ''}</span>
           </button>
-          <button type="button" onClick={onRepost} aria-pressed={reposted} className={reposted ? 'is-reposted' : ''}>
-            <Repeat2 size={18} /> {reposted ? 1 : ''}
+          <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''} title="Like">
+            <Heart size={18} fill={liked ? 'currentColor' : 'none'} /> <span>{likeCount || reactionTotal || ''}</span>
           </button>
-          <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''}>
-            <Heart size={18} fill={liked ? 'currentColor' : 'none'} /> {likeCount || reactionTotal || ''}
+          {showAddFriend && (
+            <button
+              type="button"
+              onClick={onAddFriend}
+              disabled={friendBusy || friendPending}
+              className={friendPending ? 'is-friend-pending' : ''}
+              title={friendPending ? 'Friend request pending' : 'Add friend'}
+            >
+              <UserPlus size={18} /> <span>{friendPending ? 'Pending' : 'Add friend'}</span>
+            </button>
+          )}
+          <button type="button" onClick={onInvite} title="Invite to collaborate">
+            <UserPlus size={18} /> <span>Invite</span>
           </button>
-          <button type="button" onClick={onToggleSave} aria-pressed={post.is_saved} className={post.is_saved ? 'is-saved' : ''} disabled={busy}>
+          <button type="button" onClick={onToggleSave} aria-pressed={post.is_saved} className={post.is_saved ? 'is-saved' : ''} disabled={busy} title="Save">
             <Bookmark size={18} fill={post.is_saved ? 'currentColor' : 'none'} />
           </button>
-          <button type="button" onClick={onCopy}><Share size={17} /></button>
+          <button type="button" onClick={onCopy} title="Copy link"><Share size={17} /></button>
           <button type="button" className="tweet-more-react" onClick={onTogglePicker} aria-haspopup="menu" aria-expanded={pickerOpen}>
-            {pickerOpen ? 'Close' : 'More'}
+            {pickerOpen ? 'Close' : 'React'}
           </button>
         </div>
         {pickerOpen && (
@@ -877,9 +873,9 @@ function HighlightDialog({ post, onClose }: { post: Post; onClose: () => void })
     <div className="highlight-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
       <div className={'highlight-dialog category-' + post.category} role="dialog" aria-modal="true" aria-labelledby="highlight-dialog-title" ref={dialogRef}>
         <button type="button" onClick={onClose} className="highlight-dialog-close" aria-label="Close highlight"><X size={17} /></button>
-        <div className="highlight-dialog-orbit"><Sparkles size={28} /></div>
+        <div className="highlight-dialog-mark" aria-hidden="true"><Sparkles size={22} /></div>
         <span className="highlight-dialog-category">{categoryLabel(post.category)}</span>
-        <h2 id="highlight-dialog-title">{post.author_name} moved something forward.</h2>
+        <h2 id="highlight-dialog-title">{post.author_name} took a step forward</h2>
         <p>{post.body}</p>
         <footer><Avatar name={post.author_name} size="sm" /><span><strong>{post.author_name}</strong><small>{post.author_handle} · {relativeTime(post.created_at)}</small></span></footer>
       </div>

@@ -2,7 +2,12 @@
 
 Helios Space is a React application for creating projects and sharing progress. Accounts, projects, posts, audiences, and reactions are persisted in SQLite by the included Express server.
 
-The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, Lifestyle uses a familiar social-feed information architecture while retaining the Helios graphite, solar, violet, and sky visual language. Chat Hub shows unread badges in navigation, Home has loading states, and error boundaries protect against unexpected crashes.
+The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, **Lifestyle (nav: Space)** is the social feed core. Helios Space is **completely free** — no Orbit / Stripe paywall in the product UI.
+
+**Active product plan:** [`PLAN.md`](./PLAN.md).  
+**Helios-native Mini Apps:** Quill, Lattice, Stage, Folio, Pulse, Dispatch, Orbit, Cascade, Weave, Tally, Forge.  
+**AI keys (Ollama ≈ unlimited):** [`docs/AI_KEYS.md`](./docs/AI_KEYS.md).  
+Design blueprint: [`PRODUCT.md`](./PRODUCT.md). Earlier WorkBuddy notes: [`REDESIGN.md`](./REDESIGN.md).
 
 ## Run locally
 
@@ -43,21 +48,26 @@ dedicated persistent directory.
 - Explore search, category filters, real sorting, and post deletion for authors
 - Spaces derived from the real space labels on the user’s projects
 - Account-scoped daily task list stored in the browser
-- Helios Mini Apps with account-isolated browser storage:
-  - Focus Orbit timer with refresh-safe timing
-  - Quick Notes
-  - Habit Pulse
-  - Decision Flip
+- Helios Mini Apps Create suite (Docs, Sheets, Slides, Notebook, Tasks, Code, and related tools)
 - Direction-aware primary-view transitions, active navigation motion, dialog focus trapping, and keyboard shortcuts
 - Theme, reduced-motion preference, and JSON account-data export
-- Optional Helios AI using an administrator-configured OpenAI-compatible endpoint
+- Optional Helios AI using an administrator-configured OpenAI-compatible endpoint (local free helper when no key)
 - Environment-configured admin panel for users, site settings, and AI configuration
 - Chat unread badge on desktop rail and mobile nav, polled every 30 seconds and cleared on entering Chat Hub
 - Home view shimmer loading skeleton and API error recovery banner
-- Projects view pre-selects the active Space when navigated from a Space context
 - Global React error boundary protecting against unexpected view crashes
 - Helios AI self-negation correction: upstream model replies claiming inability are replaced with a Helios-scoped boundary explanation
-- After signup, a required plan picker offers Free, Alpha, or Orbit. Paid plans unlock extra Mini Apps (Flash Cards, Homework Radar, Vocab Spark, Streak Arena, Idea Vault, Meeting Pulse, Deep Work, Win Log) plus card or Stripe checkout.
+- Billing UI retired: Helios Space is free forever (no plan picker / Orbit checkout in the product path)
+
+## Next slice (see PLAN.md)
+
+**Implementing** approved PLAN.md v2:
+
+- Lifestyle Instagram-packed; Your space / CREATE cards removed
+- **Mini App** text + arrow panel; Create nav removed; chrome collapse
+- Friend requests (Chat username search + Lifestyle)
+- M365 Mini Apps + PowerPoint Designer/photos + Helios IDE autosave
+- Inline Helios patch without opening full workspace
 
 ## Deliberately not represented as available
 

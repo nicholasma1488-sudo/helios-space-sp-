@@ -1,29 +1,21 @@
 import { useMemo, useState } from 'react'
-import { Clock3, FilePlus2, Lock, Search, Sparkles, X } from 'lucide-react'
+import { FilePlus2, Grid3X3, Search } from 'lucide-react'
+import { AppIcon } from '../components/AppIcon'
 import { useApp } from '../store/appStore'
-import { useFocusTrap } from '../hooks/useFocusTrap'
-import { createSuiteProject, openProjectWorkspace } from '../product/flow'
+import { openProjectWorkspace } from '../product/flow'
 import {
   editionBlurb,
   editionFor,
-  editionKicker,
   editionLabel,
-  nextSuiteFileName,
-  spaceForSuiteApp,
-  suiteAppUnlocked,
   suiteAppsForEdition,
   suiteHomeTitle,
-  suiteStarterWorkspace,
-  unlockLabel,
-  WRITING_LIMITS,
   type SuiteApp,
 } from '../product/miniApps'
 import './MiniAppsView.css'
 
 function relativeTime(value: string) {
-  const delta = Date.now() - new Date(value).getTime()
-  const minutes = Math.round(delta / 60000)
-  if (minutes < 1) return 'Just now'
+  const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000)
+  if (minutes < 1) return 'just now'
   if (minutes < 60) return `${minutes}m ago`
   const hours = Math.round(minutes / 60)
   if (hours < 24) return `${hours}h ago`
@@ -32,21 +24,22 @@ function relativeTime(value: string) {
   return new Date(value).toLocaleDateString()
 }
 
+function openTopBarCreatePanel(app?: SuiteApp) {
+  window.dispatchEvent(new CustomEvent('helios-open-create-panel', { detail: { appId: app?.id } }))
+}
+
 export function MiniAppsView() {
   const { state, dispatch } = useApp()
   const edition = editionFor(state.user?.plan)
   const apps = suiteAppsForEdition(edition)
   const [query, setQuery] = useState('')
-  const [active, setActive] = useState<SuiteApp | null>(null)
-  const [creating, setCreating] = useState(false)
-  const pickerRef = useFocusTrap<HTMLDivElement>(Boolean(active))
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
     if (!needle) return apps
     return apps.filter(app =>
-      app.name.toLowerCase().includes(needle) ||
-      app.description.toLowerCase().includes(needle),
+      [app.name, app.guideName, app.description, app.guideTip]
+        .some(value => value.toLowerCase().includes(needle)),
     )
   }, [apps, query])
 
@@ -60,53 +53,6 @@ export function MiniAppsView() {
     [state.projects, suiteIds],
   )
 
-  const activeFiles = useMemo(
-    () => active
-      ? state.projects
-        .filter(project => project.app_kind === active.id)
-        .slice()
-        .sort((left, right) => +new Date(right.updated_at) - +new Date(left.updated_at))
-        .slice(0, 8)
-      : [],
-    [active, state.projects],
-  )
-
-  function goBilling() {
-    dispatch({ type: 'OPEN_UPGRADE' })
-  }
-
-  function openApp(app: SuiteApp) {
-    if (!suiteAppUnlocked(app, edition)) {
-      goBilling()
-      return
-    }
-    if (app.id === 'stocks') {
-      const existing = state.projects
-        .filter(project => project.app_kind === 'stocks')
-        .sort((left, right) => +new Date(right.updated_at) - +new Date(left.updated_at))[0]
-      if (existing) {
-        void openExisting(existing.id)
-        return
-      }
-      if (creating) return
-      setCreating(true)
-      void createSuiteProject({
-        name: nextSuiteFileName(app.newName, state.projects, app.id),
-        spaceId: spaceForSuiteApp(app),
-        type: app.projectType,
-        appKind: app.id,
-        content: suiteStarterWorkspace(app),
-      }, dispatch).catch(error => {
-        dispatch({
-          type: 'PUSH_TOAST',
-          toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' },
-        })
-      }).finally(() => setCreating(false))
-      return
-    }
-    setActive(app)
-  }
-
   async function openExisting(projectId: number) {
     try {
       await openProjectWorkspace(projectId, state.projects, dispatch)
@@ -118,121 +64,88 @@ export function MiniAppsView() {
     }
   }
 
-  async function createFile() {
-    if (!active || creating) return
-    setCreating(true)
-    try {
-      await createSuiteProject({
-        name: nextSuiteFileName(active.newName, state.projects, active.id),
-        spaceId: spaceForSuiteApp(active),
-        type: active.projectType,
-        appKind: active.id,
-        content: suiteStarterWorkspace(active),
-      }, dispatch)
-    } catch (error) {
-      dispatch({
-        type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' },
-      })
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  const canUpgrade = edition === 'free'
-  const writingUsed = state.projects.filter(project =>
-    project.user_id === state.user?.id
-    && (project.type === 'writing' || (project.type === 'doc' && project.app_kind !== 'stocks')),
-  ).length
-  const writingLimit = state.user?.usage?.documents.limit ?? WRITING_LIMITS[edition].documents
-  const characterLimit = state.user?.usage?.characters.limit ?? WRITING_LIMITS[edition].characters
-
   return (
     <div className="suite-view">
       <header className="suite-top">
         <div>
-          <div className="suite-kicker"><Sparkles size={13} /> {editionKicker(edition)}</div>
+          <div className="suite-kicker">{editionLabel(edition)}</div>
           <h1>{suiteHomeTitle(edition)}</h1>
           <p>{editionBlurb(edition)}</p>
         </div>
         <label className="suite-search">
           <Search size={16} aria-hidden="true" />
           <span className="sr-only">Search apps</span>
-          <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Word, Excel, Stocks…" />
+          <input
+            value={query}
+            onChange={event => setQuery(event.target.value)}
+            placeholder="Search Docs / Sheets / Code…"
+          />
         </label>
       </header>
 
-      <div className="suite-welcome">
-        <div>
-          <small>{editionKicker(edition)}</small>
-          <strong>You are on {editionLabel(edition)}</strong>
-          <span>
-            {writingLimit == null
-              ? `Writing documents unlimited · ${characterLimit.toLocaleString()} characters each`
-              : `Writing ${writingUsed} / ${writingLimit} · ${characterLimit.toLocaleString()} characters each`}
-          </span>
-        </div>
-        {canUpgrade && (
-          <button type="button" onClick={goBilling}>
-            Upgrade to Orbit
-          </button>
-        )}
-      </div>
+      <button
+        type="button"
+        className="suite-hero-open liquid-glass-btn"
+        onClick={() => openTopBarCreatePanel()}
+      >
+        <span className="suite-hero-icon" aria-hidden="true"><Grid3X3 size={22} /></span>
+        <span>
+          <strong>Open Mini Apps from the top bar</strong>
+          <small>Expands a half-screen panel — pick Docs, Sheets, Code, and the rest</small>
+        </span>
+      </button>
 
       <div className="suite-body">
         <section className="suite-apps" aria-labelledby="suite-apps-title">
           <header>
-            <h2 id="suite-apps-title">{query ? 'Search results' : 'Apps'}</h2>
+            <h2 id="suite-apps-title">{query ? 'Search results' : 'Mini Apps'}</h2>
             <span>{filtered.length}</span>
           </header>
-          {['core', 'orbit'].map(track => {
-            const group = filtered.filter(app => app.track === track)
-            if (group.length === 0) return null
-            return (
-              <div key={track} className="suite-group">
-                <h3>{track === 'core' ? 'Included' : 'Orbit suite'}</h3>
-                <div className="suite-grid">
-                  {group.map(app => {
-                    const unlocked = suiteAppUnlocked(app, edition)
-                    return (
-                      <button
-                        key={app.id}
-                        type="button"
-                        className={'suite-tile' + (unlocked ? '' : ' is-locked')}
-                        title={unlocked ? app.description : unlockLabel(edition)}
-                        onClick={() => openApp(app)}
-                        aria-label={unlocked ? `Open ${app.name}` : unlockLabel(edition)}
-                      >
-                        <span className="suite-tile-icon" style={{ background: app.color }}>
-                          {unlocked ? app.letter : <Lock size={18} />}
-                        </span>
-                        <strong>{app.name}</strong>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )
-          })}
+          <div className="suite-grid suite-grid-guides">
+            {filtered.map(app => (
+              <button
+                key={app.id}
+                type="button"
+                className="suite-tile suite-tile-guide liquid-glass-btn"
+                title={app.guideTip}
+                onClick={() => openTopBarCreatePanel(app)}
+                aria-label={`Open ${app.name}`}
+              >
+                <span className="suite-tile-icon" style={{ background: app.color }} aria-hidden="true">
+                  <AppIcon icon={app.icon} />
+                </span>
+                <strong className="suite-tile-name">{app.name}</strong>
+                <span className="suite-guide">
+                  <span className="suite-guide-meta">
+                    <b>{app.guideTip}</b>
+                    <small>{app.description}</small>
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
           {filtered.length === 0 && (
             <div className="suite-empty">
               <Search size={22} />
-              <strong>No app found</strong>
-              <span>Try Word, Excel, PowerPoint, or OneNote.</span>
+              <strong>No matching app</strong>
+              <span>Try Docs, Sheets, Slides, or Code</span>
             </div>
           )}
         </section>
 
         <section className="suite-files" aria-labelledby="suite-recent-title">
           <header>
-            <h2 id="suite-recent-title">Recent</h2>
-            <span>Saved to your Projects</span>
+            <h2 id="suite-recent-title">Recent files</h2>
+            <span>Also on Home</span>
           </header>
           {recent.length === 0 ? (
             <div className="suite-empty">
               <FilePlus2 size={22} />
               <strong>No files yet</strong>
-              <span>Open Word, Excel or PowerPoint and start a real file.</span>
+              <span>Open Mini Apps from the top bar to create a file.</span>
+              <button type="button" className="liquid-glass-btn is-primary" onClick={() => openTopBarCreatePanel()}>
+                Open Mini Apps
+              </button>
             </div>
           ) : (
             <div className="suite-file-list">
@@ -240,7 +153,9 @@ export function MiniAppsView() {
                 const app = apps.find(item => item.id === project.app_kind)
                 return (
                   <button key={project.id} type="button" onClick={() => void openExisting(project.id)}>
-                    <span style={{ background: app?.color || '#185ABD' }}>{app?.letter || 'W'}</span>
+                    <span style={{ background: app?.color || 'var(--helios-accent)' }} aria-hidden="true">
+                      {app ? <AppIcon icon={app.icon} size={16} /> : '·'}
+                    </span>
                     <span>
                       <strong>{project.name}</strong>
                       <small>{app?.name || project.app_kind} · {relativeTime(project.updated_at)}</small>
@@ -252,47 +167,6 @@ export function MiniAppsView() {
           )}
         </section>
       </div>
-
-      {active && (
-        <div
-          className="suite-picker"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="suite-picker-title"
-          onMouseDown={event => { if (event.target === event.currentTarget) setActive(null) }}
-        >
-          <div className="suite-picker-panel" ref={pickerRef}>
-            <header>
-              <span className="suite-tile-icon" style={{ background: active.color }}>{active.letter}</span>
-              <div>
-                <small>NEW OR OPEN</small>
-                <h2 id="suite-picker-title">{active.name}</h2>
-              </div>
-              <button type="button" onClick={() => setActive(null)} aria-label="Close">
-                <X size={16} />
-              </button>
-            </header>
-            <p>{active.description}</p>
-            <button type="button" className="suite-create" onClick={() => void createFile()} disabled={creating}>
-              <FilePlus2 size={16} />
-              {creating ? 'Creating…' : `Blank ${active.newName.toLowerCase()}`}
-            </button>
-            {activeFiles.length > 0 && (
-              <div className="suite-file-list">
-                {activeFiles.map(project => (
-                  <button key={project.id} type="button" onClick={() => void openExisting(project.id)}>
-                    <span style={{ background: active.color }}>{active.letter}</span>
-                    <span>
-                      <strong>{project.name}</strong>
-                      <small><Clock3 size={11} /> {relativeTime(project.updated_at)}</small>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

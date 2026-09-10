@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AtSign, Bot, ChevronRight, Download, File, FolderGit2, Hash, Image,
+  AtSign, Bot, Check, ChevronRight, Download, File, FolderGit2, Hash, Image,
   MessageCircle, MoreHorizontal, Paperclip, Pin, Plus, Search, Send, Sparkles,
-  Users, X,
+  UserPlus, Users, X,
 } from 'lucide-react'
 import { api, type ChatMessage, type Conversation, type LiveSession, type Project } from '../api'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { askHeliosWithContext, openLiveSession, openProjectWorkspace } from '../product/flow'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
 import './ChatView.css'
 
 type PendingAttachment =
   | { type: 'project'; id: number; label: string }
   | { type: 'file'; file: { name: string; mime: string; size: number; data: string }; label: string }
+
+type FriendStatus = 'none' | 'friends' | 'outgoing' | 'incoming'
+type PeopleResult = { id: number; name: string; handle: string; friend_status: FriendStatus }
+type FriendRequestRow = { id: number; user_id: number; name: string; handle: string; created_at: string }
 
 const TAB_COPY: Array<{ id: Conversation['kind']; label: string; icon: React.ReactNode }> = [
   { id: 'project', label: 'Project Chats', icon: <FolderGit2 size={15} /> },
@@ -27,6 +32,11 @@ export function ChatView() {
   const [activeId, setActiveId] = useState<number | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [query, setQuery] = useState('')
+  const [peopleQuery, setPeopleQuery] = useState('')
+  const [peopleResults, setPeopleResults] = useState<PeopleResult[]>([])
+  const [peopleSearching, setPeopleSearching] = useState(false)
+  const [incomingRequests, setIncomingRequests] = useState<FriendRequestRow[]>([])
+  const [friendBusyId, setFriendBusyId] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
   const [pending, setPending] = useState<PendingAttachment | null>(null)
   const [loading, setLoading] = useState(true)
@@ -39,12 +49,29 @@ export function ChatView() {
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([])
   const fileInput = useRef<HTMLInputElement>(null)
   const messagesEnd = useRef<HTMLDivElement>(null)
+  const attachPanelRef = useFocusTrap<HTMLDivElement>(showAttachments)
   const initialSelectionDone = useRef(false)
+  const activeIdRef = useRef<number | null>(null)
+  const peopleSearchId = useRef(0)
+  activeIdRef.current = activeId
+
+  useEffect(() => {
+    if (!showAttachments) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShowAttachments(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showAttachments])
+
+  useEffect(() => {
+    setShowAttachments(false)
+  }, [activeId])
 
   const loadConversations = useCallback(async () => {
     try {
       const result = await api.chat.list()
-      setConversations(result.conversations)
+      setConversations(result.conversations || [])
       // Clear the global unread badge when user enters Chat Hub
       dispatch({ type: 'SET_CHAT_UNREAD', count: 0 })
       if (!initialSelectionDone.current) {
@@ -60,7 +87,107 @@ export function ChatView() {
   }, [dispatch])
 
   useEffect(() => { void loadConversations() }, [loadConversations])
-  useEffect(() => { void api.live.list().then(result => setLiveSessions(result.sessions)).catch(() => {}) }, [])
+
+  const loadFriendRequests = useCallback(async () => {
+    try {
+      const result = await api.friends.requests()
+      setIncomingRequests(result.incoming || [])
+    } catch {
+      setIncomingRequests([])
+    }
+  }, [])
+
+  useEffect(() => { void loadFriendRequests() }, [loadFriendRequests])
+
+  useEffect(() => {
+    const needle = peopleQuery.trim()
+    if (needle.length < 1) {
+      setPeopleResults([])
+      setPeopleSearching(false)
+      return
+    }
+    const id = ++peopleSearchId.current
+    setPeopleSearching(true)
+    const timeout = window.setTimeout(() => {
+      void api.users.search(needle).then(result => {
+        if (id !== peopleSearchId.current) return
+        setPeopleResults(result.people || [])
+      }).catch(() => {
+        if (id !== peopleSearchId.current) return
+        setPeopleResults([])
+      }).finally(() => {
+        if (id === peopleSearchId.current) setPeopleSearching(false)
+      })
+    }, 220)
+    return () => window.clearTimeout(timeout)
+  }, [peopleQuery])
+
+  useEffect(() => {
+    let cancelled = false
+    void api.live.list().then(result => {
+      if (!cancelled) setLiveSessions(result.sessions || [])
+    }).catch(() => {
+      if (!cancelled) setLiveSessions([])
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  function patchPersonStatus(userId: number, status: FriendStatus) {
+    setPeopleResults(current => current.map(person => person.id === userId ? { ...person, friend_status: status } : person))
+  }
+
+  async function sendFriendRequest(person: PeopleResult) {
+    if (friendBusyId !== null) return
+    setFriendBusyId(person.id)
+    try {
+      await api.friends.request({ user_id: person.id })
+      patchPersonStatus(person.id, 'outgoing')
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Friend request sent to ${person.name}`, tone: 'success' } })
+    } catch (error) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
+    } finally {
+      setFriendBusyId(null)
+    }
+  }
+
+  async function respondFriendRequest(requestId: number, decision: 'accept' | 'decline', userId?: number) {
+    if (friendBusyId !== null) return
+    setFriendBusyId(requestId)
+    try {
+      await api.friends.respond(requestId, decision)
+      setIncomingRequests(current => current.filter(item => item.id !== requestId))
+      if (userId) patchPersonStatus(userId, decision === 'accept' ? 'friends' : 'none')
+      dispatch({
+        type: 'PUSH_TOAST',
+        toast: {
+          id: String(Date.now()),
+          message: decision === 'accept' ? 'Friend request accepted' : 'Friend request declined',
+          tone: decision === 'accept' ? 'success' : 'info',
+        },
+      })
+    } catch (error) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
+    } finally {
+      setFriendBusyId(null)
+    }
+  }
+
+  async function acceptIncomingFromSearch(person: PeopleResult) {
+    const match = incomingRequests.find(item => item.user_id === person.id)
+    if (match) {
+      await respondFriendRequest(match.id, 'accept', person.id)
+      return
+    }
+    try {
+      const result = await api.friends.requests()
+      setIncomingRequests(result.incoming || [])
+      const found = (result.incoming || []).find(item => item.user_id === person.id)
+      if (found) await respondFriendRequest(found.id, 'accept', person.id)
+      else dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'Incoming request not found. Refresh and try again.', tone: 'warning' } })
+    } catch (error) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
+    }
+  }
 
   const active = conversations.find(item => item.id === activeId) ?? null
   const visibleConversations = useMemo(() => {
@@ -72,22 +199,40 @@ export function ChatView() {
     if (!quiet) setMessagesLoading(true)
     try {
       const result = await api.chat.messages(conversationId)
-      if (activeId === conversationId || !activeId) setMessages(result.messages)
-      await api.chat.read(conversationId)
-      setConversations(current => current.map(item => item.id === conversationId ? { ...item, unread: 0 } : item))
+      setMessages(current => {
+        if (activeIdRef.current !== conversationId) return current
+        return result.messages || []
+      })
+      // Only mark read / clear badge for the still-active conversation.
+      if (activeIdRef.current === conversationId) {
+        await api.chat.read(conversationId)
+        setConversations(current => current.map(item => item.id === conversationId ? { ...item, unread: 0 } : item))
+      }
     } catch (error) {
       if (!quiet) dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
     } finally { if (!quiet) setMessagesLoading(false) }
-  }, [activeId, dispatch])
+  }, [dispatch])
 
   useEffect(() => {
     if (!activeId) { setMessages([]); return }
-    void loadMessages(activeId)
-    const poll = window.setInterval(() => { void loadMessages(activeId, true); void loadConversations() }, 4500)
-    return () => window.clearInterval(poll)
+    let cancelled = false
+    void (async () => {
+      if (!cancelled) await loadMessages(activeId)
+    })()
+    const poll = window.setInterval(() => {
+      if (cancelled) return
+      void loadMessages(activeId, true)
+      void loadConversations()
+    }, 8000)
+    return () => {
+      cancelled = true
+      window.clearInterval(poll)
+    }
   }, [activeId, loadConversations, loadMessages])
 
-  useEffect(() => { messagesEnd.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages.length])
+  useEffect(() => {
+    messagesEnd.current?.scrollIntoView({ behavior: state.reducedMotion ? 'auto' : 'smooth' })
+  }, [messages.length, state.reducedMotion])
 
   function selectTab(next: Conversation['kind']) {
     setTab(next)
@@ -179,6 +324,56 @@ export function ChatView() {
       <aside className="chat-hub-sidebar">
         <header><div><MessageCircle size={19} /><span><strong>Chat Hub</strong><small>Work stays connected</small></span></div><button type="button" onClick={() => openCreate(tab)} aria-label="New conversation"><Plus size={16} /></button></header>
         <label className="chat-hub-search"><Search size={14} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search conversations" /></label>
+        <label className="chat-hub-search chat-people-search"><UserPlus size={14} /><input value={peopleQuery} onChange={event => setPeopleQuery(event.target.value)} placeholder="Search username" aria-label="Search username" /></label>
+        {(peopleQuery.trim() || peopleResults.length > 0) && (
+          <div className="chat-people-results" aria-live="polite">
+            {peopleSearching && <div className="chat-people-empty">Searching…</div>}
+            {!peopleSearching && peopleResults.length === 0 && peopleQuery.trim() && <div className="chat-people-empty">No people found</div>}
+            {!peopleSearching && peopleResults.map(person => (
+              <div key={person.id} className="chat-people-row">
+                <span className="chat-people-avatar" aria-hidden="true">{person.name.slice(0, 1)}</span>
+                <span className="chat-people-meta">
+                  <strong>{person.name}</strong>
+                  <small>{person.handle}</small>
+                </span>
+                {person.friend_status === 'friends' && <span className="chat-friend-badge">Friends</span>}
+                {person.friend_status === 'outgoing' && <span className="chat-friend-badge is-pending">Pending</span>}
+                {person.friend_status === 'incoming' && (
+                  <button type="button" className="chat-friend-action is-accept" disabled={friendBusyId !== null} onClick={() => void acceptIncomingFromSearch(person)}>
+                    <Check size={12} /> Accept
+                  </button>
+                )}
+                {person.friend_status === 'none' && (
+                  <button type="button" className="chat-friend-action" disabled={friendBusyId === person.id} onClick={() => void sendFriendRequest(person)}>
+                    <UserPlus size={12} /> Add friend
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        {incomingRequests.length > 0 && (
+          <section className="chat-friend-requests" aria-label="Friend requests">
+            <header><UserPlus size={12} /><span>Friend requests</span><b>{incomingRequests.length}</b></header>
+            <div>
+              {incomingRequests.map(request => (
+                <div key={request.id} className="chat-people-row">
+                  <span className="chat-people-avatar" aria-hidden="true">{request.name.slice(0, 1)}</span>
+                  <span className="chat-people-meta">
+                    <strong>{request.name}</strong>
+                    <small>{request.handle}</small>
+                  </span>
+                  <button type="button" className="chat-friend-action is-accept" disabled={friendBusyId === request.id} onClick={() => void respondFriendRequest(request.id, 'accept', request.user_id)}>
+                    Accept
+                  </button>
+                  <button type="button" className="chat-friend-action is-decline" disabled={friendBusyId === request.id} onClick={() => void respondFriendRequest(request.id, 'decline', request.user_id)}>
+                    Decline
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
         <nav className="chat-kind-tabs" aria-label="Conversation types">{TAB_COPY.map(item => <button type="button" key={item.id} className={tab === item.id ? 'is-active' : ''} onClick={() => selectTab(item.id)}>{item.icon}<span>{item.label}</span>{conversations.filter(conversation => conversation.kind === item.id).reduce((sum, conversation) => sum + conversation.unread, 0) > 0 && <b>{conversations.filter(conversation => conversation.kind === item.id).reduce((sum, conversation) => sum + conversation.unread, 0)}</b>}</button>)}</nav>
         <div className="chat-conversation-list">
           {loading && <><ConversationSkeleton /><ConversationSkeleton /><ConversationSkeleton /></>}
@@ -204,10 +399,97 @@ export function ChatView() {
           </div>
 
           <form className="chat-composer" onSubmit={submit}>
-            {pending && <div className="chat-pending-attachment">{pending.type === 'project' ? <FolderGit2 size={15} /> : <File size={15} />}<span><small>{pending.type === 'project' ? 'PROJECT' : 'FILE'}</small><strong>{pending.label}</strong></span><button type="button" onClick={() => setPending(null)}><X size={14} /></button></div>}
-            {showAttachments && <div className="chat-attachment-menu"><header><strong>Share into this conversation</strong><button type="button" onClick={() => setShowAttachments(false)}><X size={13} /></button></header><button type="button" onClick={() => fileInput.current?.click()}><Paperclip size={15} /><span><strong>Upload a file</strong><small>Documents, images or project materials · up to 1 MB</small></span></button><p className="chat-attach-label">Shared Projects</p>{state.projects.slice(0, 6).map(project => <button type="button" key={project.id} onClick={() => { setPending({ type: 'project', id: project.id, label: project.name }); setShowAttachments(false) }}><FolderGit2 size={15} /><span><strong>{project.name}</strong><small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small></span></button>)}<p className="chat-attach-label">Shared Mini Apps</p>{state.projects.slice(0, 6).map(project => <button type="button" key={`app-${project.id}`} onClick={() => { setPending({ type: 'project', id: project.id, label: `${getMiniApp(project.app_kind).name} · ${project.name}` }); setShowAttachments(false) }}><Hash size={15} /><span><strong>{getMiniApp(project.app_kind).name}</strong><small>Opens the {project.name} workspace</small></span></button>)}</div>}
-            <div className="chat-composer-box"><button type="button" className={showAttachments ? 'is-active' : ''} onClick={() => setShowAttachments(value => !value)} aria-label="Attach file or Project"><Plus size={17} /></button><textarea value={draft} maxLength={4000} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} placeholder={`Message ${active.title}…`} /><button type="submit" disabled={sending || (!draft.trim() && !pending)}><Send size={15} /></button></div>
-            <small>Enter to send · Shift + Enter for a new line · significant Helios actions always require approval</small>
+            {pending && (
+              <div className="chat-pending-attachment">
+                {pending.type === 'project' ? <FolderGit2 size={15} /> : <File size={15} />}
+                <span>
+                  <small>{pending.type === 'project' ? 'PROJECT' : 'FILE'}</small>
+                  <strong>{pending.label}</strong>
+                </span>
+                <button type="button" onClick={() => setPending(null)} aria-label="Remove attachment"><X size={14} /></button>
+              </div>
+            )}
+            {showAttachments && (
+              <div
+                className="chat-attach-backdrop"
+                role="presentation"
+                onMouseDown={event => { if (event.target === event.currentTarget) setShowAttachments(false) }}
+              >
+                <div
+                  className="chat-attach-window"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="chat-attach-title"
+                  ref={attachPanelRef}
+                >
+                  <header>
+                    <div>
+                      <small>Attach</small>
+                      <strong id="chat-attach-title">Share into this conversation</strong>
+                    </div>
+                    <button type="button" onClick={() => setShowAttachments(false)} aria-label="Close attach window"><X size={15} /></button>
+                  </header>
+                  <button
+                    type="button"
+                    className="chat-attach-upload"
+                    onClick={() => { fileInput.current?.click(); setShowAttachments(false) }}
+                  >
+                    <Paperclip size={16} />
+                    <span>
+                      <strong>Upload a file</strong>
+                      <small>Documents or images · up to 1 MB</small>
+                    </span>
+                  </button>
+                  <p className="chat-attach-label">Projects</p>
+                  <div className="chat-attach-list">
+                    {state.projects.slice(0, 8).map(project => (
+                      <button
+                        type="button"
+                        key={project.id}
+                        onClick={() => {
+                          setPending({ type: 'project', id: project.id, label: project.name })
+                          setShowAttachments(false)
+                        }}
+                      >
+                        <FolderGit2 size={15} />
+                        <span>
+                          <strong>{project.name}</strong>
+                          <small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small>
+                        </span>
+                      </button>
+                    ))}
+                    {state.projects.length === 0 && (
+                      <div className="chat-attach-empty">No projects yet — create one in Create, then attach it here.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="chat-composer-box">
+              <button
+                type="button"
+                className={showAttachments ? 'is-active' : ''}
+                onClick={() => setShowAttachments(value => !value)}
+                aria-label="Attach file or Project"
+                aria-expanded={showAttachments}
+              >
+                <Plus size={17} />
+              </button>
+              <textarea
+                value={draft}
+                maxLength={4000}
+                onChange={event => setDraft(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault()
+                    event.currentTarget.form?.requestSubmit()
+                  }
+                }}
+                placeholder={`Message ${active.title}…`}
+              />
+              <button type="submit" disabled={sending || (!draft.trim() && !pending)}><Send size={15} /></button>
+            </div>
+            <small>Enter to send · Shift + Enter for a new line</small>
           </form>
         </>}
       </main>
@@ -217,9 +499,14 @@ export function ChatView() {
 
 function CreateConversationDialog({ kind, projects, onClose, onCreated }: { kind: Conversation['kind']; projects: Project[]; onClose: () => void; onCreated: (id: number) => void }) {
   const [selectedKind, setSelectedKind] = useState(kind)
-  const [title, setTitle] = useState('')
+  const [title, setTitle] = useState(() => sessionStorage.getItem('helios-invite-name') ? `Collab with ${sessionStorage.getItem('helios-invite-name')}` : '')
   const [projectId, setProjectId] = useState(projects[0]?.id ?? 0)
-  const [handles, setHandles] = useState('')
+  const [handles, setHandles] = useState(() => {
+    const invite = sessionStorage.getItem('helios-invite-handle') || ''
+    sessionStorage.removeItem('helios-invite-handle')
+    sessionStorage.removeItem('helios-invite-name')
+    return invite
+  })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: React.FormEvent) {
@@ -231,7 +518,7 @@ function CreateConversationDialog({ kind, projects, onClose, onCreated }: { kind
     } catch (reason) { setError((reason as Error).message) }
     finally { setSaving(false) }
   }
-  return <div className="chat-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><form className="chat-dialog" onSubmit={submit}><header><div><small>CONNECTED CONVERSATIONS</small><h2>New Chat</h2></div><button type="button" onClick={onClose}><X size={16} /></button></header><div className="chat-dialog-kinds">{TAB_COPY.map(item => <button type="button" key={item.id} className={selectedKind === item.id ? 'is-active' : ''} onClick={() => setSelectedKind(item.id)}>{item.icon}{item.label}</button>)}</div>{selectedKind === 'project' ? <label><span>Project</span><select value={projectId} onChange={event => setProjectId(Number(event.target.value))}>{projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}</select>{projects.length === 0 && <small>Create a Project before starting a Project Chat.</small>}</label> : <><label><span>{selectedKind === 'private' ? 'Conversation name' : 'Group name'}</span><input value={title} onChange={event => setTitle(event.target.value)} placeholder={selectedKind === 'private' ? 'Private chat' : 'Study group'} /></label><label><span>{selectedKind === 'private' ? 'Helios handle' : 'Member handles'}</span><input value={handles} onChange={event => setHandles(event.target.value)} placeholder={selectedKind === 'private' ? '@alex' : '@alex, @maya, @sam'} /><small>Only users with valid Helios handles are added.</small></label></>}{error && <div className="chat-dialog-error">{error}</div>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={saving || (selectedKind === 'project' && !projectId)}>{saving ? 'Creating…' : 'Create Chat'}</button></footer></form></div>
+  return <div className="chat-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><form className="chat-dialog" onSubmit={submit}><header><div><small>Collaboration chat</small><h2>New conversation</h2></div><button type="button" onClick={onClose}><X size={16} /></button></header><div className="chat-dialog-kinds">{TAB_COPY.map(item => <button type="button" key={item.id} className={selectedKind === item.id ? 'is-active' : ''} onClick={() => setSelectedKind(item.id)}>{item.icon}{item.label}</button>)}</div>{selectedKind === 'project' ? <label><span>Project</span><select value={projectId} onChange={event => setProjectId(Number(event.target.value))}>{projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}</select>{projects.length === 0 && <small>Create a Project before starting a Project Chat.</small>}</label> : <><label><span>{selectedKind === 'private' ? 'Conversation name' : 'Group name'}</span><input value={title} onChange={event => setTitle(event.target.value)} placeholder={selectedKind === 'private' ? 'Private chat' : 'Study group'} /></label><label><span>{selectedKind === 'private' ? 'Helios handle' : 'Member handles'}</span><input value={handles} onChange={event => setHandles(event.target.value)} placeholder={selectedKind === 'private' ? '@alex' : '@alex, @maya, @sam'} /><small>Only users with valid Helios handles are added.</small></label></>}{error && <div className="chat-dialog-error">{error}</div>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={saving || (selectedKind === 'project' && !projectId)}>{saving ? 'Creating…' : 'Create Chat'}</button></footer></form></div>
 }
 
 function ProjectChatContext({ conversation, project, live, messages, onOpenProject, onOpenLive, onOpenMiniApp }: {
@@ -283,7 +570,26 @@ function ConversationAvatar({ conversation }: { conversation: Conversation }) {
 }
 
 function ChatWelcome({ projects, onCreate }: { projects: Project[]; onCreate: (kind: Conversation['kind']) => void }) {
-  return <div className="chat-welcome"><div className="chat-welcome-orbit"><MessageCircle size={27} /><i /><i /></div><span>YOUR CONVERSATIONS, ATTACHED TO THE WORK</span><h1>Build together without losing context.</h1><p>Keep Project decisions, files, Writing, code, drawings and progress updates connected as rich previews—not raw links.</p><div><button type="button" onClick={() => onCreate('project')} disabled={projects.length === 0}><FolderGit2 size={15} /> Start Project Chat</button><button type="button" onClick={() => onCreate('group')}><Users size={15} /> Create Group</button><button type="button" onClick={() => onCreate('private')}><AtSign size={15} /> Private Chat</button></div>{projects.length === 0 && <small>Create your first Project to unlock a connected Project Chat.</small>}</div>
+  return (
+    <div className="chat-welcome">
+      <div className="chat-welcome-mark" aria-hidden="true"><MessageCircle size={26} /></div>
+      <span>MESSAGES</span>
+      <h1>Start a conversation</h1>
+      <p>Private chat, group, or project discussion — keep it light and tied to what you are making.</p>
+      <div>
+        <button type="button" className="liquid-glass-btn is-primary" onClick={() => onCreate('private')}>
+          <AtSign size={15} /> New private chat
+        </button>
+        <button type="button" className="liquid-glass-btn" onClick={() => onCreate('group')}>
+          <Users size={15} /> New group
+        </button>
+        <button type="button" className="liquid-glass-btn" onClick={() => onCreate('project')} disabled={projects.length === 0}>
+          <FolderGit2 size={15} /> Project chat
+        </button>
+      </div>
+      {projects.length === 0 && <small>No projects yet? You can still start a private chat or group.</small>}
+    </div>
+  )
 }
 
 function attachmentLabel(message: ChatMessage) { return message.attachment_type === 'project' ? 'Shared a Project' : message.attachment_type === 'file' ? 'Shared a file' : 'Shared progress' }

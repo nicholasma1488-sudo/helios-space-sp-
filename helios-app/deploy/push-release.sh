@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-HOST="${1:-${HELIOS_DEPLOY_HOST:-149.88.73.252}}"
+HOST="${1:-${HELIOS_DEPLOY_HOST:-154.222.19.38}}"
 USER="${HELIOS_DEPLOY_USER:-root}"
 REMOTE="${USER}@${HOST}"
 
@@ -48,6 +48,7 @@ rsync -az --delete \
 
 echo "==> installing and activating"
 "${SSH[@]}" "$REMOTE" "set -e
+export PATH=/usr/local/bin:\$PATH
 cd /opt/helios-space/releases/${RELEASE}/server
 npm ci --omit=dev
 ln -sfn /opt/helios-space/releases/${RELEASE} /opt/helios-space/current

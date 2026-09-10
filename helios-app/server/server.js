@@ -62,7 +62,7 @@ const MAX_PROJECT_FILES = 80
 const MAX_COMMIT_MESSAGE_LENGTH = 200
 const MAX_CHAT_MESSAGE_LENGTH = 4_000
 const FILE_PATH_PATTERN = /^(?!.*\.\.)(?!\/)[\w./-]{1,120}$/
-const FILE_EXTENSION_PATTERN = /\.(ts|tsx|js|jsx|mjs|cjs|json|md|css|html|py|txt|csv|svg|ipynb)$/i
+const FILE_EXTENSION_PATTERN = /\.(ts|tsx|js|jsx|mjs|cjs|json|md|css|html|py|txt|csv|svg|ipynb|cpp|cc|cxx|c|h|hpp|java|go|rs|rb|php|sh)$/i
 const MAX_LIVE_EVENT_LENGTH = 2_000
 const DEFAULT_POST_PAGE_SIZE = 15
 const MAX_POST_PAGE_SIZE = 50
@@ -294,6 +294,25 @@ db.exec(`
     FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (followed_id) REFERENCES users(id) ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS friend_requests (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_user_id INTEGER NOT NULL,
+    to_user_id   INTEGER NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'pending',
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL,
+    UNIQUE(from_user_id, to_user_id),
+    FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+  CREATE TABLE IF NOT EXISTS friends (
+    user_id     INTEGER NOT NULL,
+    friend_id   INTEGER NOT NULL,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (user_id, friend_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
+  );
   CREATE TABLE IF NOT EXISTS collaboration_requests (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id  INTEGER NOT NULL,
@@ -324,6 +343,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_solar_events_user ON solar_events(user_id, id DESC);
   CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, id DESC);
   CREATE INDEX IF NOT EXISTS idx_collaboration_requests_project ON collaboration_requests(project_id, status, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_friend_requests_to ON friend_requests(to_user_id, status, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_friend_requests_from ON friend_requests(from_user_id, status, id DESC);
+  CREATE INDEX IF NOT EXISTS idx_friends_user ON friends(user_id, friend_id);
   CREATE TABLE IF NOT EXISTS project_files (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id  INTEGER NOT NULL,
@@ -396,6 +418,8 @@ ensureColumn('users', 'plan_updated_at', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'birthdate', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'audience', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'plan_selected', 'INTEGER NOT NULL DEFAULT 0')
+try { db.prepare("UPDATE users SET plan = 'free', plan_selected = 1").run() } catch (_) {}
+// helios-free-forever-plan
 ensureColumn('users', 'stripe_customer_id', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'stripe_subscription_id', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('billing_methods', 'source', "TEXT NOT NULL DEFAULT 'card'")
@@ -440,6 +464,19 @@ const setSetting = (k, v) =>
   db.prepare('INSERT INTO site_settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value = ?')
     .run(k, String(v), String(v))
 
+// Bootstrap a free, keyless Helios provider when nothing is configured yet.
+const envAiKey = (process.env.HELIOS_OPENAI_API_KEY || process.env.OPENAI_API_KEY || '').trim()
+const envAiBase = (process.env.HELIOS_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL || '').trim()
+const envAiModel = (process.env.HELIOS_OPENAI_MODEL || process.env.OPENAI_MODEL || '').trim()
+if (envAiKey) {
+  setSetting('openai_api_key', envAiKey)
+  if (envAiBase) setSetting('openai_base_url', envAiBase)
+  if (envAiModel) setSetting('openai_model', envAiModel)
+} else if (!String(getSetting('openai_api_key') || '').trim()) {
+  setSetting('openai_api_key', 'helios-local-free')
+  setSetting('openai_base_url', 'https://helios.local')
+  setSetting('openai_model', 'helios-local')
+}
 function positiveInt(value) {
   if (typeof value === 'string') {
     if (!/^[1-9]\d*$/.test(value)) return null
@@ -541,74 +578,36 @@ const STRIPE_CANCEL_EVENTS = new Set([
 const mockStripeSessions = new Map()
 const PAY_METHODS = ['card']
 
-function envLimit(name, fallback) {
+function _envLimit(name, fallback) {
   const raw = process.env[name]
   if (raw === undefined || raw === '') return fallback
   const value = Number(raw)
   return Number.isFinite(value) && value >= 0 ? value : fallback
 }
 
-const FREE_DOCUMENT_LIMIT = envLimit('HELIOS_FREE_DOCUMENTS', 60)
-const FREE_CHARACTER_LIMIT = envLimit('HELIOS_FREE_CHARACTERS', 40_000)
-const ORBIT_CHARACTER_LIMIT = envLimit('HELIOS_ORBIT_CHARACTERS', 500_000)
-
+// Helios Space is completely free — no paid plans.
 const BILLING_PLANS = {
   free: {
     id: 'free',
-    name: 'Free',
+    name: 'Helios',
     price_cents: 0,
     currency: 'cny',
     interval: 'month',
-    description: 'Word, Excel, PowerPoint and OneNote stay included. Limits apply only to how much writing you create.',
-    mini_apps: ['Word', 'Excel', 'PowerPoint', 'OneNote'],
-    limits: { documents: FREE_DOCUMENT_LIMIT, characters: FREE_CHARACTER_LIMIT },
+    description: 'Helios Space is completely free. All five Create tools, Space, and Messages are available.',
+    mini_apps: ['Writing', 'Notebook', 'Sheets', 'Today Tasks', 'Buddy Code'],
+    limits: { documents: null, characters: null },
     features: [
-      'Create an account in under a minute — no card',
-      'Word, Excel, PowerPoint and OneNote — no paywall on tables or slides',
-      `${FREE_DOCUMENT_LIMIT} writing documents`,
-      `${FREE_CHARACTER_LIMIT.toLocaleString('en-US')} characters per document`,
-      'Work saves to Projects and stays in your Spaces',
-      'Every Subject and Hobby Space',
-      'Lifestyle, Chat Hub and Live',
-      'Helios AI when an administrator enables it',
-      'Upgrade to Orbit any time from the top-left banner',
-    ],
-  },
-  orbit: {
-    id: 'orbit',
-    name: 'Orbit',
-    price_cents: 6800,
-    currency: 'cny',
-    interval: 'month',
-    description: 'More writing room plus the rest of the suite. Pay with a card on Stripe.',
-    mini_apps: [
-      'Word', 'Excel', 'PowerPoint', 'OneNote', 'Stocks',
-      'Essay', 'Gradebook', 'Lesson Slides', 'Lab Notebook', 'Forms',
-      'Flashcards', 'Reader', 'Maths Lab', 'Homework Board', 'Study Guide',
-      'Docs', 'Budget', 'Pitch Deck', 'Meeting Notes', 'Proposals',
-      'Product Spec', 'OKRs', 'Planner', 'Reports',
-    ],
-    limits: { documents: null, characters: ORBIT_CHARACTER_LIMIT },
-    features: [
-      'Everything in Free, including spreadsheets and slides',
-      'Unlimited writing documents',
-      `${ORBIT_CHARACTER_LIMIT.toLocaleString('en-US')} characters per document`,
-      'Stocks watchlist you can open any time',
-      'School and work apps in the same account',
-      'Docs, proposals, specs and reports',
-      'Budget and OKR workbooks with formulas',
-      'Pitch decks, meetings, planner and homework board',
-      'Essay studio, gradebook, labs and study tools',
-      'Priority Helios capacity when AI is configured',
-      '3× Live session visibility for collaborators',
-      'Pay with a bank card through Stripe',
-      'Switch back to Free any time',
+      'Completely free — no card required',
+      'Writing, Notebook, Sheets, Today Tasks, Buddy Code',
+      'Unlimited documents and characters',
+      'Space feed, Messages, and collaborative live sessions',
+      'Helios assistant (when enabled by an admin)',
     ],
   },
 }
 
-function normalizePlan(plan) {
-  return plan === 'orbit' || plan === 'alpha' ? 'orbit' : 'free'
+function normalizePlan(_plan) {
+  return 'free'
 }
 
 function userEdition(user) {
@@ -622,9 +621,9 @@ function publicUser(user) {
     name: user.name,
     handle: user.handle,
     email: user.email,
-    plan: normalizePlan(user.plan),
-    plan_selected: Boolean(user.plan_selected),
-    edition: userEdition(user),
+    plan: 'free',
+    plan_selected: true,
+    edition: 'free',
     usage: usageSnapshot(user),
   }
 }
@@ -682,14 +681,13 @@ function writingLimitError(user, code, characters = 0) {
   const usage = usageSnapshot(user)
   if (code === 'document_limit') {
     return {
-      error: `Free includes ${limits.documents} writing documents. Upgrade to Orbit for unlimited drafts. Spreadsheets and slides stay included.`,
+      error: 'Writing document limit reached.',
       code,
       usage,
     }
   }
-  const planName = normalizePlan(user.plan) === 'orbit' ? 'Orbit' : 'Free'
   return {
-    error: `This draft is ${characters.toLocaleString('en-US')} characters. ${planName} allows ${limits.characters.toLocaleString('en-US')} per document.`,
+    error: `This draft is ${characters.toLocaleString('en-US')} characters.`,
     code,
     usage: { ...usage, characters: { used: characters, limit: limits.characters } },
   }
@@ -712,7 +710,8 @@ function stripePublicConfig() {
 }
 
 function planEligibilityError(planId) {
-  if (planId === 'free' || planId === 'orbit') return null
+  if (planId === 'orbit' || planId === 'alpha') return 'Helios Space is completely free — there are no paid plans.'
+  if (planId === 'free') return null
   return 'Choose Free or Orbit'
 }
 
@@ -1331,7 +1330,7 @@ app.post('/api/signup', authRateLimit, (req, res) => {
     const info = db.prepare(
       'INSERT INTO users (name, handle, email, password_hash, created_at, plan, plan_updated_at, plan_selected) VALUES (?,?,?,?,?,?,?,?)'
     ).run(checkedName.value, '@' + h, normalizedEmail,
-          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', now, 0)
+          bcrypt.hashSync(checkedPassword.value, 10), now, 'free', now, 1)
     const token = newSession('user', info.lastInsertRowid)
     res.cookie('helios_user', token, cookieOptions(USER_SESSION_MS))
     res.json({
@@ -1342,7 +1341,7 @@ app.post('/api/signup', authRateLimit, (req, res) => {
         handle: '@' + h,
         email: normalizedEmail,
         plan: 'free',
-        plan_selected: 0,
+        plan_selected: 1,
       }),
     })
   } catch (e) {
@@ -1391,90 +1390,29 @@ app.get('/api/billing', requireUser, (req, res) => {
 
 app.post('/api/billing/checkout', requireUser, billingRateLimit, async (req, res) => {
   const planId = String(req.body?.plan || '').trim().toLowerCase()
-  const catalog = BILLING_PLANS[planId]
-  if (!catalog) return res.status(400).json({ error: 'Choose Free or Orbit' })
   const blocked = planEligibilityError(planId)
   if (blocked) return res.status(403).json({ error: blocked })
+  const catalog = BILLING_PLANS[planId]
+  if (!catalog) return res.status(400).json({ error: 'Helios Space is completely free — there are no paid plans.' })
 
   const now = new Date().toISOString()
-  if (planId === 'free') {
-    db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
-    if (req.user.plan !== 'free')
-      recordBillingEvent(req.user.id, 'plan_change', 'free', 0, 'Switched to the Free edition')
-    const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
-    return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
-  }
-
-  if (!stripeConfigured())
-    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
-  try {
-    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
-    return res.json({ ok: true, method: 'card', ...session })
-  } catch (error) {
-    return res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
-  }
+  db.prepare('UPDATE users SET plan = ?, plan_updated_at = ?, plan_selected = 1 WHERE id = ?').run('free', now, req.user.id)
+  const user = publicUser({ ...req.user, plan: 'free', plan_selected: 1 })
+  return res.json({ ok: true, user, billing: getBillingSnapshot(user) })
 })
 
-app.post('/api/billing/stripe', requireUser, billingRateLimit, async (req, res) => {
-  const planId = String(req.body?.plan || '').trim().toLowerCase()
-  if (!BILLING_PLANS[planId] || planId === 'free')
-    return res.status(400).json({ error: 'Checkout is for Orbit' })
-  const blocked = planEligibilityError(planId)
-  if (blocked) return res.status(403).json({ error: blocked })
-  const payMethod = normalizePayMethod(req.body?.method)
-  if (!payMethod) return res.status(400).json({ error: 'Orbit is paid with a Stripe card only' })
-  if (!stripeConfigured())
-    return res.status(503).json({ error: 'Stripe is not configured', code: 'STRIPE_NOT_CONFIGURED' })
-  try {
-    const session = await createStripeCheckout(req.user, planId, requestOrigin(req))
-    res.json({ ok: true, method: 'card', ...session })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Checkout failed' })
-  }
+app.post('/api/billing/stripe', requireUser, billingRateLimit, async (_req, res) => {
+  return res.status(400).json({ error: 'Helios Space is completely free — Stripe checkout is disabled.' })
 })
 
-app.post('/api/billing/stripe/webhook', async (req, res) => {
-  if (STRIPE_WEBHOOK_SECRET) {
-    const raw = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {})
-    if (!verifyStripeWebhook(raw, req.headers['stripe-signature'], STRIPE_WEBHOOK_SECRET))
-      return res.status(400).json({ error: 'Invalid Stripe signature' })
-  } else if (!STRIPE_MOCK) {
-    return res.status(503).json({ error: 'Stripe webhook is not configured', code: 'STRIPE_WEBHOOK_NOT_CONFIGURED' })
-  }
-  const event = req.body || {}
-  if (event.type && STRIPE_CANCEL_EVENTS.has(event.type)) {
-    const result = cancelStripeSubscription(event.data?.object || {})
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    return res.json({ received: true, ok: true, ...result })
-  }
-  if (event.type && !STRIPE_FULFILL_EVENTS.has(event.type))
-    return res.json({ received: true, ignored: true })
-  const sessionId = String(event.data?.object?.id || '').trim()
-  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
-  try {
-    const session = await retrieveStripeSession(sessionId) || event.data?.object || null
-    const result = fulfillPaidStripeSession(session, sessionId)
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    res.json({ received: true, ok: true, user: result.user, billing: result.billing })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Webhook failed' })
-  }
+app.post('/api/billing/stripe/webhook', async (_req, res) => {
+  return res.json({ received: true, ignored: true, reason: 'billing_disabled' })
 })
 
-app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (req, res) => {
-  const sessionId = String(req.body?.session_id || '').trim()
-  if (!sessionId) return res.status(400).json({ error: 'Payment session is required' })
-  const pending = db.prepare('SELECT * FROM stripe_checkouts WHERE session_id = ? AND user_id = ?').get(sessionId, req.user.id)
-  if (!pending) return res.status(404).json({ error: 'Payment session not found' })
-  try {
-    const session = await retrieveStripeSession(sessionId)
-    const result = fulfillPaidStripeSession(session, sessionId)
-    if (result.error) return res.status(result.status || 400).json({ error: result.error })
-    res.json({ ok: true, user: result.user, billing: result.billing })
-  } catch (error) {
-    res.status(error.status || 502).json({ error: error.message || 'Payment confirmation failed' })
-  }
+app.post('/api/billing/stripe/confirm', requireUser, billingRateLimit, async (_req, res) => {
+  return res.status(400).json({ error: 'Helios Space is completely free — Stripe checkout is disabled.' })
 })
+
 
 function normalizeMarketSymbol(value) {
   const symbol = String(value || '').trim().toUpperCase()
@@ -1522,8 +1460,6 @@ async function fetchYahooQuotes(symbols) {
 }
 
 app.get('/api/markets/quotes', requireUser, marketsRateLimit, async (req, res) => {
-  if (normalizePlan(req.user.plan) !== 'orbit')
-    return res.status(403).json({ error: 'Stocks is included with Orbit' })
   const unique = [...new Set(String(req.query.symbols || '').split(',').map(normalizeMarketSymbol).filter(Boolean))].slice(0, 20)
   if (unique.length === 0) return res.status(400).json({ error: 'Add at least one ticker' })
   try {
@@ -1621,7 +1557,7 @@ app.post('/api/projects', requireUser, (req, res) => {
     if (limits.documents != null && countWritingDocuments(req.user.id) >= limits.documents)
       return res.status(403).json(writingLimitError(user, 'document_limit'))
     const characters = writingCharacterCount(checkedContent.value)
-    if (characters > limits.characters)
+    if (limits.characters != null && characters > limits.characters)
       return res.status(403).json(writingLimitError(user, 'character_limit', characters))
   }
   const now = new Date().toISOString()
@@ -1688,7 +1624,7 @@ app.put('/api/projects/:id', requireUser, (req, res) => {
       return res.status(403).json(writingLimitError(user, 'document_limit'))
     if (content !== undefined) {
       const characters = writingCharacterCount(checkedContent.value)
-      if (characters > limits.characters)
+      if (limits.characters != null && characters > limits.characters)
         return res.status(403).json(writingLimitError(user, 'character_limit', characters))
     }
   }
@@ -2060,6 +1996,292 @@ app.post('/api/users/:id/follow', requireUser, socialRateLimit, (req, res) => {
     createNotification(followedId, req.user.id, 'follow', `${req.user.name} followed your work`, '', 'profile', req.user.id)
   }
   res.json({ following: !existing })
+})
+
+function normalizeHandle(raw) {
+  return String(raw || '').trim().replace(/^@+/, '').toLowerCase()
+}
+
+function friendStatusBetween(a, b) {
+  if (db.prepare('SELECT 1 FROM friends WHERE user_id = ? AND friend_id = ?').get(a, b)) return 'friends'
+  const outgoing = db.prepare("SELECT id FROM friend_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'").get(a, b)
+  if (outgoing) return 'outgoing'
+  const incoming = db.prepare("SELECT id FROM friend_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'").get(b, a)
+  if (incoming) return 'incoming'
+  return 'none'
+}
+
+app.get('/api/users/search', requireUser, (req, res) => {
+  const checked = checkedString(req.query.q ?? '', 'Search query', 64, { required: true, trim: true })
+  if (checked.error) return res.status(400).json({ error: checked.error })
+  const q = checked.value.toLowerCase().replace(/^@+/, '')
+  const like = `%${q}%`
+  const rows = db.prepare(
+    "SELECT id, name, handle FROM users WHERE status = 'active' AND id != ? AND (lower(handle) LIKE ? OR lower(name) LIKE ?) ORDER BY handle LIMIT 20"
+  ).all(req.user.id, like, like)
+  res.json({
+    people: rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      handle: row.handle,
+      friend_status: friendStatusBetween(req.user.id, row.id),
+    })),
+  })
+})
+
+app.post('/api/friends/request', requireUser, socialRateLimit, (req, res) => {
+  let toId = positiveInt(req.body?.user_id)
+  const handle = normalizeHandle(req.body?.handle)
+  if (!toId && handle) {
+    const user = db.prepare("SELECT id FROM users WHERE lower(handle) = ? AND status = 'active'").get(handle)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+    toId = user.id
+  }
+  if (!toId || toId === req.user.id) return res.status(400).json({ error: 'Invalid friend request' })
+  const target = db.prepare("SELECT id, name FROM users WHERE id = ? AND status = 'active'").get(toId)
+  if (!target) return res.status(404).json({ error: 'User not found' })
+  if (friendStatusBetween(req.user.id, toId) === 'friends') return res.json({ ok: true, status: 'friends' })
+  const now = new Date().toISOString()
+  const incoming = db.prepare("SELECT id FROM friend_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'").get(toId, req.user.id)
+  if (incoming) {
+    db.prepare("UPDATE friend_requests SET status = 'accepted', updated_at = ? WHERE id = ?").run(now, incoming.id)
+    db.prepare('INSERT OR IGNORE INTO friends (user_id, friend_id, created_at) VALUES (?,?,?)').run(req.user.id, toId, now)
+    db.prepare('INSERT OR IGNORE INTO friends (user_id, friend_id, created_at) VALUES (?,?,?)').run(toId, req.user.id, now)
+    createNotification(toId, req.user.id, 'friend', `${req.user.name} accepted your friend request`, '', 'profile', req.user.id)
+    return res.json({ ok: true, status: 'friends' })
+  }
+  db.prepare(
+    "INSERT INTO friend_requests (from_user_id, to_user_id, status, created_at, updated_at) VALUES (?,?, 'pending', ?, ?) " +
+    "ON CONFLICT(from_user_id, to_user_id) DO UPDATE SET status = 'pending', updated_at = excluded.updated_at"
+  ).run(req.user.id, toId, now, now)
+  createNotification(toId, req.user.id, 'friend_request', `${req.user.name} sent you a friend request`, '', 'profile', req.user.id)
+  res.json({ ok: true, status: 'outgoing' })
+})
+
+app.get('/api/friends/requests', requireUser, (req, res) => {
+  const incoming = db.prepare(
+    "SELECT fr.id, fr.status, fr.created_at, u.id AS user_id, u.name, u.handle FROM friend_requests fr " +
+    "JOIN users u ON u.id = fr.from_user_id WHERE fr.to_user_id = ? AND fr.status = 'pending' ORDER BY fr.id DESC"
+  ).all(req.user.id)
+  const outgoing = db.prepare(
+    "SELECT fr.id, fr.status, fr.created_at, u.id AS user_id, u.name, u.handle FROM friend_requests fr " +
+    "JOIN users u ON u.id = fr.to_user_id WHERE fr.from_user_id = ? AND fr.status = 'pending' ORDER BY fr.id DESC"
+  ).all(req.user.id)
+  res.json({ incoming, outgoing })
+})
+
+app.post('/api/friends/requests/:id/respond', requireUser, socialRateLimit, (req, res) => {
+  const id = positiveInt(req.params.id)
+  const decision = String(req.body?.decision || '')
+  if (!id || !['accept', 'decline'].includes(decision)) return res.status(400).json({ error: 'Invalid decision' })
+  const row = db.prepare("SELECT * FROM friend_requests WHERE id = ? AND to_user_id = ? AND status = 'pending'").get(id, req.user.id)
+  if (!row) return res.status(404).json({ error: 'Request not found' })
+  const now = new Date().toISOString()
+  if (decision === 'decline') {
+    db.prepare("UPDATE friend_requests SET status = 'declined', updated_at = ? WHERE id = ?").run(now, id)
+    return res.json({ ok: true, status: 'declined' })
+  }
+  db.prepare("UPDATE friend_requests SET status = 'accepted', updated_at = ? WHERE id = ?").run(now, id)
+  db.prepare('INSERT OR IGNORE INTO friends (user_id, friend_id, created_at) VALUES (?,?,?)').run(req.user.id, row.from_user_id, now)
+  db.prepare('INSERT OR IGNORE INTO friends (user_id, friend_id, created_at) VALUES (?,?,?)').run(row.from_user_id, req.user.id, now)
+  createNotification(row.from_user_id, req.user.id, 'friend', `${req.user.name} accepted your friend request`, '', 'profile', req.user.id)
+  res.json({ ok: true, status: 'friends' })
+})
+
+app.get('/api/friends', requireUser, (req, res) => {
+  const friends = db.prepare(
+    'SELECT u.id, u.name, u.handle, f.created_at FROM friends f JOIN users u ON u.id = f.friend_id WHERE f.user_id = ? ORDER BY u.name'
+  ).all(req.user.id)
+  res.json({ friends })
+})
+
+// Inline Helios content patch — write into a project without opening the workspace UI
+function applyLocalContentPatch(content, instruction, pathHint) {
+  const lower = String(instruction || '').toLowerCase()
+  const path = String(pathHint || '').trim()
+  let before = ''
+  let after = ''
+  let mode = 'append'
+
+  if (path && content.files && typeof content.files === 'object') {
+    before = String(content.files[path] || '')
+    if (/replace|overwrite|rewrite|重写|替换/.test(lower)) {
+      after = String(instruction).replace(/^(replace|overwrite|rewrite|重写|替换)\s*(with|:)?\s*/i, '').slice(0, 200000)
+      mode = 'replace'
+    } else if (/delete|清空|clear/.test(lower)) {
+      after = ''
+      mode = 'clear'
+    } else {
+      after = (before ? before.replace(/\s*$/, '\n\n') : '') + `// Helios edit\n${instruction}\n`
+      mode = 'append'
+    }
+    content.files[path] = after
+    return { content, before, after, mode, target: path }
+  }
+
+  if (content.html != null || content.html === '') {
+    before = String(content.html || '')
+    if (/replace|rewrite|重写|全文/.test(lower)) {
+      const body = String(instruction).replace(/^(replace|rewrite|重写|全文)\s*(with|:)?\s*/i, '')
+      after = `<p>${body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
+      mode = 'replace'
+    } else if (/title|标题|heading/.test(lower)) {
+      const title = String(instruction).replace(/^.*?(title|标题|heading)\s*[:=]?\s*/i, '').trim() || instruction
+      after = `<h1>${title.replace(/</g, '&lt;')}</h1>` + before
+      mode = 'prepend-title'
+    } else if (/append|加一段|继续|add paragraph/.test(lower)) {
+      const para = String(instruction).replace(/^(append|add paragraph|加一段|继续)\s*[:=]?\s*/i, '').trim() || instruction
+      after = before + `<p>${para.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
+      mode = 'append'
+    } else {
+      const para = instruction.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      after = before + `<p data-helios-edit="1"><strong>Helios:</strong> ${para}</p>`
+      mode = 'annotate'
+    }
+    content.html = after
+    return { content, before, after, mode, target: 'html' }
+  }
+
+  if (Array.isArray(content.slides) && content.slides.length) {
+    const idxSlide = Math.min(Number(content.activeSlide) || 0, content.slides.length - 1)
+    const slide = { ...content.slides[idxSlide] }
+    before = JSON.stringify({ title: slide.title, body: slide.body })
+    if (/new slide|加一页|新增幻灯/.test(lower)) {
+      content.slides.push({
+        id: `s_${Date.now()}`,
+        title: 'New slide',
+        body: instruction.replace(/^(new slide|加一页|新增幻灯)\s*[:=]?\s*/i, '').trim() || 'New idea',
+        notes: '',
+        layout: 'title-content',
+        theme: slide.theme || 'terracotta-glass',
+      })
+      content.activeSlide = content.slides.length - 1
+      after = content.slides[content.activeSlide].body
+      mode = 'add-slide'
+    } else if (/title|标题/.test(lower)) {
+      slide.title = instruction.replace(/^.*?(title|标题)\s*[:=]?\s*/i, '').trim() || instruction
+      mode = 'slide-title'
+    } else if (/image|照片|图片|photo/.test(lower)) {
+      const url = (instruction.match(/https?:\/\/\S+/) || [])[0] || ''
+      if (url) slide.imageUrl = url
+      slide.body = (slide.body || '') + (url ? '' : `\n${instruction}`)
+      mode = 'slide-image'
+    } else if (/theme|designer|主题/.test(lower)) {
+      if (/blue/.test(lower)) slide.theme = 'blue-glass'
+      else if (/charcoal|dark/.test(lower)) slide.theme = 'charcoal'
+      else if (/sand|warm/.test(lower)) slide.theme = 'warm-sand'
+      else slide.theme = 'terracotta-glass'
+      mode = 'slide-theme'
+    } else {
+      slide.body = `${slide.body || ''}\n${instruction}`.slice(0, 8000)
+      mode = 'slide-body'
+    }
+    content.slides[idxSlide] = slide
+    after = JSON.stringify({ title: slide.title, body: slide.body, theme: slide.theme, imageUrl: slide.imageUrl })
+    return { content, before, after, mode, target: `slide:${idxSlide}` }
+  }
+
+  if (Array.isArray(content.cells)) {
+    before = JSON.stringify(content.cells.slice(0, 3))
+    const rows = content.cells.map(row => [...row])
+    if (/clear|清空/.test(lower)) {
+      for (let r = 0; r < rows.length; r++) for (let c = 0; c < (rows[r] || []).length; c++) rows[r][c] = ''
+      mode = 'clear-grid'
+    } else if (/fill|填充|sample|示例/.test(lower)) {
+      const demo = [['Item', 'Qty', 'Price'], ['Alpha', '3', '12'], ['Beta', '5', '8'], ['Total', '', '=SUM(B2:B3)']]
+      for (let r = 0; r < demo.length; r++) {
+        if (!rows[r]) rows[r] = []
+        for (let c = 0; c < demo[r].length; c++) rows[r][c] = demo[r][c]
+      }
+      mode = 'sample-grid'
+    } else {
+      if (!rows[0]) rows[0] = []
+      rows[0][0] = instruction.slice(0, 80)
+      mode = 'annotate-grid'
+    }
+    content.cells = rows
+    after = JSON.stringify(rows.slice(0, 4))
+    return { content, before, after, mode, target: 'cells' }
+  }
+
+  return null
+}
+
+app.post('/api/projects/:id/helios-patch', requireUser, socialRateLimit, async (req, res) => {
+  const projectId = positiveInt(req.params.id)
+  const project = projectId ? getProjectForUser(projectId, req.user.id, { edit: true }) : null
+  if (!project) return res.status(404).json({ error: 'Project not found' })
+  const instruction = String(req.body?.instruction || '').trim().slice(0, 4000)
+  if (!instruction) return res.status(400).json({ error: 'Instruction required' })
+  let content
+  try { content = JSON.parse(project.content || '{}') } catch { content = {} }
+  const pathHint = String(req.body?.path || '').trim()
+
+  // Optional AI-shaped rewrite when a real upstream key is configured
+  const apiKey = String(getSetting('openai_api_key') || '')
+  const baseUrl = String(getSetting('openai_base_url') || '')
+  const model = String(getSetting('openai_model') || 'gpt-4o-mini')
+  const useUpstream = apiKey && !/^helios-local/i.test(apiKey) && !/helios\.local/i.test(baseUrl)
+
+  let applied = applyLocalContentPatch(content, instruction, pathHint)
+  let engine = 'local-rules'
+
+  if (useUpstream) {
+    try {
+      const snapshot = JSON.stringify(content).slice(0, 12000)
+      const prompt = [
+        'You edit Helios Mini App project JSON. Return ONLY valid JSON with shape:',
+        '{"content": <full updated project content object>}',
+        'Supported content shapes: {html}, {slides,activeSlide}, {cells}, {files}.',
+        'Apply the user instruction carefully. Keep ids. Do not wrap in markdown.',
+        `Instruction: ${instruction}`,
+        `Current content JSON: ${snapshot}`,
+      ].join('\n')
+      const endpoint = `${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`
+      const upstream = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model,
+          temperature: 0.2,
+          messages: [
+            { role: 'system', content: 'You are Helios file writer. Output JSON only.' },
+            { role: 'user', content: prompt },
+          ],
+        }),
+      })
+      if (upstream.ok) {
+        const payload = await upstream.json()
+        const raw = payload?.choices?.[0]?.message?.content || ''
+        const match = raw.match(/\{[\s\S]*\}/)
+        if (match) {
+          const parsed = JSON.parse(match[0])
+          if (parsed && parsed.content && typeof parsed.content === 'object') {
+            const before = JSON.stringify(content).slice(0, 400)
+            content = parsed.content
+            const after = JSON.stringify(content).slice(0, 400)
+            applied = { content, before, after, mode: 'ai-json', target: 'content' }
+            engine = 'upstream'
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[helios-patch] upstream failed', error)
+    }
+  }
+
+  if (!applied) return res.status(400).json({ error: 'Unsupported project content for patch' })
+  content = applied.content
+  const now = new Date().toISOString()
+  db.prepare('UPDATE projects SET content = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(content), now, projectId)
+  res.json({
+    ok: true,
+    engine,
+    mode: applied.mode,
+    target: applied.target,
+    project: serializeProject(getProjectForUser(projectId, req.user.id), req.user.id),
+    preview: { before: String(applied.before).slice(0, 500), after: String(applied.after).slice(0, 500) },
+  })
 })
 
 // ── Posts, comments, reactions, and saves (Lifestyle) ──
@@ -2873,6 +3095,56 @@ app.post('/api/conversations/:conversationId/messages/:messageId/pin', requireUs
   res.json({ pinned: !existing })
 })
 
+function buildLocalHeliosReply(userText, project) {
+  const text = String(userText || '').trim()
+  const lower = text.toLowerCase()
+  const wantsWrite = /(write|create|add|implement|fix|修改|写|生成|创建).*(file|code|cpp|js|py|文件|代码)/i.test(text)
+    || /(write|create|implement|写一个|生成一个).+/i.test(text)
+
+  if (wantsWrite || /hello|你好/.test(lower)) {
+    const isCpp = /c\+\+|cpp|\.cpp/i.test(text) || project?.app_kind === 'code'
+    if (isCpp || wantsWrite) {
+      return [
+        'I will write directly into the Code workspace. After you click Approve, the files will be saved.',
+        '',
+        '```cpp:main.cpp',
+        '#include <iostream>',
+        '',
+        'int main() {',
+        '  std::cout << "Hello from Helios\\n";',
+        '  return 0;',
+        '}',
+        '```',
+        '',
+        '```md:README.md',
+        '# Helios notes',
+        '',
+        '- Use the Language switcher for C++ / Python / JS',
+        '- Run the active file, Preview the web files, Download ZIP for the folder',
+        '```',
+      ].join('\n')
+    }
+  }
+
+  if (project?.can_edit === false) {
+    return 'This project is read-only. I can explain the contents, but I cannot write files.'
+  }
+
+  if (/summar|总结|explain|解释|review|检查/.test(lower)) {
+    return project
+      ? `I looked at "${project.name}". Open it in Code and I can propose path-based edits; click Approve to write the files. You can also switch to C++ and hit Run to try it.`
+      : 'Open a Create file and I can help you write, edit, or explain the contents.'
+  }
+
+  return [
+    'I am Helios (local free mode).',
+    'I can help with Quill, Lattice, Stage, Folio, Forge, and the other Mini Apps.',
+    'To change a file without opening it: Mini App panel → select file → Write an instruction.',
+    'For cloud AI without a paid key, set Admin AI to Pollinations (see docs/AI_KEYS.md).',
+    'For truly unlimited tokens, run Ollama on a machine with enough RAM and point HELIOS_AI_* at it.',
+  ].join('\n')
+}
+
 // ── Helios agent (OpenAI-compatible proxy, shared administrator key) ──
 app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
   const apiKey = getSetting('openai_api_key')
@@ -2963,47 +3235,94 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       `You act only inside the authenticated user's permission-filtered Helios context: Spaces, Projects, Mini Apps, conversations, comments, and files supplied below. ` +
       `Your limitation is scope, not reality: you cannot control the user's mouse, operating system, unrelated apps, arbitrary local files, or secretly act outside Helios Space. ` +
       `Never imply that you sent a message, published, deleted, changed permissions, or applied work unless the Helios UI confirms it. ` +
-      `For message help, summarize or draft replies but do not send them. For a requested project modification, first explain the intended change in one concise line, then return the full updated serialized project content in one fenced code block so the UI can show an Action Preview. ` +
+      `For message help, summarize or draft replies but do not send them. ` +
+      `For code / multi-file Mini Apps: prefer writing files. Return one or more fenced blocks tagged with the file path, e.g. \`\`\`cpp:main.cpp ... \`\`\` or \`\`\`js path=app.js ... \`\`\`. ` +
+      `You may also return the full updated serialized project JSON (schema helios-workspace-v1) in one fenced code block. ` +
+      `First explain the intended change in one concise line, then return the file/content preview so the UI can Approve and write files. ` +
       `If you cannot perform an external action, state the boundary in one short clause and then provide the best Helios-scoped next action or preview. ` +
-      `If the current content has schema "helios-workspace-v1", preserve that complete JSON structure and return valid JSON—not only one nested file or paragraph. Respect view-only permissions. Be concise, concrete, and honest.` +
+      `If the current content has schema "helios-workspace-v1", preserve that complete JSON structure when returning full workspace JSON. Respect view-only permissions. Be concise, concrete, and honest.` +
       projectContext + appContext,
   }
 
   try {
-    const endpoint = resolveChatCompletionsUrl(baseUrl)
-    const payload = buildChatCompletionPayload({
-      model,
-      messages: [system, ...safeMessages],
-      temperature: 0.4,
-    })
-    const r = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: 'Bearer ' + apiKey,
-      },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(60_000),
-    })
-    const rawBody = await r.text()
-    let data = {}
-    try { data = rawBody ? JSON.parse(rawBody) : {} } catch {}
-    if (!r.ok) {
-      const failure = mapAiUpstreamFailure(r.status)
-      const detail = summarizeAiProviderError(rawBody)
-      return res.status(failure.status).json({
-        error: failure.error,
-        code: failure.code,
-        ...(detail ? { detail } : {}),
+    const usingLocal = /helios-local/i.test(apiKey) || /helios\.local/i.test(baseUrl) || /helios-local/i.test(model)
+    const usingPollinations = /pollinations/i.test(apiKey) || /pollinations\.ai/i.test(baseUrl)
+    let rawReply = ''
+    let upstreamModel = model
+
+    if (usingLocal) {
+      const lastUser = [...safeMessages].reverse().find(message => message.role === 'user')?.content || ''
+      rawReply = buildLocalHeliosReply(lastUser, permittedProject)
+      upstreamModel = 'helios-local'
+    } else if (usingPollinations) {
+      const lastUser = [...safeMessages].reverse().find(message => message.role === 'user')?.content || ''
+      const compactSystem = [
+        'You are Helios inside Helios Space. Be concise and helpful.',
+        'For code edits, return path-tagged fenced blocks like ```cpp:main.cpp ... ``` so the UI can write files.',
+        permittedProject ? `Active project: ${permittedProject.name} (${permittedProject.app_kind}).` : '',
+        appContext.slice(0, 500),
+      ].filter(Boolean).join(' ')
+      const prompt = `${compactSystem}\n\nUser: ${lastUser}\nAssistant:`.slice(0, 3500)
+      const endpoint = `https://text.pollinations.ai/${encodeURIComponent(prompt)}?model=${encodeURIComponent(model || 'openai')}`
+      const r = await fetch(endpoint, {
+        method: 'GET',
+        headers: { Accept: 'text/plain' },
+        signal: AbortSignal.timeout(60_000),
       })
+      const rawBody = await r.text()
+      if (!r.ok) {
+        const failure = mapAiUpstreamFailure(r.status)
+        return res.status(failure.status).json({
+          error: failure.error,
+          code: failure.code,
+          detail: summarizeAiProviderError(rawBody),
+        })
+      }
+      rawReply = String(rawBody || '').trim()
+      upstreamModel = model || 'openai'
+    } else {
+      const endpoint = resolveChatCompletionsUrl(baseUrl)
+      const payload = buildChatCompletionPayload({
+        model,
+        messages: [system, ...safeMessages],
+        temperature: 0.4,
+      })
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: 'Bearer ' + apiKey,
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(60_000),
+      })
+      const rawBody = await r.text()
+      let data = {}
+      try { data = rawBody ? JSON.parse(rawBody) : {} } catch {}
+      if (!r.ok) {
+        const failure = mapAiUpstreamFailure(r.status)
+        const detail = summarizeAiProviderError(rawBody)
+        return res.status(failure.status).json({
+          error: failure.error,
+          code: failure.code,
+          ...(detail ? { detail } : {}),
+        })
+      }
+      rawReply = extractAssistantReply(data)
+      if (!rawReply)
+        return res.status(502).json({
+          error: 'The AI provider returned an invalid response.',
+          code: 'AI_INVALID_RESPONSE',
+          detail: summarizeAiProviderError(rawBody) || 'No assistant text was found in the relay response.',
+        })
+      upstreamModel = data?.model || model
     }
-    const rawReply = extractAssistantReply(data)
+
     if (!rawReply)
       return res.status(502).json({
         error: 'The AI provider returned an invalid response.',
         code: 'AI_INVALID_RESPONSE',
-        detail: summarizeAiProviderError(rawBody) || 'No assistant text was found in the relay response.',
       })
     const reply = normalizeHeliosAssistantReply(rawReply, {
       hasProject: Boolean(permittedProject),
@@ -3011,13 +3330,75 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       hasConversation: Boolean(conversationId),
       hasSelectedContent: typeof contextObject.selected_content === 'string' && Boolean(contextObject.selected_content.trim()),
     })
-    res.json({ reply, model })
+    res.json({ reply, model: upstreamModel || model })
   } catch (error) {
     if (error?.name === 'TimeoutError' || error?.name === 'AbortError')
       return res.status(504).json({ error: 'Helios timed out while waiting for the AI provider.', code: 'AI_TIMEOUT' })
     if (error instanceof TypeError || String(error?.message || '').includes('base URL'))
       return res.status(503).json({ error: 'Helios has an invalid AI provider configuration.', code: 'AI_CONFIGURATION' })
     res.status(502).json({ error: 'Helios could not reach the AI provider.', code: 'AI_NETWORK' })
+  }
+})
+
+// ── Browser code runner (local g++ / python / node) ──
+app.post('/api/code/run', requireUser, aiRateLimit, async (req, res) => {
+  const language = String(req.body?.language || '').trim().toLowerCase()
+  const filename = String(req.body?.filename || 'main.txt').slice(0, 120)
+  const source = String(req.body?.source || '')
+  if (!source || source.length > 80_000)
+    return res.status(400).json({ error: 'source must contain 1-80000 characters' })
+
+  if (language === 'javascript' || language === 'typescript' || language === 'html' || language === 'css') {
+    return res.json({
+      stdout: 'Open the Preview panel to run web / JavaScript files.',
+      stderr: '',
+      status: 0,
+      filename,
+    })
+  }
+
+  const fs = await import('node:fs/promises')
+  const os = await import('node:os')
+  const path = await import('node:path')
+  const { spawn } = await import('node:child_process')
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'helios-run-'))
+
+  function run(cmd, args, input) {
+    return new Promise(resolve => {
+      const child = spawn(cmd, args, { cwd: dir, timeout: 8000 })
+      let stdout = ''
+      let stderr = ''
+      child.stdout.on('data', chunk => { stdout += chunk })
+      child.stderr.on('data', chunk => { stderr += chunk })
+      if (input) child.stdin.end(input)
+      child.on('close', code => resolve({ stdout, stderr, status: code ?? 1 }))
+      child.on('error', error => resolve({ stdout: '', stderr: error.message, status: 1 }))
+    })
+  }
+
+  try {
+    if (language === 'cpp' || language === 'c') {
+      const src = path.join(dir, language === 'c' ? 'main.c' : 'main.cpp')
+      const out = path.join(dir, 'a.out')
+      await fs.writeFile(src, source)
+      const compile = await run('g++', ['-O0', '-std=c++17', '-o', out, src])
+      if (compile.status !== 0) {
+        return res.json({ stdout: compile.stdout, stderr: compile.stderr || 'compile failed', status: compile.status, filename })
+      }
+      const result = await run(out, [])
+      return res.json({ ...result, filename })
+    }
+    if (language === 'python') {
+      const src = path.join(dir, 'main.py')
+      await fs.writeFile(src, source)
+      const result = await run('python3', [src])
+      return res.json({ ...result, filename })
+    }
+    return res.status(400).json({ error: `Language "${language}" cannot be run in Helios yet.` })
+  } catch (error) {
+    return res.status(502).json({ error: 'Code runner failed', detail: String(error?.message || error).slice(0, 300) })
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {})
   }
 })
 

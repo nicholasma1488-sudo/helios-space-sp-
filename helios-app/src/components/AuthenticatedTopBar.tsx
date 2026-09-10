@@ -1,39 +1,56 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, BookOpen, ChevronDown, Compass, Dumbbell, FolderGit2, MessageCircle,
-  Plus, Radio, Search, Sparkles, User, Users, X,
+  Bell, ChevronDown, ChevronUp, FolderGit2, MessageCircle, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
-import { api, type ApiNotification, type SearchResults, type SpaceSummary } from '../api'
-import { HOBBIES, SUBJECTS, getSpaceDefinition } from '../product/catalog'
+import { api, type ApiNotification, type SearchResults } from '../api'
 import { useApp } from '../store/appStore'
+import { TopBarCreatePanel, TopBarCreateTrigger } from './TopBarCreatePanel'
 import './AuthenticatedTopBar.css'
 
-type OpenMenu = 'subjects' | 'hobbies' | 'search' | 'notifications' | 'profile' | null
+type OpenMenu = 'search' | 'notifications' | 'profile' | null
 
 const EMPTY_RESULTS: SearchResults = { projects: [], people: [], posts: [], live: [], spaces: [] }
+const TOPBAR_COLLAPSED_KEY = 'helios-topbar-collapsed'
+
+function readCollapsed(key: string) {
+  try { return localStorage.getItem(key) === '1' } catch { return false }
+}
+
+function writeCollapsed(key: string, value: boolean) {
+  try { localStorage.setItem(key, value ? '1' : '0') } catch { /* ignore */ }
+}
 
 export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) {
   const { state, dispatch } = useApp()
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createAppId, setCreateAppId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS)
   const [searching, setSearching] = useState(false)
   const [notifications, setNotifications] = useState<ApiNotification[]>([])
-  const [customSpaces, setCustomSpaces] = useState<SpaceSummary[]>([])
-  const [customHobby, setCustomHobby] = useState('')
-  const [addingHobby, setAddingHobby] = useState(false)
+  const [topbarCollapsed, setTopbarCollapsed] = useState(() => readCollapsed(TOPBAR_COLLAPSED_KEY))
+  const [topbarPeek, setTopbarPeek] = useState(false)
   const rootRef = useRef<HTMLElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const activeSpace = getSpaceDefinition(state.activeSpaceId)
   const unread = notifications.filter(item => !item.read).length
+
+  function setTopbarCollapsedPersist(next: boolean) {
+    setTopbarCollapsed(next)
+    writeCollapsed(TOPBAR_COLLAPSED_KEY, next)
+    if (!next) setTopbarPeek(false)
+    if (next) {
+      setOpenMenu(null)
+      setCreateOpen(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([api.spaces.list(), api.notifications.list()])
-      .then(([spaces, notificationResult]) => {
+    api.notifications.list()
+      .then(notificationResult => {
         if (cancelled) return
-        setCustomSpaces(spaces.spaces.filter(space => space.custom))
         setNotifications(notificationResult.notifications)
       })
       .catch(() => {})
@@ -41,11 +58,28 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   }, [])
 
   useEffect(() => {
+    function onOpenCreate(event: Event) {
+      const detail = (event as CustomEvent<{ appId?: string }>).detail
+      setTopbarCollapsedPersist(false)
+      setOpenMenu(null)
+      setCreateAppId(detail?.appId || null)
+      setCreateOpen(true)
+    }
+    window.addEventListener('helios-open-create-panel', onOpenCreate)
+    return () => window.removeEventListener('helios-open-create-panel', onOpenCreate)
+  }, [])
+
+  useEffect(() => {
     function closeOnOutside(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpenMenu(null)
+      if (!rootRef.current?.contains(event.target as Node) && !(event.target as HTMLElement)?.closest?.('.topbar-create-panel, .topbar-create-scrim')) {
+        setOpenMenu(null)
+      }
     }
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpenMenu(null)
+      if (event.key === 'Escape') {
+        if (createOpen) setCreateOpen(false)
+        else setOpenMenu(null)
+      }
     }
     window.addEventListener('pointerdown', closeOnOutside)
     window.addEventListener('keydown', closeOnEscape)
@@ -53,7 +87,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
       window.removeEventListener('pointerdown', closeOnOutside)
       window.removeEventListener('keydown', closeOnEscape)
     }
-  }, [])
+  }, [createOpen])
 
   useEffect(() => {
     if (openMenu === 'search') window.setTimeout(() => searchRef.current?.focus(), 80)
@@ -78,7 +112,19 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   }, [query])
 
   function toggle(menu: Exclude<OpenMenu, null>) {
+    setCreateOpen(false)
     setOpenMenu(current => current === menu ? null : menu)
+  }
+
+  function toggleCreate() {
+    setOpenMenu(null)
+    setCreateAppId(null)
+    setCreateOpen(current => !current)
+  }
+
+  function closeCreate() {
+    setCreateOpen(false)
+    setCreateAppId(null)
   }
 
   function openSpace(spaceId: string) {
@@ -124,23 +170,6 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
     setOpenMenu(null)
   }
 
-  async function addCustomHobby(event: React.FormEvent) {
-    event.preventDefault()
-    const name = customHobby.trim()
-    if (!name || addingHobby) return
-    setAddingHobby(true)
-    try {
-      const result = await api.spaces.create(name)
-      setCustomSpaces(current => [...current, result.space])
-      setCustomHobby('')
-      openSpace(result.space.id)
-    } catch (error) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
-    } finally {
-      setAddingHobby(false)
-    }
-  }
-
   async function signOut() {
     try {
       await api.logout()
@@ -151,36 +180,50 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   }
 
   const searchCount = results.projects.length + results.people.length + results.posts.length + results.live.length + results.spaces.length
-  const showUpgrade = state.user?.plan !== 'orbit' && state.user?.plan_selected !== false
+
+  if (topbarCollapsed) {
+    return (
+      <div
+        className={'authenticated-topbar-peek-zone' + (topbarPeek ? ' is-visible' : '') + (compact ? ' is-compact' : '')}
+        onMouseEnter={() => setTopbarPeek(true)}
+        onMouseLeave={() => setTopbarPeek(false)}
+      >
+        <button
+          type="button"
+          className="helios-chrome-peek-arrow helios-topbar-peek-arrow"
+          onClick={() => setTopbarCollapsedPersist(false)}
+          aria-label="Expand top bar"
+          title="Expand top bar"
+        >
+          <ChevronDown size={16} />
+        </button>
+      </div>
+    )
+  }
 
   return (
-    <header className={'authenticated-topbar' + (compact ? ' is-compact' : '') + (showUpgrade ? ' has-upgrade' : '')} ref={rootRef}>
+    <header className={'authenticated-topbar' + (compact ? ' is-compact' : '') + (createOpen ? ' is-create-open' : '')} ref={rootRef}>
       <div className="topbar-brand-cluster">
         <button type="button" className="topbar-brand" onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })} aria-label="Helios Space home">
           <span>✦</span><strong>helios<span>space</span></strong>
         </button>
-        {showUpgrade && (
-          <button type="button" className="topbar-upgrade-btn" onClick={() => dispatch({ type: 'OPEN_UPGRADE' })}>
-            <Sparkles size={13} /> Upgrade
-          </button>
-        )}
+        <button
+          type="button"
+          className="helios-topbar-collapse-btn"
+          onClick={() => setTopbarCollapsedPersist(true)}
+          aria-label="Collapse top bar"
+          title="Collapse top bar"
+        >
+          <ChevronUp size={15} />
+        </button>
       </div>
 
-      <nav className="topbar-context-nav" aria-label="Subject and hobby navigation">
-        <button type="button" className={openMenu === 'subjects' ? 'is-open' : ''} onClick={() => toggle('subjects')} aria-expanded={openMenu === 'subjects'}>
-          <BookOpen size={15} /><span>Subjects</span><ChevronDown size={13} />
-        </button>
-        <button type="button" className={openMenu === 'hobbies' ? 'is-open' : ''} onClick={() => toggle('hobbies')} aria-expanded={openMenu === 'hobbies'}>
-          <Dumbbell size={15} /><span>Hobbies</span><ChevronDown size={13} />
-        </button>
-        <span className="topbar-context-chip" style={{ '--space-accent': activeSpace.accent } as React.CSSProperties}>
-          <i />{activeSpace.name}
-        </span>
-      </nav>
-
-      <nav className="topbar-destination-nav" aria-label="Fast destinations">
-        <button type="button" className={state.view === 'explore' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'explore' })}><Compass size={15} /><span>Explore</span></button>
-        <button type="button" className={state.view === 'live' ? 'is-active' : ''} onClick={() => dispatch({ type: 'SET_VIEW', view: 'live' })}><Radio size={15} /><span>Live</span></button>
+      <nav className="topbar-context-nav" aria-label="Mini Apps">
+        <TopBarCreateTrigger
+          open={createOpen}
+          onToggle={toggleCreate}
+          label="Mini App"
+        />
       </nav>
 
       <div className="topbar-actions">
@@ -193,48 +236,19 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         </button>
       </div>
 
-      {openMenu === 'subjects' && (
-        <div className="topbar-mega-menu" role="menu" aria-label="Subjects">
-          <div className="mega-menu-heading"><span><BookOpen size={16} /> Subjects</span><small>Choose a Space and keep its context as you move.</small></div>
-          <div className="mega-space-grid">
-            {SUBJECTS.map(space => (
-              <button type="button" role="menuitem" key={space.id} onClick={() => openSpace(space.id)} className={state.activeSpaceId === space.id ? 'is-active' : ''} style={{ '--space-accent': space.accent } as React.CSSProperties}>
-                <i>{space.name.slice(0, 1)}</i><span><strong>{space.name}</strong><small>{space.description}</small></span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {openMenu === 'hobbies' && (
-        <div className="topbar-mega-menu hobbies-menu" role="menu" aria-label="Hobbies">
-          <div className="mega-menu-heading"><span><Dumbbell size={16} /> Hobbies</span><small>Meaningful practice belongs beside school and creative work.</small></div>
-          <div className="mega-space-grid hobby-grid">
-            {[...HOBBIES, ...customSpaces.map(space => getSpaceDefinition(space.id))].map(space => (
-              <button type="button" role="menuitem" key={space.id} onClick={() => openSpace(space.id)} className={state.activeSpaceId === space.id ? 'is-active' : ''} style={{ '--space-accent': space.accent } as React.CSSProperties}>
-                <i>{space.name.slice(0, 1)}</i><span><strong>{space.name}</strong><small>{space.description}</small></span>
-              </button>
-            ))}
-          </div>
-          <form className="custom-hobby-form" onSubmit={addCustomHobby}>
-            <Plus size={15} /><label htmlFor="custom-hobby">Custom hobby</label>
-            <input id="custom-hobby" value={customHobby} maxLength={60} onChange={event => setCustomHobby(event.target.value)} placeholder="e.g. Woodworking" />
-            <button type="submit" disabled={!customHobby.trim() || addingHobby}>{addingHobby ? 'Adding…' : 'Add Space'}</button>
-          </form>
-        </div>
-      )}
+      <TopBarCreatePanel open={createOpen} onClose={closeCreate} initialAppId={createAppId} />
 
       {openMenu === 'search' && (
         <div className="topbar-popover topbar-search-popover" role="dialog" aria-label="Global search">
           <div className="global-search-input"><Search size={17} /><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Spaces, people, Projects and shared work" aria-label="Search" /><button type="button" onClick={() => setOpenMenu(null)} aria-label="Close search"><X size={15} /></button></div>
           <div className="global-search-results" aria-live="polite">
             {query.trim().length < 2 && <SearchEmpty icon={<Sparkles size={19} />} text="Search only returns work you are allowed to discover." />}
-            {query.trim().length >= 2 && searching && <SearchEmpty icon={<Sparkles size={19} />} text="Searching your permitted orbit…" />}
+            {query.trim().length >= 2 && searching && <SearchEmpty icon={<Sparkles size={19} />} text="Searching…" />}
             {query.trim().length >= 2 && !searching && searchCount === 0 && <SearchEmpty icon={<Search size={19} />} text="No permitted results found." />}
             {results.spaces.length > 0 && <ResultGroup title="Spaces">{results.spaces.map(space => <button key={space.id} onClick={() => openSpace(space.id)}><Users size={14} /><span><strong>{space.name}</strong><small>{space.kind}</small></span></button>)}</ResultGroup>}
             {results.projects.length > 0 && <ResultGroup title="Projects">{results.projects.map(project => <button key={project.id} onClick={() => void openProject(project.id)}><FolderGit2 size={14} /><span><strong>{project.name}</strong><small>{project.space_id} · {project.app_kind}</small></span></button>)}</ResultGroup>}
             {results.live.length > 0 && <ResultGroup title="Live now">{results.live.map(session => <button key={session.id} onClick={() => { dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: session.id }); setOpenMenu(null) }}><Radio size={14} /><span><strong>{session.title}</strong><small>{session.owner_name} · {session.viewer_count} watching</small></span></button>)}</ResultGroup>}
-            {results.people.length > 0 && <ResultGroup title="People">{results.people.map(person => <button key={person.id} onClick={() => { dispatch({ type: 'SET_VIEW', view: 'explore' }); setOpenMenu(null) }}><User size={14} /><span><strong>{person.name}</strong><small>{person.handle}</small></span></button>)}</ResultGroup>}
+            {results.people.length > 0 && <ResultGroup title="People">{results.people.map(person => <button key={person.id} onClick={() => { dispatch({ type: 'SET_VIEW', view: 'apps' }); setOpenMenu(null) }}><User size={14} /><span><strong>{person.name}</strong><small>{person.handle}</small></span></button>)}</ResultGroup>}
             {results.posts.length > 0 && <ResultGroup title="Progress">{results.posts.map(post => <button key={post.id} onClick={() => { sessionStorage.setItem('helios-open-post', String(post.id)); dispatch({ type: 'SET_VIEW', view: 'lifestyle' }); setOpenMenu(null) }}><MessageCircle size={14} /><span><strong>{post.author_name}</strong><small>{post.body.slice(0, 90)}</small></span></button>)}</ResultGroup>}
           </div>
         </div>
@@ -256,22 +270,6 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
           <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'SET_VIEW', view: 'profile' }); setOpenMenu(null) }}><User size={15} /> Creator profile</button>
           <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); setOpenMenu(null) }}><Sparkles size={15} /> Ask Helios</button>
           <button type="button" role="menuitem" onClick={() => void signOut()}><span>↪</span> Sign out</button>
-        </div>
-      )}
-
-      {showUpgrade && (
-        <div className="topbar-upgrade-banner">
-          <strong>Orbit 福利</strong>
-          <div>
-            <span>不限文稿数量</span>
-            <span>每篇 50 万字</span>
-            <span>完整 Mini Apps</span>
-            <span>Stocks</span>
-            <span>学校与工作套件</span>
-            <span>优先 Helios</span>
-            <span>Stripe 银行卡</span>
-          </div>
-          <button type="button" onClick={() => dispatch({ type: 'OPEN_UPGRADE' })}>升级到 Orbit</button>
         </div>
       )}
     </header>

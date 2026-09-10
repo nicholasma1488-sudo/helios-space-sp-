@@ -1,0 +1,95 @@
+/*
+  Helios Space UI primitives
+  Prefer these classes over one-off styles in new work.
+*/
+
+.helios-page {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  overflow: auto;
+  animation: helios-fade-in var(--dur-standard) var(--ease-enter) both;
+}
+
+.helios-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding: var(--space-5) clamp(16px, 3vw, 36px) var(--space-3);
+}
+
+.helios-page-header h1 {
+  margin: 6px 0;
+  font: var(--type-title-md);
+  letter-spacing: -0.03em;
+}
+
+.helios-page-header p {
+  margin: 0;
+  max-width: 42ch;
+  color: var(--helios-text2);
+}
+
+.helios-muted {
+  color: var(--helios-muted);
+}
+
+.helios-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.helios-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.helios-empty {
+  display: grid;
+  place-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--helios-muted);
+  border: 1px dashed var(--glass-stroke);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+}
+
+.helios-empty strong {
+  color: var(--helios-text);
+  font: var(--type-heading-sm);
+}
+
+.helios-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.helios-field > span {
+  color: var(--helios-muted);
+  font: var(--type-label);
+}
+
+.helios-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--glass-stroke);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--helios-text);
+  font: inherit;
+  outline: none;
+  transition: border-color var(--dur-quick) var(--ease-move), box-shadow var(--dur-quick) var(--ease-move);
+}
+
+.helios-input:focus {
+  border-color: color-mix(in srgb, var(--helios-accent) 45%, var(--glass-stroke));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--helios-accent) 14%, transparent);
+}

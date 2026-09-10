@@ -96,19 +96,19 @@ export function normalizeHeliosAssistantReply(reply, meta = {}) {
   const hasSelectedContent = Boolean(meta.hasSelectedContent)
   const currentTarget = hasProject
     ? canEdit
-      ? '当前 Project / Mini App 工作区'
-      : '当前只读 Project / Mini App 工作区'
+      ? 'the current Project / Mini App workspace'
+      : 'the current read-only Project / Mini App workspace'
     : hasConversation
-      ? '当前 Chat / Project conversation'
+      ? 'the current Chat / Project conversation'
       : hasSelectedContent
-        ? '你明确选中的内容'
-        : '当前 Helios Space 上下文'
+        ? 'the content you explicitly selected'
+        : 'the current Helios Space context'
 
   return [
-    '我是 Helios Space 里的真实 AI 功能，但不是人，也不会控制你的电脑或偷偷替你执行外部操作。',
-    '我可以基于' + currentTarget + '继续工作：解释、改写、排查问题、整理反馈、起草回复、生成计划，或在你有权限的 Project 中准备修改。',
+    'I am a real AI feature inside Helios Space, but I am not a person, and I will not control your computer or silently run external actions for you.',
+    'I can keep working from ' + currentTarget + ': explain, rewrite, troubleshoot, organize feedback, draft replies, generate plans, or prepare edits in Projects you can change.',
     canEdit
-      ? '如果要改项目内容，我会先给 Action Preview；你点 Approve 后才会应用。'
-      : '如果当前内容是只读的，我会给你可复制的建议或草稿，不会假装已经修改。',
+      ? 'If project content needs to change, I will show an Action Preview first; it applies only after you click Approve.'
+      : 'If the current content is read-only, I will give you copyable suggestions or drafts instead of pretending I already changed it.',
   ].join('\n')
 }
