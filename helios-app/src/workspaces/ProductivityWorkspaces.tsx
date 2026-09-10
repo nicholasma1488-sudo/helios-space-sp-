@@ -3,8 +3,8 @@ import {
   AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowUp, BarChart3, Bold,
   BookOpen, Bookmark, ChevronLeft, ChevronRight, Columns3, Copy, Download, Eraser,
   Heading1, Heading2, Heading3, Highlighter, Image, IndentDecrease, IndentIncrease, Italic,
-  Link2, List, ListOrdered, Maximize2, Plus, Presentation, Quote, Redo2, Search, Sparkles,
-  Square, Strikethrough, Table2, Trash2, Type, Underline, Undo2, Upload,
+  Link2, List, ListOrdered, Mail, Maximize2, Plus, Presentation, Quote, Redo2, Search, Sparkles,
+  Square, Strikethrough, Table2, Trash2, Type, Underline, Undo2, Upload, Users,
 } from 'lucide-react'
 import { useApp } from '../store/appStore'
 
@@ -1112,6 +1112,243 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
           </footer>
         </div>
       )}
+    </div>
+  )
+}
+
+interface MailData {
+  to?: string
+  cc?: string
+  subject?: string
+  body?: string
+  savedAt?: string
+  html?: string
+}
+
+function parseLegacyMailHtml(html: string): Partial<MailData> {
+  const text = html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const to = /To:\s*([^S]*?)(?:Subject:|$)/i.exec(text)?.[1]?.trim() || ''
+  const subject = /Subject:\s*(.*?)(?:Start the body|Dear |Hi |Hello |$)/i.exec(text)?.[1]?.trim() || ''
+  return { to, subject, body: text }
+}
+
+export function MailWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const value = data as unknown as MailData
+  const seeded = useMemo(() => {
+    if (value.to || value.subject || value.body) return value
+    if (value.html) return { ...value, ...parseLegacyMailHtml(value.html) }
+    return value
+  }, [value])
+  const mail = {
+    to: seeded.to || '',
+    cc: seeded.cc || '',
+    subject: seeded.subject || '',
+    body: seeded.body || '',
+    savedAt: seeded.savedAt,
+  }
+
+  function patch(next: Partial<MailData>) {
+    onChange({ ...value, ...mail, ...next, html: undefined })
+  }
+
+  function saveDraft() {
+    patch({ savedAt: new Date().toISOString() })
+  }
+
+  function insertSnippet(kind: 'greeting' | 'signoff') {
+    const snippet = kind === 'greeting'
+      ? 'Hi,\n\n'
+      : '\n\nThanks,\n'
+    const body = mail.body.trim()
+      ? (kind === 'greeting' ? `${snippet}${mail.body}` : `${mail.body}${snippet}`)
+      : (kind === 'greeting' ? 'Hi,\n\n' : 'Thanks,\n')
+    patch({ body })
+  }
+
+  return (
+    <div className="mail-workspace">
+      <header className="writing-toolbar">
+        <strong>DISPATCH</strong>
+        <button type="button" onClick={() => insertSnippet('greeting')}>Greeting</button>
+        <button type="button" onClick={() => insertSnippet('signoff')}>Sign-off</button>
+        <button type="button" onClick={saveDraft}><Mail size={14} /> Save draft</button>
+        <span />
+        <button
+          type="button"
+          className="writing-helios-action"
+          onClick={() => onAskHelios(`Rewrite this Dispatch mail draft so it is clearer and more professional.\n\nTo: ${mail.to}\nCc: ${mail.cc}\nSubject: ${mail.subject}\n\n${mail.body}`)}
+        >
+          <Sparkles size={14} /> Rewrite with Helios
+        </button>
+      </header>
+      <div className="mail-composer">
+        <label>
+          <span>To</span>
+          <input value={mail.to} onChange={event => patch({ to: event.target.value })} placeholder="name@example.com" aria-label="To" />
+        </label>
+        <label>
+          <span>Cc</span>
+          <input value={mail.cc} onChange={event => patch({ cc: event.target.value })} placeholder="optional" aria-label="Cc" />
+        </label>
+        <label>
+          <span>Subject</span>
+          <input value={mail.subject} onChange={event => patch({ subject: event.target.value })} placeholder="Subject line" aria-label="Subject" />
+        </label>
+        <label className="mail-body-field">
+          <span>Body</span>
+          <textarea
+            value={mail.body}
+            onChange={event => patch({ body: event.target.value })}
+            placeholder="Write the message…"
+            aria-label="Mail body"
+          />
+        </label>
+        <footer>
+          <small>{mail.savedAt ? `Draft saved ${new Date(mail.savedAt).toLocaleString()}` : 'Draft autosaves with the Project · use Save draft to stamp a checkpoint'}</small>
+          <button type="button" onClick={saveDraft}>Save draft</button>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
+interface WeaveSection {
+  id: string
+  title: string
+}
+
+interface WeaveData {
+  html?: string
+  sections?: WeaveSection[]
+  activeSectionId?: string
+  presence?: Array<{ id: string; name: string; color: string }>
+}
+
+const DEFAULT_PRESENCE = [
+  { id: 'you', name: 'You', color: '#c96442' },
+  { id: 'maya', name: 'Maya', color: '#5b8def' },
+  { id: 'sam', name: 'Sam', color: '#7a8bb8' },
+]
+
+function weaveSectionsFromHtml(html: string): WeaveSection[] {
+  const documentValue = new DOMParser().parseFromString(html || '', 'text/html')
+  const headings = [...documentValue.querySelectorAll('h1,h2,h3')]
+  if (headings.length === 0) {
+    return [
+      { id: 'goals', title: 'Goals' },
+      { id: 'decisions', title: 'Decisions' },
+      { id: 'todos', title: 'To-dos' },
+    ]
+  }
+  return headings.map((heading, index) => ({
+    id: `section-${index}`,
+    title: heading.textContent?.trim() || `Section ${index + 1}`,
+  }))
+}
+
+export function WeaveWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const value = data as unknown as WeaveData
+  const editorRef = useRef<HTMLDivElement>(null)
+  const safeHtml = useMemo(() => sanitizeHtml(value.html || '<h1>Weave page</h1><p>Edit together here.</p>'), [value.html])
+  const sections = useMemo(
+    () => (Array.isArray(value.sections) && value.sections.length > 0 ? value.sections : weaveSectionsFromHtml(safeHtml)),
+    [safeHtml, value.sections],
+  )
+  const presence = value.presence || DEFAULT_PRESENCE
+  const [activeSectionId, setActiveSectionId] = useState(value.activeSectionId || sections[0]?.id || '')
+
+  useEffect(() => {
+    if (editorRef.current && document.activeElement !== editorRef.current && editorRef.current.innerHTML !== safeHtml) {
+      editorRef.current.innerHTML = safeHtml
+    }
+  }, [safeHtml])
+
+  function update(patch: Partial<WeaveData>) {
+    onChange({ ...value, html: value.html || safeHtml, sections, presence, ...patch })
+  }
+
+  function command(name: string, argument?: string) {
+    editorRef.current?.focus()
+    document.execCommand(name, false, argument)
+    if (editorRef.current) update({ html: sanitizeHtml(editorRef.current.innerHTML) })
+  }
+
+  function addSection() {
+    const title = window.prompt('Section title')?.trim() || `Section ${sections.length + 1}`
+    const section = { id: crypto.randomUUID(), title }
+    const nextSections = [...sections, section]
+    command('insertHTML', `<h2>${title.replace(/</g, '&lt;')}</h2><p><br></p>`)
+    update({ sections: nextSections, activeSectionId: section.id, html: editorRef.current ? sanitizeHtml(editorRef.current.innerHTML) : value.html })
+    setActiveSectionId(section.id)
+  }
+
+  return (
+    <div className="weave-workspace">
+      <header className="writing-toolbar">
+        <strong>WEAVE</strong>
+        <div className="weave-presence" aria-label="People editing">
+          <Users size={13} />
+          {presence.map(person => (
+            <span key={person.id} style={{ ['--presence-color' as string]: person.color }} title={person.name}>
+              {person.name.slice(0, 1)}
+            </span>
+          ))}
+          <small>Live page</small>
+        </div>
+        <button type="button" onClick={() => command('bold')} title="Bold"><Bold size={14} /></button>
+        <button type="button" onClick={() => command('italic')} title="Italic"><Italic size={14} /></button>
+        <button type="button" onClick={() => command('insertUnorderedList')} title="List"><List size={14} /></button>
+        <button type="button" onClick={() => command('formatBlock', 'h2')} title="Heading"><Heading2 size={14} /></button>
+        <button type="button" onClick={addSection}><Plus size={13} /> Section</button>
+        <span />
+        <button
+          type="button"
+          className="writing-helios-action"
+          onClick={() => onAskHelios('Tighten this Weave live page: clarify decisions, owners, and open questions')}
+        >
+          <Sparkles size={14} /> Clarify with Helios
+        </button>
+      </header>
+      <div className="weave-layout">
+        <aside className="weave-sections" aria-label="Sections">
+          <header><strong>SECTIONS</strong></header>
+          {sections.map(section => (
+            <button
+              type="button"
+              key={section.id}
+              className={section.id === activeSectionId ? 'is-active' : ''}
+              onClick={() => {
+                setActiveSectionId(section.id)
+                update({ activeSectionId: section.id })
+              }}
+            >
+              {section.title}
+            </button>
+          ))}
+          <button type="button" className="weave-add-section" onClick={addSection}><Plus size={12} /> Add section</button>
+          <div className="weave-presence-list">
+            <strong>HERE NOW</strong>
+            {presence.map(person => (
+              <article key={person.id}>
+                <i style={{ background: person.color }} />
+                <span>{person.name}{person.id === 'you' ? ' (editing)' : ' viewing'}</span>
+              </article>
+            ))}
+          </div>
+        </aside>
+        <div className="writing-editor-scroll weave-editor-scroll">
+          <div
+            ref={editorRef}
+            className="writing-page weave-page"
+            contentEditable
+            suppressContentEditableWarning
+            role="textbox"
+            aria-multiline="true"
+            aria-label="Weave live page"
+            onInput={event => update({ html: sanitizeHtml(event.currentTarget.innerHTML), sections: weaveSectionsFromHtml(event.currentTarget.innerHTML) })}
+          />
+        </div>
+      </div>
     </div>
   )
 }

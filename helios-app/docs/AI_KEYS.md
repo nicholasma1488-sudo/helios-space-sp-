@@ -1,65 +1,57 @@
 # Helios AI keys — free / “unlimited” options
 
-Helios talks to any **OpenAI-compatible** endpoint via admin settings / env:
+Helios uses OpenAI-compatible settings (env or Admin):
 
-- `HELIOS_AI_API_KEY` (or site setting `openai_api_key`)
-- `HELIOS_AI_BASE_URL` (`openai_base_url`)
-- `HELIOS_AI_MODEL` (`openai_model`)
+- `openai_api_key` / `HELIOS_AI_API_KEY`
+- `openai_base_url` / `HELIOS_AI_BASE_URL`
+- `openai_model` / `HELIOS_AI_MODEL`
 
-Never commit real keys to git.
+**Never commit real keys.**
 
-## Closest thing to “unlimited tokens”
+## Reality check (this production VPS)
 
-### 1) Ollama on your own machine / VPS (recommended)
+- RAM ≈ **1.8GB** → **do not run Ollama here** (it will thrash or OOM).
+- Pollinations legacy text API is **deprecated / 402** for many callers — not reliable anymore.
+- Out of the box Helios stays on **`helios-local-free`**: unlimited local helper + **file Write without opening** via Mini App panel (`/api/projects/:id/helios-patch`).
 
-Self-hosted = **no cloud token meter**. Helios can drive Quill / Lattice / Stage / Forge file writes through `/api/projects/:id/helios-patch` and `/api/helios/chat`.
+## Best “unlimited” path
+
+Run **Ollama on a stronger machine** (≥8GB RAM), then point Helios at it:
 
 ```bash
-# on the AI host
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull llama3.2
-ollama serve   # default http://127.0.0.1:11434
+ollama serve
 ```
-
-Point Helios at Ollama’s OpenAI shim:
 
 ```bash
 HELIOS_AI_API_KEY=ollama
-HELIOS_AI_BASE_URL=http://127.0.0.1:11434
+HELIOS_AI_BASE_URL=http://YOUR_OLLAMA_HOST:11434
 HELIOS_AI_MODEL=llama3.2
 ```
 
-Or in Admin → AI settings:
-- API key: `ollama` (any non-empty string)
-- Base URL: `http://127.0.0.1:11434` (or your private LAN URL)
-- Model: `llama3.2` / `qwen2.5` / whatever you pulled
+Or Admin → AI settings with the same values. Self-hosted = no cloud token bill.
 
-If Helios runs on another host, bind Ollama to that network interface and firewall it.
+## Best free cloud key (paste yourself)
 
-### 2) Cloud free tiers (not unlimited — rate limited)
+1. Open [https://console.groq.com](https://console.groq.com) → create free API key  
+2. Admin AI settings:
 
-| Provider | Notes |
-|----------|--------|
-| **Groq** | Fast free tier, OpenAI-compatible. Good for chat + patches. |
-| **Google AI Studio (Gemini)** | Free quota; use an OpenAI-compatible proxy or Gemini native adapter if you add one. |
-| **OpenRouter** | Free model routes available; still quota’d. |
-| **Pollinations** | Already supported as a fallback path in Helios when configured. |
+| Field | Value |
+|-------|--------|
+| API key | your Groq key |
+| Base URL | `https://api.groq.com/openai` |
+| Model | `llama-3.1-8b-instant` (or current Groq free model) |
 
-These are **free**, not infinite. For “无限”, use Ollama.
+Alternatives with free quotas: Google AI Studio (Gemini), OpenRouter free routes.
 
-## Write files without opening the project
+## Write Mini App files without opening them
 
-From the **Mini App** panel:
+Already shipped:
 
-1. Pick a recent file (or create one).
-2. Type an instruction in **Helios edit without opening**.
-3. Apply → server writes project `content` via `/api/projects/:id/helios-patch`.
+1. Open **Mini App** panel  
+2. Enter an app → select a recent file (do **not** need Open)  
+3. Type instruction → **Write**  
+4. Server patches SQLite project content and returns a preview  
 
-Local rule engine always works. With a real upstream key (Ollama/Groq/…), Helios may rewrite the full JSON content for smarter edits.
-
-Example instructions:
-
-- Quill: `append: Add a closing paragraph about next steps`
-- Stage: `theme: blue` or `new slide: Roadmap`
-- Lattice: `fill sample`
-- Forge: set `path` to `main.cpp` and `rewrite: ...`
+Works on local rules always; smarter when a real upstream (Ollama/Groq) is configured.

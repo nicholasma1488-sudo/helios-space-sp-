@@ -298,20 +298,38 @@ function writingData(html: string) {
   return { html, progress: 0, bookmarks: [], notes: [], readerMode: false }
 }
 
-function boardData(columns: Array<{ id: string; title: string; cards: Array<{ id: string; title: string; note: string }> }>) {
-  return { columns }
+function boardData(columns: Array<{ id: string; name: string; cards: Array<{ id: string; text: string; due?: string; owner?: string }> }>) {
+  return { columns, filter: '' }
 }
 
 export function suiteStarterContent(app: SuiteApp) {
-  if (app.id === 'word-docs' || app.id === 'loop-page') {
-    return writingData(
-      app.id === 'loop-page'
-        ? '<h1>Loop page</h1><p>Edit together here: goals, decisions, to-dos.</p><ul><li>Decide today</li><li>Whose input is still needed</li></ul>'
-        : '<h1>Title</h1><p>Start writing here. A title, body, and list are enough.</p><ul><li>Point one</li><li>Point two</li></ul>',
-    )
+  if (app.id === 'word-docs') {
+    return writingData('<h1>Title</h1><p>Start writing here. A title, body, and list are enough.</p><ul><li>Point one</li><li>Point two</li></ul>')
+  }
+  if (app.id === 'loop-page') {
+    return {
+      html: '<h1>Weave page</h1><h2>Goals</h2><p>What are we trying to finish together?</p><h2>Decisions</h2><p>Capture choices here so nobody re-litigates them.</p><h2>To-dos</h2><ul><li>Decide today</li><li>Whose input is still needed</li></ul>',
+      sections: [
+        { id: 'goals', title: 'Goals' },
+        { id: 'decisions', title: 'Decisions' },
+        { id: 'todos', title: 'To-dos' },
+      ],
+      presence: [
+        { id: 'you', name: 'You', color: '#c96442' },
+        { id: 'maya', name: 'Maya', color: '#5b8def' },
+        { id: 'sam', name: 'Sam', color: '#7a8bb8' },
+      ],
+      activeSectionId: 'goals',
+    }
   }
   if (app.id === 'mail-draft') {
-    return writingData('<h1>Mail draft</h1><p><strong>To:</strong></p><p><strong>Subject:</strong></p><p>Start the body here…</p>')
+    return {
+      to: '',
+      cc: '',
+      subject: '',
+      body: 'Hi,\n\n\n\nThanks,\n',
+      savedAt: '',
+    }
   }
   if (app.id === 'reader') {
     return writingData('<h1>Reading</h1><p>Paste or write the long text to read. Add annotations and excerpts.</p><blockquote>Put excerpts here</blockquote>')
@@ -339,10 +357,23 @@ export function suiteStarterContent(app: SuiteApp) {
   }
   if (app.id === 'notebook') {
     return {
-      title: 'Notebook',
-      cells: [
-        { id: 'today', kind: 'markdown', body: '# Today\nKey points from class:' },
-        { id: 'todo', kind: 'markdown', body: '## To do later\n- ' },
+      title: 'Folio',
+      activePageId: 'today',
+      pages: [
+        {
+          id: 'today',
+          title: 'Today',
+          body: '# Today\nKey points from class:\n\n- ',
+          tags: ['daily'],
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'todo',
+          title: 'To do later',
+          body: '## To do later\n- [ ] ',
+          tags: ['follow-up'],
+          updatedAt: new Date().toISOString(),
+        },
       ],
     }
   }
@@ -360,29 +391,39 @@ export function suiteStarterContent(app: SuiteApp) {
   }
   if (app.id === 'homework-board') {
     return boardData([
-      { id: 'due', title: 'To do', cards: [{ id: crypto.randomUUID(), title: 'Homework due today', note: '' }] },
-      { id: 'doing', title: 'Doing', cards: [] },
-      { id: 'done', title: 'Done', cards: [] },
+      { id: 'todo', name: 'To do', cards: [{ id: crypto.randomUUID(), text: 'Homework due today', due: '', owner: 'You' }] },
+      { id: 'doing', name: 'Doing', cards: [] },
+      { id: 'done', name: 'Done', cards: [] },
     ])
   }
   if (app.id === 'calendar-plan') {
-    return boardData([
-      { id: 'mon', title: 'This week', cards: [{ id: crypto.randomUUID(), title: 'Collab sync', note: 'Pick a time' }] },
-      { id: 'soon', title: 'Later', cards: [] },
-      { id: 'done', title: 'Done', cards: [] },
-    ])
+    const today = new Date()
+    const iso = (offset: number) => {
+      const next = new Date(today)
+      next.setDate(today.getDate() + offset)
+      return next.toISOString().slice(0, 10)
+    }
+    return {
+      view: 'month',
+      focusDate: iso(0),
+      events: [
+        { id: crypto.randomUUID(), title: 'Collab sync', date: iso(0), time: '15:00', notes: 'Pick a time and agenda' },
+        { id: crypto.randomUUID(), title: 'Milestone check', date: iso(3), time: '11:00', notes: '' },
+      ],
+    }
   }
   if (app.id === 'planner-board') {
     return boardData([
-      { id: 'backlog', title: 'Backlog', cards: [{ id: crypto.randomUUID(), title: 'This week’s goal', note: '' }] },
-      { id: 'doing', title: 'Doing', cards: [] },
-      { id: 'done', title: 'Done', cards: [] },
+      { id: 'todo', name: 'To do', cards: [{ id: crypto.randomUUID(), text: 'This week’s goal', due: '', owner: 'You' }] },
+      { id: 'doing', name: 'Doing', cards: [] },
+      { id: 'done', name: 'Done', cards: [] },
     ])
   }
   if (app.id === 'lists' || app.id === 'checklist') {
     return boardData([
-      { id: 'open', title: app.id === 'checklist' ? 'To check' : 'To do', cards: [{ id: crypto.randomUUID(), title: 'First item', note: '' }] },
-      { id: 'done', title: 'Done', cards: [] },
+      { id: 'open', name: app.id === 'checklist' ? 'To check' : 'To do', cards: [{ id: crypto.randomUUID(), text: 'First item', due: '', owner: 'You' }] },
+      { id: 'doing', name: 'Doing', cards: [] },
+      { id: 'done', name: 'Done', cards: [] },
     ])
   }
   if (app.id === 'code') {

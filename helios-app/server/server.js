@@ -3137,10 +3137,11 @@ function buildLocalHeliosReply(userText, project) {
   }
 
   return [
-    'I am Helios (local free unlimited mode).',
-    'I can help you: explain files, write C++/JS/Python, and edit project contents.',
-    'To write files, say something like "write a main.cpp", then click Approve.',
-    'An admin can also switch the backend to a free OpenAI-compatible key such as Groq / Gemini.',
+    'I am Helios (local free mode).',
+    'I can help with Quill, Lattice, Stage, Folio, Forge, and the other Mini Apps.',
+    'To change a file without opening it: Mini App panel → select file → Write an instruction.',
+    'For cloud AI without a paid key, set Admin AI to Pollinations (see docs/AI_KEYS.md).',
+    'For truly unlimited tokens, run Ollama on a machine with enough RAM and point HELIOS_AI_* at it.',
   ].join('\n')
 }
 
