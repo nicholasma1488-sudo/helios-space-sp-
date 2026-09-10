@@ -44,6 +44,8 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
   const [entered, setEntered] = useState(false)
   const [patchProjectId, setPatchProjectId] = useState<number | null>(null)
   const [patchInstruction, setPatchInstruction] = useState('')
+  const [patchPreview, setPatchPreview] = useState('')
+  const [patchPath, setPatchPath] = useState('')
   const [patching, setPatching] = useState(false)
   const panelRef = useFocusTrap<HTMLDivElement>(open)
 
@@ -53,6 +55,8 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
       setView({ mode: 'gallery' })
       setPatchProjectId(null)
       setPatchInstruction('')
+      setPatchPath('')
+      setPatchPreview('')
       return
     }
     const matched = initialAppId ? apps.find(app => app.id === initialAppId) : null
@@ -114,11 +118,17 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
     if (!patchProjectId || !patchInstruction.trim() || patching) return
     setPatching(true)
     try {
-      await api.heliosPatch(patchProjectId, patchInstruction.trim())
+      const result = await api.heliosPatch(patchProjectId, patchInstruction.trim(), patchPath.trim() || undefined)
+      setPatchPreview(result.preview?.after || 'Updated.')
+      if (result.project) dispatch({ type: 'UPDATE_PROJECT', project: result.project })
       setPatchInstruction('')
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'Helios patch applied', tone: 'success' },
+        toast: {
+          id: String(Date.now()),
+          message: `Helios wrote ${result.target || 'file'} (${result.engine || 'local'})`,
+          tone: 'success',
+        },
       })
     } catch (error) {
       dispatch({
@@ -260,16 +270,26 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                   {patchProjectId && (
                     <form className="topbar-helios-patch" onSubmit={event => void applyHeliosPatch(event)}>
                       <Sparkles size={14} />
+                      {active?.id === 'code' && (
+                        <input
+                          value={patchPath}
+                          onChange={event => setPatchPath(event.target.value)}
+                          placeholder="path e.g. main.cpp"
+                          aria-label="Forge file path"
+                          maxLength={120}
+                        />
+                      )}
                       <input
                         value={patchInstruction}
                         onChange={event => setPatchInstruction(event.target.value)}
-                        placeholder="Tell Helios what to change…"
+                        placeholder="Edit without opening — e.g. append: Next steps…"
                         aria-label="Helios patch instruction"
-                        maxLength={500}
+                        maxLength={2000}
                       />
                       <button type="submit" disabled={patching || !patchInstruction.trim()}>
-                        {patching ? 'Applying…' : 'Apply'}
+                        {patching ? 'Writing…' : 'Write'}
                       </button>
+                      {patchPreview && <small className="topbar-helios-patch-preview">{patchPreview}</small>}
                     </form>
                   )}
                   <button

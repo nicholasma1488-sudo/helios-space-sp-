@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ArrowDown, ArrowUp, BarChart3, Bold, BookOpen, Bookmark, ChevronLeft, ChevronRight, Columns3,
-  Copy, Heading1, Heading2, Heading3, Highlighter, Image, Italic, List, Maximize2, Plus,
-  Presentation, Quote, Search, Sparkles, Square, Table2, Trash2, Type,
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowUp, BarChart3, Bold,
+  BookOpen, Bookmark, ChevronLeft, ChevronRight, Columns3, Copy, Download, Eraser,
+  Heading1, Heading2, Heading3, Highlighter, Image, IndentDecrease, IndentIncrease, Italic,
+  Link2, List, ListOrdered, Maximize2, Plus, Presentation, Quote, Redo2, Search, Sparkles,
+  Square, Strikethrough, Table2, Trash2, Type, Underline, Undo2, Upload,
 } from 'lucide-react'
 import { useApp } from '../store/appStore'
 
@@ -44,7 +46,11 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   const [note, setNote] = useState('')
   const [fontSize, setFontSize] = useState('3')
   const [findQuery, setFindQuery] = useState('')
+  const [replaceQuery, setReplaceQuery] = useState('')
   const [findOpen, setFindOpen] = useState(false)
+  const [textColor, setTextColor] = useState('#1a1b1e')
+  const [highlightColor, setHighlightColor] = useState('#ffe08a')
+  const [lineSpacing, setLineSpacing] = useState('1.75')
   const safeHtml = useMemo(() => sanitizeHtml(value.html || ''), [value.html])
   const characterLimit = state.user?.usage?.characters.limit ?? null
   const characterUsed = writingCharacterCount(value.html || '')
@@ -79,6 +85,38 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
     command('insertHTML', '<table><tbody><tr><th>Heading</th><th>Heading</th></tr><tr><td>Data</td><td>Data</td></tr></tbody></table><p><br></p>')
   }
 
+  function insertLink() {
+    const url = window.prompt('Link URL (https://…)')?.trim()
+    if (!url || !/^https?:\/\//i.test(url)) return
+    command('createLink', url)
+  }
+
+  function insertPageBreak() {
+    command('insertHTML', '<hr class="quill-page-break" /><p><br></p>')
+  }
+
+  function applyLineSpacing(spacing: string) {
+    setLineSpacing(spacing)
+    editorRef.current?.focus()
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      command('formatBlock', 'p')
+      if (editorRef.current) {
+        const block = selection?.anchorNode instanceof Element
+          ? selection.anchorNode.closest('p,div,li,h1,h2,h3,blockquote')
+          : selection?.anchorNode?.parentElement?.closest('p,div,li,h1,h2,h3,blockquote')
+        if (block instanceof HTMLElement) {
+          block.style.lineHeight = spacing
+          update({ html: sanitizeHtml(editorRef.current.innerHTML) })
+        }
+      }
+      return
+    }
+    const selected = selection.toString()
+    if (!selected) return
+    command('insertHTML', `<p style="line-height:${spacing}">${selected.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`)
+  }
+
   function addCitation() {
     const citation = window.prompt('Citation or source')?.trim()
     if (!citation) return
@@ -87,18 +125,17 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
     if (editorRef.current) update({ html: sanitizeHtml(editorRef.current.innerHTML) })
   }
 
-  function findInDocument() {
-    const query = findQuery.trim()
-    if (!query || !editorRef.current) return
+  function findTextIndex(query: string) {
+    if (!query || !editorRef.current) return -1
     const text = editorRef.current.innerText || ''
-    const index = text.toLowerCase().indexOf(query.toLowerCase())
-    if (index < 0) {
-      window.alert('No matches found')
-      return
-    }
+    return text.toLowerCase().indexOf(query.toLowerCase())
+  }
+
+  function selectMatch(query: string, index: number) {
+    if (!editorRef.current || index < 0) return false
     editorRef.current.focus()
     const selection = window.getSelection()
-    if (!selection) return
+    if (!selection) return false
     const walker = document.createTreeWalker(editorRef.current, NodeFilter.SHOW_TEXT)
     let walked = 0
     let node = walker.nextNode()
@@ -112,11 +149,36 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
         selection.removeAllRanges()
         selection.addRange(range)
         ;(node.parentElement as HTMLElement | null)?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-        return
+        return true
       }
       walked += length
       node = walker.nextNode()
     }
+    return false
+  }
+
+  function findInDocument() {
+    const query = findQuery.trim()
+    if (!query) return
+    const index = findTextIndex(query)
+    if (index < 0) {
+      window.alert('No matches found')
+      return
+    }
+    selectMatch(query, index)
+  }
+
+  function replaceOnce() {
+    const query = findQuery.trim()
+    if (!query || !editorRef.current) return
+    const index = findTextIndex(query)
+    if (index < 0) {
+      window.alert('No matches found')
+      return
+    }
+    if (!selectMatch(query, index)) return
+    document.execCommand('insertText', false, replaceQuery)
+    update({ html: sanitizeHtml(editorRef.current.innerHTML) })
   }
 
   function addNote(event: React.FormEvent) {
@@ -131,10 +193,25 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
       <header className="writing-toolbar">
         <div className="workspace-mode-switch"><button type="button" className={mode === 'edit' ? 'is-active' : ''} onClick={() => setMode('edit')}>Edit</button><button type="button" className={mode === 'reader' ? 'is-active' : ''} onClick={() => setMode('reader')}>Reader</button></div>
         {mode === 'edit' && <>
+          <strong className="writing-toolbar-group">Home</strong>
+          <button type="button" onClick={() => command('undo')} title="Undo"><Undo2 size={14} /></button>
+          <button type="button" onClick={() => command('redo')} title="Redo"><Redo2 size={14} /></button>
           <span />
           <button type="button" onClick={() => command('bold')} title="Bold"><Bold size={14} /></button>
           <button type="button" onClick={() => command('italic')} title="Italic"><Italic size={14} /></button>
-          <button type="button" onClick={() => command('hiliteColor', '#ffe08a')} title="Highlight"><Highlighter size={14} /></button>
+          <button type="button" onClick={() => command('underline')} title="Underline"><Underline size={14} /></button>
+          <button type="button" onClick={() => command('strikeThrough')} title="Strikethrough"><Strikethrough size={14} /></button>
+          <label className="writing-color-picker" title="Text color">
+            <Type size={12} />
+            <input type="color" value={textColor} onChange={event => { setTextColor(event.target.value); command('foreColor', event.target.value) }} aria-label="Text color" />
+          </label>
+          <label className="writing-color-picker" title="Highlight color">
+            <Highlighter size={12} />
+            <input type="color" value={highlightColor} onChange={event => { setHighlightColor(event.target.value); command('hiliteColor', event.target.value) }} aria-label="Highlight color" />
+          </label>
+          <button type="button" onClick={() => command('hiliteColor', highlightColor)} title="Highlight"><Highlighter size={14} /></button>
+          <button type="button" onClick={() => command('removeFormat')} title="Clear formatting"><Eraser size={14} /></button>
+          <span />
           <button type="button" onClick={() => command('formatBlock', 'h1')} title="Heading 1"><Heading1 size={14} /></button>
           <button type="button" onClick={() => command('formatBlock', 'h2')} title="Heading 2"><Heading2 size={14} /></button>
           <button type="button" onClick={() => command('formatBlock', 'h3')} title="Heading 3"><Heading3 size={14} /></button>
@@ -147,13 +224,33 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
               <option value="5">XL</option>
             </select>
           </label>
-          <button type="button" onClick={() => command('insertUnorderedList')} title="List"><List size={14} /></button>
+          <label className="writing-font-size" title="Line spacing">
+            <select value={lineSpacing} onChange={event => applyLineSpacing(event.target.value)} aria-label="Line spacing">
+              <option value="1.15">Single</option>
+              <option value="1.5">1.5</option>
+              <option value="1.75">Default</option>
+              <option value="2">Double</option>
+            </select>
+          </label>
+          <span />
+          <button type="button" onClick={() => command('justifyLeft')} title="Align left"><AlignLeft size={14} /></button>
+          <button type="button" onClick={() => command('justifyCenter')} title="Align center"><AlignCenter size={14} /></button>
+          <button type="button" onClick={() => command('justifyRight')} title="Align right"><AlignRight size={14} /></button>
+          <button type="button" onClick={() => command('justifyFull')} title="Justify"><AlignJustify size={14} /></button>
+          <button type="button" onClick={() => command('indent')} title="Indent"><IndentIncrease size={14} /></button>
+          <button type="button" onClick={() => command('outdent')} title="Outdent"><IndentDecrease size={14} /></button>
+          <button type="button" onClick={() => command('insertUnorderedList')} title="Bullet list"><List size={14} /></button>
+          <button type="button" onClick={() => command('insertOrderedList')} title="Numbered list"><ListOrdered size={14} /></button>
           <button type="button" onClick={() => command('formatBlock', 'blockquote')} title="Quote"><Quote size={14} /></button>
+          <strong className="writing-toolbar-group">Insert</strong>
+          <button type="button" onClick={insertLink} title="Insert link"><Link2 size={14} /></button>
           <button type="button" onClick={insertImage} title="Image"><Image size={14} /></button>
           <button type="button" onClick={insertTable} title="Table"><Table2 size={14} /></button>
+          <button type="button" onClick={insertPageBreak} title="Page break">Break</button>
           <button type="button" onClick={addCitation} title="Citation"><BookOpen size={14} /></button>
-          <button type="button" onClick={() => setFindOpen(open => !open)} title="Find" className={findOpen ? 'is-active' : ''}><Search size={14} /></button>
-          <button type="button" onClick={() => onAskHelios('Check this document for grammar, clarity, structure and citation gaps')} className="writing-helios-action"><Sparkles size={14} /> Grammar & clarity</button>
+          <strong className="writing-toolbar-group">Review</strong>
+          <button type="button" onClick={() => setFindOpen(open => !open)} title="Find & replace" className={findOpen ? 'is-active' : ''}><Search size={14} /></button>
+          <button type="button" onClick={() => onAskHelios('Check this Quill document for grammar, clarity, structure and citation gaps')} className="writing-helios-action"><Sparkles size={14} /> Grammar & clarity</button>
         </>}
         <span className={'writing-usage' + (characterRatio >= 1 ? ' is-over' : characterRatio >= 0.85 ? ' is-warn' : '')}>
           {characterUsed.toLocaleString()} chars
@@ -162,8 +259,10 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
       {mode === 'edit' && findOpen && (
         <form className="writing-find-bar" onSubmit={event => { event.preventDefault(); findInDocument() }}>
           <Search size={13} />
-          <input value={findQuery} onChange={event => setFindQuery(event.target.value)} placeholder="Find in document…" aria-label="Find in document" autoFocus />
+          <input value={findQuery} onChange={event => setFindQuery(event.target.value)} placeholder="Find in Quill…" aria-label="Find in document" autoFocus />
+          <input value={replaceQuery} onChange={event => setReplaceQuery(event.target.value)} placeholder="Replace with…" aria-label="Replace with" />
           <button type="submit">Find</button>
+          <button type="button" onClick={replaceOnce}>Replace</button>
         </form>
       )}
 
@@ -176,7 +275,7 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
             suppressContentEditableWarning
             role="textbox"
             aria-multiline="true"
-            aria-label="Writing document"
+            aria-label="Quill document"
             onInput={event => update({ html: sanitizeHtml(event.currentTarget.innerHTML) })}
           />
         </div>
@@ -191,10 +290,14 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   )
 }
 
+type NumberFormat = 'raw' | 'fixed2' | 'percent'
+
 interface SpreadsheetData {
   cells: string[][]
   selected: string
   chartColumn: number
+  freezeHeader?: boolean
+  numberFormat?: NumberFormat
 }
 
 function columnName(index: number) {
@@ -206,51 +309,260 @@ function cellPosition(reference: string) {
   return match ? { column: match[1].charCodeAt(0) - 65, row: Number(match[2]) - 1 } : null
 }
 
-function numericCell(cells: string[][], reference: string): number {
+function expandRange(start: string, end: string) {
+  const a = cellPosition(start)
+  const b = cellPosition(end)
+  if (!a || !b) return [] as Array<{ row: number; column: number }>
+  const cells: Array<{ row: number; column: number }> = []
+  for (let row = Math.min(a.row, b.row); row <= Math.max(a.row, b.row); row += 1) {
+    for (let column = Math.min(a.column, b.column); column <= Math.max(a.column, b.column); column += 1) {
+      cells.push({ row, column })
+    }
+  }
+  return cells
+}
+
+function numericCell(cells: string[][], reference: string, seen: Set<string>): number {
   const position = cellPosition(reference)
   if (!position) return 0
+  if (seen.has(reference)) return 0
+  const nextSeen = new Set(seen)
+  nextSeen.add(reference)
   const raw = cells[position.row]?.[position.column] || '0'
-  const computed = computeCell(cells, raw, new Set([reference]))
+  const computed = computeCell(cells, raw, nextSeen)
   return Number(computed) || 0
+}
+
+function rangeValues(cells: string[][], start: string, end: string, seen: Set<string>) {
+  return expandRange(start, end).map(({ row, column }) => (
+    Number(computeCell(cells, cells[row]?.[column] || '0', new Set(seen))) || 0
+  ))
+}
+
+function matchesCriteria(value: number, criteria: string) {
+  const trimmed = criteria.trim()
+  const comparison = /^(<=|>=|<>|<|>|=)?(-?\d+(?:\.\d+)?)$/.exec(trimmed)
+  if (!comparison) return String(value) === trimmed
+  const operator = comparison[1] || '='
+  const target = Number(comparison[2])
+  if (operator === '<') return value < target
+  if (operator === '>') return value > target
+  if (operator === '<=') return value <= target
+  if (operator === '>=') return value >= target
+  if (operator === '<>') return value !== target
+  return value === target
 }
 
 function computeCell(cells: string[][], raw: string, seen = new Set<string>()): string {
   if (!raw.startsWith('=')) return raw
   let expression = raw.slice(1).toUpperCase()
-  expression = expression.replace(/(SUM|AVERAGE)\(([A-Z][1-9]\d*):([A-Z][1-9]\d*)\)/g, (_, fn: string, start: string, end: string) => {
-    const a = cellPosition(start)
-    const b = cellPosition(end)
-    if (!a || !b) return '0'
-    let total = 0
-    let count = 0
-    for (let row = Math.min(a.row, b.row); row <= Math.max(a.row, b.row); row += 1) {
-      for (let column = Math.min(a.column, b.column); column <= Math.max(a.column, b.column); column += 1) {
-        total += Number(computeCell(cells, cells[row]?.[column] || '0', seen)) || 0
-        count += 1
-      }
-    }
-    if (fn === 'AVERAGE') return String(count ? total / count : 0)
+
+  expression = expression.replace(/(SUM|AVERAGE|MIN|MAX)\(([A-Z][1-9]\d*):([A-Z][1-9]\d*)\)/g, (_, fn: string, start: string, end: string) => {
+    const values = rangeValues(cells, start, end, seen)
+    if (!values.length) return '0'
+    if (fn === 'MIN') return String(Math.min(...values))
+    if (fn === 'MAX') return String(Math.max(...values))
+    const total = values.reduce((sum, value) => sum + value, 0)
+    if (fn === 'AVERAGE') return String(total / values.length)
     return String(total)
   })
+
+  expression = expression.replace(/COUNTIF\(([A-Z][1-9]\d*):([A-Z][1-9]\d*),\s*"?([^)"]*)"?\)/g, (_, start: string, end: string, criteria: string) => {
+    const values = rangeValues(cells, start, end, seen)
+    return String(values.filter(value => matchesCriteria(value, criteria)).length)
+  })
+
+  expression = expression.replace(/ROUND\(([^,]+),(\d+)\)/g, (_, valueExpr: string, digits: string) => {
+    const resolved = valueExpr.replace(/[A-Z][1-9]\d*/g, reference => String(numericCell(cells, reference, seen)))
+    if (!/^[\d+\-*/().\s]+$/.test(resolved)) return '0'
+    try {
+      const value = Number(Function(`"use strict"; return (${resolved})`)())
+      return String(Number(value.toFixed(Number(digits))))
+    } catch {
+      return '0'
+    }
+  })
+
+  expression = expression.replace(/IF\(([^,]+),([^,]+),([^)]+)\)/g, (_, condition: string, whenTrue: string, whenFalse: string) => {
+    const resolvePart = (part: string) => part.trim().replace(/[A-Z][1-9]\d*/g, reference => String(numericCell(cells, reference, seen)))
+    const conditionExpr = resolvePart(condition).replace(/(<=|>=|<>|<|>|=)/g, match => match === '=' ? '==' : match === '<>' ? '!=' : match)
+    try {
+      const ok = Boolean(Function(`"use strict"; return (${conditionExpr})`)())
+      const chosen = resolvePart(ok ? whenTrue : whenFalse)
+      if (/^[\d+\-*/().\s]+$/.test(chosen)) return String(Function(`"use strict"; return (${chosen})`)())
+      return chosen
+    } catch {
+      return '#VALUE!'
+    }
+  })
+
   expression = expression.replace(/[A-Z][1-9]\d*/g, reference => {
     if (seen.has(reference)) return '0'
-    return String(numericCell(cells, reference))
+    return String(numericCell(cells, reference, seen))
   })
   if (!/^[\d+\-*/().\s]+$/.test(expression)) return '#VALUE!'
   try { return String(Function(`"use strict"; return (${expression})`)()) } catch { return '#ERROR!' }
+}
+
+function formatDisplayValue(raw: string, computed: string, numberFormat: NumberFormat) {
+  if (raw.startsWith('=') && (computed === '#VALUE!' || computed === '#ERROR!')) return computed
+  const numeric = Number(computed)
+  if (!Number.isFinite(numeric) || computed.trim() === '') return computed
+  if (numberFormat === 'fixed2') return numeric.toFixed(2)
+  if (numberFormat === 'percent') return `${(numeric * 100).toFixed(2)}%`
+  return computed
+}
+
+function downloadTextFile(filename: string, contents: string, mime = 'text/plain') {
+  const blob = new Blob([contents], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = filename
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+function cellsToCsv(cells: string[][]) {
+  return cells.map(row => row.map(cell => {
+    const value = cell ?? ''
+    if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`
+    return value
+  }).join(',')).join('\n')
+}
+
+function csvToCells(text: string) {
+  const rows: string[][] = []
+  let row: string[] = []
+  let current = ''
+  let inQuotes = false
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    const next = text[index + 1]
+    if (inQuotes) {
+      if (char === '"' && next === '"') {
+        current += '"'
+        index += 1
+      } else if (char === '"') {
+        inQuotes = false
+      } else {
+        current += char
+      }
+      continue
+    }
+    if (char === '"') {
+      inQuotes = true
+      continue
+    }
+    if (char === ',') {
+      row.push(current)
+      current = ''
+      continue
+    }
+    if (char === '\n' || (char === '\r' && next === '\n')) {
+      row.push(current)
+      rows.push(row)
+      row = []
+      current = ''
+      if (char === '\r') index += 1
+      continue
+    }
+    if (char === '\r') {
+      row.push(current)
+      rows.push(row)
+      row = []
+      current = ''
+      continue
+    }
+    current += char
+  }
+  row.push(current)
+  if (row.some(cell => cell.length) || rows.length === 0) rows.push(row)
+  const width = Math.max(8, ...rows.map(line => line.length))
+  return rows.map(line => {
+    const next = [...line]
+    while (next.length < width) next.push('')
+    return next
+  })
 }
 
 export function SpreadsheetWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   const value = data as unknown as SpreadsheetData
   const cells = value.cells || []
   const selected = cellPosition(value.selected || 'A1') || { row: 0, column: 0 }
+  const freezeHeader = Boolean(value.freezeHeader)
+  const numberFormat = value.numberFormat || 'raw'
+  const csvInputRef = useRef<HTMLInputElement>(null)
+
+  function update(patch: Partial<SpreadsheetData>) {
+    onChange({ ...value, ...patch })
+  }
 
   function updateCell(row: number, column: number, next: string) {
     const nextCells = cells.map(line => [...line])
     while (nextCells.length <= row) nextCells.push(Array(cells[0]?.length || 8).fill(''))
     while (nextCells[row].length <= column) nextCells[row].push('')
     nextCells[row][column] = next
-    onChange({ ...value, cells: nextCells })
+    update({ cells: nextCells })
+  }
+
+  function insertRow() {
+    const width = cells[0]?.length || 8
+    const next = [...cells]
+    next.splice(selected.row + 1, 0, Array(width).fill(''))
+    update({ cells: next, selected: `${columnName(selected.column)}${selected.row + 2}` })
+  }
+
+  function insertColumn() {
+    const next = cells.map(row => {
+      const line = [...row]
+      line.splice(selected.column + 1, 0, '')
+      return line
+    })
+    update({ cells: next, selected: `${columnName(selected.column + 1)}${selected.row + 1}` })
+  }
+
+  function deleteRow() {
+    if (cells.length <= 1) return
+    const next = cells.filter((_, index) => index !== selected.row)
+    const nextRow = Math.min(selected.row, next.length - 1)
+    update({ cells: next, selected: `${columnName(selected.column)}${nextRow + 1}` })
+  }
+
+  function sortSelectedColumn(direction: 'asc' | 'desc') {
+    if (cells.length < 2) return
+    const header = cells[0]
+    const body = cells.slice(1).map(row => [...row])
+    const column = selected.column
+    body.sort((left, right) => {
+      const leftRaw = left[column] || ''
+      const rightRaw = right[column] || ''
+      const leftValue = Number(computeCell(cells, leftRaw))
+      const rightValue = Number(computeCell(cells, rightRaw))
+      const leftNumeric = Number.isFinite(leftValue) && leftRaw !== ''
+      const rightNumeric = Number.isFinite(rightValue) && rightRaw !== ''
+      let result = 0
+      if (leftNumeric && rightNumeric) result = leftValue - rightValue
+      else result = String(leftRaw).localeCompare(String(rightRaw), undefined, { numeric: true, sensitivity: 'base' })
+      return direction === 'asc' ? result : -result
+    })
+    update({ cells: [header, ...body] })
+  }
+
+  function exportCsv() {
+    downloadTextFile('lattice-sheet.csv', cellsToCsv(cells), 'text/csv')
+  }
+
+  function importCsv(file: File | undefined) {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const text = String(reader.result || '')
+      const nextCells = csvToCells(text)
+      if (!nextCells.length) return
+      update({ cells: nextCells, selected: 'A1' })
+    }
+    reader.readAsText(file)
   }
 
   const chartValues = cells.slice(1, 9).map((row, index) => ({ label: row[0] || `Row ${index + 2}`, value: Number(computeCell(cells, row[value.chartColumn] || '0')) || 0 }))
@@ -258,11 +570,76 @@ export function SpreadsheetWorkspace({ data, onChange, onAskHelios }: EditorProp
 
   return (
     <div className="spreadsheet-workspace">
-      <header className="sheet-toolbar"><button type="button" onClick={() => onChange({ ...value, cells: [...cells, Array(cells[0]?.length || 8).fill('')] })}><Plus size={13} /> Row</button><button type="button" onClick={() => onChange({ ...value, cells: cells.map(row => [...row, '']) })}><Columns3 size={13} /> Column</button><span /><button type="button" onClick={() => onAskHelios('Analyze this spreadsheet, identify patterns, formula problems and useful next charts')}><Sparkles size={13} /> Analyze with Helios</button></header>
+      <header className="sheet-toolbar">
+        <button type="button" onClick={insertRow}><Plus size={13} /> Insert row</button>
+        <button type="button" onClick={insertColumn}><Columns3 size={13} /> Insert column</button>
+        <button type="button" onClick={deleteRow}><Trash2 size={13} /> Delete row</button>
+        <span />
+        <button type="button" className={freezeHeader ? 'is-active' : ''} onClick={() => update({ freezeHeader: !freezeHeader })}>Freeze header</button>
+        <button type="button" onClick={() => sortSelectedColumn('asc')} title="Sort ascending"><ArrowUp size={13} /> Sort A→Z</button>
+        <button type="button" onClick={() => sortSelectedColumn('desc')} title="Sort descending"><ArrowDown size={13} /> Sort Z→A</button>
+        <span />
+        <button type="button" className={numberFormat === 'raw' ? 'is-active' : ''} onClick={() => update({ numberFormat: 'raw' })}>Raw</button>
+        <button type="button" className={numberFormat === 'fixed2' ? 'is-active' : ''} onClick={() => update({ numberFormat: 'fixed2' })}>0.00</button>
+        <button type="button" className={numberFormat === 'percent' ? 'is-active' : ''} onClick={() => update({ numberFormat: 'percent' })}>%</button>
+        <span />
+        <button type="button" onClick={exportCsv}><Download size={13} /> CSV</button>
+        <button type="button" onClick={() => csvInputRef.current?.click()}><Upload size={13} /> Import</button>
+        <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={event => { importCsv(event.target.files?.[0]); event.target.value = '' }} />
+        <span />
+        <button type="button" onClick={() => onAskHelios('Analyze this Lattice spreadsheet, identify patterns, formula problems and useful next charts')}><Sparkles size={13} /> Analyze with Helios</button>
+      </header>
       <div className="sheet-formula-bar"><strong>{columnName(selected.column)}{selected.row + 1}</strong><span>fx</span><input value={cells[selected.row]?.[selected.column] || ''} onChange={event => updateCell(selected.row, selected.column, event.target.value)} aria-label="Formula bar" /></div>
       <div className="spreadsheet-layout">
-        <div className="sheet-grid-scroll"><table><thead><tr><th /><>{Array.from({ length: cells[0]?.length || 8 }, (_, column) => <th key={column}>{columnName(column)}</th>)}</></tr></thead><tbody>{cells.map((row, rowIndex) => <tr key={rowIndex}><th>{rowIndex + 1}</th>{row.map((raw, columnIndex) => <td key={columnIndex} className={value.selected === `${columnName(columnIndex)}${rowIndex + 1}` ? 'is-selected' : ''}><input value={raw} onFocus={() => onChange({ ...value, selected: `${columnName(columnIndex)}${rowIndex + 1}` })} onChange={event => updateCell(rowIndex, columnIndex, event.target.value)} aria-label={`${columnName(columnIndex)}${rowIndex + 1}`} /><span>{computeCell(cells, raw)}</span></td>)}</tr>)}</tbody></table></div>
-        <aside className="sheet-chart"><header><BarChart3 size={15} /><strong>Quick chart</strong><select value={value.chartColumn || 1} onChange={event => onChange({ ...value, chartColumn: Number(event.target.value) })}>{Array.from({ length: cells[0]?.length || 8 }, (_, index) => <option key={index} value={index}>Column {columnName(index)}</option>)}</select></header><div>{chartValues.map(item => <span key={item.label}><small>{item.label}</small><i style={{ height: `${Math.max(3, Math.abs(item.value) / chartMax * 100)}%` }} title={String(item.value)} /><b>{item.value}</b></span>)}</div></aside>
+        <div className={`sheet-grid-scroll${freezeHeader ? ' is-frozen-header' : ''}`}>
+          <table>
+            <thead>
+              <tr>
+                <th />
+                {Array.from({ length: cells[0]?.length || 8 }, (_, column) => <th key={column}>{columnName(column)}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {cells.map((row, rowIndex) => (
+                <tr key={rowIndex} className={freezeHeader && rowIndex === 0 ? 'is-frozen-row' : undefined}>
+                  <th>{rowIndex + 1}</th>
+                  {row.map((raw, columnIndex) => {
+                    const computed = computeCell(cells, raw)
+                    return (
+                      <td key={columnIndex} className={value.selected === `${columnName(columnIndex)}${rowIndex + 1}` ? 'is-selected' : ''}>
+                        <input
+                          value={raw}
+                          onFocus={() => update({ selected: `${columnName(columnIndex)}${rowIndex + 1}` })}
+                          onChange={event => updateCell(rowIndex, columnIndex, event.target.value)}
+                          aria-label={`${columnName(columnIndex)}${rowIndex + 1}`}
+                        />
+                        <span>{formatDisplayValue(raw, computed, numberFormat)}</span>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <aside className="sheet-chart">
+          <header>
+            <BarChart3 size={15} />
+            <strong>Quick chart</strong>
+            <select value={value.chartColumn || 1} onChange={event => update({ chartColumn: Number(event.target.value) })}>
+              {Array.from({ length: cells[0]?.length || 8 }, (_, index) => <option key={index} value={index}>Column {columnName(index)}</option>)}
+            </select>
+          </header>
+          <div>
+            {chartValues.map(item => (
+              <span key={item.label}>
+                <small>{item.label}</small>
+                <i style={{ height: `${Math.max(3, Math.abs(item.value) / chartMax * 100)}%` }} title={String(item.value)} />
+                <b>{item.value}</b>
+              </span>
+            ))}
+          </div>
+        </aside>
       </div>
     </div>
   )
@@ -271,6 +648,8 @@ export function SpreadsheetWorkspace({ data, onChange, onAskHelios }: EditorProp
 type SlideLayout = 'title' | 'title-content' | 'two-column' | 'blank' | 'section'
 type SlideTransition = 'none' | 'fade' | 'push'
 type SlideThemeId = 'terracotta-glass' | 'blue-glass' | 'charcoal' | 'warm-sand'
+type TextAlign = 'left' | 'center' | 'right'
+type ImageFit = 'cover' | 'contain'
 
 interface SlideShape {
   id: string
@@ -291,9 +670,14 @@ interface Slide {
   layout: SlideLayout
   theme: SlideThemeId
   imageUrl?: string
+  imageFit?: ImageFit
   shapes?: SlideShape[]
   transition?: SlideTransition
   secondary?: string
+  titleBold?: boolean
+  bodyBold?: boolean
+  titleAlign?: TextAlign
+  bodyAlign?: TextAlign
 }
 
 interface PresentationData { slides: Slide[]; activeSlide: number }
@@ -346,9 +730,14 @@ function normalizeSlide(slide: Partial<Slide> & { id?: string; title?: string; b
     layout: slide.layout || 'title-content',
     theme: slide.theme || 'terracotta-glass',
     imageUrl: slide.imageUrl,
+    imageFit: slide.imageFit || 'cover',
     shapes: slide.shapes || [],
     transition: slide.transition || 'none',
     secondary: slide.secondary || '',
+    titleBold: slide.titleBold || false,
+    bodyBold: slide.bodyBold || false,
+    titleAlign: slide.titleAlign || (slide.layout === 'title' ? 'center' : 'left'),
+    bodyAlign: slide.bodyAlign || (slide.layout === 'title' ? 'center' : 'left'),
   }
 }
 
@@ -425,14 +814,14 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
   function insertPhotoFromFile(file: File | undefined) {
     if (!file || !file.type.startsWith('image/')) return
     const url = URL.createObjectURL(file)
-    patchSlide({ imageUrl: url })
+    patchSlide({ imageUrl: url, imageFit: active?.imageFit || 'cover' })
   }
 
   function insertPhotoFromUrl() {
     const url = imageUrlDraft.trim()
     if (!url) return
     if (!/^https?:\/\//i.test(url) && !url.startsWith('data:') && !url.startsWith('blob:')) return
-    patchSlide({ imageUrl: url })
+    patchSlide({ imageUrl: url, imageFit: active?.imageFit || 'cover' })
     setImageUrlDraft('')
   }
 
@@ -461,9 +850,32 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
     patchSlide({ shapes: (active?.shapes || []).filter(shape => shape.id !== id) })
   }
 
+  function exportSlideText() {
+    if (!active) return
+    const lines = [
+      active.title,
+      '',
+      active.body,
+      active.secondary ? '' : null,
+      active.secondary || null,
+      '',
+      'Notes:',
+      active.notes || '(none)',
+    ].filter(line => line !== null) as string[]
+    downloadTextFile(`stage-slide-${activeIndex + 1}.txt`, `${lines.join('\n')}\n`)
+  }
+
   function renderCanvas(slide: Slide, editable: boolean) {
     const palette = SLIDE_THEMES[slide.theme]
     const layout = slide.layout
+    const titleStyle = {
+      fontWeight: slide.titleBold ? 800 : 750,
+      textAlign: slide.titleAlign || 'left',
+    } as const
+    const bodyStyle = {
+      fontWeight: slide.bodyBold ? 700 : 400,
+      textAlign: slide.bodyAlign || 'left',
+    } as const
     return (
       <div
         className={`slide-canvas layout-${layout} theme-${slide.theme}`}
@@ -473,46 +885,48 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
           editable ? (
             <input
               className="slide-title-field"
+              style={titleStyle}
               value={slide.title}
               onChange={event => patchSlide({ title: event.target.value })}
               aria-label="Slide title"
               placeholder={layout === 'section' ? 'Section title' : 'Slide title'}
             />
           ) : (
-            <h1 className="slide-title-field">{slide.title}</h1>
+            <h1 className="slide-title-field" style={titleStyle}>{slide.title}</h1>
           )
         )}
         {(layout === 'title-content' || layout === 'title' || layout === 'section') && (
           editable ? (
             <textarea
               className="slide-body-field"
+              style={bodyStyle}
               value={slide.body}
               onChange={event => patchSlide({ body: event.target.value })}
               aria-label="Slide body"
               placeholder={layout === 'title' ? 'Supporting line' : 'Body'}
             />
           ) : (
-            <p className="slide-body-field">{slide.body}</p>
+            <p className="slide-body-field" style={bodyStyle}>{slide.body}</p>
           )
         )}
         {layout === 'two-column' && (
           <div className="slide-two-column">
             {editable ? (
               <>
-                <textarea value={slide.body} onChange={event => patchSlide({ body: event.target.value })} aria-label="Left column" placeholder="Left column" />
-                <textarea value={slide.secondary || ''} onChange={event => patchSlide({ secondary: event.target.value })} aria-label="Right column" placeholder="Right column" />
+                <textarea style={bodyStyle} value={slide.body} onChange={event => patchSlide({ body: event.target.value })} aria-label="Left column" placeholder="Left column" />
+                <textarea style={bodyStyle} value={slide.secondary || ''} onChange={event => patchSlide({ secondary: event.target.value })} aria-label="Right column" placeholder="Right column" />
               </>
             ) : (
               <>
-                <p>{slide.body}</p>
-                <p>{slide.secondary}</p>
+                <p style={bodyStyle}>{slide.body}</p>
+                <p style={bodyStyle}>{slide.secondary}</p>
               </>
             )}
           </div>
         )}
         {slide.imageUrl && (
-          <figure className="slide-media">
-            <img src={slide.imageUrl} alt="" />
+          <figure className={`slide-media fit-${slide.imageFit || 'cover'}`}>
+            <img src={slide.imageUrl} alt="" style={{ objectFit: slide.imageFit || 'cover' }} />
             {editable && (
               <button type="button" onClick={() => patchSlide({ imageUrl: undefined })} aria-label="Remove image">
                 <Trash2 size={12} />
@@ -583,7 +997,8 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
           <button type="button" onClick={duplicateSlide} disabled={!active}><Copy size={14} /> Duplicate</button>
           <button type="button" onClick={() => moveSlide(-1)} disabled={activeIndex === 0} aria-label="Move slide up"><ArrowUp size={14} /></button>
           <button type="button" onClick={() => moveSlide(1)} disabled={activeIndex >= slides.length - 1} aria-label="Move slide down"><ArrowDown size={14} /></button>
-          <button type="button" onClick={() => onAskHelios('Improve this presentation structure and make each slide clearer')}><Sparkles size={14} /> Improve</button>
+          <button type="button" onClick={exportSlideText} disabled={!active}><Download size={14} /> Export .txt</button>
+          <button type="button" onClick={() => onAskHelios('Improve this Stage presentation structure and make each slide clearer')}><Sparkles size={14} /> Improve</button>
           <button type="button" onClick={deleteSlide} aria-label="Delete slide"><Trash2 size={14} /></button>
         </header>
 
@@ -591,9 +1006,9 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
           <div className="slide-editor-body">
             <div className="slide-stage">
               {renderCanvas(active, true)}
-              <label className="slide-notes">
+              <label className="slide-notes is-always-visible">
                 Speaker notes
-                <textarea value={active.notes} onChange={event => patchSlide({ notes: event.target.value })} />
+                <textarea value={active.notes} onChange={event => patchSlide({ notes: event.target.value })} placeholder="Notes stay visible while you edit…" />
               </label>
             </div>
 
@@ -613,6 +1028,21 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
                   <option value="push">Push</option>
                 </select>
               </label>
+              <div className="slide-text-controls">
+                <span>Text</span>
+                <div>
+                  <button type="button" className={active.titleBold ? 'is-active' : ''} onClick={() => patchSlide({ titleBold: !active.titleBold })} title="Title bold"><Bold size={13} /> Title</button>
+                  <button type="button" className={active.bodyBold ? 'is-active' : ''} onClick={() => patchSlide({ bodyBold: !active.bodyBold })} title="Body bold"><Bold size={13} /> Body</button>
+                </div>
+                <div>
+                  <button type="button" className={active.titleAlign === 'left' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'left' })} title="Title align left"><AlignLeft size={13} /></button>
+                  <button type="button" className={active.titleAlign === 'center' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'center' })} title="Title align center"><AlignCenter size={13} /></button>
+                  <button type="button" className={active.titleAlign === 'right' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'right' })} title="Title align right"><AlignRight size={13} /></button>
+                  <button type="button" className={active.bodyAlign === 'left' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'left' })} title="Body align left">Body L</button>
+                  <button type="button" className={active.bodyAlign === 'center' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'center' })} title="Body align center">Body C</button>
+                  <button type="button" className={active.bodyAlign === 'right' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'right' })} title="Body align right">Body R</button>
+                </div>
+              </div>
               <div className="slide-theme-presets">
                 <span>Theme</span>
                 {(Object.keys(SLIDE_THEMES) as SlideThemeId[]).map(themeId => (
@@ -649,6 +1079,15 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
                   />
                   <button type="button" onClick={insertPhotoFromUrl}>Add URL</button>
                 </div>
+                {active.imageUrl && (
+                  <button
+                    type="button"
+                    className={active.imageFit === 'cover' ? 'is-active' : ''}
+                    onClick={() => patchSlide({ imageFit: active.imageFit === 'cover' ? 'contain' : 'cover' })}
+                  >
+                    Crop fit: {active.imageFit === 'cover' ? 'Cover' : 'Contain'}
+                  </button>
+                )}
               </div>
               <div className="slide-shape-actions">
                 <span>Shapes</span>
@@ -661,9 +1100,9 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
       </section>
 
       {presenting && active && (
-        <div className={`presentation-mode transition-${active.transition || 'none'}`} role="dialog" aria-modal="true" aria-label="Presenting slides">
+        <div className={`presentation-mode transition-${active.transition || 'none'}`} role="dialog" aria-modal="true" aria-label="Presenting Stage slides">
           <button type="button" onClick={() => setPresenting(false)}><Maximize2 size={15} /> Exit</button>
-          <article className="presentation-mode-stage">
+          <article key={`${active.id}-${active.transition || 'none'}-${activeIndex}`} className="presentation-mode-stage">
             {renderCanvas(active, false)}
           </article>
           <footer>

@@ -351,6 +351,20 @@
   cursor: default;
 }
 
+.topbar-helios-patch {
+  flex-wrap: wrap;
+}
+
+.topbar-helios-patch-preview {
+  flex: 1 1 100%;
+  max-height: 72px;
+  overflow: auto;
+  color: var(--helios-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
 .topbar-create-open-selected {
   margin-top: 8px;
   padding: 0;

@@ -507,7 +507,14 @@ export const api = {
   },
 
   heliosPatch: (projectId: number, instruction: string, path?: string) =>
-    call<{ ok: boolean; project: Project; preview: { before: string; after: string } }>(
+    call<{
+      ok: boolean
+      engine?: string
+      mode?: string
+      target?: string
+      project: Project
+      preview: { before: string; after: string }
+    }>(
       `/api/projects/${projectId}/helios-patch`,
       { method: 'POST', body: JSON.stringify({ instruction, path }) },
     ),

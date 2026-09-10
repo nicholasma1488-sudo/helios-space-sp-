@@ -310,15 +310,21 @@
 .sheet-toolbar > button,
 .drawing-toolbar > button { display: inline-flex; min-width: 32px; min-height: 32px; align-items: center; justify-content: center; gap: 5px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--helios-muted); font: inherit; font-size: 8px; white-space: nowrap; cursor: pointer; }
 .writing-toolbar > button:hover,
+.sheet-toolbar > button:hover,
 .drawing-toolbar > button:hover,
 .drawing-toolbar > button.is-active { background: var(--helios-surface2); color: var(--helios-text); }
 .writing-toolbar .writing-helios-action { color: var(--helios-accent); }
-.writing-toolbar > button.is-active { background: var(--helios-surface2); color: var(--helios-text); }
+.writing-toolbar > button.is-active,
+.sheet-toolbar > button.is-active { background: var(--helios-surface2); color: var(--helios-text); }
+.writing-toolbar-group { padding: 0 6px; color: var(--helios-accent2); font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
+.writing-color-picker { display: inline-flex; align-items: center; gap: 4px; color: var(--helios-muted); }
+.writing-color-picker input[type='color'] { width: 22px; height: 22px; padding: 0; border: 1px solid var(--helios-border); border-radius: 6px; background: transparent; cursor: pointer; }
 .writing-font-size { display: inline-flex; align-items: center; gap: 5px; color: var(--helios-muted); font-size: 10px; }
 .writing-font-size select { min-height: 28px; padding: 0 6px; border: 1px solid var(--helios-border); border-radius: 7px; background: var(--helios-surface2); color: var(--helios-text); font: inherit; font-size: 10px; }
 .writing-find-bar { display: flex; min-height: 36px; flex-shrink: 0; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--helios-border); background: color-mix(in srgb, #eceff3 8%, var(--helios-surface)); color: var(--helios-muted); }
 .writing-find-bar input { min-width: 0; flex: 1; padding: 7px 9px; border: 1px solid var(--helios-border); border-radius: 8px; outline: 0; background: var(--helios-surface2); color: var(--helios-text); font: inherit; font-size: 11px; }
 .writing-find-bar button { min-height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: #c96442; color: #fff; font: inherit; font-size: 10px; cursor: pointer; }
+.writing-page .quill-page-break { display: block; margin: 36px 0; border: 0; border-top: 2px dashed #b7b3a8; page-break-after: always; break-after: page; }
 .writing-usage {
   margin-left: auto;
   padding: 0 8px;
@@ -361,7 +367,7 @@
 
 /* Spreadsheet */
 .spreadsheet-workspace { display: flex; min-width: 0; flex: 1; flex-direction: column; overflow: hidden; background: #101116; }
-.sheet-toolbar > span { flex: 1; }
+.sheet-toolbar > span { flex: 0 0 1px; width: 1px; }
 .sheet-toolbar > button { border: 1px solid var(--helios-border); background: var(--helios-surface2); }
 .sheet-toolbar > button:last-child { color: var(--helios-accent); }
 .sheet-formula-bar { display: grid; min-height: 36px; grid-template-columns: 70px 28px 1fr; align-items: center; border-bottom: 1px solid var(--helios-border); background: var(--helios-surface); }
@@ -372,7 +378,10 @@
 .sheet-grid-scroll { overflow: auto; }
 .sheet-grid-scroll table { min-width: 760px; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
 .sheet-grid-scroll th { position: sticky; z-index: 2; top: 0; width: 100px; height: 28px; border-right: 1px solid var(--helios-border); border-bottom: 1px solid var(--helios-border); background: var(--helios-surface); color: var(--helios-muted); font-size: 7px; font-weight: 600; }
-.sheet-grid-scroll tbody th { position: sticky; left: 0; width: 36px; }
+.sheet-grid-scroll tbody th { position: sticky; left: 0; width: 36px; z-index: 1; background: var(--helios-surface); }
+.sheet-grid-scroll.is-frozen-header tbody tr.is-frozen-row th,
+.sheet-grid-scroll.is-frozen-header tbody tr.is-frozen-row td { position: sticky; top: 28px; z-index: 3; background: #1a1c22; box-shadow: 0 1px 0 var(--helios-border); }
+.sheet-grid-scroll.is-frozen-header tbody tr.is-frozen-row th { z-index: 4; left: 0; }
 .sheet-grid-scroll td { position: relative; height: 29px; border-right: 1px solid #2a2c30; border-bottom: 1px solid #2a2c30; background: #14151a; }
 .sheet-grid-scroll td.is-selected { outline: 2px solid var(--helios-success); outline-offset: -2px; }
 .sheet-grid-scroll td input { position: absolute; inset: 0; z-index: 1; width: 100%; padding: 0 5px; border: 0; outline: 0; background: transparent; color: transparent; caret-color: var(--helios-text); font: 8px 'Fira Code', monospace; }
@@ -422,15 +431,24 @@
 .slide-two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; min-height: 0; flex: 1; }
 .slide-two-column textarea,
 .slide-two-column p { min-height: 120px; color: var(--slide-muted, #6b635c); font-size: clamp(11px,1.35vw,18px); line-height: 1.45; }
-.slide-media { position: absolute; right: 5%; bottom: 8%; width: min(34%, 240px); margin: 0; overflow: hidden; border-radius: 10px; border: 1px solid rgba(255,255,255,.5); box-shadow: 0 10px 28px rgba(0,0,0,.18); background: rgba(255,255,255,.35); backdrop-filter: blur(8px); }
-.slide-media img { display: block; width: 100%; height: auto; max-height: 160px; object-fit: cover; }
+.slide-media { position: absolute; right: 5%; bottom: 8%; width: min(34%, 240px); height: 160px; margin: 0; overflow: hidden; border-radius: 10px; border: 1px solid rgba(255,255,255,.5); box-shadow: 0 10px 28px rgba(0,0,0,.18); background: rgba(255,255,255,.35); backdrop-filter: blur(8px); }
+.slide-media img { display: block; width: 100%; height: 100%; max-height: none; object-fit: cover; }
+.slide-media.fit-contain img { object-fit: contain; background: rgba(0,0,0,.08); }
+.slide-media.fit-cover img { object-fit: cover; }
 .slide-media button { position: absolute; top: 6px; right: 6px; display: grid; width: 24px; height: 24px; place-items: center; border: 0; border-radius: 7px; background: rgba(28,25,23,.72); color: #fff; cursor: pointer; }
+.slide-text-controls { display: flex; flex-direction: column; gap: 6px; }
+.slide-text-controls > span { color: var(--helios-muted); font-size: 10px; }
+.slide-text-controls > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.slide-text-controls button { display: inline-flex; min-height: 28px; align-items: center; gap: 5px; padding: 0 8px; border: 1px solid var(--helios-border); border-radius: 8px; background: var(--helios-surface2); color: var(--helios-text2); font: inherit; font-size: 10px; cursor: pointer; }
+.slide-text-controls button.is-active,
+.slide-insert-photo button.is-active { border-color: #c96442; color: #c96442; }
 .slide-shape { position: absolute; z-index: 2; display: flex; align-items: stretch; overflow: hidden; border: 1px solid rgba(255,255,255,.55); border-radius: 8px; box-shadow: 0 8px 22px rgba(0,0,0,.12); }
 .slide-shape textarea,
 .slide-shape span { width: 100%; height: 100%; padding: 8px; border: 0; outline: 0; resize: none; background: transparent; color: inherit; font: 12px/1.35 "Source Sans 3", system-ui, sans-serif; }
 .slide-shape-remove { position: absolute; top: 4px; right: 4px; display: grid; width: 18px; height: 18px; place-items: center; border: 0; border-radius: 50%; background: rgba(28,25,23,.75); color: #fff; cursor: pointer; }
-.slide-notes { display: flex; min-height: 80px; flex-direction: column; gap: 5px; margin: auto 25px 16px; color: var(--helios-muted); font-size: 7px; }
-.slide-notes textarea { flex: 1; resize: none; padding: 8px; border: 1px solid var(--helios-border); border-radius: 8px; outline: 0; background: var(--helios-surface); color: var(--helios-text2); font: inherit; font-size: 8px; }
+.slide-notes { display: flex; min-height: 96px; flex: 0 0 auto; flex-direction: column; gap: 5px; margin: auto 25px 16px; color: var(--helios-muted); font-size: 7px; }
+.slide-notes.is-always-visible { display: flex !important; visibility: visible; opacity: 1; }
+.slide-notes textarea { flex: 1; min-height: 72px; resize: vertical; padding: 8px; border: 1px solid var(--helios-border); border-radius: 8px; outline: 0; background: var(--helios-surface); color: var(--helios-text2); font: inherit; font-size: 8px; }
 .slide-designer { display: flex; min-height: 0; flex-direction: column; gap: 12px; overflow-y: auto; padding: 14px; border-left: 1px solid var(--helios-border); background: rgba(236,239,243,.06); }
 .slide-designer > strong { color: #c96442; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .slide-designer label { display: flex; flex-direction: column; gap: 5px; color: var(--helios-muted); font-size: 10px; }

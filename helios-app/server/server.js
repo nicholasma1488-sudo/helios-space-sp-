@@ -2095,39 +2095,193 @@ app.get('/api/friends', requireUser, (req, res) => {
   res.json({ friends })
 })
 
-// Inline Helios content patch without opening full workspace chrome
+// Inline Helios content patch — write into a project without opening the workspace UI
+function applyLocalContentPatch(content, instruction, pathHint) {
+  const lower = String(instruction || '').toLowerCase()
+  const path = String(pathHint || '').trim()
+  let before = ''
+  let after = ''
+  let mode = 'append'
+
+  if (path && content.files && typeof content.files === 'object') {
+    before = String(content.files[path] || '')
+    if (/replace|overwrite|rewrite|重写|替换/.test(lower)) {
+      after = String(instruction).replace(/^(replace|overwrite|rewrite|重写|替换)\s*(with|:)?\s*/i, '').slice(0, 200000)
+      mode = 'replace'
+    } else if (/delete|清空|clear/.test(lower)) {
+      after = ''
+      mode = 'clear'
+    } else {
+      after = (before ? before.replace(/\s*$/, '\n\n') : '') + `// Helios edit\n${instruction}\n`
+      mode = 'append'
+    }
+    content.files[path] = after
+    return { content, before, after, mode, target: path }
+  }
+
+  if (content.html != null || content.html === '') {
+    before = String(content.html || '')
+    if (/replace|rewrite|重写|全文/.test(lower)) {
+      const body = String(instruction).replace(/^(replace|rewrite|重写|全文)\s*(with|:)?\s*/i, '')
+      after = `<p>${body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
+      mode = 'replace'
+    } else if (/title|标题|heading/.test(lower)) {
+      const title = String(instruction).replace(/^.*?(title|标题|heading)\s*[:=]?\s*/i, '').trim() || instruction
+      after = `<h1>${title.replace(/</g, '&lt;')}</h1>` + before
+      mode = 'prepend-title'
+    } else if (/append|加一段|继续|add paragraph/.test(lower)) {
+      const para = String(instruction).replace(/^(append|add paragraph|加一段|继续)\s*[:=]?\s*/i, '').trim() || instruction
+      after = before + `<p>${para.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`
+      mode = 'append'
+    } else {
+      const para = instruction.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      after = before + `<p data-helios-edit="1"><strong>Helios:</strong> ${para}</p>`
+      mode = 'annotate'
+    }
+    content.html = after
+    return { content, before, after, mode, target: 'html' }
+  }
+
+  if (Array.isArray(content.slides) && content.slides.length) {
+    const idxSlide = Math.min(Number(content.activeSlide) || 0, content.slides.length - 1)
+    const slide = { ...content.slides[idxSlide] }
+    before = JSON.stringify({ title: slide.title, body: slide.body })
+    if (/new slide|加一页|新增幻灯/.test(lower)) {
+      content.slides.push({
+        id: `s_${Date.now()}`,
+        title: 'New slide',
+        body: instruction.replace(/^(new slide|加一页|新增幻灯)\s*[:=]?\s*/i, '').trim() || 'New idea',
+        notes: '',
+        layout: 'title-content',
+        theme: slide.theme || 'terracotta-glass',
+      })
+      content.activeSlide = content.slides.length - 1
+      after = content.slides[content.activeSlide].body
+      mode = 'add-slide'
+    } else if (/title|标题/.test(lower)) {
+      slide.title = instruction.replace(/^.*?(title|标题)\s*[:=]?\s*/i, '').trim() || instruction
+      mode = 'slide-title'
+    } else if (/image|照片|图片|photo/.test(lower)) {
+      const url = (instruction.match(/https?:\/\/\S+/) || [])[0] || ''
+      if (url) slide.imageUrl = url
+      slide.body = (slide.body || '') + (url ? '' : `\n${instruction}`)
+      mode = 'slide-image'
+    } else if (/theme|designer|主题/.test(lower)) {
+      if (/blue/.test(lower)) slide.theme = 'blue-glass'
+      else if (/charcoal|dark/.test(lower)) slide.theme = 'charcoal'
+      else if (/sand|warm/.test(lower)) slide.theme = 'warm-sand'
+      else slide.theme = 'terracotta-glass'
+      mode = 'slide-theme'
+    } else {
+      slide.body = `${slide.body || ''}\n${instruction}`.slice(0, 8000)
+      mode = 'slide-body'
+    }
+    content.slides[idxSlide] = slide
+    after = JSON.stringify({ title: slide.title, body: slide.body, theme: slide.theme, imageUrl: slide.imageUrl })
+    return { content, before, after, mode, target: `slide:${idxSlide}` }
+  }
+
+  if (Array.isArray(content.cells)) {
+    before = JSON.stringify(content.cells.slice(0, 3))
+    const rows = content.cells.map(row => [...row])
+    if (/clear|清空/.test(lower)) {
+      for (let r = 0; r < rows.length; r++) for (let c = 0; c < (rows[r] || []).length; c++) rows[r][c] = ''
+      mode = 'clear-grid'
+    } else if (/fill|填充|sample|示例/.test(lower)) {
+      const demo = [['Item', 'Qty', 'Price'], ['Alpha', '3', '12'], ['Beta', '5', '8'], ['Total', '', '=SUM(B2:B3)']]
+      for (let r = 0; r < demo.length; r++) {
+        if (!rows[r]) rows[r] = []
+        for (let c = 0; c < demo[r].length; c++) rows[r][c] = demo[r][c]
+      }
+      mode = 'sample-grid'
+    } else {
+      if (!rows[0]) rows[0] = []
+      rows[0][0] = instruction.slice(0, 80)
+      mode = 'annotate-grid'
+    }
+    content.cells = rows
+    after = JSON.stringify(rows.slice(0, 4))
+    return { content, before, after, mode, target: 'cells' }
+  }
+
+  return null
+}
+
 app.post('/api/projects/:id/helios-patch', requireUser, socialRateLimit, async (req, res) => {
   const projectId = positiveInt(req.params.id)
   const project = projectId ? getProjectForUser(projectId, req.user.id, { edit: true }) : null
   if (!project) return res.status(404).json({ error: 'Project not found' })
-  const instruction = String(req.body?.instruction || '').trim().slice(0, 2000)
+  const instruction = String(req.body?.instruction || '').trim().slice(0, 4000)
   if (!instruction) return res.status(400).json({ error: 'Instruction required' })
   let content
   try { content = JSON.parse(project.content || '{}') } catch { content = {} }
-  const path = String(req.body?.path || '').trim()
-  let before = ''
-  let after = ''
-  if (path && content.files && typeof content.files === 'object') {
-    before = String(content.files[path] || '')
-    after = `${before}\n\n// Helios: ${instruction}\n`.slice(0, 200000)
-    content.files[path] = after
-  } else if (content.html != null) {
-    before = String(content.html)
-    after = before.includes('</p>')
-      ? before.replace('</p>', ` <em data-helios-edit="1">(${instruction})</em></p>`)
-      : `${before}<p><em data-helios-edit="1">${instruction}</em></p>`
-    content.html = after
-  } else if (Array.isArray(content.slides) && content.slides.length) {
-    const idx = Math.min(Number(content.activeSlide) || 0, content.slides.length - 1)
-    before = String(content.slides[idx].body || '')
-    after = `${before}\n${instruction}`.slice(0, 8000)
-    content.slides[idx] = { ...content.slides[idx], body: after }
-  } else {
-    return res.status(400).json({ error: 'Unsupported project content for patch' })
+  const pathHint = String(req.body?.path || '').trim()
+
+  // Optional AI-shaped rewrite when a real upstream key is configured
+  const apiKey = String(getSetting('openai_api_key') || '')
+  const baseUrl = String(getSetting('openai_base_url') || '')
+  const model = String(getSetting('openai_model') || 'gpt-4o-mini')
+  const useUpstream = apiKey && !/^helios-local/i.test(apiKey) && !/helios\.local/i.test(baseUrl)
+
+  let applied = applyLocalContentPatch(content, instruction, pathHint)
+  let engine = 'local-rules'
+
+  if (useUpstream) {
+    try {
+      const snapshot = JSON.stringify(content).slice(0, 12000)
+      const prompt = [
+        'You edit Helios Mini App project JSON. Return ONLY valid JSON with shape:',
+        '{"content": <full updated project content object>}',
+        'Supported content shapes: {html}, {slides,activeSlide}, {cells}, {files}.',
+        'Apply the user instruction carefully. Keep ids. Do not wrap in markdown.',
+        `Instruction: ${instruction}`,
+        `Current content JSON: ${snapshot}`,
+      ].join('\n')
+      const endpoint = `${baseUrl.replace(/\/+$/, '')}/v1/chat/completions`
+      const upstream = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model,
+          temperature: 0.2,
+          messages: [
+            { role: 'system', content: 'You are Helios file writer. Output JSON only.' },
+            { role: 'user', content: prompt },
+          ],
+        }),
+      })
+      if (upstream.ok) {
+        const payload = await upstream.json()
+        const raw = payload?.choices?.[0]?.message?.content || ''
+        const match = raw.match(/\{[\s\S]*\}/)
+        if (match) {
+          const parsed = JSON.parse(match[0])
+          if (parsed && parsed.content && typeof parsed.content === 'object') {
+            const before = JSON.stringify(content).slice(0, 400)
+            content = parsed.content
+            const after = JSON.stringify(content).slice(0, 400)
+            applied = { content, before, after, mode: 'ai-json', target: 'content' }
+            engine = 'upstream'
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[helios-patch] upstream failed', error)
+    }
   }
+
+  if (!applied) return res.status(400).json({ error: 'Unsupported project content for patch' })
+  content = applied.content
   const now = new Date().toISOString()
   db.prepare('UPDATE projects SET content = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(content), now, projectId)
-  res.json({ ok: true, project: serializeProject(getProjectForUser(projectId, req.user.id), req.user.id), preview: { before: before.slice(0, 400), after: after.slice(0, 400) } })
+  res.json({
+    ok: true,
+    engine,
+    mode: applied.mode,
+    target: applied.target,
+    project: serializeProject(getProjectForUser(projectId, req.user.id), req.user.id),
+    preview: { before: String(applied.before).slice(0, 500), after: String(applied.after).slice(0, 500) },
+  })
 })
 
 // ── Posts, comments, reactions, and saves (Lifestyle) ──

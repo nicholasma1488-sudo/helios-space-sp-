@@ -4,7 +4,9 @@ Helios Space is a React application for creating projects and sharing progress. 
 
 The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, **Lifestyle (nav: Space)** is the social feed core. Helios Space is **completely free** — no Orbit / Stripe paywall in the product UI.
 
-**Active product plan (read before coding):** [`PLAN.md`](./PLAN.md) — v2 rebuild: Instagram-packed Lifestyle, Mini App (no Create), chrome collapse, M365 depth, friend requests, Helios IDE autosave (no commit-as-save), inline Helios edits. **Implementation waits on plan approval.**  
+**Active product plan:** [`PLAN.md`](./PLAN.md).  
+**Helios-native Mini Apps:** Quill, Lattice, Stage, Folio, Pulse, Dispatch, Orbit, Cascade, Weave, Tally, Forge.  
+**AI keys (Ollama ≈ unlimited):** [`docs/AI_KEYS.md`](./docs/AI_KEYS.md).  
 Design blueprint: [`PRODUCT.md`](./PRODUCT.md). Earlier WorkBuddy notes: [`REDESIGN.md`](./REDESIGN.md).
 
 ## Run locally
