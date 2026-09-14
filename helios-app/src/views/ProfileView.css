@@ -143,3 +143,36 @@
   .profile-theme-buttons button { flex-direction: row; align-items: center; }
   .theme-swatch { flex: 0 0 84px; height: 46px; }
 }
+
+/* ── AI provider (bring your own key) ── */
+.ai-provider-status { display: flex; align-items: center; gap: 12px; }
+.ai-provider-status > div:not(.ai-provider-actions) { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.ai-provider-status strong { font-size: 11px; }
+.ai-provider-status small { color: var(--helios-muted); font-size: 8px; line-height: 1.45; overflow-wrap: anywhere; }
+.ai-provider-dot { flex: 0 0 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--helios-muted); box-shadow: 0 0 0 3px color-mix(in srgb, var(--helios-muted) 18%, transparent); }
+.ai-provider-dot.is-own { background: var(--helios-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--helios-success) 22%, transparent); }
+.ai-provider-form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--helios-border); }
+.ai-provider-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-provider-presets button {
+  padding: 6px 10px; border: 1px solid var(--glass-stroke); border-radius: 999px;
+  background: var(--glass-bg); color: var(--helios-text2); font: var(--type-label); font-size: 9px; cursor: pointer;
+  transition: border-color var(--dur-quick), background var(--dur-quick), transform var(--dur-bounce) var(--ease-bounce);
+}
+.ai-provider-presets button:hover { transform: translateY(-1px); }
+.ai-provider-presets button.is-active { border-color: color-mix(in srgb, var(--helios-accent) 55%, var(--glass-stroke)); background: color-mix(in srgb, var(--helios-accent) 12%, var(--glass-bg-strong)); color: var(--helios-text); }
+.ai-provider-key { position: relative; }
+.ai-provider-key .helios-input { padding-right: 38px; font: var(--type-mono-md); }
+.ai-provider-key > button { position: absolute; top: 50%; right: 8px; display: grid; width: 26px; height: 26px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--helios-muted); cursor: pointer; transform: translateY(-50%); }
+.ai-provider-key > button:hover { background: var(--glass-bg); color: var(--helios-text); }
+.ai-provider-form .helios-field small { color: var(--helios-muted); font-size: 8px; }
+.ai-provider-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 10px; }
+.ai-provider-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ai-provider-actions .liquid-glass-btn { padding: 8px 12px; font-size: 10px; }
+.ai-provider-actions .liquid-glass-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.ai-provider-notice { margin: 12px 0 0; padding: 9px 11px; border-radius: 10px; font-size: 9px; line-height: 1.45; }
+.ai-provider-notice.is-ok { background: color-mix(in srgb, var(--helios-success) 12%, var(--mix-base)); color: var(--helios-text); border: 1px solid color-mix(in srgb, var(--helios-success) 30%, transparent); }
+.ai-provider-notice.is-error { background: color-mix(in srgb, var(--helios-danger) 10%, var(--mix-base)); color: var(--helios-text); border: 1px solid color-mix(in srgb, var(--helios-danger) 30%, transparent); }
+@media (max-width: 620px) {
+  .ai-provider-status { flex-wrap: wrap; }
+  .ai-provider-grid { grid-template-columns: 1fr; }
+}

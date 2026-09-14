@@ -62,7 +62,21 @@ That script:
 Keep **both** `ollama serve` and the tunnel process alive while production uses this path.  
 If the Cursor session ends, production AI falls back / fails until you re-tunnel or paste a cloud key.
 
-## Best free cloud key (paste yourself)
+## Bring your own key (per user)
+
+Every user can override the site default from **Me → Settings → AI provider**:
+
+- Presets: Groq, OpenAI, Google Gemini, DeepSeek, OpenRouter, Ollama (self-hosted), Custom
+- Fields: API key · Base URL · Model, plus **Test connection** before saving
+- Keys are stored **AES-256-GCM encrypted** (`user_ai_settings.api_key_enc`); the secret is
+  `HELIOS_SECRET_KEY` or an auto-generated `DATA_DIR/.helios-secret` (0600). Only a preview
+  like `gsk_…ab12` is ever returned to the browser.
+- Resolution order: **user key → site default**. `POST /api/helios/chat` reports `"source": "user" | "site"`.
+- In production, user base URLs must point at a public host (loopback / private ranges are rejected).
+
+API: `GET / PUT / DELETE /api/me/ai`, `POST /api/me/ai/test`.
+
+## Best free cloud key (site default, admin)
 
 1. Open [https://console.groq.com](https://console.groq.com) → create free API key  
 2. Admin → AI settings:

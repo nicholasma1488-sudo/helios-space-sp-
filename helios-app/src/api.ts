@@ -20,6 +20,21 @@ export interface User {
   usage?: WritingUsage
 }
 
+export type AiProviderId = 'groq' | 'openai' | 'openrouter' | 'gemini' | 'deepseek' | 'ollama' | 'custom'
+
+export interface AiProviderPreset { label: string; base_url: string; model: string }
+
+export interface UserAiSettings {
+  configured: boolean
+  provider: AiProviderId
+  base_url: string
+  model: string
+  key_preview: string
+  updated_at: string | null
+  site_default: { kind: 'local' | 'ollama' | 'cloud'; model: string }
+  presets: Record<AiProviderId, AiProviderPreset>
+}
+
 export interface BillingPlan {
   id: BillingPlanId
   name: string
@@ -399,6 +414,15 @@ export const api = {
   session: () => call<{ user: User | null }>('/api/session'),
 
   me: () => call<{ user: User }>('/api/me'),
+
+  ai: {
+    get: () => call<UserAiSettings>('/api/me/ai'),
+    save: (data: { provider: AiProviderId; api_key?: string; base_url: string; model: string }) =>
+      call<UserAiSettings & { ok: boolean }>('/api/me/ai', { method: 'PUT', body: JSON.stringify(data) }),
+    remove: () => call<UserAiSettings & { ok: boolean }>('/api/me/ai', { method: 'DELETE' }),
+    test: (data: { api_key?: string; base_url: string; model: string }) =>
+      call<{ ok: boolean; model: string; reply: string }>('/api/me/ai/test', { method: 'POST', body: JSON.stringify(data) }),
+  },
 
   updateMe: (data: Record<string, unknown> = {}) =>
     call<{ user: User }>('/api/me', { method: 'PUT', body: JSON.stringify(data) }),

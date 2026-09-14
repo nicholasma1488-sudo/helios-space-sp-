@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Award, BookOpen, ChevronRight, Download, FolderGit2, LogOut, MessageCircle,
-  Monitor, Moon, Palette, Plus, Settings, Sparkles, Star, Sun, Trash2, Users,
+  Check, Eye, EyeOff, KeyRound, Monitor, Moon, Palette, Plus, Settings, Sparkles, Star, Sun, Trash2, Users, X,
 } from 'lucide-react'
-import { api, type Post, type Project, type SolarSummary, type SpaceSummary } from '../api'
+import { api, ApiError, type AiProviderId, type Post, type Project, type SolarSummary, type SpaceSummary, type UserAiSettings } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
@@ -183,6 +183,7 @@ function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExp
           })}
         </div>
       </article>
+      <AiProviderCard />
       <article>
         <h3><Settings size={15} /> Accessibility</h3>
         <div className="profile-setting-row">
@@ -199,4 +200,145 @@ function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExp
     </section>
   )
 }
+const PROVIDER_ORDER: AiProviderId[] = ['groq', 'openai', 'gemini', 'deepseek', 'openrouter', 'ollama', 'custom']
+const PROVIDER_KEY_HINT: Record<AiProviderId, string> = {
+  groq: 'console.groq.com → API Keys (free tier)',
+  openai: 'platform.openai.com → API keys',
+  gemini: 'aistudio.google.com → Get API key (free tier)',
+  deepseek: 'platform.deepseek.com → API keys',
+  openrouter: 'openrouter.ai → Keys (has free routes)',
+  ollama: 'Any value works, e.g. "ollama". Host must be reachable from the internet.',
+  custom: 'Any OpenAI-compatible /v1/chat/completions endpoint.',
+}
+
+function AiProviderCard() {
+  const [settings, setSettings] = useState<UserAiSettings | null>(null)
+  const [provider, setProvider] = useState<AiProviderId>('groq')
+  const [apiKey, setApiKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [baseUrl, setBaseUrl] = useState('')
+  const [model, setModel] = useState('')
+  const [busy, setBusy] = useState<'save' | 'test' | 'remove' | null>(null)
+  const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+  const [editing, setEditing] = useState(false)
+
+  const load = useCallback(async () => {
+    try {
+      const data = await api.ai.get()
+      setSettings(data)
+      if (data.configured) {
+        setProvider(data.provider)
+        setBaseUrl(data.base_url)
+        setModel(data.model)
+      } else {
+        const preset = data.presets.groq
+        setProvider('groq'); setBaseUrl(preset.base_url); setModel(preset.model)
+      }
+    } catch (error) {
+      setNotice({ tone: 'error', text: (error as Error).message })
+    }
+  }, [])
+  useEffect(() => { void load() }, [load])
+
+  const pickProvider = (id: AiProviderId) => {
+    setProvider(id)
+    const preset = settings?.presets[id]
+    if (preset) { setBaseUrl(preset.base_url); setModel(preset.model) }
+    setNotice(null)
+  }
+
+  const describeError = (error: unknown) => {
+    if (error instanceof ApiError) return error.detail ? `${error.message} — ${error.detail}` : error.message
+    return (error as Error).message
+  }
+
+  const save = async () => {
+    setBusy('save'); setNotice(null)
+    try {
+      const data = await api.ai.save({ provider, api_key: apiKey || undefined, base_url: baseUrl, model })
+      setSettings(data); setApiKey(''); setEditing(false)
+      setNotice({ tone: 'ok', text: `Saved. Helios now uses your ${data.presets[data.provider]?.label ?? 'custom'} key.` })
+    } catch (error) { setNotice({ tone: 'error', text: describeError(error) }) }
+    finally { setBusy(null) }
+  }
+
+  const test = async () => {
+    setBusy('test'); setNotice(null)
+    try {
+      const result = await api.ai.test({ api_key: apiKey || undefined, base_url: baseUrl, model })
+      setNotice({ tone: 'ok', text: `Connected · ${result.model} replied "${result.reply}"` })
+    } catch (error) { setNotice({ tone: 'error', text: describeError(error) }) }
+    finally { setBusy(null) }
+  }
+
+  const remove = async () => {
+    setBusy('remove'); setNotice(null)
+    try {
+      const data = await api.ai.remove()
+      setSettings(data); setApiKey(''); setEditing(false)
+      const preset = data.presets.groq
+      setProvider('groq'); setBaseUrl(preset.base_url); setModel(preset.model)
+      setNotice({ tone: 'ok', text: 'Back on the Helios default provider.' })
+    } catch (error) { setNotice({ tone: 'error', text: describeError(error) }) }
+    finally { setBusy(null) }
+  }
+
+  const siteLabel = settings
+    ? settings.site_default.kind === 'local' ? 'Helios local helper (rules only)'
+      : settings.site_default.kind === 'ollama' ? `Helios Ollama · ${settings.site_default.model}`
+      : `Helios default · ${settings.site_default.model}`
+    : '…'
+  const showForm = editing || !settings?.configured
+  const canSubmit = Boolean(baseUrl.trim() && model.trim() && (apiKey.trim() || settings?.configured))
+
+  return (
+    <article className="ai-provider-card">
+      <h3><KeyRound size={15} /> AI provider</h3>
+      <div className="ai-provider-status">
+        <span className={'ai-provider-dot' + (settings?.configured ? ' is-own' : '')} />
+        <div>
+          <strong>{settings?.configured ? `Your key · ${settings.presets[settings.provider]?.label ?? 'Custom'} · ${settings.model}` : `Using ${siteLabel}`}</strong>
+          <small>{settings?.configured ? `Key ${settings.key_preview} · ${settings.base_url}` : 'Add your own key to pick the model Helios answers with. Keys are encrypted and never shown again in full.'}</small>
+        </div>
+        {settings?.configured && !editing && (
+          <div className="ai-provider-actions">
+            <button type="button" className="liquid-glass-btn" onClick={() => { setEditing(true); setNotice(null) }}>Change</button>
+            <button type="button" className="liquid-glass-btn" onClick={() => void remove()} disabled={busy !== null}>{busy === 'remove' ? 'Removing…' : 'Use Helios default'}</button>
+          </div>
+        )}
+      </div>
+
+      {showForm && (
+        <div className="ai-provider-form">
+          <div className="ai-provider-presets" role="radiogroup" aria-label="Provider">
+            {PROVIDER_ORDER.map(id => (
+              <button type="button" key={id} role="radio" aria-checked={provider === id} className={provider === id ? 'is-active' : ''} onClick={() => pickProvider(id)}>
+                {settings?.presets[id]?.label ?? id}
+              </button>
+            ))}
+          </div>
+          <label className="helios-field">
+            <span>API key</span>
+            <div className="ai-provider-key">
+              <input className="helios-input" type={showKey ? 'text' : 'password'} value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder={settings?.configured ? `Leave blank to keep ${settings.key_preview}` : 'Paste your key'} autoComplete="off" spellCheck={false} />
+              <button type="button" onClick={() => setShowKey(v => !v)} aria-label={showKey ? 'Hide key' : 'Show key'}>{showKey ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+            </div>
+            <small>{PROVIDER_KEY_HINT[provider]}</small>
+          </label>
+          <div className="ai-provider-grid">
+            <label className="helios-field"><span>Base URL</span><input className="helios-input" value={baseUrl} onChange={e => setBaseUrl(e.target.value)} placeholder="https://api.example.com" spellCheck={false} /></label>
+            <label className="helios-field"><span>Model</span><input className="helios-input" value={model} onChange={e => setModel(e.target.value)} placeholder="model-name" spellCheck={false} /></label>
+          </div>
+          <div className="ai-provider-actions">
+            <button type="button" className="liquid-glass-btn is-primary" onClick={() => void save()} disabled={busy !== null || !canSubmit}>{busy === 'save' ? 'Saving…' : <><Check size={13} /> Save & use my key</>}</button>
+            <button type="button" className="liquid-glass-btn" onClick={() => void test()} disabled={busy !== null || !canSubmit}>{busy === 'test' ? 'Testing…' : 'Test connection'}</button>
+            {settings?.configured && <button type="button" className="liquid-glass-btn" onClick={() => { setEditing(false); setApiKey(''); setNotice(null); void load() }}><X size={13} /> Cancel</button>}
+          </div>
+        </div>
+      )}
+      {notice && <p className={'ai-provider-notice is-' + notice.tone} role="status">{notice.text}</p>}
+    </article>
+  )
+}
+
 function JourneyEmpty({ text }: { text: string }) { return <div className="profile-journey-empty"><Sparkles size={18} /><span>{text}</span></div> }
