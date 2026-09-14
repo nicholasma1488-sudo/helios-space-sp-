@@ -447,8 +447,10 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     }])
   }
 
-  async function sendMessage(text: string) {
+  async function sendMessage(text: string, forceMode?: PanelMode) {
     if (!text.trim() || loading) return
+    const runMode = forceMode ?? mode
+    if (forceMode && forceMode !== mode) setMode(forceMode)
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, ts: new Date().toISOString() }
     setMessages(prev => [...prev, userMsg])
     setInput('')
@@ -458,7 +460,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         .filter(m => m.id !== 'welcome')
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
       const targetProjectId = Number(contextPacket.project_id || activeProject?.id || 0) || undefined
-      if (mode === 'agent') await runAgent(text, history, targetProjectId)
+      if (runMode === 'agent') await runAgent(text, history, targetProjectId)
       else await chatReply(history, targetProjectId)
     } catch (err) {
       setMessages(prev => [...prev, {
@@ -483,6 +485,17 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     const timer = window.setTimeout(() => { void sendMessageRef.current(pending) }, 80)
     return () => window.clearTimeout(timer)
   }, [aiReady])
+
+  // The Home page agent bar (and other views) can hand a goal to an already
+  // open panel; it always runs in Agent mode.
+  useEffect(() => {
+    const onPrompt = (event: Event) => {
+      const text = (event as CustomEvent<{ text?: string }>).detail?.text
+      if (text) void sendMessageRef.current(text, 'agent')
+    }
+    window.addEventListener('helios-agent-prompt', onPrompt)
+    return () => window.removeEventListener('helios-agent-prompt', onPrompt)
+  }, [])
 
   async function undoStep(msgId: string, index: number) {
     const msg = messages.find(m => m.id === msgId)

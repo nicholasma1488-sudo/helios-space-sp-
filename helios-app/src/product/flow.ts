@@ -107,3 +107,20 @@ export function categoryForSpace(spaceId: string) {
   if (['reading', 'english', 'languages', 'history'].includes(spaceId)) return 'reading'
   return 'study'
 }
+
+/**
+ * Sends a goal to the Helios panel in Agent mode. When the panel is already
+ * open it receives the prompt through a DOM event; otherwise the prompt is
+ * parked in sessionStorage and picked up as soon as the panel mounts.
+ */
+export function runHeliosAgent(text: string, panelOpen: boolean, openPanel: () => void) {
+  const goal = text.trim()
+  if (!goal) return
+  try { localStorage.setItem('helios-panel-mode', 'agent') } catch {}
+  if (panelOpen) {
+    window.dispatchEvent(new CustomEvent('helios-agent-prompt', { detail: { text: goal } }))
+    return
+  }
+  try { sessionStorage.setItem('helios-pending-prompt', goal) } catch {}
+  openPanel()
+}

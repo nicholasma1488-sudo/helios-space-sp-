@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { api, type ApiNotification, type LiveSession, type Post } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
+import { HomeAgentBar } from '../components/HomeAgentBar'
 import { getSuiteApp } from '../product/miniApps'
 import { useApp } from '../store/appStore'
 import './HomeView.css'
@@ -154,6 +155,8 @@ export function HomeView() {
               </button>
             </div>
           </header>
+
+          <HomeAgentBar />
 
           <section className="home-section" aria-labelledby="home-files-title">
             <header>
