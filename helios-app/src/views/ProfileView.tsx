@@ -31,7 +31,7 @@ export function ProfileView() {
       const raw = sessionStorage.getItem('helios-open-creator')
       sessionStorage.removeItem('helios-open-creator')
       if (raw) setCreator(JSON.parse(raw) as { id: number; name: string; handle: string })
-      if (sessionStorage.getItem('helios-open-settings') === 'billing') {
+      if (sessionStorage.getItem('helios-open-settings')) {
         sessionStorage.removeItem('helios-open-settings')
         setTab('Settings')
       }

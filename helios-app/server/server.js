@@ -17,6 +17,20 @@ import {
   resolveChatCompletionsUrl,
   summarizeAiProviderError,
 } from './aiProvider.js'
+import {
+  AGENT_APPS,
+  AgentUpstreamError,
+  agentAppFor,
+  deriveTitle,
+  describePlan,
+  generatePostBody,
+  generateWorkspace,
+  isChinese,
+  planLocally,
+  planWithModel,
+  sanitizeSteps,
+  starterWorkspace,
+} from './agent.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number.parseInt(process.env.PORT || '8080', 10)
@@ -580,6 +594,20 @@ function resolveAiConfigForUser(userId) {
     return { apiKey, baseUrl: row.base_url, model: row.model || 'gpt-4o-mini', source: 'user', provider: row.provider }
   }
   return siteAiConfig()
+}
+
+// Explicit model tab in the Helios panel: 'site' = the free Helios default,
+// 'user' = the key saved in Settings, anything else = user first, then site.
+function resolveAiConfigForRequest(userId, provider) {
+  if (provider === 'site') return siteAiConfig()
+  if (provider === 'user') {
+    const row = userAiRow(userId)
+    const apiKey = row ? decryptSecret(row.api_key_enc) : ''
+    if (!(row && apiKey && row.base_url))
+      return { error: 'Add your own API key in Settings before using the My API tab.', code: 'AI_USER_NOT_CONFIGURED' }
+    return { apiKey, baseUrl: row.base_url, model: row.model || 'gpt-4o-mini', source: 'user', provider: row.provider }
+  }
+  return resolveAiConfigForUser(userId)
 }
 
 function describeAiConfig(config) {
@@ -3257,7 +3285,8 @@ function buildLocalHeliosReply(userText, project) {
 
 // ── Helios agent (OpenAI-compatible proxy, shared administrator key) ──
 app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
-  const aiConfig = resolveAiConfigForUser(req.user.id)
+  const aiConfig = resolveAiConfigForRequest(req.user.id, req.body?.provider)
+  if (aiConfig.error) return res.status(400).json({ error: aiConfig.error, code: aiConfig.code })
   const apiKey = aiConfig.apiKey
   if (!apiKey) return res.status(503).json({
     error: 'Helios is not configured yet. Add your own API key in Settings, or ask an administrator to set a site default.',
@@ -3448,6 +3477,166 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
     if (error instanceof TypeError || String(error?.message || '').includes('base URL'))
       return res.status(503).json({ error: 'Helios has an invalid AI provider configuration.', code: 'AI_CONFIGURATION' })
     res.status(502).json({ error: 'Helios could not reach the AI provider.', code: 'AI_NETWORK' })
+  }
+})
+
+// ── Helios agent ──
+// Phase 1 (/api/helios/agent) returns a plan quickly: steps the browser
+// executes (open pages, create/update Mini App files, share a post, switch
+// theme). Phase 2 (/api/helios/agent/content) generates the content for one
+// step at a time, so a file opens instantly with starter content and fills in
+// while the model writes. Every project reference is re-checked against the
+// caller's permissions.
+function agentAiConfig(req, res) {
+  const aiConfig = resolveAiConfigForRequest(req.user.id, req.body?.provider)
+  if (aiConfig.error) {
+    res.status(400).json({ error: aiConfig.error, code: aiConfig.code })
+    return null
+  }
+  if (!aiConfig.apiKey) {
+    res.status(503).json({
+      error: 'Helios is not configured yet. Add your own API key in Settings, or ask an administrator to set a site default.',
+      code: 'AI_NOT_CONFIGURED',
+    })
+    return null
+  }
+  return aiConfig
+}
+
+function sendAgentFailure(res, error) {
+  if (error instanceof AgentUpstreamError) return res.status(error.status).json(error.body)
+  if (error?.name === 'TimeoutError' || error?.name === 'AbortError')
+    return res.status(504).json({ error: 'Helios timed out while waiting for the AI provider.', code: 'AI_TIMEOUT' })
+  if (error instanceof TypeError || String(error?.message || '').includes('base URL'))
+    return res.status(503).json({ error: 'Helios has an invalid AI provider configuration.', code: 'AI_CONFIGURATION' })
+  console.error('agent failed', error)
+  return res.status(502).json({ error: 'Helios could not reach the AI provider.', code: 'AI_NETWORK' })
+}
+
+app.post('/api/helios/agent', requireUser, aiRateLimit, async (req, res) => {
+  const aiConfig = agentAiConfig(req, res)
+  if (!aiConfig) return
+  const checkedGoal = checkedString(req.body?.goal, 'Goal', 4000, { required: true, trim: true })
+  if (checkedGoal.error) return res.status(400).json({ error: checkedGoal.error })
+  const goal = checkedGoal.value
+  const rawContext = req.body?.context
+  if (rawContext !== undefined && (rawContext === null || typeof rawContext !== 'object' || Array.isArray(rawContext)))
+    return res.status(400).json({ error: 'context must be an object' })
+  const context = rawContext || {}
+
+  let activeProject = null
+  if (context.project_id !== undefined && context.project_id !== null) {
+    const id = positiveInt(context.project_id)
+    if (!id) return res.status(400).json({ error: 'Invalid project id' })
+    activeProject = getProjectForUser(id, req.user.id)
+  }
+  const ownProjects = db.prepare(
+    'SELECT id, name, app_kind FROM projects WHERE user_id = ? ORDER BY updated_at DESC LIMIT 40'
+  ).all(req.user.id)
+  const planningContext = {
+    projects: ownProjects.map(row => ({ id: Number(row.id), name: row.name, app_kind: row.app_kind || '' })),
+    activeProject: activeProject ? { id: Number(activeProject.id), name: activeProject.name, app_kind: activeProject.app_kind || '' } : null,
+    view: typeof context.view === 'string' ? context.view.replace(/[^a-z-]/gi, '').slice(0, 40) : '',
+  }
+
+  try {
+    let plan = planLocally(goal, planningContext)
+    let say = ''
+    let plannerModel = aiConfig.model
+    if (!plan) {
+      const modelPlan = await planWithModel(goal, planningContext, aiConfig)
+      plan = { steps: sanitizeSteps(modelPlan.steps), planner: modelPlan.planner }
+      say = modelPlan.say
+      plannerModel = modelPlan.model || plannerModel
+    }
+
+    const steps = []
+    for (const step of plan.steps) {
+      if (step.tool === 'create_file') {
+        const title = step.name || deriveTitle(goal, step.app)
+        const brief = step.brief || goal
+        steps.push({
+          tool: 'create_file',
+          app: step.app,
+          app_name: AGENT_APPS[step.app].name,
+          type: AGENT_APPS[step.app].type,
+          name: title,
+          brief,
+          starter_content: starterWorkspace(step.app, title, brief),
+        })
+      } else if (step.tool === 'update_file') {
+        const project = getProjectForUser(step.project_id, req.user.id, { edit: true })
+        if (!project) continue
+        const app = agentAppFor(project.app_kind)
+        steps.push({ tool: 'update_file', project_id: Number(project.id), project_name: project.name, app_name: AGENT_APPS[app].name, brief: step.brief || goal })
+      } else if (step.tool === 'open_file') {
+        const project = getProjectForUser(step.project_id, req.user.id)
+        if (!project) continue
+        steps.push({ tool: 'open_file', project_id: Number(project.id), project_name: project.name })
+      } else if (step.tool === 'post') {
+        const linked = steps.find(item => item.tool === 'create_file' || item.tool === 'update_file')
+        steps.push({ tool: 'post', body: step.body.slice(0, MAX_POST_BODY_LENGTH), brief: step.brief || goal, link_previous: Boolean(linked) })
+      } else if (step.tool === 'navigate' || step.tool === 'set_theme') {
+        steps.push(step)
+      }
+    }
+
+    res.json({
+      goal,
+      say: say || describePlan(steps, isChinese(goal)),
+      steps,
+      planner: plan.planner,
+      model: plannerModel,
+      source: aiConfig.source,
+    })
+  } catch (error) {
+    sendAgentFailure(res, error)
+  }
+})
+
+app.post('/api/helios/agent/content', requireUser, aiRateLimit, async (req, res) => {
+  const aiConfig = agentAiConfig(req, res)
+  if (!aiConfig) return
+  const body = req.body || {}
+  const checkedGoal = checkedString(body.goal ?? '', 'Goal', 4000, { trim: true })
+  if (checkedGoal.error) return res.status(400).json({ error: checkedGoal.error })
+  const checkedBrief = checkedString(body.brief ?? '', 'Brief', 4000, { trim: true })
+  if (checkedBrief.error) return res.status(400).json({ error: checkedBrief.error })
+  const goal = checkedGoal.value || checkedBrief.value
+  const brief = checkedBrief.value || goal
+  if (!goal) return res.status(400).json({ error: 'Goal or brief is required' })
+
+  try {
+    if (body.kind === 'post') {
+      const projectName = typeof body.project_name === 'string' ? body.project_name.slice(0, 120) : ''
+      const text = await generatePostBody({ brief, goal, ai: aiConfig, project: projectName ? { name: projectName } : null })
+      return res.json({ body: text.slice(0, MAX_POST_BODY_LENGTH), model: aiConfig.model, source: aiConfig.source })
+    }
+
+    if (body.project_id !== undefined && body.project_id !== null) {
+      const projectId = positiveInt(body.project_id)
+      if (!projectId) return res.status(400).json({ error: 'Invalid project id' })
+      const project = getProjectForUser(projectId, req.user.id, { edit: true })
+      if (!project) return res.status(404).json({ error: 'Project not found or not editable' })
+      const app = agentAppFor(project.app_kind)
+      let existing = null
+      try {
+        const parsed = JSON.parse(project.content || '')
+        if (parsed?.schema === 'helios-workspace-v1' && parsed.data && typeof parsed.data === 'object') existing = parsed.data
+      } catch {}
+      // A freshly created agent file still holds the starter placeholder; treat it as empty.
+      if (body.fresh === true) existing = null
+      const result = await generateWorkspace({ app, title: project.name, brief, goal, ai: aiConfig, existing })
+      return res.json({ content: result.content, generated: result.generated, model: result.model || aiConfig.model, source: aiConfig.source })
+    }
+
+    const app = String(body.app || '')
+    if (!AGENT_APPS[app]) return res.status(400).json({ error: 'Unknown Mini App' })
+    const title = String(body.title || deriveTitle(goal, app)).slice(0, 120)
+    const result = await generateWorkspace({ app, title, brief, goal, ai: aiConfig })
+    res.json({ content: result.content, generated: result.generated, model: result.model || aiConfig.model, source: aiConfig.source })
+  } catch (error) {
+    sendAgentFailure(res, error)
   }
 })
 

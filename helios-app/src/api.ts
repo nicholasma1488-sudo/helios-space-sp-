@@ -35,6 +35,31 @@ export interface UserAiSettings {
   presets: Record<AiProviderId, AiProviderPreset>
 }
 
+/** Which model tab the Helios panel is on: the free site default or the user's own key. */
+export type AiProviderChoice = 'auto' | 'site' | 'user'
+
+export type AgentStep =
+  | { tool: 'navigate'; view: 'home' | 'lifestyle' | 'apps' | 'chat' | 'profile' }
+  | { tool: 'set_theme'; theme: 'light' | 'dark' | 'system' }
+  | { tool: 'create_file'; app: string; app_name: string; type: Project['type']; name: string; brief: string; starter_content: string }
+  | { tool: 'update_file'; project_id: number; project_name: string; app_name: string; brief: string }
+  | { tool: 'open_file'; project_id: number; project_name: string }
+  | { tool: 'post'; body: string; brief: string; link_previous: boolean }
+
+export interface AgentPlan {
+  goal: string
+  say: string
+  steps: AgentStep[]
+  planner: 'rules' | 'model' | 'none'
+  model: string
+  source: 'user' | 'site'
+}
+
+export type AgentContentRequest =
+  | { kind: 'file'; app: string; title: string; brief: string; goal: string }
+  | { kind: 'file'; project_id: number; brief: string; goal: string; fresh?: boolean }
+  | { kind: 'post'; brief: string; goal: string; project_name?: string }
+
 export interface BillingPlan {
   id: BillingPlanId
   name: string
@@ -613,10 +638,20 @@ export const api = {
   },
 
   helios: {
-    chat: (messages: { role: string; content: string }[], project_id?: number, context?: Record<string, unknown>) =>
-      call<{ reply: string; model: string }>('/api/helios/chat', {
+    chat: (messages: { role: string; content: string }[], project_id?: number, context?: Record<string, unknown>, provider: AiProviderChoice = 'auto') =>
+      call<{ reply: string; model: string; source: 'user' | 'site' }>('/api/helios/chat', {
         method: 'POST',
-        body: JSON.stringify({ messages, project_id, context }),
+        body: JSON.stringify({ messages, project_id, context, provider }),
+      }),
+    agent: (goal: string, context: { project_id?: number; view?: string }, provider: AiProviderChoice = 'auto') =>
+      call<AgentPlan>('/api/helios/agent', {
+        method: 'POST',
+        body: JSON.stringify({ goal, context, provider }),
+      }),
+    agentContent: (request: AgentContentRequest, provider: AiProviderChoice = 'auto') =>
+      call<{ content?: string; body?: string; generated?: boolean; model: string; source: 'user' | 'site' }>('/api/helios/agent/content', {
+        method: 'POST',
+        body: JSON.stringify({ ...request, provider }),
       }),
   },
 
