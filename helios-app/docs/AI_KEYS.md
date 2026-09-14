@@ -76,6 +76,21 @@ Every user can override the site default from **Me → Settings → AI provider*
 
 API: `GET / PUT / DELETE /api/me/ai`, `POST /api/me/ai/test`.
 
+## Site default on Ollama Cloud (current production setup)
+
+Production's **Free · Helios** tab runs `gemma4:31b` on [Ollama Cloud](https://ollama.com)
+(OpenAI-compatible at `https://ollama.com/v1`). To change the key or model without touching
+the repo:
+
+```bash
+SSHPASS='<vps root password>' HELIOS_SITE_AI_KEY='<ollama.com api key>' \
+HELIOS_SITE_AI_MODEL='gemma4:31b' ./scripts/set-site-ai.sh
+```
+
+The script checks the model with one tiny completion, backs up the SQLite DB, writes
+`site_settings` and restarts `helios-space`. The reverse tunnel from the Cursor machine is
+no longer needed for production; it remains an option for a fully self-hosted model.
+
 ## Helios panel: model tabs and Agent mode
 
 The Helios side panel has two model tabs, like VS Code model pickers:
@@ -96,6 +111,10 @@ replies show `source` and the model that answered.
 | `open_file` | opens a file the prompt names |
 | `post` | shares a post in the Space feed, linked to the file just created |
 | `set_theme` | light / dark / system |
+
+The Home page also carries a **Helios Agent** card (input + example chips) so the agent is
+usable straight from the main page: it switches the panel to Agent mode, opens it if needed,
+and runs the goal.
 
 Flow: `POST /api/helios/agent` returns the plan instantly (rule planner for clear intents in
 English or Chinese, model planner otherwise). The browser executes the steps and calls

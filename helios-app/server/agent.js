@@ -64,11 +64,16 @@ export function aiMode(ai) {
 
 // ── Model calls ─────────────────────────────────────────────────────────
 
-/** Small local models (Ollama on CPU) get shorter briefs and tighter token caps so steps finish in seconds, not minutes. */
+/**
+ * Small models served from a local machine (Ollama on CPU) get shorter briefs
+ * and tighter token caps so steps finish in seconds, not minutes. Hosted
+ * endpoints such as ollama.com run large models and get the full prompts.
+ */
 export function isCompactModel(ai) {
-  const where = `${ai?.baseUrl || ''} ${ai?.apiKey || ''}`
-  if (/11434|ollama|localhost|127\.0\.0\.1/i.test(where)) return true
-  return /\b(0\.5b|1b|1\.5b|2b|3b|4b|7b|8b|mini|tiny|small|phi|gemma|instant)\b/i.test(ai?.model || '')
+  const baseUrl = String(ai?.baseUrl || '')
+  const localHost = /^(https?:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+)(:\d+)?/i.test(baseUrl) || /:11434(\/|$)/.test(baseUrl)
+  const tinyModel = /(^|[^0-9.])(0\.5|1|1\.5|2|3|4)b\b/i.test(ai?.model || '')
+  return localHost || tinyModel
 }
 
 export async function completeText(ai, messages, { temperature = 0.3, json = false, timeoutMs = 120_000, maxTokens = 0 } = {}) {
