@@ -582,7 +582,9 @@ export async function generateWorkspace({ app, title, brief, goal, ai, existing 
     const { text, model: used, skipped } = await completeText(ai, [
       { role: 'system', content: contentPrompt(app, kind, brief, goal, existing, zh, compact) },
       { role: 'user', content: `Title: ${title}\nProduce the ${AGENT_APPS[app].label} now.` },
-    ], { temperature: 0.5, json: true, timeoutMs: compact ? 110_000 : 150_000, maxTokens: compact ? 900 : 4000 })
+    // CPU-bound local models slow down sharply under load; the file is already
+    // open with starter content, so waiting longer beats giving up.
+    ], { temperature: 0.5, json: true, timeoutMs: compact ? 240_000 : 150_000, maxTokens: compact ? 800 : 4000 })
     if (!skipped) {
       model = used || model
       generated = extractJson(text)

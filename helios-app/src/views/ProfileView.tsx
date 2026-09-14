@@ -257,6 +257,7 @@ function AiProviderCard() {
     try {
       const data = await api.ai.save({ provider, api_key: apiKey || undefined, base_url: baseUrl, model })
       setSettings(data); setApiKey(''); setEditing(false)
+      window.dispatchEvent(new CustomEvent('helios-ai-settings-changed'))
       setNotice({ tone: 'ok', text: `Saved. Helios now uses your ${data.presets[data.provider]?.label ?? 'custom'} key.` })
     } catch (error) { setNotice({ tone: 'error', text: describeError(error) }) }
     finally { setBusy(null) }
@@ -276,6 +277,7 @@ function AiProviderCard() {
     try {
       const data = await api.ai.remove()
       setSettings(data); setApiKey(''); setEditing(false)
+      window.dispatchEvent(new CustomEvent('helios-ai-settings-changed'))
       const preset = data.presets.groq
       setProvider('groq'); setBaseUrl(preset.base_url); setModel(preset.model)
       setNotice({ tone: 'ok', text: 'Back on the Helios default provider.' })

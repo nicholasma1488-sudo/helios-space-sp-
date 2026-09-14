@@ -234,11 +234,15 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const stateRef = useRef(state)
   stateRef.current = state
 
+  // Load the user's provider on mount, whenever the My API tab is chosen, and
+  // when Settings saves or removes a key (the panel stays open across views).
   useEffect(() => {
     let cancelled = false
-    api.ai.get().then(result => { if (!cancelled) setUserAi(result) }).catch(() => {})
-    return () => { cancelled = true }
-  }, [])
+    const refresh = () => { api.ai.get().then(result => { if (!cancelled) setUserAi(result) }).catch(() => {}) }
+    refresh()
+    window.addEventListener('helios-ai-settings-changed', refresh)
+    return () => { cancelled = true; window.removeEventListener('helios-ai-settings-changed', refresh) }
+  }, [modelTab])
 
   useEffect(() => { try { localStorage.setItem('helios-panel-mode', mode) } catch {} }, [mode])
   useEffect(() => { try { localStorage.setItem('helios-model-tab', modelTab) } catch {} }, [modelTab])
@@ -272,7 +276,9 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     const project = activeProjectRef.current
     const chars = project?.content.length ?? 0
     const status = chars > 0 ? chars + ' chars of content' : 'empty project'
-    setMessages([{
+    // Only (re)write the welcome while no conversation exists: the agent opens
+    // files mid-run, and that must not wipe the step list the user is watching.
+    setMessages(prev => prev.some(m => m.id !== 'welcome') ? prev : [{
       id: 'welcome', role: 'assistant', ts: new Date().toISOString(),
       content: project
         ? 'I have ' + project.name + ' open (' + status + '). In Agent mode I can rewrite or extend it directly; in Chat mode I prepare a preview you approve first.'
