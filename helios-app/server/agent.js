@@ -596,6 +596,7 @@ export async function generateWorkspace({ app, title, brief, goal, ai, existing 
     }
   } catch (error) {
     if (error instanceof AgentUpstreamError) throw error
+    console.warn('agent content generation fell back to starter data:', error?.message || error)
   }
   const data = shapeData(app, generated, title, brief, existing)
   return { content: JSON.stringify({ schema: 'helios-workspace-v1', appKind: app, data }), model, generated: Boolean(generated) }
@@ -611,6 +612,7 @@ export async function generatePostBody({ brief, goal, ai, project }) {
     if (!skipped && text.trim()) return text.trim().replace(/^["“]|["”]$/g, '').slice(0, 1800)
   } catch (error) {
     if (error instanceof AgentUpstreamError) throw error
+    console.warn('agent post generation fell back to a template:', error?.message || error)
   }
   return (project ? `${zh ? '刚用 Helios 完成了' : 'Just finished'} “${project.name}” ${zh ? '，欢迎来看看！' : 'with Helios — take a look!'}` : String(goal).slice(0, 280))
 }

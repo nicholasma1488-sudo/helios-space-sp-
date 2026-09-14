@@ -76,6 +76,34 @@ Every user can override the site default from **Me → Settings → AI provider*
 
 API: `GET / PUT / DELETE /api/me/ai`, `POST /api/me/ai/test`.
 
+## Helios panel: model tabs and Agent mode
+
+The Helios side panel has two model tabs, like VS Code model pickers:
+
+- **Free · Helios** — the site default (e.g. the Cursor-machine Ollama above)
+- **My API** — the key saved in Settings; clicking it before a key exists opens Settings
+
+The tab is sent as `provider: "site" | "user"` to `/api/helios/chat` and the agent endpoints;
+replies show `source` and the model that answered.
+
+**Agent** mode (toggle next to the input) turns a prompt into steps that run inside the app:
+
+| Step | What happens in the browser |
+|------|------------------------------|
+| `navigate` | switches to Home / Space feed / Mini Apps / Messages / Settings |
+| `create_file` | creates a Quill · Lattice · Stage · Folio · Pulse · Cascade · Tally · Orbit · Dispatch · Forge file, opens it with starter content, then fills it with generated content |
+| `update_file` | rewrites an existing file (the step card offers **Undo**) |
+| `open_file` | opens a file the prompt names |
+| `post` | shares a post in the Space feed, linked to the file just created |
+| `set_theme` | light / dark / system |
+
+Flow: `POST /api/helios/agent` returns the plan instantly (rule planner for clear intents in
+English or Chinese, model planner otherwise). The browser executes the steps and calls
+`POST /api/helios/agent/content` per file, so the page opens first and the content streams in
+afterwards. Small local models (Ollama, "instant"/"mini" cloud models) get compact prompts and
+token caps; a Stage deck or Tally list takes ~25–30 s on a 4-core CPU with `llama3.2:3b`,
+a Chinese Quill document ~45–60 s. Prompts that need no action fall back to a normal chat reply.
+
 ## Best free cloud key (site default, admin)
 
 1. Open [https://console.groq.com](https://console.groq.com) → create free API key  
