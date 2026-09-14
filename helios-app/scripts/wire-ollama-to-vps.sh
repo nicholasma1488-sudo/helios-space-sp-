@@ -26,37 +26,27 @@ fi
 
 SSH=(sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes)
 
-echo "==> reverse-tunnel VPS:11434 -> Cursor Ollama"
-# Remote listen on localhost only
-pkill -f "sshpass .*${HOST}.*-R 11434:127.0.0.1:11434" 2>/dev/null || true
-nohup sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes \
-  -N -R 127.0.0.1:11434:127.0.0.1:11434 "$REMOTE" > /tmp/ollama-tunnel.log 2>&1 &
+echo "==> reverse-tunnel VPS:11434 -> Cursor Ollama (auto-reconnect)"
+pkill -f "ssh .*-R 127.0.0.1:11434:127.0.0.1:11434 ${REMOTE}" 2>/dev/null || true
+nohup bash -c "while true; do sshpass -e ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes \
+  -N -R 127.0.0.1:11434:127.0.0.1:11434 '${REMOTE}'; echo 'tunnel dropped, retrying in 5s'; sleep 5; done" > /tmp/ollama-tunnel.log 2>&1 &
 echo "tunnel_pid=$!"
-sleep 2
+sleep 4
 
 echo "==> point Helios site_settings at Ollama"
-"${SSH[@]}" "$REMOTE" "export PATH=/usr/local/bin:\$PATH
-python3 - <<'PY'
-import sqlite3
-db='/var/lib/helios-space/helios.db'
-c=sqlite3.connect(db)
-pairs=[
-  ('openai_api_key','ollama'),
-  ('openai_base_url','http://127.0.0.1:11434'),
-  ('openai_model','${MODEL}'),
-]
-for k,v in pairs:
-  c.execute('INSERT INTO site_settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (k,v))
-c.commit()
-print(c.execute(\"select key,value from site_settings where key like 'openai%'\").fetchall())
-c.close()
-PY
-# verify tunnel from VPS side
-curl -fsS http://127.0.0.1:11434/api/tags | head -c 200; echo
+# CentOS 7 ships sqlite 3.7 (no UPSERT), so use INSERT OR REPLACE.
+"${SSH[@]}" "$REMOTE" "set -e
+DB=/var/lib/helios-space/helios.db
+mkdir -p /var/lib/helios-space/backups
+cp \"\$DB\" /var/lib/helios-space/backups/helios-\$(date +%Y%m%d-%H%M).pre-ollama.db
+sqlite3 \"\$DB\" \"INSERT OR REPLACE INTO site_settings(key,value) VALUES('openai_api_key','ollama'),('openai_base_url','http://127.0.0.1:11434'),('openai_model','${MODEL}'); SELECT key,value FROM site_settings WHERE key LIKE 'openai%';\"
+chown helios-space:helios-space \"\$DB\"* 2>/dev/null || true
+echo '--- tunnel check from VPS'
+curl -fsS --max-time 10 http://127.0.0.1:11434/api/tags | head -c 160; echo
 systemctl restart helios-space
 sleep 2
 systemctl is-active helios-space
 "
 
-echo "Wired. Keep this Cursor session (and the tunnel process) alive while production uses Ollama."
+echo "Wired. Keep this machine, 'ollama serve' and the tunnel loop alive while production uses Ollama."
 echo "Tunnel log: /tmp/ollama-tunnel.log"
