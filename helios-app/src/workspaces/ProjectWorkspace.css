@@ -307,7 +307,7 @@
 .folio-empty-state button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 7px; background: var(--helios-surface2); color: var(--helios-muted); cursor: pointer; }
 .folio-page-actions button { width: 24px; height: 24px; }
 .folio-rename { display: flex; gap: 5px; }
-.folio-rename input { min-width: 0; flex: 1; min-height: 28px; padding: 0 8px; border: 1px solid var(--helios-border); border-radius: 7px; outline: 0; background: #0f1015; color: var(--helios-text); font: inherit; font-size: 11px; }
+.folio-rename input { min-width: 0; flex: 1; min-height: 28px; padding: 0 8px; border: 1px solid var(--helios-border); border-radius: 7px; outline: 0; background: var(--helios-surface2); color: var(--helios-text); font: inherit; font-size: 11px; }
 .folio-rename button { min-height: 28px; padding: 0 8px; font: inherit; font-size: 10px; color: var(--helios-text); }
 .folio-add-page { margin: 0 10px 12px; min-height: 32px; font: inherit; font-size: 10px; }
 .folio-empty { margin: 12px; color: var(--helios-muted); font-size: 11px; }
@@ -447,7 +447,7 @@
 .slide-editor-toolbar button:disabled { opacity: .4; cursor: default; }
 .slide-editor-body { display: grid; min-height: 0; flex: 1; grid-template-columns: minmax(0, 1fr) 250px; overflow: hidden; }
 .slide-stage { display: flex; min-width: 0; min-height: 0; flex-direction: column; overflow: auto; }
-.slide-canvas { position: relative; display: flex; width: min(850px, calc(100% - 50px)); aspect-ratio: 16/9; flex-direction: column; justify-content: center; gap: 14px; margin: 22px auto 14px; padding: 6%; overflow: hidden; border: 1px solid rgba(255,255,255,.45); border-radius: 4px; box-shadow: 0 18px 50px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.55); }
+.slide-canvas { position: relative; display: flex; width: min(850px, calc(100% - 50px)); aspect-ratio: 16/9; flex-direction: column; justify-content: center; gap: 14px; margin: 22px auto 14px; padding: 6%; overflow: hidden; border: 1px solid rgba(255,255,255,.45); border-radius: 4px; box-shadow: 0 18px 50px rgba(0,0,0,.32), inset 0 1px 0 var(--glass-highlight); }
 .slide-canvas.layout-title { justify-content: center; text-align: center; }
 .slide-canvas.layout-title-content { justify-content: flex-start; padding-top: 8%; }
 .slide-canvas.layout-section { justify-content: center; align-items: flex-start; text-align: left; border-left: 6px solid var(--slide-accent, #c96442); }
@@ -486,7 +486,7 @@
 .slide-designer > strong { color: #c96442; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .slide-designer label { display: flex; flex-direction: column; gap: 5px; color: var(--helios-muted); font-size: 10px; }
 .slide-designer select,
-.slide-insert-photo input { min-height: 32px; padding: 0 8px; border: 1px solid var(--glass-stroke, rgba(255,255,255,.35)); border-radius: 8px; outline: 0; background: rgba(255,255,255,.06); color: var(--helios-text); font: inherit; font-size: 11px; }
+.slide-insert-photo input { min-height: 32px; padding: 0 8px; border: 1px solid var(--glass-stroke, rgba(var(--glass-rgb), .35)); border-radius: 8px; outline: 0; background: rgba(255,255,255,.06); color: var(--helios-text); font: inherit; font-size: 11px; }
 .slide-theme-presets,
 .slide-insert-photo,
 .slide-shape-actions { display: flex; flex-direction: column; gap: 6px; }
@@ -665,7 +665,7 @@
 .calendar-event-form input,
 .calendar-event-form textarea,
 .mail-composer input,
-.mail-composer textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--helios-border); border-radius: 8px; outline: 0; background: #0f1015; color: var(--helios-text); font: inherit; font-size: 12px; }
+.mail-composer textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--helios-border); border-radius: 8px; outline: 0; background: var(--helios-surface2); color: var(--helios-text); font: inherit; font-size: 12px; }
 .calendar-event-form textarea { min-height: 72px; resize: vertical; }
 .calendar-event-form > div { display: flex; gap: 6px; }
 .calendar-event-form button,

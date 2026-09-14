@@ -331,7 +331,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: 'var(--helios-border)', flexShrink: 0 }}>
         <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold flex-shrink-0"
           style={{
-            background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.25))',
+            background: 'linear-gradient(145deg, rgba(var(--glass-rgb),0.7), rgba(120,128,140,0.25))',
             color: 'var(--codex-gray)',
             fontSize: 16,
             border: '1px solid var(--glass-stroke)',
@@ -402,7 +402,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
             {msg.role === 'assistant' && (
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                 style={{
-                  background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.28))',
+                  background: 'linear-gradient(145deg, rgba(var(--glass-rgb),0.7), rgba(120,128,140,0.28))',
                   color: 'var(--codex-gray)',
                   border: '1px solid var(--glass-stroke)',
                 }} aria-hidden="true">✦</div>
@@ -483,7 +483,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           <div className="flex items-end gap-2">
             <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
               style={{
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.28))',
+                background: 'linear-gradient(145deg, rgba(var(--glass-rgb),0.7), rgba(120,128,140,0.28))',
                 color: 'var(--codex-gray)',
                 fontSize: 12,
                 border: '1px solid var(--glass-stroke)',

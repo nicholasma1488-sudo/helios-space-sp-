@@ -137,6 +137,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   return (
     <div
       ref={rootRef}
+      data-theme="light"
       className={'landing-v2' + (transitioning ? ' is-entering-auth intent-' + transitioning : '')}
       onScroll={handleLandingScroll}
     >

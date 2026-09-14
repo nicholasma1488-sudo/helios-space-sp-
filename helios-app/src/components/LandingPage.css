@@ -1,5 +1,5 @@
 .landing-v2 {
-  --landing-bg: #eceff3;
+  --landing-bg: #f8f7f4;
   --landing-panel: rgba(255, 255, 255, .72);
   --landing-line: rgba(90, 98, 112, .14);
   --landing-accent: #c96442;
@@ -137,7 +137,7 @@
   background:
     radial-gradient(circle at 50% 38%, rgba(201, 100, 66, .1), transparent 34%),
     radial-gradient(circle at 70% 28%, rgba(91, 141, 239, .1), transparent 28%),
-    #eceff3;
+    var(--landing-bg);
 }
 
 .hero-scene-wrapper {
@@ -945,7 +945,7 @@
 .hero-occlusion i,
 .hero-occlusion b {
   position: absolute;
-  background: linear-gradient(90deg, #eceff3, transparent);
+  background: linear-gradient(90deg, var(--landing-bg), transparent);
 }
 
 .hero-occlusion i:first-child {
@@ -956,13 +956,13 @@
 .hero-occlusion i:nth-child(2) {
   inset: 0 0 0 auto;
   width: 14%;
-  background: linear-gradient(-90deg, #eceff3, transparent);
+  background: linear-gradient(-90deg, var(--landing-bg), transparent);
 }
 
 .hero-occlusion b {
   inset: auto 0 0;
   height: 18%;
-  background: linear-gradient(0deg, #eceff3, transparent);
+  background: linear-gradient(0deg, var(--landing-bg), transparent);
 }
 
 .hero-lens {
@@ -1625,7 +1625,7 @@
   height: 20px;
   margin-right: -4px;
   place-items: center;
-  border: 2px solid #eceff3;
+  border: 2px solid var(--landing-bg);
   border-radius: 50%;
   background: #21242d;
   font-size: 9px;
@@ -2055,7 +2055,7 @@
   background:
     radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--mode-color) 15%, transparent), transparent 45%),
     linear-gradient(145deg, rgba(90, 98, 112, .06), transparent),
-    #eceff3;
+    var(--landing-bg);
   box-shadow: 0 36px 90px rgba(90, 98, 112, .12);
 }
 
@@ -2312,7 +2312,7 @@
   background:
     radial-gradient(circle at 10% 50%, rgba(91, 141, 239, .16), transparent 30%),
     radial-gradient(circle at 90% 30%, rgba(91, 141, 239, .08), transparent 35%),
-    #eceff3;
+    var(--landing-bg);
 }
 
 .mini-band-orbit {
@@ -3082,7 +3082,7 @@
   background:
     radial-gradient(circle at 50% 38%, rgba(201, 100, 66, .1), transparent 34%),
     radial-gradient(circle at 70% 28%, rgba(91, 141, 239, .1), transparent 28%),
-    #eceff3;
+    var(--landing-bg);
 }
 
 .interactive-orbit-scene {

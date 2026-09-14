@@ -1,5 +1,5 @@
 import { useReducer, useEffect, useRef, useState } from 'react'
-import { AppContext, reducer, INITIAL_STATE, useApp } from './store/appStore'
+import { AppContext, reducer, INITIAL_STATE, useApp, resolveTheme } from './store/appStore'
 import type { User } from './api'
 import { api } from './api'
 import { AuthScreen } from './components/AuthScreen'
@@ -142,9 +142,18 @@ function AppInner() {
     return () => { cancelled = true }
   }, [dispatch])
 
-  // Sync theme to document
+  // Sync theme to document; follow the OS when the user picked "system"
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', state.theme)
+    const root = document.documentElement
+    const apply = () => {
+      root.setAttribute('data-theme', resolveTheme(state.theme))
+      root.setAttribute('data-theme-mode', state.theme)
+    }
+    apply()
+    if (state.theme !== 'system' || !window.matchMedia) return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
   }, [state.theme])
 
   // Sync reduced-motion to document

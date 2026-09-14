@@ -30,7 +30,22 @@ export function savePrefs(prefs: Partial<StoredPrefs>) {
 }
 
 export type NavView = 'home' | 'explore' | 'spaces' | 'lifestyle' | 'apps' | 'live' | 'chat' | 'projects' | 'profile'
-export type ThemeMode = 'dark' | 'high-contrast'
+export type ThemeMode = 'light' | 'dark' | 'system'
+export type ResolvedTheme = 'light' | 'dark'
+
+/* Older builds stored 'dark' for what was actually the light glass look, and
+   'high-contrast' for the only dark option. Map both onto the new scale. */
+export function normalizeThemeMode(value: unknown): ThemeMode {
+  if (value === 'light' || value === 'dark' || value === 'system') return value
+  if (value === 'high-contrast') return 'dark'
+  return 'light'
+}
+
+export function resolveTheme(mode: ThemeMode): ResolvedTheme {
+  if (mode !== 'system') return mode
+  if (typeof window === 'undefined' || !window.matchMedia) return 'light'
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 export type SpaceTab = 'feed' | 'projects' | 'apps' | 'live' | 'chat' | 'members' | 'challenges' | 'resources' | 'helios'
 
 const NAV_ORDER: NavView[] = ['home', 'explore', 'spaces', 'lifestyle', 'apps', 'live', 'chat', 'projects', 'profile']
@@ -148,7 +163,7 @@ export const INITIAL_STATE: AppState = {
   codeEditorOpen: false,
   notifications: [],
   toasts: [],
-  theme: _prefs.theme ?? 'dark',
+  theme: normalizeThemeMode(_prefs.theme),
   reducedMotion: _prefs.reducedMotion ?? false,
   chatUnreadCount: 0,
 }

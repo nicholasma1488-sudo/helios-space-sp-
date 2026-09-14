@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Award, BookOpen, ChevronRight, Download, FolderGit2, LogOut, MessageCircle,
-  Moon, Plus, Settings, Sparkles, Star, Sun, Trash2, Users,
+  Monitor, Moon, Palette, Plus, Settings, Sparkles, Star, Sun, Trash2, Users,
 } from 'lucide-react'
 import { api, type Post, type Project, type SolarSummary, type SpaceSummary } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
+import type { ThemeMode } from '../store/appStore'
 import './ProfileView.css'
 
 type ProfileTab = 'Journey' | 'Projects' | 'Posts' | 'Spaces' | 'Settings'
@@ -146,15 +147,40 @@ function JourneyTab({ solar, projects, posts, joinedSpaces, contributions, onOpe
 function ProjectsTab({ projects, deleting, onOpen, onDelete, onNew }: { projects: Project[]; deleting: number | null; onOpen: (project: Project) => void; onDelete: (project: Project) => void; onNew: () => void }) { return <section className="profile-tab-section"><header><div><span>FILES</span><h2>Projects & collaboration</h2><p>Your work shows up across Space, Messages, and Home.</p></div><button type="button" className="liquid-glass-btn is-primary" onClick={onNew}><Plus size={14} /> New</button></header><div className="profile-project-grid">{projects.map(project => <article key={project.id} className="glass-lift"><div><i><FolderGit2 size={18} /></i><span>{project.can_manage ? 'Owned' : project.collaborator_role ? `Collaborator · ${project.collaborator_role}` : 'Shared'}</span></div><small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small><h3>{project.name}</h3><p>{project.visibility} · Updated {new Date(project.updated_at).toLocaleDateString()}</p><footer><button type="button" onClick={() => onOpen(project)}>Open</button>{project.can_manage && <button type="button" onClick={() => onDelete(project)} disabled={deleting === project.id} aria-label={`Delete ${project.name}`}><Trash2 size={13} /></button>}</footer></article>)}{projects.length === 0 && <JourneyEmpty text="No projects yet. Pick a tool in Create to start." />}</div></section> }
 function PostsTab({ posts, onOpenProject }: { posts: Post[]; onOpenProject: (id: number) => void }) { return <section className="profile-tab-section"><header><div><span>SPACE</span><h2>Your posts</h2><p>Progress and moments you have shared.</p></div></header><div className="profile-post-list">{posts.map(post => <article key={post.id} className="glass-lift"><header><span>{getSpaceDefinition(post.space_id).name}</span><time>{new Date(post.created_at).toLocaleDateString()}</time></header><p>{post.body}</p>{post.media_url && <img src={post.media_url} alt="Progress" />}{post.project_id && <button type="button" onClick={() => onOpenProject(post.project_id!)}><FolderGit2 size={14} /> {post.project_name}<ChevronRight size={13} /></button>}<footer><span><Sparkles size={12} /> {Object.values(post.reactions || {}).reduce((sum, value) => sum + value, 0)}</span><span><MessageCircle size={12} /> {post.comment_count || 0}</span></footer></article>)}{posts.length === 0 && <JourneyEmpty text="Head to Space and share your first post." />}</div></section> }
 function SpacesTab({ spaces, onOpen }: { spaces: SpaceSummary[]; onOpen: (id: string) => void }) { return <section className="profile-tab-section"><header><div><span>SPACES</span><h2>Spaces you have joined</h2><p>Traces of real collaboration.</p></div></header><div className="profile-space-grid">{spaces.map(space => { const definition = getSpaceDefinition(space.id); return <button type="button" key={space.id} className="glass-lift" onClick={() => onOpen(space.id)} style={{ '--profile-accent': definition.accent } as React.CSSProperties}><i>{space.name.slice(0, 1)}</i><span>{space.kind}</span><h3>{space.name}</h3><p>{definition.description}</p><footer>{space.project_count} Projects · {space.live_count} Live <ChevronRight size={12} /></footer></button> })}{spaces.length === 0 && <JourneyEmpty text="After you create or post, your spaces will show up here." />}</div></section> }
-function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExport, onLogout }: { theme: string; reducedMotion: boolean; exporting: boolean; onTheme: (theme: 'dark' | 'high-contrast') => void; onMotion: () => void; onExport: () => void; onLogout: () => void }) {
+const THEME_OPTIONS: { id: ThemeMode; label: string; hint: string; icon: typeof Sun }[] = [
+  { id: 'light', label: 'Light', hint: 'Bright porcelain glass with warm terracotta.', icon: Sun },
+  { id: 'dark', label: 'Dark', hint: 'Deep graphite glass, softened for long sessions.', icon: Moon },
+  { id: 'system', label: 'System', hint: 'Follows your device appearance automatically.', icon: Monitor },
+]
+
+function ThemeSwatch({ scheme }: { scheme: 'light' | 'dark' | 'system' }) {
+  return (
+    <span className={'theme-swatch is-' + scheme} aria-hidden="true">
+      <i className="theme-swatch-bar" />
+      <i className="theme-swatch-card" />
+      <i className="theme-swatch-card is-second" />
+      <i className="theme-swatch-accent" />
+    </span>
+  )
+}
+
+function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExport, onLogout }: { theme: ThemeMode; reducedMotion: boolean; exporting: boolean; onTheme: (theme: ThemeMode) => void; onMotion: () => void; onExport: () => void; onLogout: () => void }) {
   return (
     <section className="profile-settings">
       <header><span>ACCOUNT & ACCESSIBILITY</span><h2>Settings</h2></header>
       <article>
-        <h3><Moon size={15} /> Appearance</h3>
-        <div className="profile-theme-buttons">
-          <button type="button" className={theme === 'dark' ? 'is-active' : ''} onClick={() => onTheme('dark')}>Dark</button>
-          <button type="button" className={theme === 'high-contrast' ? 'is-active' : ''} onClick={() => onTheme('high-contrast')}>High contrast</button>
+        <h3><Palette size={15} /> Appearance</h3>
+        <div className="profile-theme-buttons" role="radiogroup" aria-label="Theme">
+          {THEME_OPTIONS.map(option => {
+            const Icon = option.icon
+            const active = theme === option.id
+            return (
+              <button type="button" key={option.id} role="radio" aria-checked={active} className={active ? 'is-active' : ''} onClick={() => onTheme(option.id)}>
+                <ThemeSwatch scheme={option.id} />
+                <span><strong><Icon size={12} /> {option.label}</strong><small>{option.hint}</small></span>
+              </button>
+            )
+          })}
         </div>
       </article>
       <article>

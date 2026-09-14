@@ -133,7 +133,7 @@
 }
 .home-buddy-avatar {
   display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px;
-  background: color-mix(in srgb, var(--helios-accent) 18%, white); color: var(--helios-accent); font-weight: 700;
+  background: color-mix(in srgb, var(--helios-accent) 18%, var(--mix-base)); color: var(--helios-accent); font-weight: 700;
 }
 .home-buddy-list small, .home-note-list small { display: block; color: var(--helios-muted); font-size: 12px; }
 .home-note-list > button.is-unread { border-color: color-mix(in srgb, var(--helios-accent) 40%, var(--helios-border)); }
@@ -149,7 +149,7 @@
 .home-empty strong { color: var(--helios-text); }
 .home-error {
   margin-bottom: 16px; padding: 12px 14px; border-radius: 12px;
-  background: color-mix(in srgb, var(--helios-danger) 10%, white);
+  background: color-mix(in srgb, var(--helios-danger) 10%, var(--mix-base));
   color: var(--helios-danger);
 }
 .home-skeleton {
