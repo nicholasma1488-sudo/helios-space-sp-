@@ -340,10 +340,12 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         try {
           const generated = await api.helios.agentContent({ kind: 'file', project_id: project.id, brief: step.brief, goal, fresh: true }, modelTab)
           if (generated.content) {
-            const updated = await api.projects.update(project.id, { content: generated.content })
-            dispatch({ type: 'UPDATE_PROJECT', project: updated.project })
-            onProjectContentChange?.(project.id, updated.project.content)
-            return { detail: generated.generated ? `“${project.name}” written by ${generated.model}` : `“${project.name}” created with a starter outline (model output was unusable)`, project: updated.project }
+            // The server already saved the result (so a reload mid-generation
+            // loses nothing); only older servers leave the write to us.
+            const written = generated.project ?? (await api.projects.update(project.id, { content: generated.content })).project
+            dispatch({ type: 'UPDATE_PROJECT', project: written })
+            onProjectContentChange?.(project.id, written.content)
+            return { detail: generated.generated ? `“${project.name}” written by ${generated.model}` : `“${project.name}” created with a starter outline (model output was unusable)`, project: written }
           }
         } catch (error) {
           return { detail: `“${project.name}” created with a starter outline — ${(error as Error).message}`, project }
@@ -362,12 +364,13 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         const before = (await api.projects.get(step.project_id)).project
         const generated = await api.helios.agentContent({ kind: 'file', project_id: step.project_id, brief: step.brief, goal }, modelTab)
         if (!generated.content) throw new Error('No content was generated')
-        const updated = await api.projects.update(step.project_id, { content: generated.content })
-        dispatch({ type: 'UPDATE_PROJECT', project: updated.project })
-        onProjectContentChange?.(step.project_id, updated.project.content)
+        if (!generated.generated) throw new Error(`${generated.model} did not return a usable new version; the file was left unchanged`)
+        const written = generated.project ?? (await api.projects.update(step.project_id, { content: generated.content })).project
+        dispatch({ type: 'UPDATE_PROJECT', project: written })
+        onProjectContentChange?.(step.project_id, written.content)
         return {
           detail: `Wrote the new version of “${step.project_name}” with ${generated.model}`,
-          project: updated.project,
+          project: written,
           undo: async () => {
             const restored = await api.projects.update(step.project_id, { content: before.content })
             dispatch({ type: 'UPDATE_PROJECT', project: restored.project })

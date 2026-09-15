@@ -45,6 +45,12 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+function sameFiles(a: Record<string, string>, b: Record<string, string>) {
+  const keys = Object.keys(a)
+  if (keys.length !== Object.keys(b).length) return false
+  return keys.every(key => a[key] === b[key])
+}
+
 export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = true }: Props) {
   const value = data as unknown as CodeData
   const monacoTheme = monacoThemeFor(useResolvedTheme())
@@ -56,14 +62,17 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   const [running, setRunning] = useState(false)
   const [heliosPrompt, setHeliosPrompt] = useState('')
   const syncedRef = useRef(false)
+  const seenFilesRef = useRef<Record<string, string> | null>(null)
 
   useEffect(() => {
     syncedRef.current = false
+    seenFilesRef.current = null
   }, [project?.id])
 
   useEffect(() => {
     if (!repo.ready || syncedRef.current) return
     syncedRef.current = true
+    seenFilesRef.current = workspaceFiles
     if (Object.keys(repo.workingFiles).length > 0) {
       const active = repo.workingFiles[value.activeFile] !== undefined ? value.activeFile : Object.keys(repo.workingFiles)[0] || ''
       onChange({
@@ -79,6 +88,19 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
       repo.persist(workspaceFiles)
     }
   }, [repo.ready, project?.id])
+
+  // After the initial sync the editor shows the repo's working files, so a
+  // change that arrives through project content from outside this workspace
+  // (Helios agent writing the generated code, Undo, a collaborator) has to be
+  // pushed into the repo or the editor would keep showing the old files.
+  // Edits made here already update both sides, so equal files are a no-op.
+  useEffect(() => {
+    if (!repo.ready || !syncedRef.current || seenFilesRef.current === workspaceFiles) return
+    seenFilesRef.current = workspaceFiles
+    if (!Object.keys(workspaceFiles).length || sameFiles(workspaceFiles, repo.workingFiles)) return
+    repo.setWorkingFiles(workspaceFiles)
+    repo.persist(workspaceFiles)
+  }, [workspaceFiles, repo.ready])
 
   const files = repo.viewingCommit ? repo.files : (Object.keys(repo.workingFiles).length ? repo.workingFiles : workspaceFiles)
   const activeFile = files[value.activeFile] !== undefined ? value.activeFile : Object.keys(files)[0] || ''

@@ -3627,7 +3627,17 @@ app.post('/api/helios/agent/content', requireUser, aiRateLimit, async (req, res)
       // A freshly created agent file still holds the starter placeholder; treat it as empty.
       if (body.fresh === true) existing = null
       const result = await generateWorkspace({ app, title: project.name, brief, goal, ai: aiConfig, existing })
-      return res.json({ content: result.content, generated: result.generated, model: result.model || aiConfig.model, source: aiConfig.source })
+      // Write the result here rather than trusting the browser to do it: the
+      // model can take half a minute and the user may reload or navigate away
+      // in the meantime. A fallback never overwrites an existing file's content.
+      let persisted = null
+      if (result.generated || body.fresh === true) {
+        db.prepare('UPDATE projects SET content = ?, updated_at = ? WHERE id = ?')
+          .run(result.content, new Date().toISOString(), projectId)
+        syncWorkspaceContentFiles(projectId, result.content)
+        persisted = serializeProject(getProjectForUser(projectId, req.user.id), req.user.id)
+      }
+      return res.json({ content: result.content, generated: result.generated, model: result.model || aiConfig.model, source: aiConfig.source, project: persisted || undefined })
     }
 
     const app = String(body.app || '')

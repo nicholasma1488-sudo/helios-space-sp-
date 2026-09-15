@@ -214,7 +214,7 @@ const APP_HINTS = [
   ['spreadsheet', /\b(spreadsheet|sheet|table|budget|excel|csv|tracker|gradebook|ledger)\b|表格|电子表|预算|报表|数据表|统计表|账本|excel/i],
   ['mail-draft', /\b(e-?mail|letter to|cover letter)\b|邮件|一封信|信件|求职信/i],
   ['calendar-plan', /\b(calendar|schedule|timetable|agenda|itinerary|study plan|weekly plan)\b|日程|日历|时间表|排期|行程|周计划|课程表/i],
-  ['code', /\b(code|app|website|web ?page|landing page|html|css|javascript|typescript|python|c\+\+|java|script|program|game|function|api|component|algorithm)\b|代码|网页|程序|脚本|小游戏|网站|函数|算法|页面/i],
+  ['code', /\b(code|app|website|web ?page|landing page|html|css|javascript|typescript|python|c\+\+|java|script|program|game|function|api|component|algorithm)\b|代码|网页|程序|脚本|游戏|网站|函数|算法|页面/i],
   ['homework-board', /\bhomework\b|作业/i],
   ['planner-board', /\b(kanban|project board|roadmap|sprint|project plan|planner|milestones?)\b|看板|路线图|项目计划|里程碑/i],
   ['lists', /\b(to-?do|todo|tasks?|checklist|shopping list|packing list|list)\b|待办|清单|任务|列表|购物/i],
@@ -443,7 +443,7 @@ function ensureHtml(text, title) {
   return /<h1/i.test(clean) ? clean : `<h1>${escapeHtml(title)}</h1>${clean}`
 }
 
-function contentPrompt(app, kind, brief, goal, existing, zh, compact) {
+export function contentPrompt(app, kind, brief, goal, existing, zh, compact) {
   const language = zh ? 'Write everything in Simplified Chinese.' : 'Write in the same language as the request.'
   const base = `You are Helios, producing the actual content of a ${AGENT_APPS[app].name} ${AGENT_APPS[app].label} inside Helios Space. ${language} Be concrete and complete; never leave placeholders like "..." or "TBD". Respond with ONLY JSON.`
   const spec = compact ? {
@@ -470,17 +470,23 @@ function contentPrompt(app, kind, brief, goal, existing, zh, compact) {
 }
 
 /** Instant placeholder so the file can open before the model finishes writing. */
+/**
+ * Content a freshly created agent file opens with while the model is still
+ * writing. It must not look like a finished result (users read an echoed brief
+ * as "it just copied my words"), so code projects show a clear placeholder.
+ */
 export function starterWorkspace(app, title, brief) {
-  return JSON.stringify({ schema: 'helios-workspace-v1', appKind: app, data: fallbackData(app, title, brief) })
+  return JSON.stringify({ schema: 'helios-workspace-v1', appKind: app, data: fallbackData(app, title, brief, undefined, { pending: true }) })
 }
 
 function briefSentences(brief) {
   return String(brief || '').split(/[\n.;。；!！?？]+/).map(s => s.trim()).filter(Boolean)
 }
 
-export function fallbackData(app, title, brief, existing) {
+export function fallbackData(app, title, brief, existing, { pending = false } = {}) {
   const kind = AGENT_APPS[app].kind
   const sentences = briefSentences(brief)
+  const zh = isChinese(brief || title)
   const today = new Date()
   const iso = offset => { const d = new Date(today); d.setDate(today.getDate() + offset); return d.toISOString().slice(0, 10) }
   switch (kind) {
@@ -514,9 +520,12 @@ export function fallbackData(app, title, brief, existing) {
     case 'code': {
       const files = existing?.files && typeof existing.files === 'object' ? { ...existing.files } : {}
       if (!Object.keys(files).length) {
-        files['index.html'] = `<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8" />\n  <title>${escapeHtml(title)}</title>\n  <link rel="stylesheet" href="styles.css" />\n</head>\n<body>\n  <main id="app"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(brief || '')}</p></main>\n  <script src="app.js"></script>\n</body>\n</html>\n`
-        files['styles.css'] = 'body { font-family: system-ui, sans-serif; padding: 24px; background: #f6f5f2; color: #1c1917; }\n'
-        files['app.js'] = `console.log(${JSON.stringify(title)})\n`
+        const note = pending
+          ? (zh ? 'Helios 正在编写这个项目，代码马上就会出现在这里…' : 'Helios is writing this project — the code will appear here in a moment…')
+          : (zh ? 'Helios 没能生成这个项目，请再试一次。' : 'Helios could not generate this project. Please try again.')
+        files['index.html'] = `<!doctype html>\n<html lang="${zh ? 'zh-CN' : 'en'}">\n<head>\n  <meta charset="utf-8" />\n  <title>${escapeHtml(title)}</title>\n  <link rel="stylesheet" href="styles.css" />\n</head>\n<body>\n  <main id="app">\n    <h1>${escapeHtml(title)}</h1>\n    <p class="note">${escapeHtml(note)}</p>\n    <!-- ${zh ? '需求' : 'Brief'}: ${escapeHtml(brief || '').replace(/--/g, '—')} -->\n  </main>\n  <script src="app.js"></script>\n</body>\n</html>\n`
+        files['styles.css'] = 'body { font-family: system-ui, sans-serif; padding: 24px; background: #f6f5f2; color: #1c1917; }\n.note { color: #6b6560; }\n'
+        files['app.js'] = `// ${pending ? (zh ? 'Helios 正在编写…' : 'Helios is writing…') : (zh ? '生成失败' : 'generation failed')}\nconsole.log(${JSON.stringify(title)})\n`
       }
       return { files, activeFile: 'index.html', openFiles: Object.keys(files).slice(0, 3), terminal: [], language: 'html' }
     }
@@ -656,7 +665,8 @@ export async function generateWorkspace({ app, title, brief, goal, ai, existing 
       { role: 'user', content: `Title: ${title}\nProduce the ${AGENT_APPS[app].label} now.` },
     // CPU-bound local models slow down sharply under load; the file is already
     // open with starter content, so waiting longer beats giving up.
-    ], { temperature: 0.5, json: true, timeoutMs: compact ? 240_000 : 150_000, maxTokens: compact ? 800 : 4000 })
+    // Games and small apps easily run past 4k tokens; a truncated app.js is a broken project.
+    ], { temperature: 0.5, json: true, timeoutMs: compact ? 240_000 : 150_000, maxTokens: compact ? 800 : (kind === 'code' ? 7000 : 4000) })
     if (!skipped) {
       model = used || model
       generated = extractJson(text)
@@ -665,6 +675,7 @@ export async function generateWorkspace({ app, title, brief, goal, ai, existing 
         if (Object.keys(files).length) generated = { files }
       }
       if (!generated && kind === 'writing' && text.trim()) generated = { html: ensureHtml(text, title) }
+      if (!generated) console.warn(`agent content: unusable ${kind} output from ${model} (${text.length} chars), tail: ${JSON.stringify(text.slice(-160))}`)
     }
   } catch (error) {
     if (error instanceof AgentUpstreamError) throw error

@@ -649,7 +649,7 @@ export const api = {
         body: JSON.stringify({ goal, context, provider }),
       }),
     agentContent: (request: AgentContentRequest, provider: AiProviderChoice = 'auto') =>
-      call<{ content?: string; body?: string; generated?: boolean; model: string; source: 'user' | 'site' }>('/api/helios/agent/content', {
+      call<{ content?: string; body?: string; generated?: boolean; model: string; source: 'user' | 'site'; project?: Project }>('/api/helios/agent/content', {
         method: 'POST',
         body: JSON.stringify({ ...request, provider }),
       }),
