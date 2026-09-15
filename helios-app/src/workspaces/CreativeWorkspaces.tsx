@@ -4,6 +4,7 @@ import {
   Layers3, LineChart, MessageSquareText, Palette, PanelTop, Plus,
   Search, Sparkles, Square, Trash2,
 } from 'lucide-react'
+import { useLocale, useT } from '../i18n'
 
 interface EditorProps {
   data: Record<string, unknown>
@@ -27,6 +28,7 @@ interface CanvasData {
 }
 
 export function DrawingWorkspace({ data, onChange, onAskHelios, appKind = 'drawing' }: EditorProps) {
+  const t = useT()
   const value = data as unknown as CanvasData
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const drawingRef = useRef<Stroke | null>(null)
@@ -94,26 +96,26 @@ export function DrawingWorkspace({ data, onChange, onAskHelios, appKind = 'drawi
   }
 
   function addComicElement(kind: 'panel' | 'bubble' | 'note') {
-    const text = kind === 'bubble' || kind === 'note' ? window.prompt(kind === 'bubble' ? 'Speech bubble text' : 'Note text')?.trim() || '' : ''
+    const text = kind === 'bubble' || kind === 'note' ? window.prompt(kind === 'bubble' ? t('Speech bubble text') : t('Note text'))?.trim() || '' : ''
     onChange({ ...value, comicElements: [...comicElements, { id: crypto.randomUUID(), kind, text, x: 18 + comicElements.length * 3, y: 16 + comicElements.length * 4 }] })
   }
 
   return (
     <div className="drawing-workspace">
       <header className="drawing-toolbar">
-        <button type="button" className={tool === 'pen' ? 'is-active' : ''} onClick={() => setTool('pen')}><Palette size={14} /> Brush</button>
-        <button type="button" className={tool === 'eraser' ? 'is-active' : ''} onClick={() => setTool('eraser')}><Eraser size={14} /> Eraser</button>
-        <label>Colour<input type="color" value={value.color || '#171819'} onChange={event => onChange({ ...value, color: event.target.value })} /></label>
-        <label>Size<input type="range" min="1" max="28" value={value.size || 4} onChange={event => onChange({ ...value, size: Number(event.target.value) })} /></label>
-        {['comic-studio','comic-maker','manga-studio','graphic-novel','zine-maker','storyboard'].includes(appKind) && <><span /><button type="button" onClick={() => addComicElement('panel')}><PanelTop size={14} /> Panel</button><button type="button" onClick={() => addComicElement('bubble')}><MessageSquareText size={14} /> Speech</button></>}
-        {(['whiteboard','moodboard','ui-wireframe','ux-map','typography-lab'].includes(appKind)) && <button type="button" onClick={() => addComicElement('note')}><Square size={14} /> Note</button>}
+        <button type="button" className={tool === 'pen' ? 'is-active' : ''} onClick={() => setTool('pen')}><Palette size={14} /> {t('Brush')}</button>
+        <button type="button" className={tool === 'eraser' ? 'is-active' : ''} onClick={() => setTool('eraser')}><Eraser size={14} /> {t('Eraser')}</button>
+        <label>{t('Colour')}<input type="color" value={value.color || '#171819'} onChange={event => onChange({ ...value, color: event.target.value })} /></label>
+        <label>{t('Size')}<input type="range" min="1" max="28" value={value.size || 4} onChange={event => onChange({ ...value, size: Number(event.target.value) })} /></label>
+        {['comic-studio','comic-maker','manga-studio','graphic-novel','zine-maker','storyboard'].includes(appKind) && <><span /><button type="button" onClick={() => addComicElement('panel')}><PanelTop size={14} /> {t('Panel')}</button><button type="button" onClick={() => addComicElement('bubble')}><MessageSquareText size={14} /> {t('Speech')}</button></>}
+        {(['whiteboard','moodboard','ui-wireframe','ux-map','typography-lab'].includes(appKind)) && <button type="button" onClick={() => addComicElement('note')}><Square size={14} /> {t('Note')}</button>}
         <span />
-        <button type="button" onClick={() => onAskHelios(['comic-studio','comic-maker','manga-studio','graphic-novel','zine-maker','storyboard'].includes(appKind) ? 'Review this comic page and suggest the next panel' : 'Critique this visual work and suggest one useful next step')}><Sparkles size={14} /> Ask Helios</button>
-        <button type="button" onClick={() => onChange({ ...value, strokes: [] })}><Trash2 size={14} /> Clear</button>
+        <button type="button" onClick={() => onAskHelios(['comic-studio','comic-maker','manga-studio','graphic-novel','zine-maker','storyboard'].includes(appKind) ? t('Review this comic page and suggest the next panel') : t('Critique this visual work and suggest one useful next step'))}><Sparkles size={14} /> {t('Ask Helios')}</button>
+        <button type="button" onClick={() => onChange({ ...value, strokes: [] })}><Trash2 size={14} /> {t('Clear')}</button>
       </header>
       <div className="drawing-layout">
-        <aside className="layers-panel"><header><Layers3 size={14} /><strong>LAYERS</strong></header>{layers.map(layer => <article key={layer.id} className={value.activeLayer === layer.id ? 'is-active' : ''}><button type="button" onClick={() => onChange({ ...value, activeLayer: layer.id })}><GripVertical size={12} /><span>{layer.name}</span></button><input type="checkbox" checked={layer.visible} onChange={() => onChange({ ...value, layers: layers.map(item => item.id === layer.id ? { ...item, visible: !item.visible } : item) })} aria-label={`Show ${layer.name}`} /></article>)}<form onSubmit={addLayer}><input value={newLayer} onChange={event => setNewLayer(event.target.value)} placeholder="Layer name" /><button type="submit" disabled={!newLayer.trim()}><Plus size={13} /></button></form>{['comic-studio','comic-maker','manga-studio','graphic-novel','zine-maker','storyboard'].includes(appKind) && <section className="comic-pages"><strong>PAGES</strong>{(value.pages || []).map((page, index) => <button type="button" key={page.id} className={(value.activePage || 0) === index ? 'is-active' : ''} onClick={() => onChange({ ...value, activePage: index })}>{index + 1}. {page.name}</button>)}<button type="button" onClick={() => onChange({ ...value, pages: [...(value.pages || []), { id: crypto.randomUUID(), name: `Page ${(value.pages || []).length + 1}` }], activePage: (value.pages || []).length })}><Plus size={12} /> Add page</button></section>}</aside>
-        <main className="drawing-stage"><canvas ref={canvasRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={() => { drawingRef.current = null }} onPointerCancel={() => { drawingRef.current = null }} aria-label="Drawing canvas" />{comicElements.map(element => <div key={element.id} className={`canvas-element element-${element.kind}`} style={{ left: `${element.x}%`, top: `${element.y}%` }}>{element.kind === 'panel' ? '' : element.text}<button type="button" onClick={() => onChange({ ...value, comicElements: comicElements.filter(item => item.id !== element.id) })}>×</button></div>)}</main>
+        <aside className="layers-panel"><header><Layers3 size={14} /><strong>{t('LAYERS')}</strong></header>{layers.map(layer => <article key={layer.id} className={value.activeLayer === layer.id ? 'is-active' : ''}><button type="button" onClick={() => onChange({ ...value, activeLayer: layer.id })}><GripVertical size={12} /><span>{layer.name}</span></button><input type="checkbox" checked={layer.visible} onChange={() => onChange({ ...value, layers: layers.map(item => item.id === layer.id ? { ...item, visible: !item.visible } : item) })} aria-label={t('Show {name}', { name: layer.name })} /></article>)}<form onSubmit={addLayer}><input value={newLayer} onChange={event => setNewLayer(event.target.value)} placeholder={t('Layer name')} /><button type="submit" disabled={!newLayer.trim()}><Plus size={13} /></button></form>{['comic-studio','comic-maker','manga-studio','graphic-novel','zine-maker','storyboard'].includes(appKind) && <section className="comic-pages"><strong>{t('PAGES')}</strong>{(value.pages || []).map((page, index) => <button type="button" key={page.id} className={(value.activePage || 0) === index ? 'is-active' : ''} onClick={() => onChange({ ...value, activePage: index })}>{index + 1}. {page.name}</button>)}<button type="button" onClick={() => onChange({ ...value, pages: [...(value.pages || []), { id: crypto.randomUUID(), name: `Page ${(value.pages || []).length + 1}` }], activePage: (value.pages || []).length })}><Plus size={12} /> {t('Add page')}</button></section>}</aside>
+        <main className="drawing-stage"><canvas ref={canvasRef} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={() => { drawingRef.current = null }} onPointerCancel={() => { drawingRef.current = null }} aria-label={t('Drawing canvas')} />{comicElements.map(element => <div key={element.id} className={`canvas-element element-${element.kind}`} style={{ left: `${element.x}%`, top: `${element.y}%` }}>{element.kind === 'panel' ? '' : element.text}<button type="button" onClick={() => onChange({ ...value, comicElements: comicElements.filter(item => item.id !== element.id) })}>×</button></div>)}</main>
       </div>
     </div>
   )
@@ -130,6 +132,7 @@ function evaluateMath(expression: string, x = 0) {
 }
 
 export function MathWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const t = useT()
   const value = data as unknown as MathData
   const [result, setResult] = useState('')
   const points = useMemo(() => {
@@ -146,15 +149,15 @@ export function MathWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   function calculate(event: React.FormEvent) {
     event.preventDefault()
     const calculated = evaluateMath(value.calculator || '0')
-    const text = Number.isFinite(calculated) ? String(calculated) : 'Invalid expression'
+    const text = Number.isFinite(calculated) ? String(calculated) : t('Invalid expression')
     setResult(text)
     onChange({ ...value, history: [`${value.calculator} = ${text}`, ...(value.history || [])].slice(0, 20) })
   }
 
   return (
     <div className="math-workspace">
-      <section className="scientific-calculator"><header><Calculator size={16} /><div><strong>Scientific Calculator</strong><small>sin, cos, tan, sqrt, log, ln, π and powers</small></div></header><form onSubmit={calculate}><input value={value.calculator || ''} onChange={event => onChange({ ...value, calculator: event.target.value })} placeholder="sqrt(144) + sin(pi / 2)" aria-label="Calculation" /><button type="submit">=</button></form><output>{result || '0'}</output><div className="calculator-keys">{['sin(', 'cos(', 'tan(', 'sqrt(', 'log(', 'pi', '^', '(', ')'].map(key => <button type="button" key={key} onClick={() => onChange({ ...value, calculator: (value.calculator || '') + key })}>{key}</button>)}</div><section><strong>History</strong>{(value.history || []).slice(0, 8).map((item, index) => <button type="button" key={index} onClick={() => onChange({ ...value, calculator: item.split(' = ')[0] })}>{item}</button>)}</section></section>
-      <section className="graph-workspace"><header><LineChart size={16} /><div><strong>Graphing workspace</strong><small>Use x as the variable</small></div><button type="button" onClick={() => onAskHelios('Explain this graph, its intercepts, domain and important behaviour')}><Sparkles size={13} /> Explain</button></header><label>y = <input value={value.expression || ''} onChange={event => onChange({ ...value, expression: event.target.value })} /></label><svg viewBox="0 0 600 360" role="img" aria-label={`Graph of ${value.expression}`}><path className="graph-grid" d="M0 180H600M300 0V360" /><path className="graph-line" d={path} /></svg><textarea value={value.notes || ''} onChange={event => onChange({ ...value, notes: event.target.value })} placeholder="Formula, geometry, probability or statistics notes…" /></section>
+      <section className="scientific-calculator"><header><Calculator size={16} /><div><strong>{t('Scientific Calculator')}</strong><small>{t('sin, cos, tan, sqrt, log, ln, π and powers')}</small></div></header><form onSubmit={calculate}><input value={value.calculator || ''} onChange={event => onChange({ ...value, calculator: event.target.value })} placeholder="sqrt(144) + sin(pi / 2)" aria-label={t('Calculation')} /><button type="submit">=</button></form><output>{result || '0'}</output><div className="calculator-keys">{['sin(', 'cos(', 'tan(', 'sqrt(', 'log(', 'pi', '^', '(', ')'].map(key => <button type="button" key={key} onClick={() => onChange({ ...value, calculator: (value.calculator || '') + key })}>{key}</button>)}</div><section><strong>{t('History')}</strong>{(value.history || []).slice(0, 8).map((item, index) => <button type="button" key={index} onClick={() => onChange({ ...value, calculator: item.split(' = ')[0] })}>{item}</button>)}</section></section>
+      <section className="graph-workspace"><header><LineChart size={16} /><div><strong>{t('Graphing workspace')}</strong><small>{t('Use x as the variable')}</small></div><button type="button" onClick={() => onAskHelios(t('Explain this graph, its intercepts, domain and important behaviour'))}><Sparkles size={13} /> {t('Explain')}</button></header><label>y = <input value={value.expression || ''} onChange={event => onChange({ ...value, expression: event.target.value })} /></label><svg viewBox="0 0 600 360" role="img" aria-label={t('Graph of {expression}', { expression: value.expression })}><path className="graph-grid" d="M0 180H600M300 0V360" /><path className="graph-line" d={path} /></svg><textarea value={value.notes || ''} onChange={event => onChange({ ...value, notes: event.target.value })} placeholder={t('Formula, geometry, probability or statistics notes…')} /></section>
     </div>
   )
 }
@@ -163,13 +166,14 @@ interface SurveyQuestion { id: string; prompt: string; type: 'short' | 'long' | 
 interface SurveyData { title: string; description: string; questions: SurveyQuestion[] }
 
 export function SurveyWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const t = useT()
   const value = data as unknown as SurveyData
   const [preview, setPreview] = useState(false)
   const questions = value.questions || []
   function patchQuestion(id: string, patch: Partial<SurveyQuestion>) {
     onChange({ ...value, questions: questions.map(question => question.id === id ? { ...question, ...patch } : question) })
   }
-  return <div className="survey-workspace"><header><div><strong>Survey Builder</strong><small>Build useful questions, then share this Project.</small></div><button type="button" onClick={() => setPreview(value => !value)}>{preview ? 'Edit survey' : 'Preview survey'}</button><button type="button" onClick={() => onAskHelios('Review this survey for bias, clarity, missing options and research usefulness')}><Sparkles size={13} /> Review questions</button></header>{!preview ? <main><input className="survey-title" value={value.title || ''} onChange={event => onChange({ ...value, title: event.target.value })} aria-label="Survey title" /><textarea className="survey-description" value={value.description || ''} onChange={event => onChange({ ...value, description: event.target.value })} aria-label="Survey description" />{questions.map((question, index) => <article key={question.id}><span>{index + 1}</span><input value={question.prompt} onChange={event => patchQuestion(question.id, { prompt: event.target.value })} aria-label={`Question ${index + 1}`} /><select value={question.type} onChange={event => patchQuestion(question.id, { type: event.target.value as SurveyQuestion['type'] })}><option value="short">Short answer</option><option value="long">Long answer</option><option value="choice">Multiple choice</option></select>{question.type === 'choice' && <div>{question.options.map((option, optionIndex) => <input key={optionIndex} value={option} onChange={event => patchQuestion(question.id, { options: question.options.map((item, indexValue) => indexValue === optionIndex ? event.target.value : item) })} aria-label={`Option ${optionIndex + 1}`} />)}<button type="button" onClick={() => patchQuestion(question.id, { options: [...question.options, `Option ${question.options.length + 1}`] })}><Plus size={12} /> Option</button></div>}<button type="button" className="survey-delete" onClick={() => onChange({ ...value, questions: questions.filter(item => item.id !== question.id) })}><Trash2 size={13} /></button></article>)}<button type="button" className="survey-add" onClick={() => onChange({ ...value, questions: [...questions, { id: crypto.randomUUID(), prompt: 'New question', type: 'short', options: [] }] })}><Plus size={14} /> Add question</button></main> : <main className="survey-preview"><h1>{value.title}</h1><p>{value.description}</p>{questions.map((question, index) => <label key={question.id}><strong>{index + 1}. {question.prompt}</strong>{question.type === 'choice' ? question.options.map(option => <span key={option}><input type="radio" name={question.id} /> {option}</span>) : question.type === 'long' ? <textarea /> : <input />}</label>)}<button type="button"><Check size={14} /> Submit response</button></main>}</div>
+  return <div className="survey-workspace"><header><div><strong>{t('Survey Builder')}</strong><small>{t('Build useful questions, then share this Project.')}</small></div><button type="button" onClick={() => setPreview(value => !value)}>{preview ? t('Edit survey') : t('Preview survey')}</button><button type="button" onClick={() => onAskHelios(t('Review this survey for bias, clarity, missing options and research usefulness'))}><Sparkles size={13} /> {t('Review questions')}</button></header>{!preview ? <main><input className="survey-title" value={value.title || ''} onChange={event => onChange({ ...value, title: event.target.value })} aria-label={t('Survey title')} /><textarea className="survey-description" value={value.description || ''} onChange={event => onChange({ ...value, description: event.target.value })} aria-label={t('Survey description')} />{questions.map((question, index) => <article key={question.id}><span>{index + 1}</span><input value={question.prompt} onChange={event => patchQuestion(question.id, { prompt: event.target.value })} aria-label={t('Question {n}', { n: index + 1 })} /><select value={question.type} onChange={event => patchQuestion(question.id, { type: event.target.value as SurveyQuestion['type'] })}><option value="short">{t('Short answer')}</option><option value="long">{t('Long answer')}</option><option value="choice">{t('Multiple choice')}</option></select>{question.type === 'choice' && <div>{question.options.map((option, optionIndex) => <input key={optionIndex} value={option} onChange={event => patchQuestion(question.id, { options: question.options.map((item, indexValue) => indexValue === optionIndex ? event.target.value : item) })} aria-label={t('Option {n}', { n: optionIndex + 1 })} />)}<button type="button" onClick={() => patchQuestion(question.id, { options: [...question.options, `Option ${question.options.length + 1}`] })}><Plus size={12} /> {t('Option')}</button></div>}<button type="button" className="survey-delete" onClick={() => onChange({ ...value, questions: questions.filter(item => item.id !== question.id) })}><Trash2 size={13} /></button></article>)}<button type="button" className="survey-add" onClick={() => onChange({ ...value, questions: [...questions, { id: crypto.randomUUID(), prompt: 'New question', type: 'short', options: [] }] })}><Plus size={14} /> {t('Add question')}</button></main> : <main className="survey-preview"><h1>{value.title}</h1><p>{value.description}</p>{questions.map((question, index) => <label key={question.id}><strong>{index + 1}. {question.prompt}</strong>{question.type === 'choice' ? question.options.map(option => <span key={option}><input type="radio" name={question.id} /> {option}</span>) : question.type === 'long' ? <textarea /> : <input />}</label>)}<button type="button"><Check size={14} /> {t('Submit response')}</button></main>}</div>
 }
 
 interface BoardCard {
@@ -230,6 +234,7 @@ function normalizeBoardColumns(raw: BoardData['columns'] | undefined): BoardColu
 }
 
 export function ProjectBoardWorkspace({ data, onChange, onAskHelios, appKind = 'project-board' }: EditorProps) {
+  const t = useT()
   const value = data as unknown as BoardData
   const columns = useMemo(() => normalizeBoardColumns(value.columns), [value.columns])
   const branding = BOARD_BRANDING[appKind] || {
@@ -297,8 +302,8 @@ export function ProjectBoardWorkspace({ data, onChange, onAskHelios, appKind = '
     <div className={`board-workspace board-app-${appKind}`}>
       <header>
         <div>
-          <strong>{branding.label}</strong>
-          <small>{branding.blurb}</small>
+          <strong>{t(branding.label)}</strong>
+          <small>{t(branding.blurb)}</small>
         </div>
         <label className="board-filter">
           <Search size={13} />
@@ -308,15 +313,15 @@ export function ProjectBoardWorkspace({ data, onChange, onAskHelios, appKind = '
               setFilter(event.target.value)
               onChange({ ...value, columns, filter: event.target.value })
             }}
-            placeholder="Filter cards…"
-            aria-label="Filter cards"
+            placeholder={t('Filter cards…')}
+            aria-label={t('Filter cards')}
           />
         </label>
         <form className="board-add-column" onSubmit={addColumn}>
-          <input value={columnDraft} onChange={event => setColumnDraft(event.target.value)} placeholder="New column" aria-label="New column name" />
-          <button type="submit" disabled={!columnDraft.trim()}><Plus size={13} /> Column</button>
+          <input value={columnDraft} onChange={event => setColumnDraft(event.target.value)} placeholder={t('New column')} aria-label={t('New column name')} />
+          <button type="submit" disabled={!columnDraft.trim()}><Plus size={13} /> {t('Column')}</button>
         </form>
-        <button type="button" onClick={() => onAskHelios(branding.helios)}><Sparkles size={13} /> Plan with Helios</button>
+        <button type="button" onClick={() => onAskHelios(t(branding.helios))}><Sparkles size={13} /> {t('Plan with Helios')}</button>
       </header>
       <main>
         {columns.map((column, columnIndex) => {
@@ -333,26 +338,26 @@ export function ProjectBoardWorkspace({ data, onChange, onAskHelios, appKind = '
                     <GripVertical size={13} />
                     {editingId === card.id ? (
                       <div className="board-card-edit">
-                        <input value={card.text} onChange={event => patchCard(column.id, card.id, { text: event.target.value })} aria-label="Card text" />
-                        <input type="date" value={card.due || ''} onChange={event => patchCard(column.id, card.id, { due: event.target.value })} aria-label="Due date" />
-                        <input value={card.owner || ''} onChange={event => patchCard(column.id, card.id, { owner: event.target.value })} placeholder="Owner" aria-label="Owner" />
-                        <button type="button" onClick={() => setEditingId(null)}>Done</button>
+                        <input value={card.text} onChange={event => patchCard(column.id, card.id, { text: event.target.value })} aria-label={t('Card text')} />
+                        <input type="date" value={card.due || ''} onChange={event => patchCard(column.id, card.id, { due: event.target.value })} aria-label={t('Due date')} />
+                        <input value={card.owner || ''} onChange={event => patchCard(column.id, card.id, { owner: event.target.value })} placeholder={t('Owner')} aria-label={t('Owner')} />
+                        <button type="button" onClick={() => setEditingId(null)}>{t('Done')}</button>
                       </div>
                     ) : (
                       <button type="button" className="board-card-body" onClick={() => setEditingId(card.id)}>
                         <p>{card.text}</p>
                         <small>
-                          {card.due ? `Due ${card.due}` : 'No due date'}
+                          {card.due ? t('Due {date}', { date: card.due }) : t('No due date')}
                           {card.owner ? ` · ${card.owner}` : ''}
                         </small>
                       </button>
                     )}
-                    <button type="button" disabled={columnIndex === 0} onClick={() => moveCard(card, columnIndex, -1)} aria-label="Move left"><ChevronLeft size={13} /></button>
-                    <button type="button" disabled={columnIndex === columns.length - 1} onClick={() => moveCard(card, columnIndex, 1)} aria-label="Move right"><ChevronRight size={13} /></button>
+                    <button type="button" disabled={columnIndex === 0} onClick={() => moveCard(card, columnIndex, -1)} aria-label={t('Move left')}><ChevronLeft size={13} /></button>
+                    <button type="button" disabled={columnIndex === columns.length - 1} onClick={() => moveCard(card, columnIndex, 1)} aria-label={t('Move right')}><ChevronRight size={13} /></button>
                     <button
                       type="button"
                       onClick={() => commit(columns.map(item => item.id === column.id ? { ...item, cards: item.cards.filter(cardItem => cardItem.id !== card.id) } : item))}
-                      aria-label="Delete card"
+                      aria-label={t('Delete card')}
                     >
                       <Trash2 size={12} />
                     </button>
@@ -363,7 +368,7 @@ export function ProjectBoardWorkspace({ data, onChange, onAskHelios, appKind = '
                 <input
                   value={drafts[column.id] || ''}
                   onChange={event => setDrafts(current => ({ ...current, [column.id]: event.target.value }))}
-                  placeholder={branding.label === 'Tally' ? 'Add an item' : 'Add a card'}
+                  placeholder={branding.label === 'Tally' ? t('Add an item') : t('Add a card')}
                 />
                 <button type="submit" disabled={!drafts[column.id]?.trim()}><Plus size={13} /></button>
               </form>
@@ -414,6 +419,8 @@ function monthCells(focus: Date) {
 }
 
 export function CalendarWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const t = useT()
+  const locale = useLocale()
   const value = data as unknown as CalendarData
   const events = useMemo(() => (value.events || []).map(event => ({
     id: event.id || crypto.randomUUID(),
@@ -476,30 +483,33 @@ export function CalendarWorkspace({ data, onChange, onAskHelios }: EditorProps) 
     ? Array.from({ length: 7 }, (_, index) => addDays(startOfWeek(focus), index))
     : monthCells(focus)
   const selectedEvents = events.filter(item => item.date === selectedDate).sort((a, b) => (a.time || '').localeCompare(b.time || ''))
-  const monthLabel = focus.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+  const monthLabel = focus.toLocaleDateString(locale, { month: 'long', year: 'numeric' })
 
   return (
     <div className="calendar-workspace">
       <header>
         <div>
           <strong>Orbit</strong>
-          <small>Plan collab time and milestones on a real calendar.</small>
+          <small>{t('Plan collab time and milestones on a real calendar.')}</small>
         </div>
         <div className="calendar-view-switch">
-          <button type="button" className={view === 'month' ? 'is-active' : ''} onClick={() => commit({ view: 'month' })}>Month</button>
-          <button type="button" className={view === 'week' ? 'is-active' : ''} onClick={() => commit({ view: 'week' })}>Week</button>
+          <button type="button" className={view === 'month' ? 'is-active' : ''} onClick={() => commit({ view: 'month' })}>{t('Month')}</button>
+          <button type="button" className={view === 'week' ? 'is-active' : ''} onClick={() => commit({ view: 'week' })}>{t('Week')}</button>
         </div>
         <div className="calendar-nav">
-          <button type="button" onClick={() => shiftFocus(-1)} aria-label="Previous"><ChevronLeft size={14} /></button>
-          <strong>{view === 'week' ? `Week of ${toDateKey(startOfWeek(focus))}` : monthLabel}</strong>
-          <button type="button" onClick={() => shiftFocus(1)} aria-label="Next"><ChevronRight size={14} /></button>
-          <button type="button" onClick={() => commit({ focusDate: toDateKey(new Date()) })}>Today</button>
+          <button type="button" onClick={() => shiftFocus(-1)} aria-label={t('Previous')}><ChevronLeft size={14} /></button>
+          <strong>{view === 'week' ? t('Week of {date}', { date: toDateKey(startOfWeek(focus)) }) : monthLabel}</strong>
+          <button type="button" onClick={() => shiftFocus(1)} aria-label={t('Next')}><ChevronRight size={14} /></button>
+          <button type="button" onClick={() => commit({ focusDate: toDateKey(new Date()) })}>{t('Today')}</button>
         </div>
-        <button type="button" onClick={() => onAskHelios('Review this Orbit calendar and suggest a realistic schedule for the next milestones')}><Sparkles size={13} /> Plan week</button>
+        <button type="button" onClick={() => onAskHelios(t('Review this Orbit calendar and suggest a realistic schedule for the next milestones'))}><Sparkles size={13} /> {t('Plan week')}</button>
       </header>
       <div className="calendar-layout">
-        <div className={`calendar-grid is-${view}`} role="grid" aria-label="Orbit calendar">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(label => <span key={label} className="calendar-dow">{label}</span>)}
+        <div className={`calendar-grid is-${view}`} role="grid" aria-label={t('Orbit calendar')}>
+          {Array.from({ length: 7 }, (_, index) => {
+            const label = new Date(2024, 0, 7 + index).toLocaleDateString(locale, { weekday: 'short' })
+            return <span key={index} className="calendar-dow">{label}</span>
+          })}
           {days.map(day => {
             const key = toDateKey(day)
             const dayEvents = events.filter(item => item.date === key)
@@ -516,7 +526,7 @@ export function CalendarWorkspace({ data, onChange, onAskHelios }: EditorProps) 
                   {dayEvents.slice(0, view === 'week' ? 6 : 3).map(item => (
                     <span key={item.id}>{item.time ? `${item.time} ` : ''}{item.title}</span>
                   ))}
-                  {dayEvents.length > (view === 'week' ? 6 : 3) && <small>+{dayEvents.length - (view === 'week' ? 6 : 3)} more</small>}
+                  {dayEvents.length > (view === 'week' ? 6 : 3) && <small>{t('+{count} more', { count: dayEvents.length - (view === 'week' ? 6 : 3) })}</small>}
                 </div>
               </button>
             )
@@ -525,15 +535,15 @@ export function CalendarWorkspace({ data, onChange, onAskHelios }: EditorProps) 
         <aside className="calendar-sidebar">
           <header>
             <strong>{selectedDate}</strong>
-            <small>{selectedEvents.length} event{selectedEvents.length === 1 ? '' : 's'}</small>
+            <small>{selectedEvents.length === 1 ? t('1 event') : t('{count} events', { count: selectedEvents.length })}</small>
           </header>
           <form className="calendar-event-form" onSubmit={upsertEvent}>
-            <input value={draft.title} onChange={event => setDraft(current => ({ ...current, title: event.target.value }))} placeholder="Event title" aria-label="Event title" required />
-            <input type="time" value={draft.time} onChange={event => setDraft(current => ({ ...current, time: event.target.value }))} aria-label="Event time" />
-            <textarea value={draft.notes} onChange={event => setDraft(current => ({ ...current, notes: event.target.value }))} placeholder="Notes" aria-label="Event notes" />
+            <input value={draft.title} onChange={event => setDraft(current => ({ ...current, title: event.target.value }))} placeholder={t('Event title')} aria-label={t('Event title')} required />
+            <input type="time" value={draft.time} onChange={event => setDraft(current => ({ ...current, time: event.target.value }))} aria-label={t('Event time')} />
+            <textarea value={draft.notes} onChange={event => setDraft(current => ({ ...current, notes: event.target.value }))} placeholder={t('Notes')} aria-label={t('Event notes')} />
             <div>
-              <button type="submit"><Plus size={13} /> {editingId ? 'Update event' : 'Add event'}</button>
-              {editingId && <button type="button" onClick={() => { setEditingId(null); setDraft({ title: '', time: '', notes: '' }) }}>Cancel</button>}
+              <button type="submit"><Plus size={13} /> {editingId ? t('Update event') : t('Add event')}</button>
+              {editingId && <button type="button" onClick={() => { setEditingId(null); setDraft({ title: '', time: '', notes: '' }) }}>{t('Cancel')}</button>}
             </div>
           </form>
           <div className="calendar-event-list">
@@ -541,18 +551,18 @@ export function CalendarWorkspace({ data, onChange, onAskHelios }: EditorProps) 
               <article key={item.id}>
                 <button type="button" onClick={() => editEvent(item)}>
                   <strong>{item.title}</strong>
-                  <small>{item.time || 'All day'}{item.notes ? ` · ${item.notes}` : ''}</small>
+                  <small>{item.time || t('All day')}{item.notes ? ` · ${item.notes}` : ''}</small>
                 </button>
                 <button
                   type="button"
-                  aria-label={`Delete ${item.title}`}
+                  aria-label={t('Delete {name}', { name: item.title })}
                   onClick={() => commit({ events: events.filter(eventItem => eventItem.id !== item.id) })}
                 >
                   <Trash2 size={12} />
                 </button>
               </article>
             ))}
-            {selectedEvents.length === 0 && <p>No events on this day. Add one above.</p>}
+            {selectedEvents.length === 0 && <p>{t('No events on this day. Add one above.')}</p>}
           </div>
         </aside>
       </div>

@@ -1,0 +1,62 @@
+.agent-status {
+  position: fixed;
+  top: 66px;
+  left: 50%;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(640px, calc(100vw - 32px));
+  padding: 8px 14px 8px 9px;
+  border: 1px solid color-mix(in srgb, var(--helios-accent) 30%, var(--glass-stroke));
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  color: var(--helios-text);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: agent-status-in var(--dur-deliberate) var(--ease-enter) both;
+}
+.agent-status-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--helios-accent);
+  color: var(--helios-on-accent);
+}
+.agent-status-running .agent-status-icon,
+.agent-status-planning .agent-status-icon { animation: agent-status-pulse 1.6s ease-in-out infinite; }
+.agent-status-done { border-color: color-mix(in srgb, var(--helios-success) 40%, var(--glass-stroke)); }
+.agent-status-done .agent-status-icon { background: var(--helios-success); color: var(--helios-on-success); }
+.agent-status-failed { border-color: color-mix(in srgb, var(--helios-danger) 40%, var(--glass-stroke)); }
+.agent-status-failed .agent-status-icon { background: var(--helios-danger); color: #fff; }
+.agent-status-text { display: flex; min-width: 0; flex-direction: column; line-height: 1.3; }
+.agent-status-text strong { font-size: 11px; letter-spacing: .02em; color: var(--helios-accent); }
+.agent-status-done .agent-status-text strong { color: var(--helios-success); }
+.agent-status-failed .agent-status-text strong { color: var(--helios-danger); }
+.agent-status-text > span { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.agent-status-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
+.agent-status-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--helios-accent); animation: agent-status-dot 1.2s ease-in-out infinite; }
+.agent-status-dots i:nth-child(2) { animation-delay: .2s; }
+.agent-status-dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes agent-status-in { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes agent-status-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--helios-accent) 45%, transparent); } 50% { box-shadow: 0 0 0 7px transparent; } }
+@keyframes agent-status-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-2px); } }
+@media (max-width: 720px) { .agent-status { top: auto; bottom: 76px; } }
+@media (prefers-reduced-motion: reduce) {
+  .agent-status, .agent-status-icon, .agent-status-dots i { animation: none !important; }
+}
+
+/* Mini App tile the agent is about to open */
+.suite-tile.is-agent-target {
+  outline: 2px solid var(--helios-accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--helios-accent) 14%, transparent), var(--glass-shadow);
+  transform: translateY(-2px) scale(1.02);
+  transition: transform var(--dur-standard) var(--ease-enter), box-shadow var(--dur-standard) ease;
+}

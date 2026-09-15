@@ -6,6 +6,7 @@ import {
 import { api } from '../api'
 import { useIsMobile } from '../hooks/useMediaQuery'
 import { useApp, type NavView } from '../store/appStore'
+import { useT } from '../i18n'
 import { AuthenticatedTopBar } from './AuthenticatedTopBar'
 import { ErrorBoundary } from './ErrorBoundary'
 
@@ -38,13 +39,14 @@ function RailBtn({
   badge?: number
 }) {
   const [hover, setHover] = useState(false)
+  const t = useT()
   return (
     <div className="relative" style={{ position: 'relative' }}>
       <button
         type="button"
         onClick={onClick}
-        title={label}
-        aria-label={label}
+        title={t(label)}
+        aria-label={t(label)}
         aria-current={active ? 'page' : undefined}
         className={`helios-rail-btn liquid-glass-btn w-12 h-12 rounded-xl flex items-center justify-center cursor-pointer ${active ? 'helios-rail-btn-active' : ''}`}
         style={{
@@ -73,7 +75,7 @@ function RailBtn({
           borderRadius: 'var(--radius-sm)', background: 'var(--helios-surface3)', color: 'var(--helios-text)',
           boxShadow: '0 4px 16px rgba(0,0,0,.3)', fontSize: 12, whiteSpace: 'nowrap', pointerEvents: 'none',
           transform: 'translateY(-50%)', animation: 'helios-fade-in var(--dur-quick) var(--ease-enter)',
-        }}>{label}</div>
+        }}>{t(label)}</div>
       )}
     </div>
   )
@@ -81,14 +83,15 @@ function RailBtn({
 
 function HeliosFloatingButton() {
   const { state, dispatch } = useApp()
+  const t = useT()
   return (
     <button
       type="button"
       className={'helios-floating-agent' + (state.heliosPanelOpen ? ' is-open' : '')}
       onClick={() => dispatch({ type: 'TOGGLE_HELIOS_PANEL' })}
-      aria-label={state.heliosPanelOpen ? 'Close Helios assistant' : 'Open Helios assistant'}
+      aria-label={state.heliosPanelOpen ? t('Close Helios assistant') : t('Open Helios assistant')}
       aria-pressed={state.heliosPanelOpen}
-      title="Ask Helios (⌘J)"
+      title={t('Ask Helios (⌘J)')}
     >
       <span aria-hidden="true"><Sparkles size={18} /></span>
       <i aria-hidden="true" />
@@ -98,6 +101,7 @@ function HeliosFloatingButton() {
 
 export function GlobalShell({ children }: { children: React.ReactNode }) {
   const { state, dispatch } = useApp()
+  const t = useT()
   const isMobile = useIsMobile()
   const [railCollapsed, setRailCollapsed] = useState(() => readCollapsed(RAIL_COLLAPSED_KEY))
   const [railPeek, setRailPeek] = useState(false)
@@ -147,24 +151,24 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
     }
     return (
       <div className="helios-shell flex flex-col h-screen w-screen overflow-hidden" style={{ background: 'var(--helios-bg)', color: 'var(--helios-text)' }}>
-        <a href="#main-content" className="skip-link">Skip to main content</a>
+        <a href="#main-content" className="skip-link">{t('Skip to main content')}</a>
         <AuthenticatedTopBar compact />
         <div id="main-content" className="helios-main flex flex-1 overflow-hidden relative" role="main" tabIndex={-1}>
           {children}
           <HeliosFloatingButton />
         </div>
-        <nav className="helios-mobile-nav flex items-stretch overflow-x-auto border-t" style={{ flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)', paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label="Main navigation">
+        <nav className="helios-mobile-nav flex items-stretch overflow-x-auto border-t" style={{ flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)', paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label={t('Main navigation')}>
           {NAV.map(item => {
             const active = state.view === item.id && !state.codeEditorOpen
             return (
-              <button key={item.id} type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: item.id })} aria-label={item.id === 'chat' && state.chatUnreadCount > 0 ? `${item.label} (${state.chatUnreadCount} unread)` : item.label} aria-current={active ? 'page' : undefined} className={'helios-mobile-nav-item flex flex-col items-center justify-center gap-0.5 cursor-pointer' + (active ? ' is-active' : '')} style={{ flex: '1 0 62px', background: 'none', border: 'none', color: active ? 'var(--helios-accent)' : 'var(--helios-muted)', minHeight: 56, padding: '6px 0', position: 'relative' }}>
+              <button key={item.id} type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: item.id })} aria-label={item.id === 'chat' && state.chatUnreadCount > 0 ? t('{label} ({count} unread)', { label: t(item.label), count: state.chatUnreadCount }) : t(item.label)} aria-current={active ? 'page' : undefined} className={'helios-mobile-nav-item flex flex-col items-center justify-center gap-0.5 cursor-pointer' + (active ? ' is-active' : '')} style={{ flex: '1 0 62px', background: 'none', border: 'none', color: active ? 'var(--helios-accent)' : 'var(--helios-muted)', minHeight: 56, padding: '6px 0', position: 'relative' }}>
                 {item.icon}
                 {item.id === 'chat' && state.chatUnreadCount > 0 && (
                   <span style={{ position: 'absolute', top: 6, right: '50%', marginRight: -18, background: 'var(--helios-danger)', color: '#fff', borderRadius: 999, fontSize: 8, minWidth: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', pointerEvents: 'none' }}>
                     {state.chatUnreadCount > 9 ? '9+' : state.chatUnreadCount}
                   </span>
                 )}
-                <span style={{ fontSize: 9, fontWeight: active ? 650 : 400 }}>{item.shortLabel ?? item.label}</span>
+                <span style={{ fontSize: 9, fontWeight: active ? 650 : 400 }}>{t(item.shortLabel ?? item.label)}</span>
               </button>
             )
           })}
@@ -179,7 +183,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
       style={{ background: 'var(--helios-bg)', color: 'var(--helios-text)' }}
       data-rail-collapsed={railCollapsed ? '1' : '0'}
     >
-      <a href="#main-content" className="skip-link">Skip to main content</a>
+      <a href="#main-content" className="skip-link">{t('Skip to main content')}</a>
       <nav
         className={'helios-side-rail flex flex-col items-center gap-0.5 py-3 px-2 border-r' + (railCollapsed ? ' is-collapsed' : '')}
         style={{
@@ -192,7 +196,7 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
           borderRightWidth: railCollapsed ? 0 : undefined,
           transition: 'width 280ms var(--ease-enter, ease), padding 280ms ease',
         }}
-        aria-label="Main navigation"
+        aria-label={t('Main navigation')}
         aria-hidden={railCollapsed || undefined}
       >
         {!railCollapsed && (
@@ -207,12 +211,12 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
               type="button"
               className="helios-rail-collapse-btn"
               onClick={() => setRailCollapsedPersist(true)}
-              aria-label="Collapse sidebar"
-              title="Collapse sidebar"
+              aria-label={t('Collapse sidebar')}
+              title={t('Collapse sidebar')}
             >
               <ChevronLeft size={16} />
             </button>
-            <div className="helios-rail-space-context" title={`Current Space: ${state.activeSpaceId}`} aria-hidden="true"><span>✦</span><i /></div>
+            <div className="helios-rail-space-context" title={t('Current Space: {space}', { space: state.activeSpaceId })} aria-hidden="true"><span>✦</span><i /></div>
           </>
         )}
       </nav>
@@ -226,8 +230,8 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
             type="button"
             className="helios-chrome-peek-arrow helios-rail-peek-arrow"
             onClick={() => setRailCollapsedPersist(false)}
-            aria-label="Expand sidebar"
-            title="Expand sidebar"
+            aria-label={t('Expand sidebar')}
+            title={t('Expand sidebar')}
           >
             <ChevronRight size={16} />
           </button>

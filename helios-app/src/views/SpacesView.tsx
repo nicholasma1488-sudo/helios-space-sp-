@@ -4,6 +4,7 @@ import type { Project } from '../api'
 import { useApp } from '../store/appStore'
 import { NewProjectModal } from '../components/NewProjectModal'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
+import { useLocale, useT } from '../i18n'
 
 const TYPE_ICON: Partial<Record<Project['type'], React.ReactNode>> = {
   code: <Code size={15} />,
@@ -16,6 +17,8 @@ const ALL = '__all__'
 
 export function SpacesView() {
   const { state, dispatch } = useApp()
+  const t = useT()
+  const locale = useLocale()
   const [activeSpace, setActiveSpace] = useState(() => {
     // Pre-select the active space if the user has projects in it
     return ALL
@@ -48,8 +51,8 @@ export function SpacesView() {
   })
 
   const selectedLabel = activeSpace === ALL
-    ? 'All projects'
-    : getSpaceDefinition(activeSpace).name
+    ? t('All projects')
+    : t(getSpaceDefinition(activeSpace).name)
 
   const initialSpaceId = activeSpace !== ALL ? activeSpace : state.activeSpaceId
   const initialSpace = getSpaceDefinition(initialSpaceId).name
@@ -58,9 +61,9 @@ export function SpacesView() {
     <div className="flex flex-col flex-1 overflow-hidden">
       <header className="helios-pg-header px-8 pt-7 pb-4 flex items-start justify-between gap-4" style={{ flexShrink: 0 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>Projects</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>{t('Projects')}</h1>
           <p style={{ fontSize: 13, color: 'var(--helios-muted)', margin: 0 }}>
-            Durable work shared by your Mini Apps, Spaces, Feed, Chat, Live and Helios.
+            {t('Durable work shared by your Mini Apps, Spaces, Feed, Chat, Live and Helios.')}
           </p>
         </div>
         <button
@@ -69,18 +72,18 @@ export function SpacesView() {
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer flex-shrink-0"
           style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}
         >
-          <Plus size={15} /> New project
+          <Plus size={15} /> {t('New project')}
         </button>
       </header>
 
       <div className="helios-cols flex gap-6 px-8 pb-8 flex-1 overflow-hidden">
-        <aside className="helios-side flex flex-col gap-3 min-h-0 overflow-hidden" style={{ flex: '0 0 240px' }} aria-label="Project Space filters">
+        <aside className="helios-side flex flex-col gap-3 min-h-0 overflow-hidden" style={{ flex: '0 0 240px' }} aria-label={t('Project Space filters')}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--helios-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Filter by Space
+            {t('Filter by Space')}
           </div>
           <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 min-h-0">
             <SpaceButton
-              label="All projects"
+              label={t('All projects')}
               count={state.projects.length}
               active={activeSpace === ALL}
               onClick={() => setActiveSpace(ALL)}
@@ -88,7 +91,7 @@ export function SpacesView() {
             {spaces.map(spaceId => (
               <SpaceButton
                 key={spaceId}
-                label={getSpaceDefinition(spaceId).name}
+                label={t(getSpaceDefinition(spaceId).name)}
                 count={state.projects.filter(project => project.space_id === spaceId).length}
                 active={activeSpace === spaceId}
                 onClick={() => setActiveSpace(spaceId)}
@@ -102,7 +105,9 @@ export function SpacesView() {
             <div className="flex-1 min-w-48">
               <h2 id="space-projects-heading" style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{selectedLabel}</h2>
               <div style={{ fontSize: 12, color: 'var(--helios-muted)', marginTop: 2 }}>
-                {visibleProjects.length} matching project{visibleProjects.length === 1 ? '' : 's'}
+                {visibleProjects.length === 1
+                  ? t('{count} matching project', { count: visibleProjects.length })
+                  : t('{count} matching projects', { count: visibleProjects.length })}
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-xl px-3" style={{ width: 'min(280px, 100%)', minHeight: 44, background: 'var(--helios-surface)', border: '1px solid var(--helios-border)' }} role="search">
@@ -110,13 +115,13 @@ export function SpacesView() {
               <input
                 value={query}
                 onChange={event => setQuery(event.target.value)}
-                placeholder="Search your projects"
-                aria-label="Search your projects"
+                placeholder={t('Search your projects')}
+                aria-label={t('Search your projects')}
                 className="flex-1 bg-transparent outline-none min-w-0"
                 style={{ border: 'none', color: 'var(--helios-text)', fontSize: 13 }}
               />
               {query && (
-                <button type="button" onClick={() => setQuery('')} aria-label="Clear search"
+                <button type="button" onClick={() => setQuery('')} aria-label={t('Clear search')}
                   style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', cursor: 'pointer' }}>×</button>
               )}
             </div>
@@ -128,18 +133,18 @@ export function SpacesView() {
                 style={{ background: 'var(--helios-surface)', border: '1px dashed var(--helios-border)' }}>
                 <FolderOpen size={30} style={{ margin: '0 auto 12px', color: 'var(--helios-muted)' }} />
                 <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
-                  {state.projects.length === 0 ? 'No projects yet' : 'No matching projects'}
+                  {state.projects.length === 0 ? t('No projects yet') : t('No matching projects')}
                 </div>
                 <p style={{ fontSize: 13, color: 'var(--helios-muted)', margin: '0 auto 16px', maxWidth: 360, lineHeight: 1.55 }}>
                   {state.projects.length === 0
-                    ? 'Start from a contextual Mini App inside a Subject or Hobby Space.'
-                    : 'Try another space or clear the search.'}
+                    ? t('Start from a contextual Mini App inside a Subject or Hobby Space.')
+                    : t('Try another space or clear the search.')}
                 </p>
                 {state.projects.length === 0 && (
                   <button type="button" onClick={() => setShowNewProject(true)}
                     className="px-4 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                     style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}>
-                    Create your first project
+                    {t('Create your first project')}
                   </button>
                 )}
               </div>
@@ -152,19 +157,19 @@ export function SpacesView() {
                       <span style={{ color: 'var(--helios-accent)' }}>{TYPE_ICON[project.type] ?? <FolderOpen size={15} />}</span>
                       <span style={{ fontSize: 12, color: 'var(--helios-muted)', textTransform: 'capitalize' }}>{getMiniApp(project.app_kind).name}</span>
                       <time className="ml-auto" dateTime={project.updated_at} style={{ fontSize: 11, color: 'var(--helios-muted)' }}>
-                        {new Date(project.updated_at).toLocaleDateString()}
+                        {new Date(project.updated_at).toLocaleDateString(locale)}
                       </time>
                     </div>
                     <div>
                       <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>{project.name}</h3>
                       <div style={{ fontSize: 12, color: 'var(--helios-muted)' }}>
-                        {getSpaceDefinition(project.space_id).name} · {project.visibility} · {project.collaborator_role ? `Shared as ${project.collaborator_role}` : 'Owned by you'}
+                        {t(getSpaceDefinition(project.space_id).name)} · {t(project.visibility)} · {project.collaborator_role ? t('Shared as {role}', { role: t(project.collaborator_role) }) : t('Owned by you')}
                       </div>
                     </div>
                     <button type="button" onClick={() => dispatch({ type: 'OPEN_CODE_EDITOR', projectId: project.id })}
                       className="mt-auto py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
                       style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}>
-                      Open project
+                      {t('Open project')}
                     </button>
                   </article>
                 ))}

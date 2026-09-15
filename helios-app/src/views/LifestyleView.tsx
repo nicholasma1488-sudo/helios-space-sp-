@@ -6,6 +6,7 @@ import type { Comment, Post, User } from '../api'
 import { api, type LiveSession } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
+import { getLocale, t, useT } from '../i18n'
 import { getMiniApp } from '../product/catalog'
 import { openCreatorProfile, openLiveSession, openProjectWorkspace } from '../product/flow'
 import './LifestyleView.css'
@@ -30,6 +31,7 @@ interface Props { currentUser: User }
 
 export function LifestyleView({ currentUser }: Props) {
   const { state, dispatch } = useApp()
+  const t = useT()
   const [posts, setPosts] = useState<Post[]>([])
   const [nextCursor, setNextCursor] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -92,7 +94,7 @@ export function LifestyleView({ currentUser }: Props) {
       setNextCursor(result.next_cursor)
     } catch (error) {
       if (id === requestId.current)
-        setLoadError((error as Error).message || 'The feed could not be loaded.')
+        setLoadError((error as Error).message || t('The feed could not be loaded.'))
     } finally {
       if (id === requestId.current) {
         setLoading(false)
@@ -184,12 +186,12 @@ export function LifestyleView({ currentUser }: Props) {
         type: 'PUSH_TOAST',
         toast: {
           id: String(Date.now()),
-          message: audience === 'public' ? 'Progress shared with your space' : 'Private reflection saved',
+          message: audience === 'public' ? t('Progress shared with your space') : t('Private reflection saved'),
           tone: 'success',
         },
       })
     } catch (error) {
-      setSubmitError((error as Error).message || 'The update could not be saved.')
+      setSubmitError((error as Error).message || t('The update could not be saved.'))
     } finally {
       setSubmitting(false)
     }
@@ -198,11 +200,11 @@ export function LifestyleView({ currentUser }: Props) {
   async function chooseMedia(file: globalThis.File | undefined) {
     if (!file) return
     if (!/^(image\/(png|jpeg|webp|gif)|video\/(mp4|webm|quicktime))$/i.test(file.type)) {
-      setSubmitError('Choose a PNG, JPEG, WebP, GIF, MP4, WebM or QuickTime file.')
+      setSubmitError(t('Choose a PNG, JPEG, WebP, GIF, MP4, WebM or QuickTime file.'))
       return
     }
     if (file.size > 950_000) {
-      setSubmitError('Photo and video uploads are limited to 950 KB in this build.')
+      setSubmitError(t('Photo and video uploads are limited to 950 KB in this build.'))
       return
     }
     try {
@@ -215,7 +217,7 @@ export function LifestyleView({ currentUser }: Props) {
       setMediaData(data)
       setMediaName(file.name)
       setSubmitError('')
-    } catch { setSubmitError('The selected media could not be read.') }
+    } catch { setSubmitError(t('The selected media could not be read.')) }
   }
 
   async function openLinkedProject(projectId: number | null) {
@@ -234,7 +236,7 @@ export function LifestyleView({ currentUser }: Props) {
     } catch (error) {
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'Reaction failed: ' + (error as Error).message, tone: 'warning' },
+        toast: { id: String(Date.now()), message: t('Reaction failed: {error}', { error: (error as Error).message }), tone: 'warning' },
       })
     } finally {
       setBusyPost(null)
@@ -255,12 +257,12 @@ export function LifestyleView({ currentUser }: Props) {
       }
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: result.saved ? 'Saved for later' : 'Removed from saved', tone: 'info' },
+        toast: { id: String(Date.now()), message: result.saved ? t('Saved for later') : t('Removed from saved'), tone: 'info' },
       })
     } catch (error) {
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'Save failed: ' + (error as Error).message, tone: 'warning' },
+        toast: { id: String(Date.now()), message: t('Save failed: {error}', { error: (error as Error).message }), tone: 'warning' },
       })
     } finally {
       setBusyPost(null)
@@ -272,26 +274,26 @@ export function LifestyleView({ currentUser }: Props) {
       await navigator.clipboard.writeText(post.body + '\n— ' + post.author_name + ' on Helios Space')
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'Update copied to clipboard', tone: 'success' },
+        toast: { id: String(Date.now()), message: t('Update copied to clipboard'), tone: 'success' },
       })
     } catch {
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'Clipboard access was unavailable', tone: 'warning' },
+        toast: { id: String(Date.now()), message: t('Clipboard access was unavailable'), tone: 'warning' },
       })
     }
   }
 
   async function deletePost(post: Post) {
-    if (!post.can_delete || !window.confirm('Delete this update? This cannot be undone.')) return
+    if (!post.can_delete || !window.confirm(t('Delete this update? This cannot be undone.'))) return
     try {
       await api.posts.remove(post.id)
       setPosts(current => current.filter(item => item.id !== post.id))
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'Update deleted', tone: 'info' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Update deleted'), tone: 'info' } })
     } catch (error) {
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: 'Delete failed: ' + (error as Error).message, tone: 'warning' },
+        toast: { id: String(Date.now()), message: t('Delete failed: {error}', { error: (error as Error).message }), tone: 'warning' },
       })
     }
   }
@@ -313,7 +315,7 @@ export function LifestyleView({ currentUser }: Props) {
     } catch (error) {
       dispatch({
         type: 'PUSH_TOAST',
-        toast: { id: String(Date.now()), message: (error as Error).message || 'Could not send friend request', tone: 'warning' },
+        toast: { id: String(Date.now()), message: (error as Error).message || t('Could not send friend request'), tone: 'warning' },
       })
     } finally {
       setFriendBusyUser(null)
@@ -340,17 +342,17 @@ export function LifestyleView({ currentUser }: Props) {
       <header className="lifestyle-topbar">
         <div className="lifestyle-title">
           <span className="lifestyle-title-mark"><Zap size={17} /></span>
-          <div><strong>Space</strong><small>See what friends are up to, and share what you are shipping</small></div>
+          <div><strong>{t('Space')}</strong><small>{t('See what friends are up to, and share what you are shipping')}</small></div>
         </div>
         <label className="lifestyle-search">
           <Search size={16} />
-          <span className="sr-only">Search updates</span>
+          <span className="sr-only">{t('Search updates')}</span>
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
-            placeholder="Search"
+            placeholder={t('Search')}
           />
-          {query && <button type="button" onClick={() => setQuery('')} aria-label="Clear search"><X size={14} /></button>}
+          {query && <button type="button" onClick={() => setQuery('')} aria-label={t('Clear search')}><X size={14} /></button>}
         </label>
         <button type="button" className="lifestyle-compose-top liquid-glass-btn is-primary" onClick={() => setComposerOpen(true)}>
           <Plus size={16} /> Post
@@ -358,35 +360,35 @@ export function LifestyleView({ currentUser }: Props) {
       </header>
 
       <div className="lifestyle-layout">
-        <aside className="lifestyle-left" aria-label="Lifestyle shortcuts">
+        <aside className="lifestyle-left" aria-label={t('Lifestyle shortcuts')}>
           <button type="button" className="lifestyle-profile-shortcut" onClick={() => dispatch({ type: 'SET_VIEW', view: 'profile' })}>
             <Avatar name={currentUser.name} size="md" />
             <span><strong>{currentUser.name}</strong><small>{currentUser.handle}</small></span>
           </button>
 
-          <nav className="lifestyle-side-nav" aria-label="Feed filters">
+          <nav className="lifestyle-side-nav" aria-label={t('Feed filters')}>
             <button type="button" className={!savedOnly && feedTab === 'foryou' ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('foryou') }}>
-              <Globe2 size={17} /><span>For you</span>
+              <Globe2 size={17} /><span>{t('For you')}</span>
             </button>
             <button type="button" className={!savedOnly && feedTab === 'following' ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>
-              <Users size={17} /><span>Buddies</span>
+              <Users size={17} /><span>{t('Buddies')}</span>
             </button>
             <button type="button" className={savedOnly ? 'is-active' : ''} onClick={() => setSavedOnly(true)}>
-              <Bookmark size={17} /><span>Saved</span>
+              <Bookmark size={17} /><span>{t('Saved')}</span>
             </button>
           </nav>
         </aside>
 
         <main className="lifestyle-feed twitter-feed" aria-live="polite">
-          <section className="workbuddy-strip liquid-glass" aria-label="WorkBuddy activity">
+          <section className="workbuddy-strip liquid-glass" aria-label={t('WorkBuddy activity')}>
             <header>
-              <strong>WorkBuddy</strong>
-              <small>Collaborating / just updated</small>
+              <strong>{t('WorkBuddy')}</strong>
+              <small>{t('Collaborating / just updated')}</small>
             </header>
             <div className="workbuddy-strip-row">
               <button type="button" className="workbuddy-chip is-you" onClick={() => setComposerOpen(true)}>
                 <Avatar name={currentUser.name} size="sm" />
-                <span>Share progress</span>
+                <span>{t('Share progress')}</span>
               </button>
               {timeline.slice(0, 8).map(post => (
                 <button
@@ -405,15 +407,15 @@ export function LifestyleView({ currentUser }: Props) {
               {timeline.length === 0 && (
                 <button type="button" className="workbuddy-chip" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
                   <Users size={14} />
-                  <span>Invite buddies</span>
+                  <span>{t('Invite buddies')}</span>
                 </button>
               )}
             </div>
           </section>
 
-          <nav className="feed-home-tabs" aria-label="Feed timeline">
-            <button type="button" className={feedTab === 'foryou' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('foryou') }}>For you</button>
-            <button type="button" className={feedTab === 'following' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>Buddies</button>
+          <nav className="feed-home-tabs" aria-label={t('Feed timeline')}>
+            <button type="button" className={feedTab === 'foryou' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('foryou') }}>{t('For you')}</button>
+            <button type="button" className={feedTab === 'following' && !savedOnly ? 'is-active' : ''} onClick={() => { setSavedOnly(false); setFeedTab('following') }}>{t('Buddies')}</button>
           </nav>
 
           <section className={'lifestyle-composer liquid-glass' + (composerOpen ? ' is-open' : '')}>
@@ -422,20 +424,20 @@ export function LifestyleView({ currentUser }: Props) {
                 <div className="composer-compact">
                   <Avatar name={currentUser.name} size="md" />
                   <button type="button" onClick={() => setComposerOpen(true)}>
-                    Share something in progress…
+                    {t('Share something in progress…')}
                   </button>
                 </div>
                 <div className="composer-quick-actions">
-                  <button type="button" onClick={() => { setPostCategory('reflection'); setComposerOpen(true) }}><PenLine size={16} /> Update</button>
-                  <button type="button" onClick={() => { setPostCategory('activity'); setComposerOpen(true) }}><Zap size={16} /> Go Live</button>
+                  <button type="button" onClick={() => { setPostCategory('reflection'); setComposerOpen(true) }}><PenLine size={16} /> {t('Update')}</button>
+                  <button type="button" onClick={() => { setPostCategory('activity'); setComposerOpen(true) }}><Zap size={16} /> {t('Go Live')}</button>
                 </div>
               </>
             ) : (
               <form onSubmit={submitPost}>
                 <input ref={mediaRef} hidden type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime" onChange={event => { void chooseMedia(event.target.files?.[0]); event.currentTarget.value = '' }} />
                 <header>
-                  <div><Avatar name={currentUser.name} size="md" /><span><strong>Create progress</strong><small>{audience === 'public' ? 'Visible to the community' : 'Visible only to you'}</small></span></div>
-                  <button type="button" onClick={() => setComposerOpen(false)} aria-label="Close composer"><X size={17} /></button>
+                  <div><Avatar name={currentUser.name} size="md" /><span><strong>{t('Create progress')}</strong><small>{audience === 'public' ? t('Visible to the community') : t('Visible only to you')}</small></span></div>
+                  <button type="button" onClick={() => setComposerOpen(false)} aria-label={t('Close composer')}><X size={17} /></button>
                 </header>
                 <textarea
                   ref={composerRef}
@@ -445,10 +447,10 @@ export function LifestyleView({ currentUser }: Props) {
                     if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') event.currentTarget.form?.requestSubmit()
                   }}
                   maxLength={2000}
-                  placeholder="Share something in progress…"
-                  aria-label="Post content"
+                  placeholder={t('Share something in progress…')}
+                  aria-label={t('Post content')}
                 />
-                <div className="composer-category-row" role="group" aria-label="Update category">
+                <div className="composer-category-row" role="group" aria-label={t('Update category')}>
                   {CATEGORIES.slice(1).map(item => (
                     <button
                       type="button"
@@ -457,31 +459,31 @@ export function LifestyleView({ currentUser }: Props) {
                       onClick={() => setPostCategory(item.id)}
                       style={{ '--category-color': item.color } as React.CSSProperties}
                     >
-                      {item.icon}<span>{item.label}</span>
+                      {item.icon}<span>{t(item.label)}</span>
                     </button>
                   ))}
                 </div>
-                <div className="composer-kind-row" role="group" aria-label="What you are sharing">
+                <div className="composer-kind-row" role="group" aria-label={t('What you are sharing')}>
                   {([['text', 'Text'], ['project', 'Work'], ['live', 'Go Live']] as const).map(([id, label]) => (
-                    <button type="button" key={id} aria-pressed={postKind === id} onClick={() => setPostKind(id)}>{label}</button>
+                    <button type="button" key={id} aria-pressed={postKind === id} onClick={() => setPostKind(id)}>{t(label)}</button>
                   ))}
                 </div>
                 <div className="composer-options">
-                  <button type="button" className="composer-media-button" onClick={() => mediaRef.current?.click()}><ImageIcon size={14} /> Photo / video</button>
-                  <div className="composer-audience" role="group" aria-label="Post audience">
+                  <button type="button" className="composer-media-button" onClick={() => mediaRef.current?.click()}><ImageIcon size={14} /> {t('Photo / video')}</button>
+                  <div className="composer-audience" role="group" aria-label={t('Post audience')}>
                     <button type="button" aria-pressed={audience === 'public'} onClick={() => setAudience('public')}>
-                      <Users size={14} /> Public
+                      <Users size={14} /> {t('Public')}
                     </button>
                     <button type="button" aria-pressed={audience === 'private'} onClick={() => setAudience('private')}>
-                      <Lock size={14} /> Only me
+                      <Lock size={14} /> {t('Only me')}
                     </button>
                   </div>
                   {(state.projects.length > 0 && postKind !== 'live') && (
                     <label className="composer-project">
                       <FolderGit2 size={14} />
-                      <span className="sr-only">Link a project</span>
+                      <span className="sr-only">{t('Link a project')}</span>
                       <select value={linkedProjectId ?? ''} onChange={event => setLinkedProjectId(event.target.value ? Number(event.target.value) : null)}>
-                        <option value="">No linked project</option>
+                        <option value="">{t('No linked project')}</option>
                         {state.projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}
                       </select>
                       <ChevronDown size={13} />
@@ -496,25 +498,25 @@ export function LifestyleView({ currentUser }: Props) {
                         const session = liveSessions.find(item => item.id === id)
                         if (session) setLinkedProjectId(session.project_id)
                       }}>
-                        <option value="">Choose a live session</option>
+                        <option value="">{t('Choose a live session')}</option>
                         {liveSessions.map(session => <option key={session.id} value={session.id}>{session.title}</option>)}
                       </select>
                     </label>
                   )}
                 </div>
-                {mediaData && <div className="composer-media-preview">{mediaData.startsWith('data:video/') ? <video src={mediaData} controls /> : <img src={mediaData} alt="Progress upload preview" />}<span><strong>{mediaName}</strong><small>Attached to this progress post</small></span><button type="button" onClick={() => { setMediaData(''); setMediaName('') }} aria-label="Remove media"><X size={14} /></button></div>}
+                {mediaData && <div className="composer-media-preview">{mediaData.startsWith('data:video/') ? <video src={mediaData} controls /> : <img src={mediaData} alt={t('Progress upload preview')} />}<span><strong>{mediaName}</strong><small>{t('Attached to this progress post')}</small></span><button type="button" onClick={() => { setMediaData(''); setMediaName('') }} aria-label={t('Remove media')}><X size={14} /></button></div>}
                 {submitError && <div className="composer-error" role="alert">{submitError}</div>}
                 <footer>
-                  <span>{postText.length}/2000 · ⌘ Enter to publish</span>
+                  <span>{t('{count}/2000 · ⌘ Enter to publish', { count: postText.length })}</span>
                   <button type="submit" className="liquid-glass-btn is-primary" disabled={!postText.trim() || submitting}>
-                    <Send size={15} /> {submitting ? 'Posting…' : 'Post'}
+                    <Send size={15} /> {submitting ? t('Posting…') : t('Post')}
                   </button>
                 </footer>
               </form>
             )}
           </section>
 
-          <section className="feed-filter-bar" aria-label="Feed controls">
+          <section className="feed-filter-bar" aria-label={t('Feed controls')}>
             <div className="feed-filter-scroll">
               {CATEGORIES.map(item => (
                 <button
@@ -523,28 +525,28 @@ export function LifestyleView({ currentUser }: Props) {
                   className={categoryFilter === item.id ? 'is-active' : ''}
                   onClick={() => setCategoryFilter(item.id)}
                 >
-                  {item.icon}{item.label}
+                  {item.icon}{t(item.label)}
                 </button>
               ))}
             </div>
             <button type="button" className={savedOnly ? 'is-active' : ''} onClick={() => setSavedOnly(value => !value)}>
-              <Filter size={14} /> {savedOnly ? 'Saved' : 'Filter'}
+              <Filter size={14} /> {savedOnly ? t('Saved') : t('Filter')}
             </button>
           </section>
 
-          {loading && <FeedState icon={<Sparkles size={22} />} title="Loading…" detail="Pulling in the latest updates." />}
+          {loading && <FeedState icon={<Sparkles size={22} />} title={t('Loading…')} detail={t('Pulling in the latest updates.')} />}
           {!loading && loadError && (
-            <FeedState icon={<Zap size={22} />} title="Could not load updates" detail={loadError}>
-              <button type="button" className="liquid-glass-btn is-primary" onClick={() => void loadPosts()}>Try again</button>
+            <FeedState icon={<Zap size={22} />} title={t('Could not load updates')} detail={loadError}>
+              <button type="button" className="liquid-glass-btn is-primary" onClick={() => void loadPosts()}>{t('Try again')}</button>
             </FeedState>
           )}
           {!loading && !loadError && timeline.length === 0 && (
             <FeedState
               icon={savedOnly ? <Bookmark size={22} /> : <FileText size={22} />}
-              title={savedOnly ? 'Nothing saved yet' : feedTab === 'following' ? 'Your buddy feed is empty' : 'No updates yet'}
-              detail={savedOnly ? 'Save an update and it will show up here.' : feedTab === 'following' ? 'Posts from others will show up here.' : 'Post your first update, or try a different filter.'}
+              title={savedOnly ? t('Nothing saved yet') : feedTab === 'following' ? t('Your buddy feed is empty') : t('No updates yet')}
+              detail={savedOnly ? t('Save an update and it will show up here.') : feedTab === 'following' ? t('Posts from others will show up here.') : t('Post your first update, or try a different filter.')}
             >
-              {!savedOnly && <button type="button" onClick={() => setComposerOpen(true)}>Post</button>}
+              {!savedOnly && <button type="button" onClick={() => setComposerOpen(true)}>{t('Post')}</button>}
             </FeedState>
           )}
 
@@ -573,7 +575,7 @@ export function LifestyleView({ currentUser }: Props) {
                 sessionStorage.setItem('helios-invite-handle', post.author_handle || '')
                 sessionStorage.setItem('helios-invite-name', post.author_name || '')
                 dispatch({ type: 'SET_VIEW', view: 'chat' })
-                dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Invite ${post.author_name} to collaborate in Messages`, tone: 'success' } })
+                dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Invite {name} to collaborate in Messages', { name: post.author_name }), tone: 'success' } })
               }}
               onToggleComments={() => toggleComments(post.id)}
               onToggleSave={() => void toggleSave(post)}
@@ -598,11 +600,11 @@ export function LifestyleView({ currentUser }: Props) {
               disabled={loadingMore}
               onClick={() => void loadPosts(nextCursor, true)}
             >
-              {loadingMore ? 'Loading more…' : 'Load more progress'}
+              {loadingMore ? t('Loading more…') : t('Load more progress')}
             </button>
           )}
           {!loading && !loadError && timeline.length > 0 && !nextCursor && (
-            <div className="feed-end"><span>✦</span> You're all caught up.</div>
+            <div className="feed-end"><span>✦</span> {t("You're all caught up.")}</div>
           )}
         </main>
       </div>
@@ -623,16 +625,16 @@ function categoryLabel(category: string) {
 
 function relativeTime(value: string) {
   const timestamp = Date.parse(value)
-  if (!Number.isFinite(timestamp)) return 'recently'
+  if (!Number.isFinite(timestamp)) return t('recently')
   const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
-  if (seconds < 60) return 'just now'
+  if (seconds < 60) return t('Just now')
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return minutes + 'm ago'
+  if (minutes < 60) return t('{count}m ago', { count: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return hours + 'h ago'
+  if (hours < 24) return t('{count}h ago', { count: hours })
   const days = Math.floor(hours / 24)
-  if (days < 7) return days + 'd ago'
-  return new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  if (days < 7) return t('{count}d ago', { count: days })
+  return new Date(value).toLocaleDateString(getLocale(), { month: 'short', day: 'numeric' })
 }
 
 function PostCard({
@@ -662,6 +664,7 @@ function PostCard({
   onOpenCreator: () => void
   onCommentCountChange: (delta: number) => void
 }) {
+  const t = useT()
   const liked = post.my_reactions.includes('❤️')
   const likeCount = post.reactions?.['❤️'] || 0
   const reactionTotal = Object.values(post.reactions || {}).reduce((sum, count) => sum + count, 0)
@@ -678,12 +681,12 @@ function PostCard({
               <span>{post.author_handle}</span>
             </button>
             <time dateTime={post.created_at}>· {relativeTime(post.created_at)}</time>
-            {post.audience === 'private' ? <Lock size={13} aria-label="Only visible to you" /> : null}
+            {post.audience === 'private' ? <Lock size={13} aria-label={t('Only visible to you')} /> : null}
           </div>
           {post.can_delete ? (
-            <button type="button" className="post-more" onClick={onDelete} aria-label="Delete post"><Trash2 size={15} /></button>
+            <button type="button" className="post-more" onClick={onDelete} aria-label={t('Delete post')}><Trash2 size={15} /></button>
           ) : (
-            <button type="button" className="post-more" aria-label="More" disabled><MoreHorizontal size={17} /></button>
+            <button type="button" className="post-more" aria-label={t('More')} disabled><MoreHorizontal size={17} /></button>
           )}
         </header>
 
@@ -691,23 +694,23 @@ function PostCard({
 
         {post.media_url && (post.media_url.startsWith('data:video/') || /\.(mp4|webm|mov)(\?|$)/i.test(post.media_url)
           ? <video className="post-media" src={post.media_url} controls preload="metadata" />
-          : <img className="post-media" src={post.media_url} alt="Collaboration post media" />)}
+          : <img className="post-media" src={post.media_url} alt={t('Collaboration post media')} />)}
 
         {post.project_name && (
           <div className="post-project-row">
             <button type="button" onClick={onOpenProject} className="post-project">
-              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? 'Live collab' : 'Work'}</span><strong>{post.project_name}</strong>
+              <FolderGit2 size={14} /><span>{post.post_type === 'live-replay' || post.post_type === 'live-watch' ? t('Live collab') : t('Work')}</span><strong>{post.project_name}</strong>
             </button>
-            {post.project_app_kind && <button type="button" onClick={onOpenMiniApp} className="post-project"><AppWindow size={14} /><span>Tool</span><strong>{getMiniApp(post.project_app_kind).name}</strong></button>}
-            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>Watch</span><strong>Live collab</strong></button>}
+            {post.project_app_kind && <button type="button" onClick={onOpenMiniApp} className="post-project"><AppWindow size={14} /><span>{t('Tool')}</span><strong>{getMiniApp(post.project_app_kind).name}</strong></button>}
+            {(post.post_type === 'live-replay' || post.post_type === 'live-watch') && <button type="button" onClick={onWatchLive} className="post-project"><Globe2 size={14} /><span>{t('Watch')}</span><strong>{t('Live collab')}</strong></button>}
           </div>
         )}
 
         <div className="post-actions tweet-actions collab-actions">
-          <button type="button" onClick={onToggleComments} aria-expanded={commentsOpen} title="Comment">
+          <button type="button" onClick={onToggleComments} aria-expanded={commentsOpen} title={t('Comment')}>
             <MessageCircle size={18} /> <span>{post.comment_count || ''}</span>
           </button>
-          <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''} title="Like">
+          <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''} title={t('Like')}>
             <Heart size={18} fill={liked ? 'currentColor' : 'none'} /> <span>{likeCount || reactionTotal || ''}</span>
           </button>
           {showAddFriend && (
@@ -716,34 +719,34 @@ function PostCard({
               onClick={onAddFriend}
               disabled={friendBusy || friendPending}
               className={friendPending ? 'is-friend-pending' : ''}
-              title={friendPending ? 'Friend request pending' : 'Add friend'}
+              title={friendPending ? t('Friend request pending') : t('Add friend')}
             >
-              <UserPlus size={18} /> <span>{friendPending ? 'Pending' : 'Add friend'}</span>
+              <UserPlus size={18} /> <span>{friendPending ? t('Pending') : t('Add friend')}</span>
             </button>
           )}
-          <button type="button" onClick={onInvite} title="Invite to collaborate">
-            <UserPlus size={18} /> <span>Invite</span>
+          <button type="button" onClick={onInvite} title={t('Invite to collaborate')}>
+            <UserPlus size={18} /> <span>{t('Invite')}</span>
           </button>
-          <button type="button" onClick={onToggleSave} aria-pressed={post.is_saved} className={post.is_saved ? 'is-saved' : ''} disabled={busy} title="Save">
+          <button type="button" onClick={onToggleSave} aria-pressed={post.is_saved} className={post.is_saved ? 'is-saved' : ''} disabled={busy} title={t('Save')}>
             <Bookmark size={18} fill={post.is_saved ? 'currentColor' : 'none'} />
           </button>
-          <button type="button" onClick={onCopy} title="Copy link"><Share size={17} /></button>
+          <button type="button" onClick={onCopy} title={t('Copy link')}><Share size={17} /></button>
           <button type="button" className="tweet-more-react" onClick={onTogglePicker} aria-haspopup="menu" aria-expanded={pickerOpen}>
-            {pickerOpen ? 'Close' : 'React'}
+            {pickerOpen ? t('Close') : t('React')}
           </button>
         </div>
         {pickerOpen && (
-          <div className="reaction-picker tweet-picker" role="menu" aria-label="Choose a reaction">
+          <div className="reaction-picker tweet-picker" role="menu" aria-label={t('Choose a reaction')}>
             {REACTIONS.map(item => (
               <button
                 key={item.emoji}
                 type="button"
                 role="menuitem"
-                title={item.label}
+                title={t(item.label)}
                 onClick={() => onReact(item.emoji)}
                 className={post.my_reactions.includes(item.emoji) ? 'is-active' : ''}
               >
-                <span>{item.emoji}</span><small>{item.label}</small>
+                <span>{item.emoji}</span><small>{t(item.label)}</small>
               </button>
             ))}
           </div>
@@ -770,6 +773,7 @@ function CommentsSection({
   currentUser: User
   onCountChange: (delta: number) => void
 }) {
+  const t = useT()
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -815,8 +819,8 @@ function CommentsSection({
   }
 
   return (
-    <section className="comments-section" aria-label="Comments">
-      {loading && <div className="comments-loading">Loading comments…</div>}
+    <section className="comments-section" aria-label={t('Comments')}>
+      {loading && <div className="comments-loading">{t('Loading comments…')}</div>}
       {!loading && comments.map(comment => (
         <article key={comment.id} className="comment-item">
           <Avatar name={comment.author_name} size="sm" />
@@ -825,15 +829,15 @@ function CommentsSection({
             <p>{comment.body}</p>
           </div>
           {comment.can_delete && (
-            <button type="button" onClick={() => void remove(comment)} aria-label="Delete comment"><X size={13} /></button>
+            <button type="button" onClick={() => void remove(comment)} aria-label={t('Delete comment')}><X size={13} /></button>
           )}
         </article>
       ))}
-      {!loading && comments.length === 0 && <div className="comments-empty">No comments yet. Add something useful or kind.</div>}
+      {!loading && comments.length === 0 && <div className="comments-empty">{t('No comments yet. Add something useful or kind.')}</div>}
       <form onSubmit={submit} className="comment-form">
         <Avatar name={currentUser.name} size="sm" />
         <label>
-          <span className="sr-only">Write a comment</span>
+          <span className="sr-only">{t('Write a comment')}</span>
           <textarea
             value={draft}
             maxLength={600}
@@ -841,10 +845,10 @@ function CommentsSection({
             onKeyDown={event => {
               if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') event.currentTarget.form?.requestSubmit()
             }}
-            placeholder="Write a thoughtful comment…"
+            placeholder={t('Write a thoughtful comment…')}
             rows={1}
           />
-          <button type="submit" disabled={!draft.trim() || submitting} aria-label="Post comment"><Send size={14} /></button>
+          <button type="submit" disabled={!draft.trim() || submitting} aria-label={t('Post comment')}><Send size={14} /></button>
         </label>
       </form>
       {error && <div className="comments-error" role="alert">{error}</div>}
@@ -874,7 +878,7 @@ function HighlightDialog({ post, onClose }: { post: Post; onClose: () => void })
       <div className={'highlight-dialog category-' + post.category} role="dialog" aria-modal="true" aria-labelledby="highlight-dialog-title" ref={dialogRef}>
         <button type="button" onClick={onClose} className="highlight-dialog-close" aria-label="Close highlight"><X size={17} /></button>
         <div className="highlight-dialog-mark" aria-hidden="true"><Sparkles size={22} /></div>
-        <span className="highlight-dialog-category">{categoryLabel(post.category)}</span>
+        <span className="highlight-dialog-category">{t(categoryLabel(post.category))}</span>
         <h2 id="highlight-dialog-title">{post.author_name} took a step forward</h2>
         <p>{post.body}</p>
         <footer><Avatar name={post.author_name} size="sm" /><span><strong>{post.author_name}</strong><small>{post.author_handle} · {relativeTime(post.created_at)}</small></span></footer>

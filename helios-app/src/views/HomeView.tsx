@@ -5,8 +5,10 @@ import {
 } from 'lucide-react'
 import { api, type ApiNotification, type LiveSession, type Post } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
+import { HomeAgentBar } from '../components/HomeAgentBar'
 import { getSuiteApp } from '../product/miniApps'
 import { useApp } from '../store/appStore'
+import { useLocale, useT } from '../i18n'
 import './HomeView.css'
 
 interface TodayTask { id: string; text: string; done: boolean }
@@ -17,6 +19,8 @@ function dayKey(date = new Date()) {
 
 export function HomeView() {
   const { state, dispatch } = useApp()
+  const t = useT()
+  const locale = useLocale()
   const [tasks, setTasks] = useState<TodayTask[]>([])
   const [tasksReady, setTasksReady] = useState(false)
   const [newTask, setNewTask] = useState('')
@@ -72,7 +76,7 @@ export function HomeView() {
       setNotifications(notificationResult.notifications || [])
       setActivity(postResult.posts || [])
     }).catch(err => {
-      if (!cancelled) setError((err as Error).message || 'Home could not load')
+      if (!cancelled) setError((err as Error).message || t('Home could not load'))
     }).finally(() => {
       if (!cancelled) setLoading(false)
     })
@@ -120,7 +124,7 @@ export function HomeView() {
       app_kind: project.app_kind,
       selected_content: (project.content || '').slice(0, 4000),
     }))
-    sessionStorage.setItem('helios-pending-prompt', `Explain what is in "${project.name}" in plain language, without opening the file.`)
+    sessionStorage.setItem('helios-pending-prompt', t('Explain what is in “{name}” in plain language, without opening the file.', { name: project.name }))
     dispatch({ type: 'OPEN_HELIOS_PANEL' })
   }
 
@@ -128,11 +132,11 @@ export function HomeView() {
     <div className="home-page home-simple">
       {showNewProject && <NewProjectModal onClose={() => setShowNewProject(false)} />}
 
-      {loading && <div className="home-skeleton" role="status" aria-label="Loading" />}
+      {loading && <div className="home-skeleton" role="status" aria-label={t('Loading')} />}
       {error && (
         <div role="alert" className="home-error">
           {error}
-          <button type="button" onClick={() => window.location.reload()}>Reload</button>
+          <button type="button" onClick={() => window.location.reload()}>{t('Reload')}</button>
         </div>
       )}
 
@@ -140,9 +144,9 @@ export function HomeView() {
         <>
           <header className="home-hero">
             <div>
-              <span>{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-              <h1>Hi, {firstName}</h1>
-              <p>See what your buddies are doing, or create something and push it forward together.</p>
+              <span>{new Date().toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+              <h1>{t('Hi, {name}', { name: firstName })}</h1>
+              <p>{t('See what your buddies are doing, or create something and push it forward together.')}</p>
             </div>
             <div className="home-hero-actions">
               <button
@@ -150,16 +154,18 @@ export function HomeView() {
                 className="home-btn-primary liquid-glass-btn is-primary"
                 onClick={() => window.dispatchEvent(new CustomEvent('helios-open-create-panel'))}
               >
-                <Plus size={16} /> Continue
+                <Plus size={16} /> {t('Continue')}
               </button>
             </div>
           </header>
 
+          <HomeAgentBar />
+
           <section className="home-section" aria-labelledby="home-files-title">
             <header>
               <div>
-                <span>Files / Projects</span>
-                <h2 id="home-files-title">Recently in progress</h2>
+                <span>{t('Files / Projects')}</span>
+                <h2 id="home-files-title">{t('Recently in progress')}</h2>
               </div>
               <button type="button" onClick={() => setShowNewProject(true)}><Plus size={14} /> New file</button>
             </header>
@@ -171,20 +177,20 @@ export function HomeView() {
                     <button type="button" className="home-file-main" onClick={() => openProject(project.id)}>
                       <i style={{ background: app?.color || 'var(--helios-accent)' }}>{app?.letter || '·'}</i>
                       <span>
-                        <small>{app?.name || 'File'}</small>
+                        <small>{app?.name || t('File')}</small>
                         <strong>{project.name}</strong>
-                        <p>Updated {new Date(project.updated_at).toLocaleString()}</p>
+                        <p>{t('Updated {time}', { time: new Date(project.updated_at).toLocaleString(locale) })}</p>
                       </span>
                     </button>
                     <div className="home-file-actions">
                       <button type="button" onClick={() => openProject(project.id)}>
-                        <FolderGit2 size={14} /> Open
+                        <FolderGit2 size={14} /> {t('Open')}
                       </button>
                       <button type="button" onClick={() => askHeliosAbout(project.id)}>
-                        <Sparkles size={14} /> Preview
+                        <Sparkles size={14} /> {t('Preview')}
                       </button>
                       <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}>
-                        <UserPlus size={14} /> Invite
+                        <UserPlus size={14} /> {t('Invite')}
                       </button>
                     </div>
                   </article>
@@ -193,9 +199,9 @@ export function HomeView() {
               {recent.length === 0 && (
                 <div className="home-empty">
                   <FolderGit2 size={22} />
-                  <strong>No files yet</strong>
-                  <span>Pick a Mini App, then share it to Space when you are done.</span>
-                  <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('helios-open-create-panel'))}>Open Mini App</button>
+                  <strong>{t('No files yet')}</strong>
+                  <span>{t('Pick a Mini App, then share it to Space when you are done.')}</span>
+                  <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('helios-open-create-panel'))}>{t('Open Mini App')}</button>
                 </div>
               )}
             </div>
@@ -205,8 +211,8 @@ export function HomeView() {
             <section className="home-section" aria-labelledby="home-tasks-title">
               <header>
                 <div>
-                  <span>Today</span>
-                  <h2 id="home-tasks-title">{doneCount}/{tasks.length} done</h2>
+                  <span>{t('Today')}</span>
+                  <h2 id="home-tasks-title">{t('{done}/{total} done', { done: doneCount, total: tasks.length })}</h2>
                 </div>
                 <Circle size={16} />
               </header>
@@ -214,28 +220,28 @@ export function HomeView() {
                 {tasksReady && tasks.length === 0 && (
                   <div className="home-empty compact">
                     <Check size={18} />
-                    <strong>Nothing on the list yet</strong>
-                    <span>Add one thing you need to do today.</span>
+                    <strong>{t('Nothing on the list yet')}</strong>
+                    <span>{t('Add one thing you need to do today.')}</span>
                   </div>
                 )}
                 {tasks.map(task => (
                   <div key={task.id} className={task.done ? 'is-done' : ''}>
                     <button
                       type="button"
-                      aria-label={task.done ? 'Mark as not done' : 'Mark as done'}
+                      aria-label={task.done ? t('Mark as not done') : t('Mark as done')}
                       onClick={() => setTasks(current => current.map(item => item.id === task.id ? { ...item, done: !item.done } : item))}
                     >
                       {task.done && <Check size={12} />}
                     </button>
                     <span>{task.text}</span>
-                    <button type="button" aria-label="Delete" onClick={() => setTasks(current => current.filter(item => item.id !== task.id))}>
+                    <button type="button" aria-label={t('Delete')} onClick={() => setTasks(current => current.filter(item => item.id !== task.id))}>
                       <Trash2 size={12} />
                     </button>
                   </div>
                 ))}
               </div>
               <form onSubmit={addTask} className="home-task-form">
-                <input value={newTask} maxLength={200} onChange={event => setNewTask(event.target.value)} placeholder="Add a task for today" />
+                <input value={newTask} maxLength={200} onChange={event => setNewTask(event.target.value)} placeholder={t('Add a task for today')} />
                 <button type="submit" disabled={!newTask.trim()}><Plus size={14} /></button>
               </form>
             </section>
@@ -243,10 +249,10 @@ export function HomeView() {
             <section className="home-section" aria-labelledby="home-buddies-title">
               <header>
                 <div>
-                  <span>WorkBuddies</span>
-                  <h2 id="home-buddies-title">People you work with</h2>
+                  <span>{t('WorkBuddies')}</span>
+                  <h2 id="home-buddies-title">{t('People you work with')}</h2>
                 </div>
-                <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'lifestyle' })}>See updates</button>
+                <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'lifestyle' })}>{t('See updates')}</button>
               </header>
               <div className="home-buddy-list">
                 {live.slice(0, 5).map(session => (
@@ -254,7 +260,7 @@ export function HomeView() {
                     <span className="home-buddy-avatar">{session.owner_name.slice(0, 1)}</span>
                     <span>
                       <strong>{session.owner_name}</strong>
-                      <small><Radio size={11} /> Live now · {session.project_name}</small>
+                      <small><Radio size={11} /> {t('Live now')} · {session.project_name}</small>
                     </span>
                   </button>
                 ))}
@@ -277,8 +283,8 @@ export function HomeView() {
                 {live.length === 0 && activity.length === 0 && (
                   <div className="home-empty compact">
                     <Users size={18} />
-                    <strong>No WorkBuddy activity yet</strong>
-                    <span>Post on Space, or invite a friend to collaborate.</span>
+                    <strong>{t('No WorkBuddy activity yet')}</strong>
+                    <span>{t('Post on Space, or invite a friend to collaborate.')}</span>
                   </div>
                 )}
               </div>
@@ -287,8 +293,8 @@ export function HomeView() {
             <section className="home-section" aria-labelledby="home-notes-title">
               <header>
                 <div>
-                  <span>Alerts</span>
-                  <h2 id="home-notes-title">{unread.length} unread</h2>
+                  <span>{t('Alerts')}</span>
+                  <h2 id="home-notes-title">{t('{count} unread', { count: unread.length })}</h2>
                 </div>
                 <Bell size={16} />
               </header>
@@ -308,7 +314,7 @@ export function HomeView() {
                   </button>
                 ))}
                 {notifications.length === 0 && (
-                  <div className="home-empty compact">You are caught up on alerts.</div>
+                  <div className="home-empty compact">{t('You are caught up on alerts.')}</div>
                 )}
               </div>
             </section>

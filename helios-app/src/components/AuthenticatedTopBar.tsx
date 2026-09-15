@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults } from '../api'
 import { useApp } from '../store/appStore'
+import { useLocale, useT } from '../i18n'
 import { TopBarCreatePanel, TopBarCreateTrigger } from './TopBarCreatePanel'
 import './AuthenticatedTopBar.css'
 
@@ -22,6 +23,8 @@ function writeCollapsed(key: string, value: boolean) {
 
 export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) {
   const { state, dispatch } = useApp()
+  const t = useT()
+  const locale = useLocale()
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [createAppId, setCreateAppId] = useState<string | null>(null)
@@ -139,7 +142,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
         project = (await api.projects.get(projectId)).project
         dispatch({ type: 'ADD_PROJECT', project })
       } catch {
-        dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'This project is no longer available.', tone: 'warning' } })
+        dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('This project is no longer available.'), tone: 'warning' } })
         return
       }
     }
@@ -175,7 +178,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
       await api.logout()
       dispatch({ type: 'RESET_SESSION' })
     } catch (error) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Sign out failed: ${(error as Error).message}`, tone: 'warning' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Sign out failed: {error}', { error: (error as Error).message }), tone: 'warning' } })
     }
   }
 
@@ -192,8 +195,8 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
           type="button"
           className="helios-chrome-peek-arrow helios-topbar-peek-arrow"
           onClick={() => setTopbarCollapsedPersist(false)}
-          aria-label="Expand top bar"
-          title="Expand top bar"
+          aria-label={t('Expand top bar')}
+          title={t('Expand top bar')}
         >
           <ChevronDown size={16} />
         </button>
@@ -204,34 +207,34 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   return (
     <header className={'authenticated-topbar' + (compact ? ' is-compact' : '') + (createOpen ? ' is-create-open' : '')} ref={rootRef}>
       <div className="topbar-brand-cluster">
-        <button type="button" className="topbar-brand" onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })} aria-label="Helios Space home">
+        <button type="button" className="topbar-brand" onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })} aria-label={t('Helios Space home')}>
           <span>✦</span><strong>helios<span>space</span></strong>
         </button>
         <button
           type="button"
           className="helios-topbar-collapse-btn"
           onClick={() => setTopbarCollapsedPersist(true)}
-          aria-label="Collapse top bar"
-          title="Collapse top bar"
+          aria-label={t('Collapse top bar')}
+          title={t('Collapse top bar')}
         >
           <ChevronUp size={15} />
         </button>
       </div>
 
-      <nav className="topbar-context-nav" aria-label="Mini Apps">
+      <nav className="topbar-context-nav" aria-label={t('Mini Apps')}>
         <TopBarCreateTrigger
           open={createOpen}
           onToggle={toggleCreate}
-          label="Mini App"
+          label={t('Mini App')}
         />
       </nav>
 
       <div className="topbar-actions">
-        <button type="button" onClick={() => toggle('search')} aria-label="Search Helios Space" aria-expanded={openMenu === 'search'}><Search size={17} /><span>Search</span></button>
-        <button type="button" onClick={() => toggle('notifications')} aria-label={unread ? `${unread} unread notifications` : 'Notifications'} aria-expanded={openMenu === 'notifications'} className="topbar-notification-button">
+        <button type="button" onClick={() => toggle('search')} aria-label={t('Search Helios Space')} aria-expanded={openMenu === 'search'}><Search size={17} /><span>{t('Search')}</span></button>
+        <button type="button" onClick={() => toggle('notifications')} aria-label={unread ? t('{count} unread notifications', { count: unread }) : t('Notifications')} aria-expanded={openMenu === 'notifications'} className="topbar-notification-button">
           <Bell size={17} />{unread > 0 && <b>{unread > 9 ? '9+' : unread}</b>}
         </button>
-        <button type="button" className="topbar-profile-button" onClick={() => toggle('profile')} aria-label="Account menu" aria-expanded={openMenu === 'profile'}>
+        <button type="button" className="topbar-profile-button" onClick={() => toggle('profile')} aria-label={t('Account menu')} aria-expanded={openMenu === 'profile'}>
           {(state.user?.name || '?')[0].toUpperCase()}
         </button>
       </div>
@@ -239,37 +242,37 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
       <TopBarCreatePanel open={createOpen} onClose={closeCreate} initialAppId={createAppId} />
 
       {openMenu === 'search' && (
-        <div className="topbar-popover topbar-search-popover" role="dialog" aria-label="Global search">
-          <div className="global-search-input"><Search size={17} /><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Spaces, people, Projects and shared work" aria-label="Search" /><button type="button" onClick={() => setOpenMenu(null)} aria-label="Close search"><X size={15} /></button></div>
+        <div className="topbar-popover topbar-search-popover" role="dialog" aria-label={t('Global search')}>
+          <div className="global-search-input"><Search size={17} /><input ref={searchRef} value={query} onChange={event => setQuery(event.target.value)} placeholder={t('Search Spaces, people, Projects and shared work')} aria-label={t('Search')} /><button type="button" onClick={() => setOpenMenu(null)} aria-label={t('Close search')}><X size={15} /></button></div>
           <div className="global-search-results" aria-live="polite">
-            {query.trim().length < 2 && <SearchEmpty icon={<Sparkles size={19} />} text="Search only returns work you are allowed to discover." />}
-            {query.trim().length >= 2 && searching && <SearchEmpty icon={<Sparkles size={19} />} text="Searching…" />}
-            {query.trim().length >= 2 && !searching && searchCount === 0 && <SearchEmpty icon={<Search size={19} />} text="No permitted results found." />}
-            {results.spaces.length > 0 && <ResultGroup title="Spaces">{results.spaces.map(space => <button key={space.id} onClick={() => openSpace(space.id)}><Users size={14} /><span><strong>{space.name}</strong><small>{space.kind}</small></span></button>)}</ResultGroup>}
-            {results.projects.length > 0 && <ResultGroup title="Projects">{results.projects.map(project => <button key={project.id} onClick={() => void openProject(project.id)}><FolderGit2 size={14} /><span><strong>{project.name}</strong><small>{project.space_id} · {project.app_kind}</small></span></button>)}</ResultGroup>}
-            {results.live.length > 0 && <ResultGroup title="Live now">{results.live.map(session => <button key={session.id} onClick={() => { dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: session.id }); setOpenMenu(null) }}><Radio size={14} /><span><strong>{session.title}</strong><small>{session.owner_name} · {session.viewer_count} watching</small></span></button>)}</ResultGroup>}
-            {results.people.length > 0 && <ResultGroup title="People">{results.people.map(person => <button key={person.id} onClick={() => { dispatch({ type: 'SET_VIEW', view: 'apps' }); setOpenMenu(null) }}><User size={14} /><span><strong>{person.name}</strong><small>{person.handle}</small></span></button>)}</ResultGroup>}
-            {results.posts.length > 0 && <ResultGroup title="Progress">{results.posts.map(post => <button key={post.id} onClick={() => { sessionStorage.setItem('helios-open-post', String(post.id)); dispatch({ type: 'SET_VIEW', view: 'lifestyle' }); setOpenMenu(null) }}><MessageCircle size={14} /><span><strong>{post.author_name}</strong><small>{post.body.slice(0, 90)}</small></span></button>)}</ResultGroup>}
+            {query.trim().length < 2 && <SearchEmpty icon={<Sparkles size={19} />} text={t('Search only returns work you are allowed to discover.')} />}
+            {query.trim().length >= 2 && searching && <SearchEmpty icon={<Sparkles size={19} />} text={t('Searching…')} />}
+            {query.trim().length >= 2 && !searching && searchCount === 0 && <SearchEmpty icon={<Search size={19} />} text={t('No permitted results found.')} />}
+            {results.spaces.length > 0 && <ResultGroup title={t('Spaces')}>{results.spaces.map(space => <button key={space.id} onClick={() => openSpace(space.id)}><Users size={14} /><span><strong>{space.name}</strong><small>{space.kind}</small></span></button>)}</ResultGroup>}
+            {results.projects.length > 0 && <ResultGroup title={t('Projects')}>{results.projects.map(project => <button key={project.id} onClick={() => void openProject(project.id)}><FolderGit2 size={14} /><span><strong>{project.name}</strong><small>{project.space_id} · {project.app_kind}</small></span></button>)}</ResultGroup>}
+            {results.live.length > 0 && <ResultGroup title={t('Live now')}>{results.live.map(session => <button key={session.id} onClick={() => { dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: session.id }); setOpenMenu(null) }}><Radio size={14} /><span><strong>{session.title}</strong><small>{session.owner_name} · {t('{count} watching', { count: session.viewer_count })}</small></span></button>)}</ResultGroup>}
+            {results.people.length > 0 && <ResultGroup title={t('People')}>{results.people.map(person => <button key={person.id} onClick={() => { dispatch({ type: 'SET_VIEW', view: 'apps' }); setOpenMenu(null) }}><User size={14} /><span><strong>{person.name}</strong><small>{person.handle}</small></span></button>)}</ResultGroup>}
+            {results.posts.length > 0 && <ResultGroup title={t('Progress')}>{results.posts.map(post => <button key={post.id} onClick={() => { sessionStorage.setItem('helios-open-post', String(post.id)); dispatch({ type: 'SET_VIEW', view: 'lifestyle' }); setOpenMenu(null) }}><MessageCircle size={14} /><span><strong>{post.author_name}</strong><small>{post.body.slice(0, 90)}</small></span></button>)}</ResultGroup>}
           </div>
         </div>
       )}
 
       {openMenu === 'notifications' && (
-        <div className="topbar-popover notifications-popover" role="dialog" aria-label="Notifications">
-          <header><div><strong>Notifications</strong><small>{unread ? `${unread} unread` : 'You are caught up'}</small></div>{unread > 0 && <button type="button" onClick={() => { void api.notifications.markRead(); setNotifications(current => current.map(item => ({ ...item, read: true }))) }}>Mark all read</button>}</header>
+        <div className="topbar-popover notifications-popover" role="dialog" aria-label={t('Notifications')}>
+          <header><div><strong>{t('Notifications')}</strong><small>{unread ? t('{count} unread', { count: unread }) : t('You are caught up')}</small></div>{unread > 0 && <button type="button" onClick={() => { void api.notifications.markRead(); setNotifications(current => current.map(item => ({ ...item, read: true }))) }}>{t('Mark all read')}</button>}</header>
           <div>
-            {notifications.map(item => <button type="button" key={item.id} className={item.read ? '' : 'is-unread'} onClick={() => void routeNotification(item)}><i>{item.kind === 'chat_message' ? <MessageCircle size={14} /> : item.kind.includes('live') ? <Radio size={14} /> : <Sparkles size={14} />}</i><span><strong>{item.title}</strong><small>{item.detail}</small><time>{new Date(item.created_at).toLocaleDateString()}</time></span></button>)}
-            {notifications.length === 0 && <SearchEmpty icon={<Bell size={19} />} text="Useful project, message and Live updates will appear here." />}
+            {notifications.map(item => <button type="button" key={item.id} className={item.read ? '' : 'is-unread'} onClick={() => void routeNotification(item)}><i>{item.kind === 'chat_message' ? <MessageCircle size={14} /> : item.kind.includes('live') ? <Radio size={14} /> : <Sparkles size={14} />}</i><span><strong>{item.title}</strong><small>{item.detail}</small><time>{new Date(item.created_at).toLocaleDateString(locale)}</time></span></button>)}
+            {notifications.length === 0 && <SearchEmpty icon={<Bell size={19} />} text={t('Useful project, message and Live updates will appear here.')} />}
           </div>
         </div>
       )}
 
       {openMenu === 'profile' && (
-        <div className="topbar-popover profile-popover" role="menu" aria-label="Account">
+        <div className="topbar-popover profile-popover" role="menu" aria-label={t('Account')}>
           <div className="profile-popover-user"><span>{(state.user?.name || '?')[0].toUpperCase()}</span><div><strong>{state.user?.name}</strong><small>{state.user?.handle}</small></div></div>
-          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'SET_VIEW', view: 'profile' }); setOpenMenu(null) }}><User size={15} /> Creator profile</button>
-          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); setOpenMenu(null) }}><Sparkles size={15} /> Ask Helios</button>
-          <button type="button" role="menuitem" onClick={() => void signOut()}><span>↪</span> Sign out</button>
+          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'SET_VIEW', view: 'profile' }); setOpenMenu(null) }}><User size={15} /> {t('Creator profile')}</button>
+          <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); setOpenMenu(null) }}><Sparkles size={15} /> {t('Ask Helios')}</button>
+          <button type="button" role="menuitem" onClick={() => void signOut()}><span>↪</span> {t('Sign out')}</button>
         </div>
       )}
     </header>

@@ -17,6 +17,21 @@ import {
   resolveChatCompletionsUrl,
   summarizeAiProviderError,
 } from './aiProvider.js'
+import {
+  AGENT_APPS,
+  AgentUpstreamError,
+  agentAppFor,
+  deriveTitle,
+  describePlan,
+  generatePostBody,
+  generateWorkspace,
+  isChinese,
+  replyLanguage,
+  planLocally,
+  planWithModel,
+  sanitizeSteps,
+  starterWorkspace,
+} from './agent.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = Number.parseInt(process.env.PORT || '8080', 10)
@@ -477,6 +492,131 @@ if (envAiKey) {
   setSetting('openai_base_url', 'https://helios.local')
   setSetting('openai_model', 'helios-local')
 }
+// ── Per-user AI provider (bring your own key) ──
+// Keys are encrypted at rest with AES-256-GCM. The secret comes from
+// HELIOS_SECRET_KEY or a 0600 file generated once inside DATA_DIR.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_ai_settings (
+    user_id     INTEGER PRIMARY KEY,
+    provider    TEXT NOT NULL DEFAULT 'custom',
+    api_key_enc TEXT NOT NULL DEFAULT '',
+    base_url    TEXT NOT NULL DEFAULT '',
+    model       TEXT NOT NULL DEFAULT '',
+    updated_at  TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+`)
+
+const SECRET_KEY = (() => {
+  const fromEnv = (process.env.HELIOS_SECRET_KEY || '').trim()
+  if (fromEnv) return crypto.createHash('sha256').update(fromEnv).digest()
+  const file = path.join(DATA_DIR, '.helios-secret')
+  try {
+    return Buffer.from(fs.readFileSync(file, 'utf8').trim(), 'hex')
+  } catch {
+    const generated = crypto.randomBytes(32)
+    fs.writeFileSync(file, generated.toString('hex'), { mode: 0o600 })
+    return generated
+  }
+})()
+
+function encryptSecret(plain) {
+  if (!plain) return ''
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', SECRET_KEY, iv)
+  const body = Buffer.concat([cipher.update(String(plain), 'utf8'), cipher.final()])
+  return [iv, cipher.getAuthTag(), body].map(part => part.toString('base64')).join('.')
+}
+
+function decryptSecret(packed) {
+  if (!packed) return ''
+  try {
+    const [iv, tag, body] = String(packed).split('.').map(part => Buffer.from(part, 'base64'))
+    const decipher = crypto.createDecipheriv('aes-256-gcm', SECRET_KEY, iv)
+    decipher.setAuthTag(tag)
+    return Buffer.concat([decipher.update(body), decipher.final()]).toString('utf8')
+  } catch {
+    return ''
+  }
+}
+
+const AI_PROVIDER_PRESETS = {
+  groq:       { label: 'Groq',        base_url: 'https://api.groq.com/openai',  model: 'llama-3.1-8b-instant' },
+  openai:     { label: 'OpenAI',      base_url: 'https://api.openai.com',       model: 'gpt-4o-mini' },
+  openrouter: { label: 'OpenRouter',  base_url: 'https://openrouter.ai/api',    model: 'meta-llama/llama-3.1-8b-instruct:free' },
+  gemini:     { label: 'Google Gemini', base_url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', model: 'gemini-2.0-flash' },
+  deepseek:   { label: 'DeepSeek',    base_url: 'https://api.deepseek.com',     model: 'deepseek-chat' },
+  ollama:     { label: 'Ollama (self-hosted)', base_url: 'http://your-host:11434', model: 'llama3.2:3b' },
+  custom:     { label: 'Custom OpenAI-compatible', base_url: '', model: '' },
+}
+
+// User-supplied endpoints are fetched from this server, so keep them off the
+// loopback / private ranges to avoid turning Helios into an internal proxy.
+function isPrivateHostname(hostname) {
+  const host = String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '')
+  if (!host || host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return true
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    const [a, b] = host.split('.').map(Number)
+    return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || a >= 224
+  }
+  if (host.includes(':')) return host === '::1' || host === '::' || /^f[cd]/.test(host) || /^fe[89ab]/.test(host)
+  return false
+}
+
+function checkUserAiBaseUrl(value) {
+  let endpoint
+  try { endpoint = new URL(resolveChatCompletionsUrl(value)) } catch {
+    return { error: 'Base URL must be a valid http or https URL' }
+  }
+  if (IS_PRODUCTION && isPrivateHostname(endpoint.hostname))
+    return { error: 'Base URL must point at a public host (private or local addresses are not allowed)' }
+  return { value: String(value).trim().replace(/\/+$/, '') }
+}
+
+function siteAiConfig() {
+  return {
+    apiKey: String(getSetting('openai_api_key') || ''),
+    baseUrl: String(getSetting('openai_base_url') || ''),
+    model: String(getSetting('openai_model') || 'gpt-4o-mini'),
+    source: 'site',
+  }
+}
+
+function userAiRow(userId) {
+  return db.prepare('SELECT * FROM user_ai_settings WHERE user_id = ?').get(userId) || null
+}
+
+// The user's own provider wins whenever they have saved a key; otherwise the
+// site-wide Helios default is used.
+function resolveAiConfigForUser(userId) {
+  const row = userAiRow(userId)
+  const apiKey = row ? decryptSecret(row.api_key_enc) : ''
+  if (row && apiKey && row.base_url) {
+    return { apiKey, baseUrl: row.base_url, model: row.model || 'gpt-4o-mini', source: 'user', provider: row.provider }
+  }
+  return siteAiConfig()
+}
+
+// Explicit model tab in the Helios panel: 'site' = the free Helios default,
+// 'user' = the key saved in Settings, anything else = user first, then site.
+function resolveAiConfigForRequest(userId, provider) {
+  if (provider === 'site') return siteAiConfig()
+  if (provider === 'user') {
+    const row = userAiRow(userId)
+    const apiKey = row ? decryptSecret(row.api_key_enc) : ''
+    if (!(row && apiKey && row.base_url))
+      return { error: 'Add your own API key in Settings before using the My API tab.', code: 'AI_USER_NOT_CONFIGURED' }
+    return { apiKey, baseUrl: row.base_url, model: row.model || 'gpt-4o-mini', source: 'user', provider: row.provider }
+  }
+  return resolveAiConfigForUser(userId)
+}
+
+function describeAiConfig(config) {
+  if (/helios-local/i.test(config.apiKey) || /helios\.local/i.test(config.baseUrl)) return 'local'
+  if (/11434/.test(config.baseUrl) || /ollama/i.test(config.apiKey)) return 'ollama'
+  return 'cloud'
+}
+
 function positiveInt(value) {
   if (typeof value === 'string') {
     if (!/^[1-9]\d*$/.test(value)) return null
@@ -2218,9 +2358,8 @@ app.post('/api/projects/:id/helios-patch', requireUser, socialRateLimit, async (
   const pathHint = String(req.body?.path || '').trim()
 
   // Optional AI-shaped rewrite when a real upstream key is configured
-  const apiKey = String(getSetting('openai_api_key') || '')
-  const baseUrl = String(getSetting('openai_base_url') || '')
-  const model = String(getSetting('openai_model') || 'gpt-4o-mini')
+  // (the user's own key takes precedence over the site default)
+  const { apiKey, baseUrl, model } = resolveAiConfigForUser(req.user.id)
   const useUpstream = apiKey && !/^helios-local/i.test(apiKey) && !/helios\.local/i.test(baseUrl)
 
   let applied = applyLocalContentPatch(content, instruction, pathHint)
@@ -3147,13 +3286,15 @@ function buildLocalHeliosReply(userText, project) {
 
 // ── Helios agent (OpenAI-compatible proxy, shared administrator key) ──
 app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
-  const apiKey = getSetting('openai_api_key')
+  const aiConfig = resolveAiConfigForRequest(req.user.id, req.body?.provider)
+  if (aiConfig.error) return res.status(400).json({ error: aiConfig.error, code: aiConfig.code })
+  const apiKey = aiConfig.apiKey
   if (!apiKey) return res.status(503).json({
-    error: 'Helios is not configured yet. An administrator must add an OpenAI API key.',
+    error: 'Helios is not configured yet. Add your own API key in Settings, or ask an administrator to set a site default.',
     code: 'AI_NOT_CONFIGURED',
   })
-  const model = getSetting('openai_model') || 'gpt-4o-mini'
-  const baseUrl = getSetting('openai_base_url') || 'https://api.openai.com'
+  const model = aiConfig.model || 'gpt-4o-mini'
+  const baseUrl = aiConfig.baseUrl || 'https://api.openai.com'
   const { messages, project_id, context } = req.body || {}
   if (!Array.isArray(messages) || messages.length === 0 || messages.length > 30)
     return res.status(400).json({ error: 'messages must contain between 1 and 30 items' })
@@ -3195,7 +3336,7 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
   }
   const requestedSpaceId = contextObject.space_id === undefined ? '' : normalizeSpaceId(contextObject.space_id, '')
   if (requestedSpaceId) {
-    const knownSpace = STATIC_SPACES.some(space => space.id === requestedSpaceId)
+    const knownSpace = SPACE_CATALOG.some(([id]) => id === requestedSpaceId)
       || db.prepare('SELECT 1 FROM user_spaces WHERE user_id = ? AND id = ?').get(req.user.id, requestedSpaceId)
     if (knownSpace) appContext += `\nCurrent Space: ${requestedSpaceId}`
   }
@@ -3226,6 +3367,13 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
     appContext += `\n\nContent explicitly selected by the user in the current Helios view:\n${contextObject.selected_content.trim().slice(0, 4000)}`
   }
 
+  const chatLanguage = replyLanguage(safeMessages.map(item => item.content).join('\n'), contextObject.language)
+  const languageClause = chatLanguage === 'zh-TW'
+    ? 'Reply in Traditional Chinese using Taiwan software conventions (設定, 檔案, 訊息, 專案). '
+    : chatLanguage === 'zh-CN'
+      ? 'Reply in Simplified Chinese. '
+      : ''
+
   const system = {
     role: 'system',
     content:
@@ -3240,7 +3388,8 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       `You may also return the full updated serialized project JSON (schema helios-workspace-v1) in one fenced code block. ` +
       `First explain the intended change in one concise line, then return the file/content preview so the UI can Approve and write files. ` +
       `If you cannot perform an external action, state the boundary in one short clause and then provide the best Helios-scoped next action or preview. ` +
-      `If the current content has schema "helios-workspace-v1", preserve that complete JSON structure when returning full workspace JSON. Respect view-only permissions. Be concise, concrete, and honest.` +
+      `If the current content has schema "helios-workspace-v1", preserve that complete JSON structure when returning full workspace JSON. Respect view-only permissions. Be concise, concrete, and honest. ` +
+      languageClause +
       projectContext + appContext,
   }
 
@@ -3258,6 +3407,7 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       const lastUser = [...safeMessages].reverse().find(message => message.role === 'user')?.content || ''
       const compactSystem = [
         'You are Helios inside Helios Space. Be concise and helpful.',
+        languageClause.trim(),
         'For code edits, return path-tagged fenced blocks like ```cpp:main.cpp ... ``` so the UI can write files.',
         permittedProject ? `Active project: ${permittedProject.name} (${permittedProject.app_kind}).` : '',
         appContext.slice(0, 500),
@@ -3330,13 +3480,185 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       hasConversation: Boolean(conversationId),
       hasSelectedContent: typeof contextObject.selected_content === 'string' && Boolean(contextObject.selected_content.trim()),
     })
-    res.json({ reply, model: upstreamModel || model })
+    res.json({ reply, model: upstreamModel || model, source: aiConfig.source })
   } catch (error) {
     if (error?.name === 'TimeoutError' || error?.name === 'AbortError')
       return res.status(504).json({ error: 'Helios timed out while waiting for the AI provider.', code: 'AI_TIMEOUT' })
     if (error instanceof TypeError || String(error?.message || '').includes('base URL'))
       return res.status(503).json({ error: 'Helios has an invalid AI provider configuration.', code: 'AI_CONFIGURATION' })
     res.status(502).json({ error: 'Helios could not reach the AI provider.', code: 'AI_NETWORK' })
+  }
+})
+
+// ── Helios agent ──
+// Phase 1 (/api/helios/agent) returns a plan quickly: steps the browser
+// executes (open pages, create/update Mini App files, share a post, switch
+// theme). Phase 2 (/api/helios/agent/content) generates the content for one
+// step at a time, so a file opens instantly with starter content and fills in
+// while the model writes. Every project reference is re-checked against the
+// caller's permissions.
+function agentAiConfig(req, res) {
+  const aiConfig = resolveAiConfigForRequest(req.user.id, req.body?.provider)
+  if (aiConfig.error) {
+    res.status(400).json({ error: aiConfig.error, code: aiConfig.code })
+    return null
+  }
+  if (!aiConfig.apiKey) {
+    res.status(503).json({
+      error: 'Helios is not configured yet. Add your own API key in Settings, or ask an administrator to set a site default.',
+      code: 'AI_NOT_CONFIGURED',
+    })
+    return null
+  }
+  return aiConfig
+}
+
+function sendAgentFailure(res, error) {
+  if (error instanceof AgentUpstreamError) return res.status(error.status).json(error.body)
+  if (error?.name === 'TimeoutError' || error?.name === 'AbortError')
+    return res.status(504).json({ error: 'Helios timed out while waiting for the AI provider.', code: 'AI_TIMEOUT' })
+  if (error instanceof TypeError || String(error?.message || '').includes('base URL'))
+    return res.status(503).json({ error: 'Helios has an invalid AI provider configuration.', code: 'AI_CONFIGURATION' })
+  console.error('agent failed', error)
+  return res.status(502).json({ error: 'Helios could not reach the AI provider.', code: 'AI_NETWORK' })
+}
+
+app.post('/api/helios/agent', requireUser, aiRateLimit, async (req, res) => {
+  const aiConfig = agentAiConfig(req, res)
+  if (!aiConfig) return
+  const checkedGoal = checkedString(req.body?.goal, 'Goal', 4000, { required: true, trim: true })
+  if (checkedGoal.error) return res.status(400).json({ error: checkedGoal.error })
+  const goal = checkedGoal.value
+  const rawContext = req.body?.context
+  if (rawContext !== undefined && (rawContext === null || typeof rawContext !== 'object' || Array.isArray(rawContext)))
+    return res.status(400).json({ error: 'context must be an object' })
+  const context = rawContext || {}
+
+  let activeProject = null
+  if (context.project_id !== undefined && context.project_id !== null) {
+    const id = positiveInt(context.project_id)
+    if (!id) return res.status(400).json({ error: 'Invalid project id' })
+    activeProject = getProjectForUser(id, req.user.id)
+  }
+  const ownProjects = db.prepare(
+    'SELECT id, name, app_kind FROM projects WHERE user_id = ? ORDER BY updated_at DESC LIMIT 40'
+  ).all(req.user.id)
+  const uiLanguage = typeof context.language === 'string' ? context.language : ''
+  const planningContext = {
+    projects: ownProjects.map(row => ({ id: Number(row.id), name: row.name, app_kind: row.app_kind || '' })),
+    activeProject: activeProject ? { id: Number(activeProject.id), name: activeProject.name, app_kind: activeProject.app_kind || '' } : null,
+    view: typeof context.view === 'string' ? context.view.replace(/[^a-z-]/gi, '').slice(0, 40) : '',
+    language: replyLanguage(goal, uiLanguage),
+  }
+
+  try {
+    let plan = planLocally(goal, planningContext)
+    let say = ''
+    let plannerModel = aiConfig.model
+    if (!plan) {
+      const modelPlan = await planWithModel(goal, planningContext, aiConfig)
+      plan = { steps: sanitizeSteps(modelPlan.steps), planner: modelPlan.planner }
+      say = modelPlan.say
+      plannerModel = modelPlan.model || plannerModel
+    }
+
+    const steps = []
+    for (const step of plan.steps) {
+      if (step.tool === 'create_file') {
+        const title = step.name || deriveTitle(goal, step.app)
+        const brief = step.brief || goal
+        steps.push({
+          tool: 'create_file',
+          app: step.app,
+          app_name: AGENT_APPS[step.app].name,
+          type: AGENT_APPS[step.app].type,
+          name: title,
+          brief,
+          starter_content: starterWorkspace(step.app, title, brief, planningContext.language),
+        })
+      } else if (step.tool === 'update_file') {
+        const project = getProjectForUser(step.project_id, req.user.id, { edit: true })
+        if (!project) continue
+        const app = agentAppFor(project.app_kind)
+        steps.push({ tool: 'update_file', project_id: Number(project.id), project_name: project.name, app_name: AGENT_APPS[app].name, brief: step.brief || goal })
+      } else if (step.tool === 'open_file') {
+        const project = getProjectForUser(step.project_id, req.user.id)
+        if (!project) continue
+        steps.push({ tool: 'open_file', project_id: Number(project.id), project_name: project.name })
+      } else if (step.tool === 'post') {
+        const linked = steps.find(item => item.tool === 'create_file' || item.tool === 'update_file')
+        steps.push({ tool: 'post', body: step.body.slice(0, MAX_POST_BODY_LENGTH), brief: step.brief || goal, link_previous: Boolean(linked) })
+      } else if (step.tool === 'navigate' || step.tool === 'set_theme') {
+        steps.push(step)
+      }
+    }
+
+    res.json({
+      goal,
+      say: say || describePlan(steps, planningContext.language || isChinese(goal)),
+      steps,
+      planner: plan.planner,
+      model: plannerModel,
+      source: aiConfig.source,
+    })
+  } catch (error) {
+    sendAgentFailure(res, error)
+  }
+})
+
+app.post('/api/helios/agent/content', requireUser, aiRateLimit, async (req, res) => {
+  const aiConfig = agentAiConfig(req, res)
+  if (!aiConfig) return
+  const body = req.body || {}
+  const checkedGoal = checkedString(body.goal ?? '', 'Goal', 4000, { trim: true })
+  if (checkedGoal.error) return res.status(400).json({ error: checkedGoal.error })
+  const checkedBrief = checkedString(body.brief ?? '', 'Brief', 4000, { trim: true })
+  if (checkedBrief.error) return res.status(400).json({ error: checkedBrief.error })
+  const goal = checkedGoal.value || checkedBrief.value
+  const brief = checkedBrief.value || goal
+  if (!goal) return res.status(400).json({ error: 'Goal or brief is required' })
+
+  try {
+    if (body.kind === 'post') {
+      const projectName = typeof body.project_name === 'string' ? body.project_name.slice(0, 120) : ''
+      const text = await generatePostBody({ brief, goal, ai: aiConfig, project: projectName ? { name: projectName } : null, language: body.language })
+      return res.json({ body: text.slice(0, MAX_POST_BODY_LENGTH), model: aiConfig.model, source: aiConfig.source })
+    }
+
+    if (body.project_id !== undefined && body.project_id !== null) {
+      const projectId = positiveInt(body.project_id)
+      if (!projectId) return res.status(400).json({ error: 'Invalid project id' })
+      const project = getProjectForUser(projectId, req.user.id, { edit: true })
+      if (!project) return res.status(404).json({ error: 'Project not found or not editable' })
+      const app = agentAppFor(project.app_kind)
+      let existing = null
+      try {
+        const parsed = JSON.parse(project.content || '')
+        if (parsed?.schema === 'helios-workspace-v1' && parsed.data && typeof parsed.data === 'object') existing = parsed.data
+      } catch {}
+      // A freshly created agent file still holds the starter placeholder; treat it as empty.
+      if (body.fresh === true) existing = null
+      const result = await generateWorkspace({ app, title: project.name, brief, goal, ai: aiConfig, existing, language: body.language })
+      // Write the result here rather than trusting the browser to do it: the
+      // model can take half a minute and the user may reload or navigate away
+      // in the meantime. A fallback never overwrites an existing file's content.
+      let persisted = null
+      if (result.generated || body.fresh === true) {
+        db.prepare('UPDATE projects SET content = ?, updated_at = ? WHERE id = ?')
+          .run(result.content, new Date().toISOString(), projectId)
+        syncWorkspaceContentFiles(projectId, result.content)
+        persisted = serializeProject(getProjectForUser(projectId, req.user.id), req.user.id)
+      }
+      return res.json({ content: result.content, generated: result.generated, model: result.model || aiConfig.model, source: aiConfig.source, project: persisted || undefined })
+    }
+
+    const app = String(body.app || '')
+    if (!AGENT_APPS[app]) return res.status(400).json({ error: 'Unknown Mini App' })
+    const title = String(body.title || deriveTitle(goal, app)).slice(0, 120)
+    const result = await generateWorkspace({ app, title, brief, goal, ai: aiConfig, language: body.language })
+    res.json({ content: result.content, generated: result.generated, model: result.model || aiConfig.model, source: aiConfig.source })
+  } catch (error) {
+    sendAgentFailure(res, error)
   }
 })
 
@@ -3492,6 +3814,95 @@ app.get('/api/admin/settings', requireAdmin, (_req, res) => {
     openai_key_preview: key ? key.slice(0, 7) + '…' + key.slice(-4) : '',
     openai_base_url: getSetting('openai_base_url') || 'https://api.openai.com',
   })
+})
+
+// ── User AI provider settings (bring your own key) ──
+function userAiSummary(userId) {
+  const row = userAiRow(userId)
+  const key = row ? decryptSecret(row.api_key_enc) : ''
+  const site = siteAiConfig()
+  return {
+    configured: Boolean(row && key && row.base_url),
+    provider: row?.provider || 'custom',
+    base_url: row?.base_url || '',
+    model: row?.model || '',
+    key_preview: key ? (key.length > 8 ? key.slice(0, 4) + '…' + key.slice(-4) : '••••') : '',
+    updated_at: row?.updated_at || null,
+    site_default: { kind: describeAiConfig(site), model: site.model },
+    presets: AI_PROVIDER_PRESETS,
+  }
+}
+
+app.get('/api/me/ai', requireUser, (req, res) => res.json(userAiSummary(req.user.id)))
+
+app.put('/api/me/ai', requireUser, (req, res) => {
+  const { provider, api_key, base_url, model } = req.body || {}
+  const providerId = Object.prototype.hasOwnProperty.call(AI_PROVIDER_PRESETS, String(provider)) ? String(provider) : 'custom'
+  const checkedModel = checkedString(model, 'Model', 120, { required: true, trim: true })
+  if (checkedModel.error) return res.status(400).json({ error: checkedModel.error })
+  const checkedBase = checkedString(base_url, 'Base URL', 500, { required: true, trim: true })
+  if (checkedBase.error) return res.status(400).json({ error: checkedBase.error })
+  const baseCheck = checkUserAiBaseUrl(checkedBase.value)
+  if (baseCheck.error) return res.status(400).json({ error: baseCheck.error })
+
+  const existing = userAiRow(req.user.id)
+  let encryptedKey = existing?.api_key_enc || ''
+  if (api_key !== undefined && api_key !== null && String(api_key) !== '') {
+    const checkedKey = checkedString(api_key, 'API key', 500, { trim: true })
+    if (checkedKey.error) return res.status(400).json({ error: checkedKey.error })
+    if (/\s/.test(checkedKey.value)) return res.status(400).json({ error: 'API key must not contain spaces' })
+    encryptedKey = encryptSecret(checkedKey.value)
+  }
+  if (!encryptedKey) return res.status(400).json({ error: 'API key is required' })
+
+  db.prepare(
+    'INSERT OR REPLACE INTO user_ai_settings (user_id, provider, api_key_enc, base_url, model, updated_at) VALUES (?,?,?,?,?,?)'
+  ).run(req.user.id, providerId, encryptedKey, baseCheck.value, checkedModel.value, new Date().toISOString())
+  res.json({ ok: true, ...userAiSummary(req.user.id) })
+})
+
+app.delete('/api/me/ai', requireUser, (req, res) => {
+  db.prepare('DELETE FROM user_ai_settings WHERE user_id = ?').run(req.user.id)
+  res.json({ ok: true, ...userAiSummary(req.user.id) })
+})
+
+// Sends one tiny completion so the user can confirm key, URL and model
+// together before relying on them. Unsaved values may be passed in the body.
+app.post('/api/me/ai/test', requireUser, aiRateLimit, async (req, res) => {
+  const body = req.body || {}
+  const saved = userAiRow(req.user.id)
+  const apiKey = body.api_key ? String(body.api_key).trim() : (saved ? decryptSecret(saved.api_key_enc) : '')
+  const baseUrl = String(body.base_url ?? saved?.base_url ?? '').trim()
+  const model = String(body.model ?? saved?.model ?? '').trim() || 'gpt-4o-mini'
+  if (!apiKey) return res.status(400).json({ error: 'API key is required' })
+  const baseCheck = checkUserAiBaseUrl(baseUrl)
+  if (baseCheck.error) return res.status(400).json({ error: baseCheck.error })
+  try {
+    const r = await fetch(resolveChatCompletionsUrl(baseUrl), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: 'Bearer ' + apiKey },
+      body: JSON.stringify(buildChatCompletionPayload({
+        model,
+        messages: [{ role: 'user', content: 'Reply with the single word: ready' }],
+        temperature: 0,
+      })),
+      signal: AbortSignal.timeout(30_000),
+    })
+    const rawBody = await r.text()
+    if (!r.ok) {
+      const failure = mapAiUpstreamFailure(r.status)
+      return res.status(failure.status).json({ error: failure.error, code: failure.code, detail: summarizeAiProviderError(rawBody) })
+    }
+    let data = {}
+    try { data = rawBody ? JSON.parse(rawBody) : {} } catch {}
+    const reply = extractAssistantReply(data)
+    if (!reply) return res.status(502).json({ error: 'The provider answered, but no assistant text was found.', code: 'AI_INVALID_RESPONSE' })
+    res.json({ ok: true, model: data?.model || model, reply: reply.slice(0, 200) })
+  } catch (error) {
+    if (error?.name === 'TimeoutError' || error?.name === 'AbortError')
+      return res.status(504).json({ error: 'The provider did not answer within 30 seconds.', code: 'AI_TIMEOUT' })
+    res.status(502).json({ error: 'Could not reach the provider at that base URL.', code: 'AI_NETWORK' })
+  }
 })
 
 app.post('/api/admin/settings', requireAdmin, (req, res) => {

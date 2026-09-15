@@ -8,12 +8,14 @@ import { getMiniApp, getSpaceDefinition, SUBJECTS } from '../product/catalog'
 import { askHeliosWithContext, openOrCreateProjectChat, publishLiveReplay } from '../product/flow'
 import { useApp } from '../store/appStore'
 import { parseWorkspace } from '../workspaces/workspaceData'
+import { useLocale, useT } from '../i18n'
 import './LiveView.css'
 
 type LiveBundle = { session: LiveSession; project: Project; events: LiveEvent[] }
 
 export function LiveView() {
   const { state, dispatch } = useApp()
+  const t = useT()
   const [sessions, setSessions] = useState<LiveSession[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -28,9 +30,9 @@ export function LiveView() {
     setLoading(true)
     try { setSessions((await api.live.list()).sessions) }
     catch (error) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Live sessions could not load: ${(error as Error).message}`, tone: 'warning' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Live sessions could not load: {error}', { error: (error as Error).message }), tone: 'warning' } })
     } finally { setLoading(false) }
-  }, [dispatch])
+  }, [dispatch, t])
 
   useEffect(() => { void loadSessions() }, [loadSessions])
 
@@ -103,8 +105,8 @@ export function LiveView() {
   if (state.activeLiveSessionId) {
     return (
       <div className="live-page live-session-page">
-        <button type="button" className="live-back" onClick={() => dispatch({ type: 'CLOSE_LIVE_SESSION' })}><ArrowLeft size={15} /> All Live work</button>
-        {sessionError && <div className="live-session-error"><X size={18} /><strong>Session unavailable</strong><span>{sessionError}</span><button type="button" onClick={() => dispatch({ type: 'CLOSE_LIVE_SESSION' })}>Return to Live</button></div>}
+        <button type="button" className="live-back" onClick={() => dispatch({ type: 'CLOSE_LIVE_SESSION' })}><ArrowLeft size={15} /> {t('All Live work')}</button>
+        {sessionError && <div className="live-session-error"><X size={18} /><strong>{t('Session unavailable')}</strong><span>{sessionError}</span><button type="button" onClick={() => dispatch({ type: 'CLOSE_LIVE_SESSION' })}>{t('Return to Live')}</button></div>}
         {!sessionError && !bundle && <LiveSessionSkeleton />}
         {bundle && <LiveRoom bundle={bundle} setBundle={setBundle} onOpenProject={() => void openProject(bundle.project)} />}
       </div>
@@ -114,14 +116,14 @@ export function LiveView() {
   return (
     <div className="live-page live-discovery-page">
       <header className="live-discovery-hero">
-        <div><span><i /> WORK HAPPENING NOW</span><h1>Live collaborative work</h1><p>Watch a real Project change, offer specific help, or request to collaborate. Live is a working session—not a passive video stream.</p></div>
+        <div><span><i /> {t('WORK HAPPENING NOW')}</span><h1>{t('Live collaborative work')}</h1><p>{t('Watch a real Project change, offer specific help, or request to collaborate. Live is a working session—not a passive video stream.')}</p></div>
         <div className="live-hero-orbit" aria-hidden="true"><Radio size={28} /><i /><i /></div>
       </header>
 
       <div className="live-discovery-tools">
-        <label><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search live creators, Projects or Spaces" /></label>
+        <label><Search size={15} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('Search live creators, Projects or Spaces')} /></label>
         <div className="live-space-filters">
-          <button type="button" className={spaceFilter === 'all' ? 'is-active' : ''} onClick={() => setSpaceFilter('all')}>All Spaces</button>
+          <button type="button" className={spaceFilter === 'all' ? 'is-active' : ''} onClick={() => setSpaceFilter('all')}>{t('All Spaces')}</button>
           {SUBJECTS.slice(0, 8).map(space => <button type="button" key={space.id} className={spaceFilter === space.id ? 'is-active' : ''} onClick={() => setSpaceFilter(space.id)}>{space.name}</button>)}
         </div>
       </div>
@@ -129,23 +131,26 @@ export function LiveView() {
       {loading && <div className="live-session-grid"><LiveCardSkeleton /><LiveCardSkeleton /><LiveCardSkeleton /></div>}
       {!loading && filtered.length > 0 && <div className="live-session-grid">{filtered.map(session => <LiveCard key={session.id} session={session} onOpen={() => dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: session.id })} />)}</div>}
       {!loading && filtered.length === 0 && (
-        <section className="live-empty-state"><Radio size={30} /><h2>No matching Live work</h2><p>Open one of your Projects and choose Go Live from its common project shell.</p><button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'projects' })}>Choose a Project <ChevronRight size={14} /></button></section>
+        <section className="live-empty-state"><Radio size={30} /><h2>{t('No matching Live work')}</h2><p>{t('Open one of your Projects and choose Go Live from its common project shell.')}</p><button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'projects' })}>{t('Choose a Project')} <ChevronRight size={14} /></button></section>
       )}
     </div>
   )
 }
 
 function LiveCard({ session, onOpen }: { session: LiveSession; onOpen: () => void }) {
+  const t = useT()
   const space = getSpaceDefinition(session.space_id)
   const app = getMiniApp(session.app_kind)
   return <button type="button" className="live-session-card" onClick={onOpen} style={{ '--live-accent': space.accent } as React.CSSProperties}>
-    <div className="live-card-preview"><span><i /> LIVE</span><div><Code2 size={26} /><small>{app.name}</small></div><b>{session.viewer_count} watching</b></div>
-    <div className="live-card-copy"><span>{space.name} · {app.shortName}</span><h2>{session.title}</h2><p><strong>{session.owner_name}</strong> is building {session.project_name}</p><footer><span><Users size={13} /> {session.viewer_count}</span><b>Join workspace <ChevronRight size={13} /></b></footer></div>
+    <div className="live-card-preview"><span><i /> {t('LIVE')}</span><div><Code2 size={26} /><small>{app.name}</small></div><b>{t('{count} watching', { count: session.viewer_count })}</b></div>
+    <div className="live-card-copy"><span>{space.name} · {app.shortName}</span><h2>{session.title}</h2><p>{t('{name} is building {project}', { name: session.owner_name, project: session.project_name })}</p><footer><span><Users size={13} /> {session.viewer_count}</span><b>{t('Join workspace')} <ChevronRight size={13} /></b></footer></div>
   </button>
 }
 
 function LiveRoom({ bundle, setBundle, onOpenProject }: { bundle: LiveBundle; setBundle: React.Dispatch<React.SetStateAction<LiveBundle | null>>; onOpenProject: () => void }) {
   const { dispatch } = useApp()
+  const t = useT()
+  const locale = useLocale()
   const { session, project, events } = bundle
   const [draft, setDraft] = useState('')
   const [kind, setKind] = useState<'comment' | 'suggestion' | 'collaboration_request'>('comment')
@@ -174,35 +179,41 @@ function LiveRoom({ bundle, setBundle, onOpenProject }: { bundle: LiveBundle; se
   }
 
   async function endSession() {
-    if (!window.confirm('End this Live workspace? It will remain discoverable in Feed.')) return
+    if (!window.confirm(t('End this Live workspace? It will remain discoverable in Feed.'))) return
     await api.live.end(session.id)
     const ended = { ...session, status: 'ended' as const }
     setBundle(current => current ? { ...current, session: ended } : current)
     try { await publishLiveReplay(ended, project, dispatch) } catch {}
   }
 
+  const kindPlaceholder = kind === 'comment'
+    ? t('Add a useful live comment…')
+    : kind === 'suggestion'
+      ? t('Suggest a concrete improvement…')
+      : t('Explain how you would collaborate…')
+
   return (
     <div className="live-room" style={{ '--live-accent': space.accent } as React.CSSProperties}>
       <header className="live-room-header">
-        <div className="live-room-identity"><span><i /> {session.status === 'live' ? 'LIVE' : 'SESSION REPLAY'}</span><h1>{session.title}</h1><p>{session.owner_name} · {space.name} · {app.name}</p></div>
-        <div className="live-room-actions"><span><Eye size={14} /> {session.viewer_count} watching</span>{session.permissions.voice && <span><Mic size={14} /> Voice on</span>}<button type="button" onClick={onOpenProject}><FolderGit2 size={14} /> Open Project</button><button type="button" onClick={() => void openOrCreateProjectChat(project, dispatch)}>Project Chat</button><button type="button" onClick={() => askHeliosWithContext({ project_id: project.id, project_name: project.name, space_id: session.space_id, app_kind: session.app_kind, live_session_id: session.id, selected_content: 'Live Project' }, 'Summarize what is changing in this Live Project and suggest the next useful comment.', dispatch)}><Sparkles size={14} /> Ask Helios</button><button type="button" onClick={() => { void navigator.clipboard.writeText(`${session.title} is Live in Helios Space`); dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'Live session copied to share', tone: 'success' } }) }}>Share</button>{session.can_manage && session.status === 'live' && <button type="button" className="end-live" onClick={() => void endSession()}>End Live</button>}</div>
+        <div className="live-room-identity"><span><i /> {session.status === 'live' ? t('LIVE') : t('SESSION REPLAY')}</span><h1>{session.title}</h1><p>{session.owner_name} · {space.name} · {app.name}</p></div>
+        <div className="live-room-actions"><span><Eye size={14} /> {t('{count} watching', { count: session.viewer_count })}</span>{session.permissions.voice && <span><Mic size={14} /> {t('Voice on')}</span>}<button type="button" onClick={onOpenProject}><FolderGit2 size={14} /> {t('Open Project')}</button><button type="button" onClick={() => void openOrCreateProjectChat(project, dispatch)}>{t('Project Chat')}</button><button type="button" onClick={() => askHeliosWithContext({ project_id: project.id, project_name: project.name, space_id: session.space_id, app_kind: session.app_kind, live_session_id: session.id, selected_content: 'Live Project' }, 'Summarize what is changing in this Live Project and suggest the next useful comment.', dispatch)}><Sparkles size={14} /> {t('Ask Helios')}</button><button type="button" onClick={() => { void navigator.clipboard.writeText(t('{title} is Live in Helios Space', { title: session.title })); dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Live session copied to share'), tone: 'success' } }) }}>{t('Share')}</button>{session.can_manage && session.status === 'live' && <button type="button" className="end-live" onClick={() => void endSession()}>{t('End Live')}</button>}</div>
       </header>
 
       <div className="live-room-grid">
         <section className="live-work-stage">
-          <div className="live-stage-bar"><div><span className="live-owner-avatar">{session.owner_name.slice(0, 1)}</span><strong>{project.name}</strong><small>Editing in {app.name}</small></div><span className={recentWork ? 'is-updating' : ''}><Sparkles size={13} /> {recentWork ? `Updated ${new Date(recentWork.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Waiting for changes'}</span></div>
+          <div className="live-stage-bar"><div><span className="live-owner-avatar">{session.owner_name.slice(0, 1)}</span><strong>{project.name}</strong><small>{t('Editing in {name}', { name: app.name })}</small></div><span className={recentWork ? 'is-updating' : ''}><Sparkles size={13} /> {recentWork ? t('Updated {time}', { time: new Date(recentWork.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) }) : t('Waiting for changes')}</span></div>
           <ProjectLivePreview project={project} />
-          <div className="live-viewer-cursors" aria-hidden="true">{cursors.map(cursor => <span key={cursor.user_id} style={{ left: `${Number(cursor.payload.x)}%`, top: `${Number(cursor.payload.y)}%` }}><i />{String(cursor.payload.author_name || 'Collaborator')}</span>)}</div>
-          <div className="live-stage-footer"><span><Radio size={13} /> Changes stream here from the durable Project</span><button type="button" onClick={onOpenProject}>View project details <ChevronRight size={13} /></button></div>
+          <div className="live-viewer-cursors" aria-hidden="true">{cursors.map(cursor => <span key={cursor.user_id} style={{ left: `${Number(cursor.payload.x)}%`, top: `${Number(cursor.payload.y)}%` }}><i />{String(cursor.payload.author_name || t('Collaborator'))}</span>)}</div>
+          <div className="live-stage-footer"><span><Radio size={13} /> {t('Changes stream here from the durable Project')}</span><button type="button" onClick={onOpenProject}>{t('View project details')} <ChevronRight size={13} /></button></div>
         </section>
 
         <aside className="live-discussion">
-          <header><div><strong>Live Comments</strong><span>{visibleEvents.length} contributions · {cursors.length + 1} viewers</span></div><span className="live-presence">{[session.owner_name, ...cursors.map(item => String(item.payload.author_name || 'Viewer'))].slice(0, 5).map(name => <i key={name} title={name} />)} watching</span></header>
+          <header><div><strong>{t('Live Comments')}</strong><span>{t('{count} contributions · {viewers} viewers', { count: visibleEvents.length, viewers: cursors.length + 1 })}</span></div><span className="live-presence">{[session.owner_name, ...cursors.map(item => String(item.payload.author_name || t('Viewer')))].slice(0, 5).map(name => <i key={name} title={name} />)} {t('watching')}</span></header>
           <div className="live-event-feed" ref={feedRef}>
-            {visibleEvents.length === 0 && <div className="live-discussion-empty"><MessageCircle size={22} /><strong>Help move the work forward</strong><span>Ask a question, leave a specific suggestion, or request to edit.</span></div>}
-            {visibleEvents.map(event => <article key={event.id} className={`live-message kind-${event.kind}`}><span>{String(event.payload.author_name || '?').slice(0, 1)}</span><div><header><strong>{String(event.payload.author_name || 'Viewer')}</strong><b>{event.kind.replace('_', ' ')}</b><time>{new Date(event.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time></header><p>{String(event.payload.text || '')}</p></div></article>)}
+            {visibleEvents.length === 0 && <div className="live-discussion-empty"><MessageCircle size={22} /><strong>{t('Help move the work forward')}</strong><span>{t('Ask a question, leave a specific suggestion, or request to edit.')}</span></div>}
+            {visibleEvents.map(event => <article key={event.id} className={`live-message kind-${event.kind}`}><span>{String(event.payload.author_name || '?').slice(0, 1)}</span><div><header><strong>{String(event.payload.author_name || t('Viewer'))}</strong><b>{t(event.kind.replace('_', ' '))}</b><time>{new Date(event.created_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}</time></header><p>{String(event.payload.text || '')}</p></div></article>)}
           </div>
-          {session.status === 'live' ? <form className="live-message-composer" onSubmit={submit}><div className="live-message-kinds"><button type="button" className={kind === 'comment' ? 'is-active' : ''} onClick={() => setKind('comment')}><MessageCircle size={12} /> Comment</button><button type="button" className={kind === 'suggestion' ? 'is-active' : ''} disabled={session.permissions.suggest === false} onClick={() => setKind('suggestion')}><Sparkles size={12} /> Suggest</button><button type="button" className={kind === 'collaboration_request' ? 'is-active' : ''} disabled={session.permissions.request_edit === false} onClick={() => setKind('collaboration_request')}><Hand size={12} /> Request edit</button></div><div><textarea value={draft} maxLength={800} onChange={event => setDraft(event.target.value)} placeholder={kind === 'comment' ? 'Add a useful live comment…' : kind === 'suggestion' ? 'Suggest a concrete improvement…' : 'Explain how you would collaborate…'} /><button type="submit" disabled={!draft.trim() || sending}><Send size={14} /></button></div></form> : <div className="live-replay-note"><Radio size={14} /> This session ended. Its Project and discussion remain connected.</div>}
+          {session.status === 'live' ? <form className="live-message-composer" onSubmit={submit}><div className="live-message-kinds"><button type="button" className={kind === 'comment' ? 'is-active' : ''} onClick={() => setKind('comment')}><MessageCircle size={12} /> {t('Comment')}</button><button type="button" className={kind === 'suggestion' ? 'is-active' : ''} disabled={session.permissions.suggest === false} onClick={() => setKind('suggestion')}><Sparkles size={12} /> {t('Suggest')}</button><button type="button" className={kind === 'collaboration_request' ? 'is-active' : ''} disabled={session.permissions.request_edit === false} onClick={() => setKind('collaboration_request')}><Hand size={12} /> {t('Request edit')}</button></div><div><textarea value={draft} maxLength={800} onChange={event => setDraft(event.target.value)} placeholder={kindPlaceholder} /><button type="submit" disabled={!draft.trim() || sending}><Send size={14} /></button></div></form> : <div className="live-replay-note"><Radio size={14} /> {t('This session ended. Its Project and discussion remain connected.')}</div>}
         </aside>
       </div>
     </div>
@@ -210,16 +221,17 @@ function LiveRoom({ bundle, setBundle, onOpenProject }: { bundle: LiveBundle; se
 }
 
 function ProjectLivePreview({ project }: { project: Project }) {
+  const t = useT()
   const payload = parseWorkspace(project)
   if (payload.appKind === 'web-code') {
     const fileRecord = payload.data.files && typeof payload.data.files === 'object' && !Array.isArray(payload.data.files) ? payload.data.files as Record<string, string> : {}
     const names = Object.keys(fileRecord)
     const selectedName = String(payload.data.activeFile || names[0] || '')
-    return <div className="live-code-preview"><aside>{names.slice(0, 6).map(name => <span key={name}>⌁ {name}</span>)}</aside><pre><code>{fileRecord[selectedName] || '// The creator has not written code yet.'}</code></pre></div>
+    return <div className="live-code-preview"><aside>{names.slice(0, 6).map(name => <span key={name}>⌁ {name}</span>)}</aside><pre><code>{fileRecord[selectedName] || t('// The creator has not written code yet.')}</code></pre></div>
   }
   if (payload.appKind === 'writing' || payload.appKind === 'reader' || payload.appKind === 'book-creator') {
     const html = String(payload.data.html || '')
-    return <div className="live-document-preview"><div dangerouslySetInnerHTML={{ __html: html }} />{!html && <p>Start of a new document…</p>}</div>
+    return <div className="live-document-preview"><div dangerouslySetInnerHTML={{ __html: html }} />{!html && <p>{t('Start of a new document…')}</p>}</div>
   }
   if (payload.appKind === 'spreadsheet' || payload.appKind === 'data-visualization') {
     const cells = Array.isArray(payload.data.cells) ? payload.data.cells as string[][] : []
@@ -228,9 +240,9 @@ function ProjectLivePreview({ project }: { project: Project }) {
   if (payload.appKind === 'presentation') {
     const slides = Array.isArray(payload.data.slides) ? payload.data.slides as Array<{ title?: string; body?: string }> : []
     const current = slides[Number(payload.data.activeSlide || 0)] ?? slides[0]
-    return <div className="live-slide-preview"><small>SLIDE {Number(payload.data.activeSlide || 0) + 1}</small><h2>{current?.title || 'Untitled presentation'}</h2><p>{current?.body || 'The creator is shaping this slide.'}</p></div>
+    return <div className="live-slide-preview"><small>{t('SLIDE {number}', { number: Number(payload.data.activeSlide || 0) + 1 })}</small><h2>{current?.title || t('Untitled presentation')}</h2><p>{current?.body || t('The creator is shaping this slide.')}</p></div>
   }
-  return <div className="live-generic-preview"><Sparkles size={30} /><h2>{project.name}</h2><p>{getMiniApp(payload.appKind).description}</p><span>Live Project data updates in realtime</span></div>
+  return <div className="live-generic-preview"><Sparkles size={30} /><h2>{project.name}</h2><p>{getMiniApp(payload.appKind).description}</p><span>{t('Live Project data updates in realtime')}</span></div>
 }
 
 function LiveCardSkeleton() { return <div className="live-card-skeleton"><i /><i /><i /><i /></div> }

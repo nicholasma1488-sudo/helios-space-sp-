@@ -39,7 +39,7 @@
   box-shadow: none !important;
 }
 .chat-composer, .chat-composer-box {
-  background: rgba(255,255,255,.92) !important;
+  background: rgba(var(--glass-rgb), .92) !important;
   border-color: #d1d1d6 !important;
 }
 .chat-hub-sidebar, .chat-sidebar {
@@ -71,7 +71,7 @@
   border-color: var(--glass-stroke) !important;
 }
 .chat-hub-search {
-  background: rgba(255,255,255,.55) !important;
+  background: rgba(var(--glass-rgb), .55) !important;
   border-color: var(--glass-stroke) !important;
 }
 .chat-kind-tabs button.is-active,
@@ -85,10 +85,10 @@
 }
 .chat-conversation-list > button.is-active {
   border-color: color-mix(in srgb, var(--helios-accent) 25%, var(--glass-stroke)) !important;
-  background: color-mix(in srgb, var(--helios-accent2) 10%, white) !important;
+  background: color-mix(in srgb, var(--helios-accent2) 10%, var(--mix-base)) !important;
 }
 .chat-conversation-avatar {
-  background: color-mix(in srgb, var(--helios-accent) 12%, white) !important;
+  background: color-mix(in srgb, var(--helios-accent) 12%, var(--mix-base)) !important;
   color: var(--helios-accent) !important;
 }
 .chat-thread {
@@ -99,24 +99,24 @@
 .chat-thread-header,
 .chat-composer,
 .chat-composer-box {
-  background: rgba(255,255,255,.88) !important;
+  background: rgba(var(--glass-rgb), .88) !important;
   border-color: var(--glass-stroke) !important;
   backdrop-filter: blur(14px);
 }
 .chat-message-content > p {
-  background: rgba(255,255,255,.78) !important;
+  background: rgba(var(--glass-rgb), .78) !important;
   color: var(--helios-text) !important;
   border-color: var(--glass-stroke) !important;
   border-radius: 18px 18px 18px 6px !important;
 }
 .chat-message-row.is-mine .chat-message-content > p {
-  background: color-mix(in srgb, var(--helios-accent) 88%, white) !important;
+  background: color-mix(in srgb, var(--helios-accent) 88%, var(--mix-base)) !important;
   color: var(--helios-on-accent) !important;
   border: 0 !important;
   border-radius: 18px 18px 6px 18px !important;
 }
 .chat-message-avatar {
-  background: linear-gradient(145deg, rgba(255,255,255,.75), rgba(120,128,140,.25)) !important;
+  background: linear-gradient(145deg, rgba(var(--glass-rgb), .75), rgba(120,128,140,.25)) !important;
   color: var(--codex-gray) !important;
 }
 .chat-welcome {
@@ -159,21 +159,21 @@
 .chat-attach-label { color: var(--helios-muted) !important; }
 .chat-dialog input,
 .chat-dialog select {
-  background: rgba(255,255,255,.7) !important;
+  background: rgba(var(--glass-rgb), .7) !important;
   color: var(--helios-text) !important;
   border-color: var(--glass-stroke) !important;
 }
 .chat-dialog-kinds button.is-active {
   border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--glass-stroke)) !important;
-  background: color-mix(in srgb, var(--helios-accent) 10%, white) !important;
+  background: color-mix(in srgb, var(--helios-accent) 10%, var(--mix-base)) !important;
   color: var(--helios-text) !important;
 }
 .chat-pinned,
 .project-chat-context {
-  background: color-mix(in srgb, var(--helios-accent2) 8%, white) !important;
+  background: color-mix(in srgb, var(--helios-accent2) 8%, var(--mix-base)) !important;
 }
 .chat-list-empty > span {
-  background: color-mix(in srgb, var(--helios-accent) 10%, white) !important;
+  background: color-mix(in srgb, var(--helios-accent) 10%, var(--mix-base)) !important;
   color: var(--helios-accent) !important;
 }
 .chat-thread-empty svg { color: var(--helios-accent) !important; }
@@ -243,7 +243,7 @@
   padding: 11px 12px;
   border: 1px solid var(--glass-stroke, var(--helios-border));
   border-radius: 12px;
-  background: rgba(255,255,255,.55);
+  background: rgba(var(--glass-rgb), .55);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -335,7 +335,7 @@
   padding: 8px;
   border: 1px solid var(--glass-stroke, var(--helios-border));
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(var(--glass-rgb), 0.55);
   backdrop-filter: blur(10px);
 }
 .chat-friend-requests {
@@ -381,7 +381,7 @@
   height: 28px;
   flex: 0 0 auto;
   border-radius: 9px;
-  background: color-mix(in srgb, var(--helios-accent) 12%, white);
+  background: color-mix(in srgb, var(--helios-accent) 12%, var(--mix-base));
   color: var(--helios-accent);
   font-size: 11px;
   font-weight: 800;
@@ -409,7 +409,7 @@
   flex: 0 0 auto;
   padding: 4px 8px;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--helios-accent) 10%, white);
+  background: color-mix(in srgb, var(--helios-accent) 10%, var(--mix-base));
   color: var(--helios-muted);
   font-size: 9px;
   font-weight: 700;
@@ -426,7 +426,7 @@
   padding: 0 8px;
   border: 1px solid var(--glass-stroke, var(--helios-border));
   border-radius: 8px;
-  background: var(--glass-bg, rgba(255,255,255,.7));
+  background: var(--glass-bg, rgba(var(--glass-rgb), .7));
   color: var(--helios-text);
   font: inherit;
   font-size: 9px;
@@ -438,7 +438,7 @@
   color: var(--helios-accent);
 }
 .chat-friend-action.is-accept {
-  background: color-mix(in srgb, var(--helios-accent) 88%, white);
+  background: color-mix(in srgb, var(--helios-accent) 88%, var(--mix-base));
   border-color: transparent;
   color: var(--helios-on-accent, #fff);
 }

@@ -17,6 +17,7 @@ import { NotebookWorkspace } from './NotebookWorkspace'
 import { MailWorkspace, PresentationWorkspace, SpreadsheetWorkspace, WeaveWorkspace, WritingWorkspace } from './ProductivityWorkspaces'
 import { StocksWorkspace } from './StocksWorkspace'
 import { RepoBoundWorkspace } from './RepoFrame'
+import { t, useLocale, useT } from '../i18n'
 import { askHeliosWithContext, openOrCreateProjectChat, publishLiveReplay } from '../product/flow'
 import { parseWorkspace, resolveWorkspaceKind, serializeWorkspace, type WorkspacePayload } from './workspaceData'
 import './ProjectWorkspace.css'
@@ -31,6 +32,8 @@ interface Props {
 
 export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   const { state, dispatch } = useApp()
+  const t = useT()
+  const locale = useLocale()
   const [payload, setPayload] = useState<WorkspacePayload | null>(() => activeProject ? parseWorkspace(activeProject) : null)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [saveError, setSaveError] = useState('')
@@ -47,7 +50,7 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   const [liveDraft, setLiveDraft] = useState('')
   const [liveStarting, setLiveStarting] = useState(false)
   const [showLiveSetup, setShowLiveSetup] = useState(false)
-  const [liveTitle, setLiveTitle] = useState(activeProject?.name ? `Building ${activeProject.name}` : 'Live work session')
+  const [liveTitle, setLiveTitle] = useState(activeProject?.name ? t('Building {name}', { name: activeProject.name }) : t('Live work session'))
   const [liveAudience, setLiveAudience] = useState<'public' | 'private'>('public')
   const [livePermissions, setLivePermissions] = useState({ comment: true, suggest: true, request_edit: true, voice: false })
   const payloadRef = useRef(payload)
@@ -77,7 +80,7 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
     setSidePanel(null)
     setLiveSession(null)
     setLiveEvents([])
-    setLiveTitle(`Building ${nextProject.name}`)
+    setLiveTitle(t('Building {name}', { name: nextProject.name }))
   }, [activeProjectId])
 
   useEffect(() => {
@@ -190,7 +193,7 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   }, [liveSessionId, liveSessionStatus])
 
   if (!activeProject || !payload) {
-    return <div className="project-workspace-empty"><FolderGit2 size={30} /><strong>Project unavailable</strong><button type="button" onClick={() => dispatch({ type: 'CLOSE_CODE_EDITOR' })}>Return</button></div>
+    return <div className="project-workspace-empty"><FolderGit2 size={30} /><strong>{t('Project unavailable')}</strong><button type="button" onClick={() => dispatch({ type: 'CLOSE_CODE_EDITOR' })}>{t('Return')}</button></div>
   }
 
   const project = activeProject
@@ -198,7 +201,7 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   const app = getMiniApp(workspacePayload.appKind)
   const suiteApp = getSuiteApp(workspacePayload.appKind)
   const space = getSpaceDefinition(project.space_id)
-  const saveLabel = saveState === 'saving' ? 'Saving…' : saveState === 'dirty' ? 'Unsaved changes' : saveState === 'error' ? 'Save failed' : 'Saved'
+  const saveLabel = saveState === 'saving' ? t('Saving…') : saveState === 'dirty' ? t('Unsaved changes') : saveState === 'error' ? t('Save failed') : t('Saved')
   const chromeName = suiteApp?.name || app.name
   const chromeColor = suiteApp?.color || app.accent
 
@@ -222,15 +225,15 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   async function checkpoint() {
     const saved = await saveNow()
     if (!saved) return
-    const label = window.prompt('Checkpoint label', `Checkpoint ${new Date().toLocaleString()}`)?.trim()
+    const label = window.prompt(t('Checkpoint label'), t('Checkpoint {time}', { time: new Date().toLocaleString(locale) }))?.trim()
     if (!label) return
     await api.projects.versions.create(project.id, label)
     setVersions((await api.projects.versions.list(project.id)).versions)
-    dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'Version checkpoint created', tone: 'success' } })
+    dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Version checkpoint created'), tone: 'success' } })
   }
 
   async function restoreVersion(version: ProjectVersion) {
-    if (!window.confirm(`Restore “${version.label}”? Current autosaved work remains in the previous checkpoint only if you saved one.`)) return
+    if (!window.confirm(t('Restore “{label}”? Current autosaved work remains in the previous checkpoint only if you saved one.', { label: version.label }))) return
     const result = await api.projects.versions.restore(project.id, version.id)
     onProjectUpdate(result.project)
     const next = parseWorkspace(result.project)
@@ -275,7 +278,7 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
       app_kind: workspacePayload.appKind,
       app_name: chromeName,
       live_status: liveSession?.status || 'offline',
-    }, prompt || `Help with ${project.name} in ${chromeName}.`, dispatch)
+    }, prompt || t('Help with {project} in {app}.', { project: project.name, app: chromeName }), dispatch)
   }
 
   function openLiveControls() {
@@ -293,7 +296,7 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
       await saveNow()
       const result = liveSession?.status === 'live'
         ? await api.live.update(liveSession.id, { audience: liveAudience, permissions: livePermissions })
-        : await api.live.create({ project_id: project.id, title: liveTitle.trim() || `${project.name} · ${app.name}`, audience: liveAudience, permissions: livePermissions })
+        : await api.live.create({ project_id: project.id, title: liveTitle.trim() || `${project.name} · ${t(app.name)}`, audience: liveAudience, permissions: livePermissions })
       setLiveSession(result.session)
       if (!liveSession || liveSession.status !== 'live') setLiveEvents([])
       setShowLiveSetup(false)
@@ -322,7 +325,7 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   }
 
   async function endLive() {
-    if (!liveSession || !window.confirm('End this Live workspace? The session remains discoverable in Feed.')) return
+    if (!liveSession || !window.confirm(t('End this Live workspace? The session remains discoverable in Feed.'))) return
     await api.live.end(liveSession.id)
     const ended = { ...liveSession, status: 'ended' as const }
     setLiveSession(ended)
@@ -334,31 +337,31 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
   return (
     <div className={'project-workspace' + (liveSession?.status === 'live' ? ' is-live' : '') + (suiteApp ? ' is-suite' : '')} style={{ '--workspace-accent': chromeColor } as React.CSSProperties}>
       <header className="project-shell-header">
-        <button type="button" className="project-close" onClick={() => void close()} aria-label="Save and close Project"><X size={17} /></button>
-        <div className="project-shell-identity"><i>{suiteApp?.letter || app.shortName.slice(0, 1)}</i><span><small>{chromeName}{liveSession?.status === 'live' ? ' · LIVE' : suiteApp ? '' : ` · ${space.name}`}</small><strong>{project.name}</strong></span>{!suiteApp && <span className="repo-branch">main</span>}<ChevronDown size={13} /></div>
+        <button type="button" className="project-close" onClick={() => void close()} aria-label={t('Save and close Project')}><X size={17} /></button>
+        <div className="project-shell-identity"><i>{suiteApp?.letter || app.shortName.slice(0, 1)}</i><span><small>{t(chromeName)}{liveSession?.status === 'live' ? ` · ${t('LIVE')}` : suiteApp ? '' : ` · ${t(space.name)}`}</small><strong>{project.name}</strong></span>{!suiteApp && <span className="repo-branch">main</span>}<ChevronDown size={13} /></div>
         <span className={'project-save-state state-' + saveState} role="status"><i />{saveLabel}</span>
         <div className="project-shell-actions">
-          <button type="button" onClick={() => void saveNow()} disabled={!project.can_edit || saveState === 'saving'}><Save size={14} /><span>Save</span></button>
-          <button type="button" onClick={() => setShowPublish(true)}><Share2 size={14} /><span>Share</span></button>
-          <button type="button" onClick={() => void openOrCreateProjectChat(project, dispatch)}><MessageCircle size={14} /><span>Project Chat</span></button>
-          <button type="button" onClick={() => void loadPanel('comments')} className={sidePanel === 'comments' ? 'is-active' : ''}><MessageCircle size={14} /><span>Comments</span></button>
-          <button type="button" onClick={() => void loadPanel('collaborators')} className={sidePanel === 'collaborators' ? 'is-active' : ''}><Users size={14} /><span>People</span></button>
-          <button type="button" onClick={() => void loadPanel('versions')} className={sidePanel === 'versions' ? 'is-active' : ''}><History size={14} /><span>History</span></button>
-          <button type="button" onClick={() => void loadPanel('permissions')} className={sidePanel === 'permissions' ? 'is-active' : ''}><Lock size={14} /><span>Access</span></button>
-          <button type="button" onClick={() => askHelios()} className="project-helios"><Sparkles size={14} /><span>Helios</span></button>
-          {app.live && project.can_edit && <button type="button" className={'project-go-live' + (liveSession?.status === 'live' ? ' is-live' : '')} onClick={openLiveControls} disabled={liveStarting}><Radio size={14} /><span>{liveSession?.status === 'live' ? 'Live controls' : liveStarting ? 'Starting…' : 'Go Live'}</span></button>}
+          <button type="button" onClick={() => void saveNow()} disabled={!project.can_edit || saveState === 'saving'}><Save size={14} /><span>{t('Save')}</span></button>
+          <button type="button" onClick={() => setShowPublish(true)}><Share2 size={14} /><span>{t('Share')}</span></button>
+          <button type="button" onClick={() => void openOrCreateProjectChat(project, dispatch)}><MessageCircle size={14} /><span>{t('Project Chat')}</span></button>
+          <button type="button" onClick={() => void loadPanel('comments')} className={sidePanel === 'comments' ? 'is-active' : ''}><MessageCircle size={14} /><span>{t('Comments')}</span></button>
+          <button type="button" onClick={() => void loadPanel('collaborators')} className={sidePanel === 'collaborators' ? 'is-active' : ''}><Users size={14} /><span>{t('People')}</span></button>
+          <button type="button" onClick={() => void loadPanel('versions')} className={sidePanel === 'versions' ? 'is-active' : ''}><History size={14} /><span>{t('History')}</span></button>
+          <button type="button" onClick={() => void loadPanel('permissions')} className={sidePanel === 'permissions' ? 'is-active' : ''}><Lock size={14} /><span>{t('Access')}</span></button>
+          <button type="button" onClick={() => askHelios()} className="project-helios"><Sparkles size={14} /><span>{t('Helios')}</span></button>
+          {app.live && project.can_edit && <button type="button" className={'project-go-live' + (liveSession?.status === 'live' ? ' is-live' : '')} onClick={openLiveControls} disabled={liveStarting}><Radio size={14} /><span>{liveSession?.status === 'live' ? t('Live controls') : liveStarting ? t('Starting…') : t('Go Live')}</span></button>}
         </div>
       </header>
 
-      {saveError && <div className="project-save-error">{saveError}<button type="button" onClick={() => void saveNow()}>Retry</button></div>}
-      {!project.can_edit && <div className="project-readonly-banner"><Eye size={13} /> You can view this shared Project. Editing requires collaborator permission.</div>}
+      {saveError && <div className="project-save-error">{saveError}<button type="button" onClick={() => void saveNow()}>{t('Retry')}</button></div>}
+      {!project.can_edit && <div className="project-readonly-banner"><Eye size={13} /> {t('You can view this shared Project. Editing requires collaborator permission.')}</div>}
 
       <main className="project-workspace-main" onPointerMove={broadcastCursor}>
         <WorkspaceEditor project={project} payload={workspacePayload} canEdit={project.can_edit} onChange={updateData} onCheckpoint={() => void checkpoint()} onAskHelios={askHelios} />
-        <div className="workspace-collaborator-cursors" aria-hidden="true">{collaboratorCursors.map(cursor => <span key={cursor.user_id} style={{ left: `${Number(cursor.payload.x)}%`, top: `${Number(cursor.payload.y)}%` }}><i />{String(cursor.payload.author_name || 'Collaborator')}</span>)}</div>
+        <div className="workspace-collaborator-cursors" aria-hidden="true">{collaboratorCursors.map(cursor => <span key={cursor.user_id} style={{ left: `${Number(cursor.payload.x)}%`, top: `${Number(cursor.payload.y)}%` }}><i />{String(cursor.payload.author_name || t('Collaborator'))}</span>)}</div>
         {sidePanel && (
-          <aside className="project-side-panel" aria-label={`${sidePanel} panel`}>
-            <header><div><small>PROJECT</small><strong>{panelTitle(sidePanel)}</strong></div><button type="button" onClick={() => setSidePanel(null)} aria-label="Close panel"><X size={15} /></button></header>
+          <aside className="project-side-panel" aria-label={t('{panel} panel', { panel: panelTitle(sidePanel) })}>
+            <header><div><small>{t('PROJECT')}</small><strong>{panelTitle(sidePanel)}</strong></div><button type="button" onClick={() => setSidePanel(null)} aria-label={t('Close panel')}><X size={15} /></button></header>
             {sidePanel === 'comments' && <ProjectComments comments={comments} draft={commentDraft} setDraft={setCommentDraft} onSubmit={submitProjectComment} />}
             {sidePanel === 'versions' && <VersionHistory versions={versions} onCheckpoint={() => void checkpoint()} onRestore={version => void restoreVersion(version)} />}
             {sidePanel === 'collaborators' && <CollaboratorsPanel collaborators={collaborators} canManage={project.can_manage} handle={inviteHandle} setHandle={setInviteHandle} role={inviteRole} setRole={setInviteRole} onInvite={inviteCollaborator} />}
@@ -366,10 +369,10 @@ export function ProjectWorkspace({ activeProject, onProjectUpdate }: Props) {
           </aside>
         )}
         {liveSession?.status === 'live' && (
-          <aside className="live-workspace-drawer" aria-label="Live workspace">
-            <header><div><span><i /> LIVE</span><strong>{liveSession.title}</strong><small>{liveSession.viewer_count} watching · Creator {state.user?.name} · {app.name}</small></div><div>{liveSession.can_manage && <button type="button" onClick={() => void endLive()}>End Live</button>}<button type="button" onClick={() => dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: liveSession.id })}>View Live</button></div></header>
-            <div className="live-event-stream">{liveEvents.filter(event => !['work', 'cursor'].includes(event.kind)).length === 0 && <div className="live-quiet"><Radio size={19} /><span>The work is live. Comments and suggestions will appear here.</span></div>}{liveEvents.filter(event => !['work', 'cursor'].includes(event.kind)).map(event => <article key={event.id} className={`live-event-${event.kind}`}><span>{String(event.payload.author_name || '?').slice(0, 1)}</span><div><strong>{String(event.payload.author_name || 'Viewer')}<small>{event.kind.replace('_', ' ')}</small></strong><p>{String(event.payload.text || '')}</p></div></article>)}{liveEvents.some(event => event.kind === 'work') && <div className="live-work-signal"><Sparkles size={12} /> Project changes are streaming to viewers</div>}</div>
-            <form onSubmit={sendLiveComment}><input value={liveDraft} maxLength={2000} onChange={event => setLiveDraft(event.target.value)} placeholder="Add a live note for viewers…" /><button type="submit" disabled={!liveDraft.trim()}><Send size={14} /></button></form>
+          <aside className="live-workspace-drawer" aria-label={t('Live workspace')}>
+            <header><div><span><i /> {t('LIVE')}</span><strong>{liveSession.title}</strong><small>{t('{count} watching · Creator {name} · {app}', { count: liveSession.viewer_count, name: state.user?.name, app: t(app.name) })}</small></div><div>{liveSession.can_manage && <button type="button" onClick={() => void endLive()}>{t('End Live')}</button>}<button type="button" onClick={() => dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: liveSession.id })}>{t('View Live')}</button></div></header>
+            <div className="live-event-stream">{liveEvents.filter(event => !['work', 'cursor'].includes(event.kind)).length === 0 && <div className="live-quiet"><Radio size={19} /><span>{t('The work is live. Comments and suggestions will appear here.')}</span></div>}{liveEvents.filter(event => !['work', 'cursor'].includes(event.kind)).map(event => <article key={event.id} className={`live-event-${event.kind}`}><span>{String(event.payload.author_name || '?').slice(0, 1)}</span><div><strong>{String(event.payload.author_name || t('Viewer'))}<small>{t(event.kind.replace('_', ' '))}</small></strong><p>{String(event.payload.text || '')}</p></div></article>)}{liveEvents.some(event => event.kind === 'work') && <div className="live-work-signal"><Sparkles size={12} /> {t('Project changes are streaming to viewers')}</div>}</div>
+            <form onSubmit={sendLiveComment}><input value={liveDraft} maxLength={2000} onChange={event => setLiveDraft(event.target.value)} placeholder={t('Add a live note for viewers…')} /><button type="submit" disabled={!liveDraft.trim()}><Send size={14} /></button></form>
           </aside>
         )}
       </main>
@@ -413,33 +416,40 @@ function LiveSetupDialog({ title, setTitle, audience, setAudience, permissions, 
   onClose: () => void
   onSave: () => void
 }) {
+  const t = useT()
   const options: Array<[keyof typeof permissions, string, string]> = [
-    ['comment', 'Comment', 'Viewers can join the live discussion.'],
-    ['suggest', 'Suggest', 'Viewers can offer concrete improvements.'],
-    ['request_edit', 'Request edit', 'Viewers may ask to become a collaborator.'],
-    ['voice', 'Voice discussion', 'Show that optional voice discussion is available.'],
+    ['comment', t('Comment'), t('Viewers can join the live discussion.')],
+    ['suggest', t('Suggest'), t('Viewers can offer concrete improvements.')],
+    ['request_edit', t('Request edit'), t('Viewers may ask to become a collaborator.')],
+    ['voice', t('Voice discussion'), t('Show that optional voice discussion is available.')],
   ]
-  return <div className="live-setup-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><section className="live-setup-dialog" role="dialog" aria-modal="true" aria-label="Go Live controls"><header><div><span><i /> {active ? 'LIVE CONTROLS' : 'TURN THIS PROJECT INTO LIVE WORK'}</span><h2>{active ? 'Control the session' : 'Go Live with the actual Project'}</h2><p>Work changes stream from this Mini App. This is not a normal video livestream.</p></div><button type="button" onClick={onClose}><X size={16} /></button></header><label><span>Session title</span><input value={title} maxLength={140} onChange={event => setTitle(event.target.value)} disabled={active} /></label><div className="live-audience-options"><button type="button" className={audience === 'public' ? 'is-active' : ''} onClick={() => setAudience('public')}><Eye size={15} /><span><strong>Discoverable</strong><small>Authenticated people can find this session.</small></span></button><button type="button" className={audience === 'private' ? 'is-active' : ''} onClick={() => setAudience('private')}><Lock size={15} /><span><strong>Invited access</strong><small>Only Project collaborators can watch.</small></span></button></div><div className="live-permission-options">{options.map(([key, label, detail]) => <label key={key}><span><strong>{label}</strong><small>{detail}</small></span><input type="checkbox" checked={permissions[key]} onChange={() => setPermissions(current => ({ ...current, [key]: !current[key] }))} /></label>)}</div><footer><button type="button" onClick={onClose}>Cancel</button><button type="button" onClick={onSave} disabled={saving || !title.trim()}><Radio size={14} /> {saving ? 'Saving…' : active ? 'Update controls' : 'Expand into Live'}</button></footer></section></div>
+  return <div className="live-setup-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><section className="live-setup-dialog" role="dialog" aria-modal="true" aria-label={t('Go Live controls')}><header><div><span><i /> {active ? t('LIVE CONTROLS') : t('TURN THIS PROJECT INTO LIVE WORK')}</span><h2>{active ? t('Control the session') : t('Go Live with the actual Project')}</h2><p>{t('Work changes stream from this Mini App. This is not a normal video livestream.')}</p></div><button type="button" onClick={onClose}><X size={16} /></button></header><label><span>{t('Session title')}</span><input value={title} maxLength={140} onChange={event => setTitle(event.target.value)} disabled={active} /></label><div className="live-audience-options"><button type="button" className={audience === 'public' ? 'is-active' : ''} onClick={() => setAudience('public')}><Eye size={15} /><span><strong>{t('Discoverable')}</strong><small>{t('Authenticated people can find this session.')}</small></span></button><button type="button" className={audience === 'private' ? 'is-active' : ''} onClick={() => setAudience('private')}><Lock size={15} /><span><strong>{t('Invited access')}</strong><small>{t('Only Project collaborators can watch.')}</small></span></button></div><div className="live-permission-options">{options.map(([key, label, detail]) => <label key={key}><span><strong>{label}</strong><small>{detail}</small></span><input type="checkbox" checked={permissions[key]} onChange={() => setPermissions(current => ({ ...current, [key]: !current[key] }))} /></label>)}</div><footer><button type="button" onClick={onClose}>{t('Cancel')}</button><button type="button" onClick={onSave} disabled={saving || !title.trim()}><Radio size={14} /> {saving ? t('Saving…') : active ? t('Update controls') : t('Expand into Live')}</button></footer></section></div>
 }
 
 function panelTitle(panel: Exclude<SidePanel, null>) {
-  return ({ comments: 'Comments', versions: 'Version History', collaborators: 'Collaborators', permissions: 'Share & Permissions' })[panel]
+  return ({ comments: t('Comments'), versions: t('Version History'), collaborators: t('Collaborators'), permissions: t('Share & Permissions') })[panel]
 }
 
 function ProjectComments({ comments, draft, setDraft, onSubmit }: { comments: ProjectComment[]; draft: string; setDraft: (value: string) => void; onSubmit: (event: React.FormEvent) => void }) {
-  return <div className="project-comments-panel"><div>{comments.map(comment => <article key={comment.id}><span>{comment.author_name.slice(0, 1)}</span><div><strong>{comment.author_name}<time>{new Date(comment.created_at).toLocaleDateString()}</time></strong><p>{comment.body}</p></div></article>)}{comments.length === 0 && <PanelEmpty icon={<MessageCircle size={21} />} text="Feedback and decisions stay connected to this Project." />}</div><form onSubmit={onSubmit}><textarea value={draft} maxLength={600} onChange={event => setDraft(event.target.value)} placeholder="Add project feedback…" /><button type="submit" disabled={!draft.trim()}><Send size={13} /> Comment</button></form></div>
+  const t = useT()
+  const locale = useLocale()
+  return <div className="project-comments-panel"><div>{comments.map(comment => <article key={comment.id}><span>{comment.author_name.slice(0, 1)}</span><div><strong>{comment.author_name}<time>{new Date(comment.created_at).toLocaleDateString(locale)}</time></strong><p>{comment.body}</p></div></article>)}{comments.length === 0 && <PanelEmpty icon={<MessageCircle size={21} />} text={t('Feedback and decisions stay connected to this Project.')} />}</div><form onSubmit={onSubmit}><textarea value={draft} maxLength={600} onChange={event => setDraft(event.target.value)} placeholder={t('Add project feedback…')} /><button type="submit" disabled={!draft.trim()}><Send size={13} /> {t('Comment')}</button></form></div>
 }
 
 function VersionHistory({ versions, onCheckpoint, onRestore }: { versions: ProjectVersion[]; onCheckpoint: () => void; onRestore: (version: ProjectVersion) => void }) {
-  return <div className="version-panel"><button type="button" className="create-checkpoint" onClick={onCheckpoint}><History size={14} /> Create checkpoint</button><div>{versions.map((version, index) => <article key={version.id}><i /><span><strong>{version.label}</strong><small>{version.author_name} · {new Date(version.created_at).toLocaleString()}</small></span>{index > 0 && <button type="button" onClick={() => onRestore(version)}>Restore</button>}</article>)}{versions.length === 0 && <PanelEmpty icon={<History size={21} />} text="Create a named checkpoint before a significant change." />}</div></div>
+  const t = useT()
+  const locale = useLocale()
+  return <div className="version-panel"><button type="button" className="create-checkpoint" onClick={onCheckpoint}><History size={14} /> {t('Create checkpoint')}</button><div>{versions.map((version, index) => <article key={version.id}><i /><span><strong>{version.label}</strong><small>{version.author_name} · {new Date(version.created_at).toLocaleString(locale)}</small></span>{index > 0 && <button type="button" onClick={() => onRestore(version)}>{t('Restore')}</button>}</article>)}{versions.length === 0 && <PanelEmpty icon={<History size={21} />} text={t('Create a named checkpoint before a significant change.')} />}</div></div>
 }
 
 function CollaboratorsPanel({ collaborators, canManage, handle, setHandle, role, setRole, onInvite }: { collaborators: Collaborator[]; canManage: boolean; handle: string; setHandle: (value: string) => void; role: Collaborator['role']; setRole: (value: Collaborator['role']) => void; onInvite: (event: React.FormEvent) => void }) {
-  return <div className="collaborators-panel">{canManage && <form onSubmit={onInvite}><UserPlus size={15} /><input value={handle} onChange={event => setHandle(event.target.value)} placeholder="@handle" aria-label="Collaborator handle" /><select value={role} onChange={event => setRole(event.target.value)}><option value="viewer">Can view</option><option value="commenter">Can comment</option><option value="editor">Can edit</option></select><button type="submit" disabled={!handle.trim()}>Invite</button></form>}<div>{collaborators.map(person => <article key={person.user_id}><span>{person.name.slice(0, 1)}</span><div><strong>{person.name}</strong><small>{person.handle}</small></div><b>{person.role}</b></article>)}{collaborators.length === 0 && <PanelEmpty icon={<Users size={21} />} text="Invite a collaborator by Helios handle. Access is enforced by the Project API." />}</div></div>
+  const t = useT()
+  return <div className="collaborators-panel">{canManage && <form onSubmit={onInvite}><UserPlus size={15} /><input value={handle} onChange={event => setHandle(event.target.value)} placeholder={t('@handle')} aria-label={t('Collaborator handle')} /><select value={role} onChange={event => setRole(event.target.value as Collaborator['role'])}><option value="viewer">{t('Can view')}</option><option value="commenter">{t('Can comment')}</option><option value="editor">{t('Can edit')}</option></select><button type="submit" disabled={!handle.trim()}>{t('Invite')}</button></form>}<div>{collaborators.map(person => <article key={person.user_id}><span>{person.name.slice(0, 1)}</span><div><strong>{person.name}</strong><small>{person.handle}</small></div><b>{t(person.role)}</b></article>)}{collaborators.length === 0 && <PanelEmpty icon={<Users size={21} />} text={t('Invite a collaborator by Helios handle. Access is enforced by the Project API.')} />}</div></div>
 }
 
 function PermissionsPanel({ project, onChange }: { project: Project; onChange: (visibility: Project['visibility']) => void }) {
-  return <div className="permissions-panel"><section><Lock size={17} /><div><strong>Project visibility</strong><p>Publishing a project-backed post lets permitted viewers open the actual Project.</p></div></section>{(['private', 'space', 'public'] as const).map(visibility => <button type="button" key={visibility} aria-pressed={project.visibility === visibility} onClick={() => onChange(visibility)} disabled={!project.can_manage}><span>{visibility === 'private' ? <Lock size={14} /> : visibility === 'space' ? <Users size={14} /> : <Eye size={14} />}</span><div><strong>{visibility === 'private' ? 'Private' : visibility === 'space' ? 'Space members' : 'Public & discoverable'}</strong><small>{visibility === 'private' ? 'Only you and invited collaborators' : visibility === 'space' ? 'People in the current Space can view' : 'Any authenticated user may discover and view'}</small></div><i>{project.visibility === visibility ? '✓' : ''}</i></button>)}</div>
+  const t = useT()
+  return <div className="permissions-panel"><section><Lock size={17} /><div><strong>{t('Project visibility')}</strong><p>{t('Publishing a project-backed post lets permitted viewers open the actual Project.')}</p></div></section>{(['private', 'space', 'public'] as const).map(visibility => <button type="button" key={visibility} aria-pressed={project.visibility === visibility} onClick={() => onChange(visibility)} disabled={!project.can_manage}><span>{visibility === 'private' ? <Lock size={14} /> : visibility === 'space' ? <Users size={14} /> : <Eye size={14} />}</span><div><strong>{visibility === 'private' ? t('Private') : visibility === 'space' ? t('Space members') : t('Public & discoverable')}</strong><small>{visibility === 'private' ? t('Only you and invited collaborators') : visibility === 'space' ? t('People in the current Space can view') : t('Any authenticated user may discover and view')}</small></div><i>{project.visibility === visibility ? '✓' : ''}</i></button>)}</div>
 }
 
 function PanelEmpty({ icon, text }: { icon: React.ReactNode; text: string }) {

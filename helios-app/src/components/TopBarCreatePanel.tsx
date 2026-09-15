@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronDown, ChevronUp, Clock3, FilePlus2, Sparkles, X } from 'lucide-react'
 import { api } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { getLocale, t, useT } from '../i18n'
 import { createSuiteProject, openProjectWorkspace } from '../product/flow'
 import {
   editionFor,
@@ -21,13 +22,13 @@ type PanelView =
 
 function relativeTime(value: string) {
   const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 1) return t('Just now')
+  if (minutes < 60) return t('{count}m ago', { count: minutes })
   const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t('{count}h ago', { count: hours })
   const days = Math.round(hours / 24)
-  if (days < 14) return `${days}d ago`
-  return new Date(value).toLocaleDateString()
+  if (days < 14) return t('{count}d ago', { count: days })
+  return new Date(value).toLocaleDateString(getLocale())
 }
 
 interface Props {
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props) {
+  const t = useT()
   const { state, dispatch } = useApp()
   const apps = suiteAppsForEdition(editionFor(state.user?.plan))
   const [view, setView] = useState<PanelView>({ mode: 'gallery' })
@@ -119,14 +121,14 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
     setPatching(true)
     try {
       const result = await api.heliosPatch(patchProjectId, patchInstruction.trim(), patchPath.trim() || undefined)
-      setPatchPreview(result.preview?.after || 'Updated.')
+      setPatchPreview(result.preview?.after || t('Updated.'))
       if (result.project) dispatch({ type: 'UPDATE_PROJECT', project: result.project })
       setPatchInstruction('')
       dispatch({
         type: 'PUSH_TOAST',
         toast: {
           id: String(Date.now()),
-          message: `Helios wrote ${result.target || 'file'} (${result.engine || 'local'})`,
+          message: t('Helios wrote {target} ({engine})', { target: result.target || t('file'), engine: result.engine || 'local' }),
           tone: 'success',
         },
       })
@@ -169,7 +171,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
       <button
         type="button"
         className={'topbar-create-scrim' + (entered ? ' is-open' : '')}
-        aria-label="Close Mini Apps"
+        aria-label={t('Close Mini Apps')}
         onClick={onClose}
       />
       <section
@@ -186,13 +188,13 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
             <>
               <header className="topbar-create-head">
                 <div>
-                  <small>Tools</small>
-                  <h2 id="topbar-create-title">Mini Apps</h2>
+                  <small>{t('Tools')}</small>
+                  <h2 id="topbar-create-title">{t('Mini Apps')}</h2>
                 </div>
-                <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
+                <button type="button" onClick={onClose} aria-label={t('Close')}><X size={16} /></button>
               </header>
               <p className="topbar-create-lead">
-                Pick a tool the way you pick a model — then make a file or open one you already started.
+                {t('Pick a tool the way you pick a model — then make a file or open one you already started.')}
               </p>
               <div className="topbar-create-gallery">
                 {apps.map((app, index) => (
@@ -207,7 +209,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                       <AppIcon icon={app.icon} size={20} />
                     </span>
                     <strong>{app.name}</strong>
-                    <small>{app.guideTip}</small>
+                    <small>{t(app.guideTip)}</small>
                   </button>
                 ))}
               </div>
@@ -219,7 +221,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                   type="button"
                   className="topbar-create-back"
                   onClick={() => setView({ mode: 'gallery' })}
-                  aria-label="Back to all Mini Apps"
+                  aria-label={t('Back to all Mini Apps')}
                 >
                   <ChevronLeft size={16} />
                 </button>
@@ -231,12 +233,12 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                   <AppIcon icon={view.app.icon} size={22} />
                 </span>
                 <div>
-                  <small>{view.app.guideTip}</small>
+                  <small>{t(view.app.guideTip)}</small>
                   <h2 id="topbar-create-title">{view.app.name}</h2>
                 </div>
-                <button type="button" onClick={onClose} aria-label="Close"><X size={16} /></button>
+                <button type="button" onClick={onClose} aria-label={t('Close')}><X size={16} /></button>
               </header>
-              <p className="topbar-create-lead">{view.app.description}</p>
+              <p className="topbar-create-lead">{t(view.app.description)}</p>
               <button
                 type="button"
                 className="topbar-create-new liquid-glass-btn is-primary"
@@ -244,7 +246,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                 disabled={creating}
               >
                 <FilePlus2 size={16} />
-                {creating ? 'Creating…' : `New ${view.app.newName}`}
+                {creating ? t('Creating…') : t('New {name}', { name: t(view.app.newName) })}
               </button>
               {activeFiles.length > 0 && (
                 <>
@@ -255,7 +257,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                         type="button"
                         className={patchProjectId === project.id ? 'is-selected' : ''}
                         style={{ '--stagger': `${60 + index * 35}ms` } as React.CSSProperties}
-                        title="Select for Helios patch · double-click to open"
+                        title={t('Select for Helios patch · double-click to open')}
                         onClick={() => setPatchProjectId(project.id)}
                         onDoubleClick={() => void openExisting(project.id)}
                       >
@@ -274,20 +276,20 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                         <input
                           value={patchPath}
                           onChange={event => setPatchPath(event.target.value)}
-                          placeholder="path e.g. main.cpp"
-                          aria-label="Forge file path"
+                          placeholder={t('path e.g. main.cpp')}
+                          aria-label={t('Forge file path')}
                           maxLength={120}
                         />
                       )}
                       <input
                         value={patchInstruction}
                         onChange={event => setPatchInstruction(event.target.value)}
-                        placeholder="Edit without opening — e.g. append: Next steps…"
-                        aria-label="Helios patch instruction"
+                        placeholder={t('Edit without opening — e.g. append: Next steps…')}
+                        aria-label={t('Helios patch instruction')}
                         maxLength={2000}
                       />
                       <button type="submit" disabled={patching || !patchInstruction.trim()}>
-                        {patching ? 'Writing…' : 'Write'}
+                        {patching ? t('Writing…') : t('Write')}
                       </button>
                       {patchPreview && <small className="topbar-helios-patch-preview">{patchPreview}</small>}
                     </form>
@@ -298,7 +300,7 @@ export function TopBarCreatePanel({ open, onClose, initialAppId = null }: Props)
                     disabled={!patchProjectId}
                     onClick={() => patchProjectId && void openExisting(patchProjectId)}
                   >
-                    Open selected
+                    {t('Open selected')}
                   </button>
                 </>
               )}
@@ -319,16 +321,17 @@ export function TopBarCreateTrigger({
   onToggle: () => void
   label: string
 }) {
+  const t = useT()
   return (
     <button
       type="button"
       className={'topbar-create-trigger' + (open ? ' is-open' : '')}
       aria-expanded={open}
       aria-controls="topbar-create-panel"
-      aria-label={open ? 'Close Mini App panel' : 'Open Mini App panel'}
+      aria-label={open ? t('Close Mini App panel') : t('Open Mini App panel')}
       onClick={onToggle}
     >
-      <span className="topbar-create-trigger-label">{label || 'Mini App'}</span>
+      <span className="topbar-create-trigger-label">{t(label || 'Mini App')}</span>
       <span className="topbar-create-trigger-chevron" aria-hidden="true">
         {open ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
       </span>

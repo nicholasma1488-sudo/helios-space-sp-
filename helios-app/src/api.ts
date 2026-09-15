@@ -1,4 +1,5 @@
 // Typed API client for Helios Space backend
+import { getLanguage } from './i18n'
 
 export type BillingPlanId = 'free' | 'orbit'
 export type PayMethod = 'card'
@@ -19,6 +20,46 @@ export interface User {
   edition?: SuiteEdition
   usage?: WritingUsage
 }
+
+export type AiProviderId = 'groq' | 'openai' | 'openrouter' | 'gemini' | 'deepseek' | 'ollama' | 'custom'
+
+export interface AiProviderPreset { label: string; base_url: string; model: string }
+
+export interface UserAiSettings {
+  configured: boolean
+  provider: AiProviderId
+  base_url: string
+  model: string
+  key_preview: string
+  updated_at: string | null
+  site_default: { kind: 'local' | 'ollama' | 'cloud'; model: string }
+  presets: Record<AiProviderId, AiProviderPreset>
+}
+
+/** Which model tab the Helios panel is on: the free site default or the user's own key. */
+export type AiProviderChoice = 'auto' | 'site' | 'user'
+
+export type AgentStep =
+  | { tool: 'navigate'; view: 'home' | 'lifestyle' | 'apps' | 'chat' | 'profile' }
+  | { tool: 'set_theme'; theme: 'light' | 'dark' | 'system' }
+  | { tool: 'create_file'; app: string; app_name: string; type: Project['type']; name: string; brief: string; starter_content: string }
+  | { tool: 'update_file'; project_id: number; project_name: string; app_name: string; brief: string }
+  | { tool: 'open_file'; project_id: number; project_name: string }
+  | { tool: 'post'; body: string; brief: string; link_previous: boolean }
+
+export interface AgentPlan {
+  goal: string
+  say: string
+  steps: AgentStep[]
+  planner: 'rules' | 'model' | 'none'
+  model: string
+  source: 'user' | 'site'
+}
+
+export type AgentContentRequest =
+  | { kind: 'file'; app: string; title: string; brief: string; goal: string }
+  | { kind: 'file'; project_id: number; brief: string; goal: string; fresh?: boolean }
+  | { kind: 'post'; brief: string; goal: string; project_name?: string }
 
 export interface BillingPlan {
   id: BillingPlanId
@@ -400,6 +441,15 @@ export const api = {
 
   me: () => call<{ user: User }>('/api/me'),
 
+  ai: {
+    get: () => call<UserAiSettings>('/api/me/ai'),
+    save: (data: { provider: AiProviderId; api_key?: string; base_url: string; model: string }) =>
+      call<UserAiSettings & { ok: boolean }>('/api/me/ai', { method: 'PUT', body: JSON.stringify(data) }),
+    remove: () => call<UserAiSettings & { ok: boolean }>('/api/me/ai', { method: 'DELETE' }),
+    test: (data: { api_key?: string; base_url: string; model: string }) =>
+      call<{ ok: boolean; model: string; reply: string }>('/api/me/ai/test', { method: 'POST', body: JSON.stringify(data) }),
+  },
+
   updateMe: (data: Record<string, unknown> = {}) =>
     call<{ user: User }>('/api/me', { method: 'PUT', body: JSON.stringify(data) }),
 
@@ -589,10 +639,22 @@ export const api = {
   },
 
   helios: {
-    chat: (messages: { role: string; content: string }[], project_id?: number, context?: Record<string, unknown>) =>
-      call<{ reply: string; model: string }>('/api/helios/chat', {
+    // The UI language rides along so Helios answers, plans and writes in the
+    // language the user is reading, not just the language they typed in.
+    chat: (messages: { role: string; content: string }[], project_id?: number, context?: Record<string, unknown>, provider: AiProviderChoice = 'auto') =>
+      call<{ reply: string; model: string; source: 'user' | 'site' }>('/api/helios/chat', {
         method: 'POST',
-        body: JSON.stringify({ messages, project_id, context }),
+        body: JSON.stringify({ messages, project_id, context: { ...context, language: getLanguage() }, provider }),
+      }),
+    agent: (goal: string, context: { project_id?: number; view?: string }, provider: AiProviderChoice = 'auto') =>
+      call<AgentPlan>('/api/helios/agent', {
+        method: 'POST',
+        body: JSON.stringify({ goal, context: { ...context, language: getLanguage() }, provider }),
+      }),
+    agentContent: (request: AgentContentRequest, provider: AiProviderChoice = 'auto') =>
+      call<{ content?: string; body?: string; generated?: boolean; model: string; source: 'user' | 'site'; project?: Project }>('/api/helios/agent/content', {
+        method: 'POST',
+        body: JSON.stringify({ ...request, language: getLanguage(), provider }),
       }),
   },
 

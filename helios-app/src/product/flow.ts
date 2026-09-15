@@ -1,6 +1,7 @@
 import type { Dispatch } from 'react'
 import { api, type Conversation, type LiveSession, type Project } from '../api'
 import type { AppState } from '../store/appStore'
+import { t } from '../i18n'
 
 type AppAction =
   | { type: 'SET_VIEW'; view: AppState['view'] }
@@ -90,7 +91,7 @@ export async function publishLiveReplay(session: LiveSession, project: Project, 
   sessionStorage.setItem('helios-open-post', String(result.post.id))
   dispatch({
     type: 'PUSH_TOAST',
-    toast: { id: String(Date.now()), message: 'Live session kept as Feed-discoverable work', tone: 'success' },
+    toast: { id: String(Date.now()), message: t('Live session kept as Feed-discoverable work'), tone: 'success' },
   })
   return result.post
 }
@@ -106,4 +107,47 @@ export function categoryForSpace(spaceId: string) {
   if (['running', 'basketball', 'music', 'photography', 'cooking', 'travel'].includes(spaceId)) return 'activity'
   if (['reading', 'english', 'languages', 'history'].includes(spaceId)) return 'reading'
   return 'study'
+}
+
+/**
+ * Sends a goal to the Helios panel in Agent mode. When the panel is already
+ * open it receives the prompt through a DOM event; otherwise the prompt is
+ * parked in sessionStorage and picked up as soon as the panel mounts.
+ */
+export function runHeliosAgent(text: string, panelOpen: boolean, openPanel: () => void) {
+  const goal = text.trim()
+  if (!goal) return
+  try { localStorage.setItem('helios-panel-mode', 'agent') } catch {}
+  if (panelOpen) {
+    window.dispatchEvent(new CustomEvent('helios-agent-prompt', { detail: { text: goal } }))
+    return
+  }
+  try { sessionStorage.setItem('helios-pending-prompt', goal) } catch {}
+  openPanel()
+}
+
+export const AGENT_STATUS_EVENT = 'helios-agent-status'
+
+export interface AgentStatus {
+  phase: 'planning' | 'running' | 'done' | 'failed' | 'idle'
+  title: string
+  detail?: string
+  step?: number
+  total?: number
+}
+
+/** Broadcast what the agent is doing so the floating status bar can show it over the page. */
+export function reportAgentStatus(status: AgentStatus) {
+  window.dispatchEvent(new CustomEvent<AgentStatus>(AGENT_STATUS_EVENT, { detail: status }))
+}
+
+/** Briefly ring a Mini App tile on the Mini Apps page so the user sees which app the agent picked. */
+export function spotlightMiniApp(appId: string, ms = 1400) {
+  const tile = document.querySelector<HTMLElement>(`[data-app-id="${appId}"]`)
+  if (!tile) return false
+  // Only move the page when the tile is actually off-screen.
+  tile.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  tile.classList.add('is-agent-target')
+  window.setTimeout(() => tile.classList.remove('is-agent-target'), ms)
+  return true
 }

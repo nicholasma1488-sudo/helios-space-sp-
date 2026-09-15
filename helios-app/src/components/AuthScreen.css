@@ -1,3 +1,10 @@
+.auth-language-switcher {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 4;
+}
+
 .auth-screen-v2 {
   display: grid !important;
   grid-template-columns: minmax(320px, 560px) minmax(360px, 410px);

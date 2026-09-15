@@ -1,5 +1,5 @@
 import { useReducer, useEffect, useRef, useState } from 'react'
-import { AppContext, reducer, INITIAL_STATE, useApp } from './store/appStore'
+import { AppContext, reducer, INITIAL_STATE, useApp, resolveTheme } from './store/appStore'
 import type { User } from './api'
 import { api } from './api'
 import { AuthScreen } from './components/AuthScreen'
@@ -9,6 +9,7 @@ import { HeliosPanel } from './components/HeliosPanel'
 import { CommandPalette } from './components/CommandPalette'
 import { ShortcutsHelp } from './components/ShortcutsHelp'
 import { ToastLayer } from './components/ToastLayer'
+import { AgentStatusBar } from './components/AgentStatusBar'
 import { HomeView } from './views/HomeView'
 import { LifestyleView } from './views/LifestyleView'
 import { ChatView } from './views/ChatView'
@@ -16,6 +17,7 @@ import { ProfileView } from './views/ProfileView'
 import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
 import { leavePay, isPayPath } from './product/pay'
+import { t, useLanguage } from './i18n'
 import './App.css'
 
 function MainContent() {
@@ -58,6 +60,7 @@ function MainContent() {
 
 function AppInner() {
   const { state, dispatch } = useApp()
+  const language = useLanguage()
   // Controls whether the visitor is looking at the marketing landing page
   // or the auth form. Starts on the landing page for logged-out visitors;
   // CTA buttons on the landing page set this to 'auth'.
@@ -105,12 +108,12 @@ function AppInner() {
     }
     if (state.codeEditorOpen) {
       const proj = state.projects.find(p => p.id === state.activeProjectId)
-      document.title = proj ? `${proj.name} — Helios Space` : 'Editor — Helios Space'
+      document.title = proj ? `${proj.name} — Helios Space` : `${t('Editor')} — Helios Space`
       return
     }
-    const label = VIEW_TITLES[state.view] ?? 'Helios Space'
-    document.title = `${label} — Helios Space`
-  }, [onPayPage, state.user, state.view, state.codeEditorOpen, state.activeProjectId, state.projects])
+    const label = VIEW_TITLES[state.view]
+    document.title = label ? `${t(label)} — Helios Space` : 'Helios Space'
+  }, [onPayPage, state.user, state.view, state.codeEditorOpen, state.activeProjectId, state.projects, language])
 
   // Load site info + check auth on mount
   useEffect(() => {
@@ -133,7 +136,7 @@ function AppInner() {
           .catch(err => {
             if (!cancelled) dispatch({
               type: 'PUSH_TOAST',
-              toast: { id: Date.now().toString(), message: `Projects could not be loaded: ${(err as Error).message}`, tone: 'warning' },
+              toast: { id: Date.now().toString(), message: t('Projects could not be loaded: {error}', { error: (err as Error).message }), tone: 'warning' },
             })
           })
       })
@@ -142,9 +145,18 @@ function AppInner() {
     return () => { cancelled = true }
   }, [dispatch])
 
-  // Sync theme to document
+  // Sync theme to document; follow the OS when the user picked "system"
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', state.theme)
+    const root = document.documentElement
+    const apply = () => {
+      root.setAttribute('data-theme', resolveTheme(state.theme))
+      root.setAttribute('data-theme-mode', state.theme)
+    }
+    apply()
+    if (state.theme !== 'system' || !window.matchMedia) return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
   }, [state.theme])
 
   // Sync reduced-motion to document
@@ -164,7 +176,7 @@ function AppInner() {
     dispatch({ type: 'CLOSE_UPGRADE' })
     dispatch({
       type: 'PUSH_TOAST',
-      toast: { id: String(Date.now()), message: 'Helios Space is completely free — no upgrade needed.', tone: 'success' },
+      toast: { id: String(Date.now()), message: t('Helios Space is completely free — no upgrade needed.'), tone: 'success' },
     })
   }, [state.upgradeOpen, dispatch])
 
@@ -229,7 +241,7 @@ function AppInner() {
             .then(r => dispatch({ type: 'SET_PROJECTS', projects: r.projects }))
             .catch(err => dispatch({
               type: 'PUSH_TOAST',
-              toast: { id: Date.now().toString(), message: `Projects could not be loaded: ${(err as Error).message}`, tone: 'warning' },
+              toast: { id: Date.now().toString(), message: t('Projects could not be loaded: {error}', { error: (err as Error).message }), tone: 'warning' },
             }))
         }}
       />
@@ -257,6 +269,7 @@ function AppInner() {
         )}
       </GlobalShell>
       <CommandPalette />
+      <AgentStatusBar />
       <ToastLayer />
       <ShortcutsHelp />
     </>

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useApp } from '../store/appStore'
 import { CheckCircle, Info, AlertTriangle, X } from 'lucide-react'
+import { useT } from '../i18n'
 
 const TONE_STYLES = {
   success: { bg: 'var(--helios-success)', icon: <CheckCircle size={14} /> },
@@ -10,6 +11,7 @@ const TONE_STYLES = {
 
 export function ToastLayer() {
   const { state, dispatch } = useApp()
+  const t = useT()
 
   useEffect(() => {
     if (state.toasts.length === 0) return
@@ -25,22 +27,22 @@ export function ToastLayer() {
       className="fixed bottom-6 right-6 flex flex-col gap-2 z-50"
       role="status"
       aria-live="polite"
-      aria-label="Notifications"
+      aria-label={t('Notifications')}
     >
-      {state.toasts.map((t, index) => {
-        const style = TONE_STYLES[t.tone]
+      {state.toasts.map((toast, index) => {
+        const style = TONE_STYLES[toast.tone]
         return (
           <div
-            key={`${t.id}-${index}`}
+            key={`${toast.id}-${index}`}
             className="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg"
             style={{ background: 'var(--helios-surface)', border: `1px solid ${style.bg}`, minWidth: 280, maxWidth: 400 }}
           >
             <span style={{ color: style.bg, flexShrink: 0 }}>{style.icon}</span>
-            <span style={{ fontSize: 13, flex: 1, lineHeight: 1.4 }}>{t.message}</span>
+            <span style={{ fontSize: 13, flex: 1, lineHeight: 1.4 }}>{toast.message}</span>
             <button
-              onClick={() => dispatch({ type: 'DISMISS_TOAST', id: t.id })}
+              onClick={() => dispatch({ type: 'DISMISS_TOAST', id: toast.id })}
               style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', cursor: 'pointer', flexShrink: 0, padding: 0 }}
-              aria-label="Dismiss"
+              aria-label={t('Dismiss')}
             >
               <X size={14} />
             </button>

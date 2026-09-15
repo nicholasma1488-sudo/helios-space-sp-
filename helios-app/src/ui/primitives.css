@@ -82,7 +82,7 @@
   padding: 10px 12px;
   border: 1px solid var(--glass-stroke);
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(var(--glass-rgb), 0.72);
   color: var(--helios-text);
   font: inherit;
   outline: none;

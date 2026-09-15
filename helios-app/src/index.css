@@ -7,7 +7,8 @@
 */
 @import "./ui/primitives.css";
 
-:root {
+:root,
+[data-theme="light"] {
   /* ── Raw graphite neutral scale (P359) ── */
   --graphite-950: #111213;
   --graphite-900: #171819;
@@ -33,16 +34,21 @@
   --s-danger: #ff6b6b;
   --s-collab: #b794ff;
 
-  /* ── Semantic tokens — artistic liquid glass (Claude × Gemini × Codex) ── */
-  --helios-bg:       #eceff3;
-  --helios-surface:  rgba(255, 255, 255, 0.55);
-  --helios-surface2: rgba(255, 255, 255, 0.72);
-  --helios-surface3: rgba(236, 239, 243, 0.92);
-  --helios-border:   rgba(90, 98, 112, 0.16);
+  /* ── Semantic tokens — Light (default) ──
+     Bright, warm porcelain instead of flat grey. Every value below is
+     mirrored in [data-theme="dark"], so components must only use these. */
+  color-scheme: light;
+
+  --helios-bg:       #f8f7f4;
+  --helios-bg-tint:  #f1f0ec;
+  --helios-surface:  rgba(255, 255, 255, 0.66);
+  --helios-surface2: rgba(255, 255, 255, 0.82);
+  --helios-surface3: rgba(244, 243, 240, 0.94);
+  --helios-border:   rgba(72, 78, 90, 0.14);
 
   --helios-text:  #1c1917;
-  --helios-text2: #4b5563;
-  --helios-muted: #6b7280;
+  --helios-text2: #4a4f5a;
+  --helios-muted: #6a6f7a;
 
   /* Claude warm terracotta + Gemini soft blue */
   --helios-accent:  #c96442;
@@ -59,13 +65,23 @@
   --helios-danger:  #c2414b;
   --helios-collab:  #7a8bb8;
 
-  /* Glass / Codex grey */
-  --glass-bg:        rgba(255, 255, 255, 0.42);
-  --glass-bg-strong: rgba(255, 255, 255, 0.68);
-  --glass-stroke:    rgba(255, 255, 255, 0.62);
-  --glass-shadow:    0 12px 40px rgba(90, 98, 112, 0.12), inset 0 1px 0 rgba(255,255,255,0.7);
-  --codex-gray:      rgba(90, 98, 112, 0.82);
-  --codex-gray-soft: rgba(120, 128, 140, 0.42);
+  /* Glass / Codex grey.
+     --glass-rgb is the tint used by translucent surfaces; --mix-base is the
+     colour that accents get blended into for soft chips and hovers. */
+  --glass-rgb:       255, 255, 255;
+  --mix-base:        #ffffff;
+  --glass-bg:        rgba(255, 255, 255, 0.52);
+  --glass-bg-strong: rgba(255, 255, 255, 0.78);
+  --glass-stroke:    rgba(255, 255, 255, 0.72);
+  --glass-highlight: rgba(255, 255, 255, 0.78);
+  --glass-shadow:    0 12px 40px rgba(72, 78, 90, 0.10), inset 0 1px 0 var(--glass-highlight);
+  --codex-gray:      rgba(84, 90, 102, 0.84);
+  --codex-gray-soft: rgba(120, 128, 140, 0.38);
+
+  /* Ambient glow behind the whole app */
+  --ambient-accent:  rgba(201, 100, 66, 0.10);
+  --ambient-accent2: rgba(91, 141, 239, 0.11);
+  --ambient-wash:    rgba(120, 128, 140, 0.05);
 
   /* ── Radius scale (P361) ── */
   --radius-xs: 4px;
@@ -98,7 +114,7 @@
   /* ── Blur / shadow ── */
   --blur-glass: 16px;
   --shadow-glass: var(--glass-shadow);
-  --shadow-lift: 0 12px 28px rgba(28, 25, 23, 0.10), inset 0 1px 0 rgba(255,255,255,0.7);
+  --shadow-lift: 0 12px 28px rgba(28, 25, 23, 0.10), inset 0 1px 0 var(--glass-highlight);
 
   /* ── Typography scale ── */
   --font-sans: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
@@ -119,30 +135,58 @@
   --type-mono-sm:    400 11px/16px 'Fira Code', ui-monospace, monospace;
 }
 
-/* ── High-contrast theme (P330, P357) ── */
-[data-theme="high-contrast"] {
-  --helios-bg:       #000000;
-  --helios-surface:  #0a0a0a;
-  --helios-surface2: #141414;
-  --helios-surface3: #1f1f1f;
-  --helios-border:   #6a6a6a;
-  --helios-text:     #ffffff;
-  --helios-text2:    #e4e4e4;
-  --helios-muted:    #c0c0c0;
-  --helios-accent:   #c96442;
-  --helios-accent2:  #5b8def;
-  --helios-on-accent:  #000000;
-  --helios-on-accent2: #000000;
-  --helios-on-success: #000000;
-  --helios-solar:    #ffcf5c;
-  --helios-success:  #5effaa;
-  --helios-danger:   #ff8080;
-  /* Status tokens missing from dark-only definition — all boosted for contrast */
-  --helios-warning:  #ffb347;
-  --helios-info:     #8fd4ff;
-  --helios-collab:   #c9a0ff;
-  --helios-text2:    #e8e8e8;
+/* ── Dark theme ──
+   Warm graphite, not pitch black. Accents are lifted one step so they keep
+   the same perceived weight on dark glass; text stays off-white to avoid
+   glare. Contrast targets: body text ≥ 7:1, muted copy ≥ 4.5:1. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --helios-bg:       #15171b;
+  --helios-bg-tint:  #1b1e23;
+  --helios-surface:  rgba(36, 39, 46, 0.66);
+  --helios-surface2: rgba(44, 48, 56, 0.82);
+  --helios-surface3: rgba(50, 54, 62, 0.94);
+  --helios-border:   rgba(214, 220, 232, 0.12);
+
+  --helios-text:  #f1efeb;
+  --helios-text2: #c3c6cd;
+  --helios-muted: #969ba6;
+
+  --helios-accent:  #de7a55;
+  --helios-accent2: #7ea6f4;
+
+  --helios-on-accent:  #1d120d;
+  --helios-on-accent2: #0d1526;
+  --helios-on-success: #0c1a14;
+
+  --helios-solar:   #e6b341;
+  --helios-success: #5cb590;
+  --helios-info:    #7ea6f4;
+  --helios-warning: #e0954c;
+  --helios-danger:  #e26872;
+  --helios-collab:  #98a8d6;
+
+  --glass-rgb:       40, 44, 52;
+  --mix-base:        #1f2228;
+  --glass-bg:        rgba(40, 44, 52, 0.58);
+  --glass-bg-strong: rgba(46, 50, 58, 0.84);
+  --glass-stroke:    rgba(255, 255, 255, 0.10);
+  --glass-highlight: rgba(255, 255, 255, 0.07);
+  --glass-shadow:    0 14px 44px rgba(0, 0, 0, 0.42), inset 0 1px 0 var(--glass-highlight);
+  --codex-gray:      rgba(190, 196, 208, 0.86);
+  --codex-gray-soft: rgba(150, 158, 172, 0.34);
+
+  --ambient-accent:  rgba(222, 122, 85, 0.13);
+  --ambient-accent2: rgba(126, 166, 244, 0.12);
+  --ambient-wash:    rgba(255, 255, 255, 0.03);
+
+  --shadow-lift: 0 12px 28px rgba(0, 0, 0, 0.38), inset 0 1px 0 var(--glass-highlight);
 }
+
+/* Photos and embedded media keep their own colours; only soften pure white
+   UI iframes slightly so they don't glare inside dark glass. */
+[data-theme="dark"] .code-output-zone iframe { filter: brightness(.94); }
 
 /*
   Compatibility bridge for existing inline filled controls and message bubbles.
@@ -497,8 +541,8 @@ button, [role="button"], a, input, select, textarea {
 
 .helios-internal-frame {
   background:
-    radial-gradient(circle at 82% -18%, rgba(201, 100, 66, .05), transparent 38%),
-    radial-gradient(circle at 8% 0%, rgba(91, 141, 239, .05), transparent 34%),
+    radial-gradient(circle at 82% -18%, var(--ambient-accent), transparent 38%),
+    radial-gradient(circle at 8% 0%, var(--ambient-accent2), transparent 34%),
     var(--helios-bg);
 }
 
@@ -550,8 +594,8 @@ button, [role="button"], a, input, select, textarea {
   border: 1px solid var(--glass-stroke);
   border-radius: 16px;
   background:
-    linear-gradient(160deg, rgba(255,255,255,0.72), rgba(255,255,255,0.22)),
-    color-mix(in srgb, var(--helios-accent) 82%, white);
+    linear-gradient(160deg, rgba(255,255,255,0.42), rgba(255,255,255,0.08)),
+    var(--helios-accent);
   color: var(--helios-on-accent);
   box-shadow: 0 12px 32px rgba(28, 25, 23, .14);
   cursor: pointer;
@@ -582,10 +626,11 @@ button, [role="button"], a, input, select, textarea {
 /* ── Liquid Glass surfaces & bounce buttons ── */
 body {
   background:
-    radial-gradient(1200px 600px at 12% -10%, rgba(201, 100, 66, 0.10), transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, rgba(91, 141, 239, 0.12), transparent 50%),
-    linear-gradient(180deg, rgba(90, 98, 112, 0.06), transparent 42%),
+    radial-gradient(1200px 600px at 12% -10%, var(--ambient-accent), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, var(--ambient-accent2), transparent 50%),
+    linear-gradient(180deg, var(--ambient-wash), transparent 42%),
     var(--helios-bg);
+  transition: background-color var(--dur-deliberate) ease, color var(--dur-deliberate) ease;
 }
 
 .liquid-glass,
@@ -613,7 +658,7 @@ body {
   border-radius: 999px;
   border: 1px solid var(--glass-stroke);
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.28)),
+    linear-gradient(180deg, rgba(var(--glass-rgb), 0.72), rgba(var(--glass-rgb), 0.28)),
     var(--glass-bg);
   color: var(--helios-text);
   box-shadow: var(--glass-shadow);
@@ -631,7 +676,7 @@ body {
 .liquid-glass-btn:hover {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--glass-stroke));
-  box-shadow: 0 14px 36px rgba(201, 100, 66, 0.12), inset 0 1px 0 rgba(255,255,255,0.75);
+  box-shadow: 0 14px 36px rgba(201, 100, 66, 0.12), inset 0 1px 0 var(--glass-highlight);
 }
 .liquid-glass-btn:active {
   transform: scale(0.95);
@@ -641,14 +686,14 @@ body {
 .liquid-glass-btn.is-primary,
 .liquid-glass-btn[data-variant="primary"] {
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08)),
-    color-mix(in srgb, var(--helios-accent) 88%, white);
+    linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.06)),
+    var(--helios-accent);
   color: var(--helios-on-accent);
-  border-color: color-mix(in srgb, var(--helios-accent) 55%, white);
+  border-color: color-mix(in srgb, var(--helios-accent) 55%, var(--glass-stroke));
 }
 .liquid-glass-btn.is-primary:hover,
 .liquid-glass-btn[data-variant="primary"]:hover {
-  box-shadow: 0 14px 36px rgba(201, 100, 66, 0.22), inset 0 1px 0 rgba(255,255,255,0.45);
+  box-shadow: 0 14px 36px rgba(201, 100, 66, 0.22), inset 0 1px 0 rgba(255,255,255,0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -661,4 +706,28 @@ body {
 
 .motion-reduced .liquid-glass-btn:active {
   transform: none !important;
+}
+
+.helios-language-switcher select {
+  appearance: none;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background:
+    var(--helios-surface)
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23888888' d='M1 1l5 5 5-5'/></svg>")
+    no-repeat right 10px center;
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.helios-language-switcher.is-compact select {
+  padding: 5px 26px 5px 8px;
+  font-size: 11px;
+}
+.helios-language-switcher select:focus-visible {
+  outline: 2px solid var(--helios-accent);
+  outline-offset: 2px;
 }

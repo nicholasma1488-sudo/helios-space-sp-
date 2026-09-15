@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useApp } from '../store/appStore'
+import { useT } from '../i18n'
 import { Search, Home, Compass, Users, Zap, MessageCircle, User, Code, FileText, Sparkles, Plus, Radio, FolderGit2, BookOpen, Grid3X3 } from 'lucide-react'
 import type { NavView } from '../store/appStore'
 import { NewProjectModal } from './NewProjectModal'
@@ -17,6 +18,7 @@ export function CommandPalette() {
   const [activeIdx, setActiveIdx] = useState(0)
   const [showNewProject, setShowNewProject] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const t = useT()
   const listRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
   const trapRef = useFocusTrap<HTMLDivElement>(state.commandPaletteOpen)
@@ -38,39 +40,39 @@ export function CommandPalette() {
   }, [dispatch, state.commandPaletteOpen])
 
   const NAV: Cmd[] = ([
-    ['home', 'Go to Home', <Home key="home" size={15} />],
-    ['explore', 'Go to Apps', <Compass key="explore" size={15} />],
-    ['spaces', 'Go to Spaces', <Users key="spaces" size={15} />],
-    ['lifestyle', 'Go to Lifestyle', <Zap key="lifestyle" size={15} />],
-    ['apps', 'Go to Apps', <Grid3X3 key="apps" size={15} />],
-    ['live', 'Go to Lifestyle work', <Radio key="live" size={15} />],
-    ['chat', 'Go to Messages', <MessageCircle key="chat" size={15} />],
-    ['projects', 'Go to Home', <FolderGit2 key="projects" size={15} />],
-    ['profile', 'Go to Profile', <User key="profile" size={15} />],
+    ['home', t('Go to Home'), <Home key="home" size={15} />],
+    ['explore', t('Go to Apps'), <Compass key="explore" size={15} />],
+    ['spaces', t('Go to Spaces'), <Users key="spaces" size={15} />],
+    ['lifestyle', t('Go to Lifestyle'), <Zap key="lifestyle" size={15} />],
+    ['apps', t('Go to Apps'), <Grid3X3 key="apps" size={15} />],
+    ['live', t('Go to Lifestyle work'), <Radio key="live" size={15} />],
+    ['chat', t('Go to Messages'), <MessageCircle key="chat" size={15} />],
+    ['projects', t('Go to Home'), <FolderGit2 key="projects" size={15} />],
+    ['profile', t('Go to Profile'), <User key="profile" size={15} />],
   ] as [NavView, string, React.ReactNode][]).map(([view, label, icon]) => ({
-    id: `nav-${view}`, label, icon, group: 'Navigate',
+    id: `nav-${view}`, label, icon, group: t('Navigate'),
     action: () => { dispatch({ type: 'SET_VIEW', view }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) },
   }))
 
   const PROJECTS: Cmd[] = state.projects.map(p => ({
-    id: `proj-${p.id}`, label: `Open "${p.name}"`, subtitle: `${getSpaceDefinition(p.space_id).name} · ${getMiniApp(p.app_kind).name}`,
-    icon: p.type === 'code' ? <Code size={15} /> : <FileText size={15} />, group: 'Projects',
+    id: `proj-${p.id}`, label: t('Open “{name}”', { name: p.name }), subtitle: `${t(getSpaceDefinition(p.space_id).name)} · ${getMiniApp(p.app_kind).name}`,
+    icon: p.type === 'code' ? <Code size={15} /> : <FileText size={15} />, group: t('Projects'),
     action: () => { dispatch({ type: 'OPEN_CODE_EDITOR', projectId: p.id }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) },
   }))
 
   const SPACES: Cmd[] = [...SUBJECTS, ...HOBBIES].map(space => ({
     id: `space-${space.id}`,
-    label: `Open ${space.name} Space`,
-    subtitle: `${space.kind === 'subject' ? 'Subject' : 'Hobby'} · Feed, Projects, Apps and Live`,
+    label: t('Open {name} Space', { name: t(space.name) }),
+    subtitle: `${space.kind === 'subject' ? t('Subject') : t('Hobby')} · ${t('Feed, Projects, Apps and Live')}`,
     icon: <BookOpen size={15} />,
-    group: 'Spaces',
+    group: t('Spaces'),
     action: () => { dispatch({ type: 'OPEN_SPACE', spaceId: space.id }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) },
   }))
 
   const ACTIONS: Cmd[] = [
-    { id: 'new-project', label: 'Create new project', subtitle: 'Choose a type and name', icon: <Plus size={15} />, group: 'Actions', action: () => { dispatch({ type: 'SET_COMMAND_PALETTE', open: false }); setShowNewProject(true) } },
-    { id: 'helios', label: 'Ask Helios', subtitle: 'Open AI assistant', icon: <Sparkles size={15} />, group: 'Actions', shortcut: '⌘J', action: () => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
-    { id: 'profile', label: 'My profile', icon: <User size={15} />, group: 'Actions', action: () => { dispatch({ type: 'SET_VIEW', view: 'profile' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
+    { id: 'new-project', label: t('Create new project'), subtitle: t('Choose a type and name'), icon: <Plus size={15} />, group: t('Actions'), action: () => { dispatch({ type: 'SET_COMMAND_PALETTE', open: false }); setShowNewProject(true) } },
+    { id: 'helios', label: t('Ask Helios'), subtitle: t('Open AI assistant'), icon: <Sparkles size={15} />, group: t('Actions'), shortcut: '⌘J', action: () => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
+    { id: 'profile', label: t('My profile'), icon: <User size={15} />, group: t('Actions'), action: () => { dispatch({ type: 'SET_VIEW', view: 'profile' }); dispatch({ type: 'SET_COMMAND_PALETTE', open: false }) } },
   ]
 
   const all = [...ACTIONS, ...NAV, ...SPACES, ...PROJECTS]
@@ -116,25 +118,25 @@ export function CommandPalette() {
           <div className="flex flex-col rounded-2xl overflow-hidden w-full shadow-2xl"
             ref={trapRef}
             style={{ maxWidth: 600, background: 'var(--helios-surface)', border: '1px solid var(--helios-border)' }}
-            onClick={e => e.stopPropagation()} role="dialog" aria-label="Command palette" aria-modal="true"
+            onClick={e => e.stopPropagation()} role="dialog" aria-label={t('Command palette')} aria-modal="true"
             aria-describedby="cmd-instructions">
-            <span id="cmd-instructions" className="sr-only">Type to filter commands. Use arrow keys to navigate, Enter to run, Escape to close.</span>
+            <span id="cmd-instructions" className="sr-only">{t('Type to filter commands. Use arrow keys to navigate, Enter to run, Escape to close.')}</span>
             <div className="flex items-center gap-3 px-4 py-4 border-b" style={{ borderColor: 'var(--helios-border)' }}>
               <Search size={16} style={{ color: 'var(--helios-muted)', flexShrink: 0 }} />
               <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)}
                 onKeyDown={handleInputKey}
-                placeholder="Type a command or search…"
+                placeholder={t('Type a command or search…')}
                 className="flex-1 bg-transparent outline-none"
                 style={{ border: 'none', color: 'var(--helios-text)', fontSize: 15 }}
-                aria-label="Command search"
+                aria-label={t('Command search')}
                 aria-autocomplete="list"
                 aria-activedescendant={filtered[activeIdx] ? `cmd-item-${filtered[activeIdx].id}` : undefined}
               />
               <kbd style={{ fontSize: 11, color: 'var(--helios-muted)', background: 'var(--helios-surface2)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--helios-border)' }}>ESC</kbd>
             </div>
-            <div ref={listRef} className="overflow-y-auto" style={{ maxHeight: 420 }} role="listbox" aria-label="Commands">
+            <div ref={listRef} className="overflow-y-auto" style={{ maxHeight: 420 }} role="listbox" aria-label={t('Commands')}>
               {Object.keys(grouped).length === 0 && (
-                <div className="p-8 text-center" style={{ color: 'var(--helios-muted)', fontSize: 13 }}>No matching commands</div>
+                <div className="p-8 text-center" style={{ color: 'var(--helios-muted)', fontSize: 13 }}>{t('No matching commands')}</div>
               )}
               {Object.entries(grouped).map(([group, cmds]) => {
                 return (

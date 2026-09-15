@@ -4,7 +4,9 @@ import { Save, Send, Sparkles, X } from 'lucide-react'
 import { api } from '../api'
 import type { Project } from '../api'
 import { useApp } from '../store/appStore'
+import { monacoThemeFor, useResolvedTheme } from '../hooks/useResolvedTheme'
 import { PublishModal } from './PublishModal'
+import { useT } from '../i18n'
 
 interface Props {
   activeProject: Project | null
@@ -28,7 +30,9 @@ function languageFor(project: Project | null): string {
 }
 
 export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
+  const t = useT()
   const { state, dispatch } = useApp()
+  const monacoTheme = monacoThemeFor(useResolvedTheme())
   const [editorContent, setEditorContent] = useState(activeProject?.content ?? '')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [saveError, setSaveError] = useState('')
@@ -105,7 +109,7 @@ export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
         if (mountedRef.current && projectRef.current?.id === project.id) {
           dirtyRef.current = true
           setSaveStatus('error')
-          setSaveError((error as Error).message || 'Could not save this project.')
+          setSaveError((error as Error).message || t('Could not save this project.'))
         }
       } finally {
         clearPendingSave()
@@ -227,28 +231,28 @@ export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
   }
 
   const statusText = saveStatus === 'dirty'
-    ? 'Unsaved changes'
+    ? t('Unsaved changes')
     : saveStatus === 'saving'
-      ? 'Saving…'
+      ? t('Saving…')
       : saveStatus === 'error'
-        ? 'Save failed'
-        : 'Saved'
+        ? t('Save failed')
+        : t('Saved')
 
   return (
     <>
-      <div className="flex flex-col flex-1 overflow-hidden" style={{ background: '#0d0d10' }}>
+      <div className="flex flex-col flex-1 overflow-hidden" style={{ background: 'var(--helios-bg)' }}>
         <header className="helios-editor-header flex items-center gap-3 px-5 py-3 border-b"
           style={{ borderColor: 'var(--helios-border)', flexShrink: 0, background: 'var(--helios-surface)' }}>
           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'var(--helios-accent)', color: '#fff', fontSize: 13 }} aria-hidden="true">
+            style={{ background: 'var(--helios-accent)', color: 'var(--helios-on-accent)', fontSize: 13 }} aria-hidden="true">
             {'</>'}
           </div>
           <div className="helios-editor-project flex-1 min-w-0">
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{activeProject?.name ?? 'No project open'}</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{activeProject?.name ?? t('No project open')}</div>
             <div style={{ fontSize: 11, color: 'var(--helios-muted)' }}>
               {activeProject
-                ? `${activeProject.space || 'No space'} · ${EDITOR_LABEL[activeProject.type] ?? 'Project editor'}`
-                : 'Choose a project from Home to start editing'}
+                ? `${t(activeProject.space || 'No space')} · ${t(EDITOR_LABEL[activeProject.type] ?? 'Project editor')}`
+                : t('Choose a project from Home to start editing')}
             </div>
           </div>
 
@@ -258,26 +262,26 @@ export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
           </span>
 
           <div className="helios-editor-actions flex items-center gap-2">
-            <button onClick={() => dispatch({ type: 'TOGGLE_HELIOS_PANEL' })} title="Ask Helios"
+            <button onClick={() => dispatch({ type: 'TOGGLE_HELIOS_PANEL' })} title={t('Ask Helios')}
               aria-pressed={state.heliosPanelOpen}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer"
-              style={{ background: state.heliosPanelOpen ? 'var(--helios-accent)' : 'var(--helios-surface2)', color: state.heliosPanelOpen ? '#fff' : 'var(--helios-accent)', border: 'none' }}>
-              <Sparkles size={12} /> Helios
+              style={{ background: state.heliosPanelOpen ? 'var(--helios-accent)' : 'var(--helios-surface2)', color: state.heliosPanelOpen ? 'var(--helios-on-accent)' : 'var(--helios-accent)', border: 'none' }}>
+              <Sparkles size={12} /> {t('Helios')}
             </button>
 
             <button onClick={handleSave} disabled={!activeProject || saveStatus === 'saving' || closing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer"
-              style={{ background: 'var(--helios-success)', color: '#fff', border: 'none', opacity: (!activeProject || saveStatus === 'saving' || closing) ? 0.55 : 1 }}>
-              <Save size={12} /> Save
+              style={{ background: 'var(--helios-success)', color: 'var(--helios-on-success)', border: 'none', opacity: (!activeProject || saveStatus === 'saving' || closing) ? 0.55 : 1 }}>
+              <Save size={12} /> {t('Save')}
             </button>
 
             <button onClick={handleOpenPublish} disabled={!activeProject || openingPublish || closing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer"
-              style={{ background: 'var(--helios-accent2)', color: '#1a1a1a', border: 'none', opacity: (!activeProject || openingPublish || closing) ? 0.55 : 1 }}>
-              <Send size={12} /> {openingPublish ? 'Saving…' : 'Publish'}
+              style={{ background: 'var(--helios-accent2)', color: 'var(--helios-on-accent2)', border: 'none', opacity: (!activeProject || openingPublish || closing) ? 0.55 : 1 }}>
+              <Send size={12} /> {openingPublish ? t('Saving…') : t('Publish')}
             </button>
 
-            <button onClick={handleClose} disabled={closing} aria-label="Save and close editor" title="Save and close"
+            <button onClick={handleClose} disabled={closing} aria-label={t('Save and close editor')} title={t('Save and close')}
               className="p-2 rounded-lg cursor-pointer flex items-center justify-center"
               style={{ background: 'var(--helios-surface2)', border: 'none', color: 'var(--helios-muted)', opacity: closing ? 0.55 : 1 }}>
               <X size={15} />
@@ -288,10 +292,10 @@ export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
         {saveError && (
           <div role="alert" className="flex items-center justify-between gap-3 px-5 py-2 border-b"
             style={{ borderColor: 'rgba(255,107,107,0.3)', background: 'rgba(255,107,107,0.08)', color: 'var(--helios-danger)', fontSize: 12 }}>
-            <span>{saveError} Your changes are still in this editor.</span>
+            <span>{t('{error} Your changes are still in this editor.', { error: saveError })}</span>
             <button onClick={handleSave} className="px-2.5 py-1 rounded-lg cursor-pointer"
               style={{ background: 'var(--helios-danger)', color: '#fff', border: 'none', fontSize: 11 }}>
-              Retry save
+              {t('Retry save')}
             </button>
           </div>
         )}
@@ -299,9 +303,9 @@ export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
         <div className="flex-1 overflow-hidden">
           <Editor
             language={languageFor(activeProject)}
-            value={activeProject ? editorContent : 'Open a project from Home to start editing.'}
+            value={activeProject ? editorContent : t('Open a project from Home to start editing.')}
             onChange={handleEditorChange}
-            theme="vs-dark"
+            theme={monacoTheme}
             options={{
               fontSize: 13,
               minimap: { enabled: false },

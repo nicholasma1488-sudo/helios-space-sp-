@@ -3,11 +3,14 @@ import { api } from '../api'
 import type { User, SiteInfo } from '../api'
 import { Logo } from './Logo'
 import { Mail, Lock, User as UserIcon, AtSign, Eye, EyeOff, Loader, AlertCircle } from 'lucide-react'
+import { useT } from '../i18n'
+import { LanguageSwitcher } from '../i18n/LanguageSwitcher'
 import './AuthScreen.css'
 
 interface Props { onAuth: (user: User) => void; defaultMode?: 'login' | 'register'; onBack?: () => void }
 
 export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) {
+  const t = useT()
   const [mode, setMode] = useState<'login' | 'register'>(defaultMode)
   const [email, setEmail] = useState('')
 
@@ -40,17 +43,17 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
   function validate(): boolean {
     const errs: Record<string, string> = {}
     if (mode === 'register') {
-      if (!name.trim()) errs.name = 'Name is required'
-      else if (name.trim().length < 2) errs.name = 'Name must be at least 2 characters'
-      if (!handle.trim()) errs.handle = 'Username is required'
+      if (!name.trim()) errs.name = t('Name is required')
+      else if (name.trim().length < 2) errs.name = t('Name must be at least 2 characters')
+      if (!handle.trim()) errs.handle = t('Username is required')
       else if (!/^[a-zA-Z0-9_.]{3,30}$/.test(handle.replace(/^@/, '')))
-        errs.handle = '3–30 chars, letters, numbers, _ or .'
+        errs.handle = t('3–30 chars, letters, numbers, _ or .')
     }
-    if (!email.trim()) errs.email = 'Email is required'
-    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errs.email = 'Enter a valid email'
-    if (!password) errs.password = 'Password is required'
+    if (!email.trim()) errs.email = t('Email is required')
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errs.email = t('Enter a valid email')
+    if (!password) errs.password = t('Password is required')
     else if (mode === 'register' && password.length < 8)
-      errs.password = 'Must be at least 8 characters'
+      errs.password = t('Must be at least 8 characters')
     setFieldErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -69,7 +72,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
         onAuth(r.user)
       }
     } catch (err) {
-      setError((err as Error).message || 'Something went wrong. Please try again.')
+      setError((err as Error).message || t('Something went wrong. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -120,7 +123,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
         {opts.type === 'password' && (
           <button type="button" onClick={() => setShowPw(v => !v)}
             style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', cursor: 'pointer', padding: '4px 2px', flexShrink: 0 }}
-            aria-label={showPw ? 'Hide password' : 'Show password'}>
+            aria-label={showPw ? t('Hide password') : t('Show password')}>
             {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
           </button>
         )}
@@ -138,6 +141,9 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
   return (
     <div className={'auth-screen-v2 fixed inset-0 flex items-center justify-center p-4' + (leaving ? ' is-leaving' : '')}
       style={{ background: 'var(--helios-bg)', overflowY: 'auto' }}>
+      <div className="auth-language-switcher">
+        <LanguageSwitcher compact />
+      </div>
 
       {/* Background radial glow */}
       <div aria-hidden="true" style={{
@@ -148,13 +154,13 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
       }} />
 
       <aside className="auth-context" aria-hidden="true">
-        <span>YOUR HELIOS SPACE</span>
-        <h1>A calmer place for everything you are moving forward.</h1>
-        <p>Projects, progress, people, and useful little tools — connected without becoming noise.</p>
+        <span>{t('YOUR HELIOS SPACE')}</span>
+        <h1>{t('A calmer place for everything you are moving forward.')}</h1>
+        <p>{t('Projects, progress, people, and useful little tools — connected without becoming noise.')}</p>
         <div>
-          <i /><span>One account, one continuous context</span>
-          <i /><span>Public or private, update by update</span>
-          <i /><span>AI stays optional and permission-bound</span>
+          <i /><span>{t('One account, one continuous context')}</span>
+          <i /><span>{t('Public or private, update by update')}</span>
+          <i /><span>{t('AI stays optional and permission-bound')}</span>
         </div>
       </aside>
 
@@ -191,7 +197,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
               style={{ background: 'rgba(255,155,106,0.1)', border: '1px solid rgba(255,155,106,0.3)' }}>
               <AlertCircle size={14} style={{ color: 'var(--helios-warning)', flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: 'var(--helios-warning)', lineHeight: 1.4 }}>
-                New signups are currently closed. You can still sign in if you have an account.
+                {t('New signups are currently closed. You can still sign in if you have an account.')}
               </span>
             </div>
           )}
@@ -202,7 +208,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
               <button onClick={backToOverview} type="button"
                 className="flex items-center gap-1 py-2 px-3 text-xs cursor-pointer rounded-lg"
                 style={{ background: 'transparent', border: 'none', color: 'var(--helios-muted)', marginRight: 4 }}>
-                ← Overview
+                ← {t('Overview')}
               </button>
             )}
             {(['login', 'register'] as const).map(m => (
@@ -215,7 +221,7 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
                   border: 'none',
                   transition: 'background var(--dur-quick) var(--ease-move), color var(--dur-quick) var(--ease-move)',
                 }}>
-                {m === 'login' ? 'Sign in' : 'Create account'}
+                {m === 'login' ? t('Sign in') : t('Create account')}
               </button>
             ))}
           </div>
@@ -223,20 +229,20 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
           <form onSubmit={submit} noValidate className="flex flex-col gap-4">
             {mode === 'register' && (
               <>
-                {field('auth-name', 'Your name', <UserIcon size={15} />, name, setName,
+                {field('auth-name', t('Your name'), <UserIcon size={15} />, name, setName,
                   { placeholder: 'Jane Smith', autoComplete: 'name', ref: nameRef })}
-                {field('auth-handle', 'Username', <AtSign size={15} />, handle, setHandle,
+                {field('auth-handle', t('Username'), <AtSign size={15} />, handle, setHandle,
                   { placeholder: 'janesmith', autoComplete: 'username' })}
                 <p style={{ margin: '-6px 0 0', color: 'var(--helios-muted)', fontSize: 11, lineHeight: 1.45 }}>
-                  Helios Space is completely free — create an account and start collaborating.
+                  {t('Helios Space is completely free — create an account and start collaborating.')}
                 </p>
               </>
             )}
-            {field('auth-email', 'Email', <Mail size={15} />, email, setEmail,
+            {field('auth-email', t('Email'), <Mail size={15} />, email, setEmail,
               { type: 'email', placeholder: 'you@example.com', autoComplete: 'email', ref: mode === 'login' ? emailRef : undefined })}
 
-            {field('auth-pw', 'Password', <Lock size={15} />, password, setPassword,
-              { type: 'password', placeholder: mode === 'register' ? 'At least 8 characters' : '••••••••',
+            {field('auth-pw', t('Password'), <Lock size={15} />, password, setPassword,
+              { type: 'password', placeholder: mode === 'register' ? t('At least 8 characters') : '••••••••',
                 autoComplete: mode === 'login' ? 'current-password' : 'new-password' })}
 
             {error && (
@@ -254,16 +260,16 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
                 transition: 'opacity var(--dur-quick) var(--ease-move)',
               }}>
               {loading && <Loader size={15} style={{ animation: 'spin var(--dur-deliberate) linear infinite', flexShrink: 0 }} />}
-              {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+              {loading ? t('Please wait…') : mode === 'login' ? t('Sign in') : t('Create account')}
             </button>
           </form>
 
           {mode === 'login' && (
             <p className="text-center mt-4" style={{ fontSize: 12, color: 'var(--helios-muted)' }}>
-              Don't have an account?{' '}
+              {t("Don't have an account?")}{' '}
               <button onClick={() => { setMode('register'); setError(''); setFieldErrors({}) }}
                 style={{ background: 'none', border: 'none', color: 'var(--helios-accent)', cursor: 'pointer', fontSize: 12, padding: 0 }}>
-                Create one free
+                {t('Create one free')}
               </button>
             </p>
           )}

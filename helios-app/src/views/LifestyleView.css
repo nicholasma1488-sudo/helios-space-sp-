@@ -195,7 +195,7 @@
   place-items: center;
   border: 1px solid var(--glass-stroke);
   border-radius: 50%;
-  background: linear-gradient(145deg, rgba(255, 255, 255, .78), rgba(120, 128, 140, .28));
+  background: linear-gradient(145deg, rgba(var(--glass-rgb), .78), rgba(120, 128, 140, .28));
   color: var(--codex-gray);
   font-weight: 780;
   letter-spacing: -.02em;
@@ -1777,7 +1777,7 @@
 .composer-kind-row button { min-height: 30px; padding: 0 10px; border: 1px solid var(--helios-border); border-radius: 999px; background: transparent; color: var(--helios-muted); font: inherit; font-size: 9px; cursor: pointer; }
 .composer-kind-row button[aria-pressed='true'] {
   border-color: color-mix(in srgb, var(--helios-accent) 40%, var(--glass-stroke));
-  background: color-mix(in srgb, var(--helios-accent) 12%, white);
+  background: color-mix(in srgb, var(--helios-accent) 12%, var(--mix-base));
   color: var(--helios-text);
 }
 .post-project-row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1916,7 +1916,7 @@ button.liquid-glass-btn.is-primary {
   font-weight: 650;
 }
 .feed-home-tabs button.is-active {
-  background: color-mix(in srgb, var(--codex-gray) 16%, white) !important;
+  background: color-mix(in srgb, var(--codex-gray) 16%, var(--mix-base)) !important;
   color: var(--helios-text) !important;
   box-shadow: inset 0 0 0 1px var(--glass-stroke);
   border-bottom: 0 !important;
@@ -1967,7 +1967,7 @@ button.liquid-glass-btn.is-primary {
 .lifestyle-side-nav button.is-active {
   color: var(--helios-text) !important;
   border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--glass-stroke)) !important;
-  background: color-mix(in srgb, var(--helios-accent) 10%, white) !important;
+  background: color-mix(in srgb, var(--helios-accent) 10%, var(--mix-base)) !important;
 }
 
 .lifestyle-left,

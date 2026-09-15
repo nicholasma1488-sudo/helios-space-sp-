@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import { t } from '../i18n'
 
 interface Props {
   children: ReactNode
@@ -38,16 +39,16 @@ export class ErrorBoundary extends Component<Props, State> {
           minHeight: '50vh', padding: 40, textAlign: 'center', background: 'var(--helios-surface)',
           border: '1px solid var(--helios-border)', borderRadius: 20, margin: 40,
         }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Something went wrong</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{t('Something went wrong')}</h2>
           <p style={{ fontSize: 13, color: 'var(--helios-muted)', marginBottom: 20, maxWidth: 460 }}>
-            {this.state.error.message || 'An unexpected error occurred'}
+            {this.state.error.message || t('An unexpected error occurred')}
           </p>
           <button type="button" onClick={this.reset}
             style={{
               padding: '10px 16px', borderRadius: 10, border: 'none',
               background: 'var(--helios-accent)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
             }}>
-            Try again
+            {t('Try again')}
           </button>
         </div>
       )

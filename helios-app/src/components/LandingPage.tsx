@@ -5,6 +5,8 @@ import {
 } from 'lucide-react'
 import { Logo } from './Logo'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
+import { useT } from '../i18n'
+import { LanguageSwitcher } from '../i18n/LanguageSwitcher'
 import './LandingPage.css'
 
 interface Props {
@@ -52,6 +54,7 @@ const STAGE_MODES: Array<{ id: StageMode; label: string }> = [
 ]
 
 export function LandingPage({ onGetStarted, onSignIn }: Props) {
+  const t = useT()
   const [scrolled, setScrolled] = useState(false)
   const [transitioning, setTransitioning] = useState<'register' | 'login' | null>(null)
   const [stageMode, setStageMode] = useState<StageMode>('feed')
@@ -137,25 +140,27 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
   return (
     <div
       ref={rootRef}
+      data-theme="light"
       className={'landing-v2' + (transitioning ? ' is-entering-auth intent-' + transitioning : '')}
       onScroll={handleLandingScroll}
     >
       <div className="landing-noise" aria-hidden="true" />
       <header className={'landing-nav' + (scrolled ? ' is-scrolled' : '')}>
-        <button type="button" className="landing-brand-button" onClick={() => rootRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Helios Space home">
+        <button type="button" className="landing-brand-button" onClick={() => rootRef.current?.scrollTo({ top: 0, behavior: 'smooth' })} aria-label={t('Helios Space home')}>
           <Logo size="sm" />
         </button>
-        <nav aria-label="Landing page">
-          <button type="button" onClick={() => scrollTo('#why-helios')}>Why Helios</button>
-          <button type="button" onClick={() => scrollTo('#connected-modes')}>Product</button>
-          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>Apps</button>
-          <button type="button" onClick={() => scrollTo('#pricing')}>Pricing</button>
+        <nav aria-label={t('Landing page')}>
+          <button type="button" onClick={() => scrollTo('#why-helios')}>{t('Why Helios')}</button>
+          <button type="button" onClick={() => scrollTo('#connected-modes')}>{t('Product')}</button>
+          <button type="button" onClick={() => scrollTo('#mini-app-preview')}>{t('Apps')}</button>
+          <button type="button" onClick={() => scrollTo('#pricing')}>{t('Pricing')}</button>
         </nav>
         <div className="landing-nav-actions">
-          <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
+          <button type="button" onClick={() => enterAuth('login')}>{t('Sign in')}</button>
           <button type="button" onClick={() => enterAuth('register')} className="landing-nav-primary">
-            Create your space <ArrowRight size={13} />
+            {t('Create your space')} <ArrowRight size={13} />
           </button>
+          <LanguageSwitcher compact />
         </div>
       </header>
 
@@ -179,7 +184,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                 <div className="hero-app-titlebar">
                   <i /><i /><i />
                   <strong>Helios Space</strong>
-                  <nav aria-label="Product views">
+                  <nav aria-label={t('Product views')}>
                     {STAGE_MODES.map(mode => (
                       <button
                         key={mode.id}
@@ -188,7 +193,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                         data-testid={`stage-mode-${mode.id}`}
                         onClick={() => selectStageMode(mode.id)}
                       >
-                        {mode.label}
+                        {t(mode.label)}
                       </button>
                     ))}
                   </nav>
@@ -212,10 +217,10 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
             <div className="hero-copy-layer">
               <span className="landing-eyebrow"><Sparkles size={14} /> HELIOS SPACE</span>
               <h1>
-                The social OS
-                <span>for real work.</span>
+                {t('The social OS')}
+                <span>{t('for real work.')}</span>
               </h1>
-              <p>Scroll to fly into the product. Click inside to use it.</p>
+              <p>{t('Scroll to fly into the product. Click inside to use it.')}</p>
               <div className="landing-hero-actions">
                 <button
                   type="button"
@@ -223,34 +228,34 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                   onClick={() => enterAuth('register')}
                   data-testid="landing-create-account"
                 >
-                  <span>Create your space</span><ArrowRight size={16} />
+                  <span>{t('Create your space')}</span><ArrowRight size={16} />
                 </button>
                 <button type="button" className="landing-play-cta" onClick={() => scrollTo('#connected-modes')}>
-                  <i><Play size={13} fill="currentColor" /></i><span>See how it connects</span>
+                  <i><Play size={13} fill="currentColor" /></i><span>{t('See how it connects')}</span>
                 </button>
               </div>
             </div>
             <p className="stage-interaction-hint">
-              {stageInteracted ? 'You’re inside Helios' : 'Scroll forward · the camera enters Helios'}
+              {stageInteracted ? t('You’re inside Helios') : t('Scroll forward · the camera enters Helios')}
             </p>
             <button type="button" className="landing-scroll-cue" onClick={() => scrollTo('#why-helios')}>
-              <span>Scroll to enter</span><i />
+              <span>{t('Scroll to enter')}</span><i />
             </button>
           </div>
         </section>
 
         <section className="landing-principles" id="why-helios" data-reveal>
-          <div className="landing-section-label"><span>01</span> WHY HELIOS</div>
+          <div className="landing-section-label"><span>01</span> {t('WHY HELIOS')}</div>
           <div className="principles-heading">
-            <h2>Social should move the work forward.</h2>
-            <p>A familiar feed, rebuilt around progress instead of endless consumption.</p>
+            <h2>{t('Social should move the work forward.')}</h2>
+            <p>{t('A familiar feed, rebuilt around progress instead of endless consumption.')}</p>
           </div>
           <div className="principles-grid">
             {PRINCIPLES.map((principle, index) => (
               <article key={principle[0]} style={{ '--principle-delay': String(index * 70) + 'ms' } as React.CSSProperties}>
                 <span>0{index + 1}</span>
-                <strong>{principle[0]}</strong>
-                <p>{principle[1]}</p>
+                <strong>{t(principle[0])}</strong>
+                <p>{t(principle[1])}</p>
               </article>
             ))}
           </div>
@@ -258,9 +263,9 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
 
         <section className="landing-connected" id="connected-modes">
           <div className="connected-intro" data-reveal>
-            <div className="landing-section-label"><span>02</span> ONE CONNECTED SPACE</div>
-            <h2>Move through the day.<br />Keep the context.</h2>
-            <p>Your project, the update it became, and the tool that helped you finish it remain part of the same story.</p>
+            <div className="landing-section-label"><span>02</span> {t('ONE CONNECTED SPACE')}</div>
+            <h2>{t('Move through the day.')}<br />{t('Keep the context.')}</h2>
+            <p>{t('Your project, the update it became, and the tool that helped you finish it remain part of the same story.')}</p>
           </div>
 
           <div className="connected-modes">
@@ -277,9 +282,9 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
                   {index === 2 && <AppsModeVisual />}
                 </div>
                 <div className="mode-copy">
-                  <span>{mode.n} / {mode.icon} CONNECT</span>
-                  <h3>{mode.title}</h3>
-                  <p>{mode.body}</p>
+                  <span>{mode.n} / {mode.icon} {t('CONNECT')}</span>
+                  <h3>{t(mode.title)}</h3>
+                  <p>{t(mode.body)}</p>
                 </div>
               </article>
             ))}
@@ -289,38 +294,38 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
         <section className="landing-mini-app-band" id="mini-app-preview" data-reveal>
           <div className="mini-band-orbit" aria-hidden="true"><Grid3X3 size={30} /></div>
           <div>
-            <span>CREATE SUITE</span>
-            <h2>Docs, Sheets, Slides, Code.<br />Make something, then share it in Space.</h2>
+            <span>{t('CREATE SUITE')}</span>
+            <h2>{t('Docs, Sheets, Slides, Code.')}<br />{t('Make something, then share it in Space.')}</h2>
           </div>
           <div className="mini-band-list">
-            <span><MessageCircle size={15} /> Docs</span>
-            <span><Compass size={15} /> Sheets</span>
-            <span><Layers3 size={15} /> Slides</span>
-            <span><Code2 size={15} /> Code</span>
+            <span><MessageCircle size={15} /> {t('Docs')}</span>
+            <span><Compass size={15} /> {t('Sheets')}</span>
+            <span><Layers3 size={15} /> {t('Slides')}</span>
+            <span><Code2 size={15} /> {t('Code')}</span>
           </div>
         </section>
 
         <section className="landing-pricing" id="pricing">
           <div className="pricing-intro" data-reveal>
-            <div className="landing-section-label"><span>03</span> FREE</div>
-            <h2>One Helios.<br />Completely free.</h2>
-            <p>No plans, no upgrades, no card. Create an account and use the full social collaboration space.</p>
+            <div className="landing-section-label"><span>03</span> {t('FREE')}</div>
+            <h2>{t('One Helios.')}<br />{t('Completely free.')}</h2>
+            <p>{t('No plans, no upgrades, no card. Create an account and use the full social collaboration space.')}</p>
           </div>
           <div className="pricing-grid">
             <article className="pricing-card is-child" data-reveal>
-              <span><Gift size={15} /> FREE FOREVER</span>
+              <span><Gift size={15} /> {t('FREE FOREVER')}</span>
               <h3>Helios Space</h3>
-              <b>$0 <small>completely free</small></b>
-              <p>No plans, no upgrades. Create an account and use everything.</p>
+              <b>$0 <small>{t('completely free')}</small></b>
+              <p>{t('No plans, no upgrades. Create an account and use everything.')}</p>
               <ul>
-                <li><Check size={13} /> Docs, Sheets, Slides, Notebook, Code, and more</li>
-                <li><Check size={13} /> Space feed and WorkBuddy collab</li>
-                <li><Check size={13} /> Messages</li>
-                <li><Check size={13} /> Free Helios AI in your files</li>
-                <li><Check size={13} /> No card required</li>
+                <li><Check size={13} /> {t('Docs, Sheets, Slides, Notebook, Code, and more')}</li>
+                <li><Check size={13} /> {t('Space feed and WorkBuddy collab')}</li>
+                <li><Check size={13} /> {t('Messages')}</li>
+                <li><Check size={13} /> {t('Free Helios AI in your files')}</li>
+                <li><Check size={13} /> {t('No card required')}</li>
               </ul>
               <button type="button" onClick={() => enterAuth('register')}>
-                Start free <ArrowRight size={15} />
+                {t('Start free')} <ArrowRight size={15} />
               </button>
             </article>
           </div>
@@ -328,19 +333,19 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
 
         <section className="landing-final-cta" data-reveal>
           <div className="final-cta-light" aria-hidden="true" />
-          <span className="landing-eyebrow"><Sparkles size={13} /> YOUR SPACE STARTS QUIET</span>
-          <h2>Make one thing.<br />Share one honest update.</h2>
-          <p>That is enough to begin an orbit.</p>
+          <span className="landing-eyebrow"><Sparkles size={13} /> {t('YOUR SPACE STARTS QUIET')}</span>
+          <h2>{t('Make one thing.')}<br />{t('Share one honest update.')}</h2>
+          <p>{t('That is enough to begin an orbit.')}</p>
           <button type="button" onClick={() => enterAuth('register')}>
-            Start building free <ArrowRight size={16} />
+            {t('Start building free')} <ArrowRight size={16} />
           </button>
         </section>
       </main>
 
       <footer className="landing-footer">
         <Logo size="sm" />
-        <span>Projects · Workspaces · Live work · Feed</span>
-        <button type="button" onClick={() => enterAuth('login')}>Sign in</button>
+        <span>{t('Projects · Workspaces · Live work · Feed')}</span>
+        <button type="button" onClick={() => enterAuth('login')}>{t('Sign in')}</button>
       </footer>
 
       <div className="landing-auth-portal" aria-hidden="true">
@@ -348,7 +353,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
       </div>
       {transitioning && (
         <div className="landing-transition-label" aria-live="polite">
-          {transitioning === 'register' ? 'Creating your doorway…' : 'Opening your space…'}
+          {transitioning === 'register' ? t('Creating your doorway…') : t('Opening your space…')}
         </div>
       )}
     </div>
@@ -396,20 +401,21 @@ function HeroFeedScreen({
   likedPosts: Record<string, boolean>
   onLike?: (id: string) => void
 }) {
+  const t = useT()
   return (
     <div className="hero-feed-ui">
       <header className="hero-feed-top">
-        <strong>Home</strong>
+        <strong>{t('Home')}</strong>
         <nav>
-          <button type="button" className={tab === 'foryou' ? 'is-on' : ''} onClick={() => onTab?.('foryou')}>For you</button>
-          <button type="button" className={tab === 'following' ? 'is-on' : ''} onClick={() => onTab?.('following')}>Following</button>
+          <button type="button" className={tab === 'foryou' ? 'is-on' : ''} onClick={() => onTab?.('foryou')}>{t('For you')}</button>
+          <button type="button" className={tab === 'following' ? 'is-on' : ''} onClick={() => onTab?.('following')}>{t('Following')}</button>
         </nav>
       </header>
       <div className="hero-tweet compose">
         <b>DF</b>
         <div>
-          <p className="hero-compose-copy">What’s happening?</p>
-          <span>Post</span>
+          <p className="hero-compose-copy">{t('What’s happening?')}</p>
+          <span>{t('Post')}</span>
         </div>
       </div>
       <div className="hero-tweet">
@@ -456,11 +462,12 @@ function HeroProjectScreen({
   activeFile: string
   onFile?: (file: string) => void
 }) {
+  const t = useT()
   const files = ['HeliosSpace.tsx', 'FeedHome.tsx', 'LiveRoom.tsx', 'chat.ts']
   return (
     <div className="hero-project-ui">
       <aside>
-        <strong>Files</strong>
+        <strong>{t('Files')}</strong>
         {files.map(file => (
           <button
             key={file}
@@ -473,7 +480,7 @@ function HeroProjectScreen({
         ))}
       </aside>
       <main>
-        <header><span><Code2 size={14} /> Web Code Editor</span><em>{activeFile}</em><b>LIVE</b></header>
+        <header><span><Code2 size={14} /> {t('Web Code Editor')}</span><em>{activeFile}</em><b>{t('LIVE')}</b></header>
         <pre>
           <code>
             <span className="ln">1</span><span className="kw">export function</span> HeliosSpace() {'{\n'}
@@ -485,40 +492,42 @@ function HeroProjectScreen({
             <span className="ln">7</span>{'}'}<i className="hero-caret" />
           </code>
         </pre>
-        <footer><i /><span>Saved just now</span><Radio size={13} /> 12 watching</footer>
+        <footer><i /><span>{t('Saved just now')}</span><Radio size={13} /> {t('{count} watching', { count: 12 })}</footer>
       </main>
     </div>
   )
 }
 
 function HeroChatScreen() {
+  const t = useT()
   return (
     <div className="hero-chat-ui">
       <header>
         <strong>My Basketball Training</strong>
-        <small>Project Chat · 3 collaborators · 12 messages</small>
+        <small>{t('Project Chat · {count} collaborators · {messages} messages', { count: 3, messages: 12 })}</small>
       </header>
       <div className="hero-chat-log">
         <p className="in"><b>Jordan</b>Can we keep the drill notes next to the clip?</p>
         <p className="out"><b>You</b>Yes — I linked File tree → session-04.md</p>
         <p className="in is-late"><b>Maya</b>Helios summary: 2 tasks, 1 Live blocker.</p>
       </div>
-      <footer>Message → Helios can draft the reply…</footer>
+      <footer>{t('Message → Helios can draft the reply…')}</footer>
     </div>
   )
 }
 
 function HeroLiveScreen() {
+  const t = useT()
   return (
     <div className="hero-live-ui">
       <header>
-        <b>LIVE</b>
+        <b>{t('LIVE')}</b>
         <strong>Watching Alex build Helios Space</strong>
-        <span>12 viewers</span>
+        <span>{t('{count} viewers', { count: 12 })}</span>
       </header>
       <div className="hero-live-stage">
         <em className="hero-cursor">Alex</em>
-        <p>Editing <b>HeliosSpace.tsx</b> · line 42</p>
+        <p>{t('Editing {file} · line {line}', { file: 'HeliosSpace.tsx', line: 42 })}</p>
         <div className="hero-live-bar" />
       </div>
       <ul>
@@ -530,52 +539,56 @@ function HeroLiveScreen() {
 }
 
 function HeroAppsScreen() {
+  const t = useT()
   return (
     <div className="hero-apps-ui">
-      <header>Apps · Word · Excel · PowerPoint · OneNote</header>
+      <header>{t('Apps · Word · Excel · PowerPoint · OneNote')}</header>
       <div>
-        <span><MessageCircle size={18} /><strong>Word</strong><small>Documents that stay saved</small></span>
-        <span><Compass size={18} /><strong>Excel</strong><small>Cells · Formulas · Charts</small></span>
-        <span><Layers3 size={18} /><strong>PowerPoint</strong><small>Slides · Present · Share</small></span>
-        <span><Code2 size={18} /><strong>OneNote</strong><small>Sections you keep adding to</small></span>
+        <span><MessageCircle size={18} /><strong>Word</strong><small>{t('Documents that stay saved')}</small></span>
+        <span><Compass size={18} /><strong>Excel</strong><small>{t('Cells · Formulas · Charts')}</small></span>
+        <span><Layers3 size={18} /><strong>PowerPoint</strong><small>{t('Slides · Present · Share')}</small></span>
+        <span><Code2 size={18} /><strong>OneNote</strong><small>{t('Sections you keep adding to')}</small></span>
       </div>
     </div>
   )
 }
 
 function ProjectModeVisual() {
+  const t = useT()
   return (
     <div className="mode-project-ui">
       <aside><i /><i /><i /><i /></aside>
       <main>
-        <header><span>orbit-interface.tsx</span><small>Saved</small></header>
+        <header><span>orbit-interface.tsx</span><small>{t('Saved')}</small></header>
         <div><i /><i /><i /><i /><i /><i /></div>
       </main>
-      <section><Sparkles size={16} /><strong>Helios</strong><p>Clarify this transition</p><span>Thinking through the flow…</span></section>
+      <section><Sparkles size={16} /><strong>Helios</strong><p>{t('Clarify this transition')}</p><span>{t('Thinking through the flow…')}</span></section>
     </div>
   )
 }
 
 function SocialModeVisual() {
+  const t = useT()
   return (
     <div className="mode-social-ui twitter-like">
-      <nav><span className="is-on">For you</span><span>Following</span></nav>
+      <nav><span className="is-on">{t('For you')}</span><span>{t('Following')}</span></nav>
       <article>
         <header><span className="stage-avatar">LS</span><span><strong>Lea Stone</strong><small>@lea · 12m</small></span></header>
         <p>I stopped optimizing the plan and tested the uncomfortable assumption.</p>
-        <footer><span>Reply 7</span><span>Repost 3</span><span>Like 24</span></footer>
+        <footer><span>{t('Reply {count}', { count: 7 })}</span><span>{t('Repost {count}', { count: 3 })}</span><span>{t('Like {count}', { count: 24 })}</span></footer>
       </article>
     </div>
   )
 }
 
 function AppsModeVisual() {
+  const t = useT()
   return (
     <div className="mode-apps-ui">
-      <div><MessageCircle size={22} /><strong>Word</strong><small>WRITE</small></div>
-      <div><Compass size={22} /><strong>Excel</strong><small>CALC</small></div>
-      <div><Layers3 size={22} /><strong>PowerPoint</strong><small>PRESENT</small></div>
-      <div><Code2 size={22} /><strong>OneNote</strong><small>NOTES</small></div>
+      <div><MessageCircle size={22} /><strong>Word</strong><small>{t('WRITE')}</small></div>
+      <div><Compass size={22} /><strong>Excel</strong><small>{t('CALC')}</small></div>
+      <div><Layers3 size={22} /><strong>PowerPoint</strong><small>{t('PRESENT')}</small></div>
+      <div><Code2 size={22} /><strong>OneNote</strong><small>{t('NOTES')}</small></div>
     </div>
   )
 }
