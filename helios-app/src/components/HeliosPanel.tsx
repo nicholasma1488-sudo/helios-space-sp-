@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { api } from '../api'
 import type { AgentStep, AiProviderChoice, Project, UserAiSettings } from '../api'
 import { useApp } from '../store/appStore'
+import { t, useLocale, useT } from '../i18n'
 import { createSuiteProject, reportAgentStatus, spotlightMiniApp } from '../product/flow'
 import { getSuiteApp, nextSuiteFileName, spaceForSuiteApp } from '../product/miniApps'
 import {
@@ -57,13 +58,13 @@ function readStored<T extends string>(key: string, allowed: readonly T[], fallba
 
 function stepTitle(step: AgentStep): string {
   switch (step.tool) {
-    case 'navigate': return `Open ${VIEW_LABELS[step.view]}`
-    case 'set_theme': return `Switch to ${step.theme} theme`
-    case 'create_file': return `Create ${step.app_name} file “${step.name}”`
-    case 'update_file': return `Update “${step.project_name}” in ${step.app_name}`
-    case 'open_file': return `Open “${step.project_name}”`
-    case 'post': return 'Share a post in the Space feed'
-    default: return 'Step'
+    case 'navigate': return t('Open {page}', { page: t(VIEW_LABELS[step.view]) })
+    case 'set_theme': return t('Switch to {theme} theme', { theme: t(step.theme) })
+    case 'create_file': return t('Create {app} file “{name}”', { app: step.app_name, name: step.name })
+    case 'update_file': return t('Update “{name}” in {app}', { name: step.project_name, app: step.app_name })
+    case 'open_file': return t('Open “{name}”', { name: step.project_name })
+    case 'post': return t('Share a post in the Space feed')
+    default: return t('Step')
   }
 }
 
@@ -221,6 +222,8 @@ const QUICK_ACTIONS_BY_APP: Record<string, string[]> = {
 
 export function HeliosPanel({ onClose, activeProject, onProjectContentChange, aiEnabled, spaceId, currentView }: Props) {
   const { state, dispatch } = useApp()
+  const t = useT()
+  const locale = useLocale()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -251,8 +254,8 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   // The site flag only knows about the administrator key; a user's own key
   // makes Helios usable even when no site default exists.
   const aiReady = modelTab === 'user' ? userAiReady : (aiEnabled || userAiReady)
-  const siteModelLabel = userAi?.site_default?.model || 'Helios default'
-  const userModelLabel = userAi?.configured ? `${userAi.presets?.[userAi.provider]?.label || userAi.provider} · ${userAi.model}` : 'Add your own key'
+  const siteModelLabel = userAi?.site_default?.model || t('Helios default')
+  const userModelLabel = userAi?.configured ? `${userAi.presets?.[userAi.provider]?.label || userAi.provider} · ${userAi.model}` : t('Add your own key')
 
   function openAiSettings() {
     try { sessionStorage.setItem('helios-open-settings', 'ai') } catch {}
@@ -279,16 +282,16 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   useEffect(() => {
     const project = activeProjectRef.current
     const chars = project?.content.length ?? 0
-    const status = chars > 0 ? chars + ' chars of content' : 'empty project'
+    const status = chars > 0 ? t('{count} chars of content', { count: chars }) : t('empty project')
     // Only (re)write the welcome while no conversation exists: the agent opens
     // files mid-run, and that must not wipe the step list the user is watching.
     setMessages(prev => prev.some(m => m.id !== 'welcome') ? prev : [{
       id: 'welcome', role: 'assistant', ts: new Date().toISOString(),
       content: project
-        ? 'I have ' + project.name + ' open (' + status + '). In Agent mode I can rewrite or extend it directly; in Chat mode I prepare a preview you approve first.'
+        ? t('I have {name} open ({status}). In Agent mode I can rewrite or extend it directly; in Chat mode I prepare a preview you approve first.', { name: project.name, status })
         : contextPacket.conversation_title
-          ? `I have the permitted context for “${contextPacket.conversation_title}”. I can summarize it or draft replies, but I will not send anything without your approval.`
-          : 'I\'m Helios, the agent for this Space. Tell me what you need — I will open the right page, create the Mini App file, fill it in, and share it if you ask. Pick the Free model or your own API above.',
+          ? t('I have the permitted context for “{title}”. I can summarize it or draft replies, but I will not send anything without your approval.', { title: contextPacket.conversation_title || '' })
+          : t('I\'m Helios, the agent for this Space. Tell me what you need — I will open the right page, create the Mini App file, fill it in, and share it if you ask. Pick the Free model or your own API above.'),
     }])
   }, [activeProject?.id, contextPacket.conversation_title, contextPacket.space_id, contextPacket.space_name])
 
@@ -330,29 +333,29 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     report: (detail: string) => void,
   ): Promise<{ detail: string; project?: Project; undo?: () => Promise<void> }> {
     const current = stateRef.current
-    const modelName = modelTab === 'user' ? (userAi?.model || 'your model') : siteModelLabel
+    const modelName = modelTab === 'user' ? (userAi?.model || t('your model')) : siteModelLabel
     switch (step.tool) {
       case 'navigate': {
         if (current.codeEditorOpen) dispatch({ type: 'CLOSE_CODE_EDITOR' })
         dispatch({ type: 'SET_VIEW', view: step.view })
         await sleep(650)
-        return { detail: `Switched to ${VIEW_LABELS[step.view]}` }
+        return { detail: t('Switched to {page}', { page: t(VIEW_LABELS[step.view]) }) }
       }
       case 'set_theme': {
         dispatch({ type: 'SET_THEME', theme: step.theme })
-        return { detail: `Theme is now ${step.theme}` }
+        return { detail: t('Theme is now {theme}', { theme: t(step.theme) }) }
       }
       case 'create_file': {
         // Walk the user through the UI the way they would do it by hand: show
         // the Mini Apps page, ring the app tile, open the file with starter
         // content, then let the model fill it in while the page is visible.
         const suite = getSuiteApp(step.app)
-        report(`Opening Mini Apps → ${step.app_name}…`)
+        report(t('Opening Mini Apps → {app}…', { app: step.app_name }))
         if (current.codeEditorOpen) dispatch({ type: 'CLOSE_CODE_EDITOR' })
         dispatch({ type: 'SET_VIEW', view: 'apps' })
         await sleep(550)
         if (spotlightMiniApp(step.app)) await sleep(1100)
-        report(`Creating “${step.name}” in ${step.app_name}…`)
+        report(t('Creating “{name}” in {app}…', { name: step.name, app: step.app_name }))
         const project = await createSuiteProject({
           name: nextSuiteFileName(step.name, current.projects, step.app),
           spaceId: suite ? spaceForSuiteApp(suite) : 'english',
@@ -369,7 +372,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
             const written = generated.project ?? (await api.projects.update(project.id, { content: generated.content })).project
             dispatch({ type: 'UPDATE_PROJECT', project: written })
             onProjectContentChange?.(project.id, written.content)
-            return { detail: generated.generated ? `“${project.name}” written by ${generated.model}` : `“${project.name}” created with a starter outline (model output was unusable)`, project: written }
+            return { detail: generated.generated ? t('“{name}” written by {model}', { name: project.name, model: generated.model }) : t('“{name}” created with a starter outline (model output was unusable)', { name: project.name }), project: written }
           }
         } catch (error) {
           return { detail: `“${project.name}” created with a starter outline — ${(error as Error).message}`, project }
@@ -379,7 +382,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       case 'open_file': {
         dispatch({ type: 'OPEN_CODE_EDITOR', projectId: step.project_id })
         await sleep(500)
-        return { detail: `Opened “${step.project_name}”` }
+        return { detail: t('Opened “{name}”', { name: step.project_name }) }
       }
       case 'update_file': {
         dispatch({ type: 'OPEN_CODE_EDITOR', projectId: step.project_id })
@@ -387,13 +390,13 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         report(`${modelName} is writing the new version…`)
         const before = (await api.projects.get(step.project_id)).project
         const generated = await api.helios.agentContent({ kind: 'file', project_id: step.project_id, brief: step.brief, goal }, modelTab)
-        if (!generated.content) throw new Error('No content was generated')
-        if (!generated.generated) throw new Error(`${generated.model} did not return a usable new version; the file was left unchanged`)
+        if (!generated.content) throw new Error(t('No content was generated'))
+        if (!generated.generated) throw new Error(t('{model} did not return a usable new version; the file was left unchanged', { model: generated.model }))
         const written = generated.project ?? (await api.projects.update(step.project_id, { content: generated.content })).project
         dispatch({ type: 'UPDATE_PROJECT', project: written })
         onProjectContentChange?.(step.project_id, written.content)
         return {
-          detail: `Wrote the new version of “${step.project_name}” with ${generated.model}`,
+          detail: t('Wrote the new version of “{name}” with {model}', { name: step.project_name, model: generated.model }),
           project: written,
           undo: async () => {
             const restored = await api.projects.update(step.project_id, { content: before.content })
@@ -409,8 +412,8 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           const generated = await api.helios.agentContent({ kind: 'post', brief: step.brief, goal, project_name: created?.name }, modelTab)
           body = generated.body || ''
         }
-        if (!body.trim()) throw new Error('No post text was generated')
-        report('Publishing to the Space feed…')
+        if (!body.trim()) throw new Error(t('No post text was generated'))
+        report(t('Publishing to the Space feed…'))
         const { post } = await api.posts.create({
           body,
           category: 'reflection',
@@ -423,15 +426,15 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         if (stateRef.current.codeEditorOpen) dispatch({ type: 'CLOSE_CODE_EDITOR' })
         dispatch({ type: 'SET_VIEW', view: 'lifestyle' })
         await sleep(700)
-        return { detail: `Posted to the Space feed: “${body.slice(0, 80)}${body.length > 80 ? '…' : ''}”` }
+        return { detail: t('Posted to the Space feed: “{body}”', { body: body.slice(0, 80) + (body.length > 80 ? '…' : '') }) }
       }
       default:
-        return { detail: 'Skipped' }
+        return { detail: t('Skipped') }
     }
   }
 
   async function runAgent(text: string, history: { role: 'user' | 'assistant'; content: string }[], targetProjectId?: number) {
-    reportAgentStatus({ phase: 'planning', title: 'Planning the steps…' })
+    reportAgentStatus({ phase: 'planning', title: t('Planning the steps…') })
     let plan
     try {
       plan = await api.helios.agent(text, { project_id: targetProjectId, view: currentView }, modelTab)
@@ -474,13 +477,13 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         summary.push(result.detail)
       } catch (error) {
         failed += 1
-        updateStep(msgId, index, { status: 'failed', detail: (error as Error).message || 'Step failed' })
+        updateStep(msgId, index, { status: 'failed', detail: (error as Error).message || t('Step failed') })
       }
     }
     setMessages(prev => prev.map(m => m.id === msgId ? { ...m, finished: true } : m))
     reportAgentStatus(failed
-      ? { phase: 'failed', title: `${total - failed}/${total} steps done`, detail: 'see the Helios panel for details' }
-      : { phase: 'done', title: total === 1 ? summary[0] : `All ${total} steps done`, detail: total === 1 ? undefined : summary[summary.length - 1] })
+      ? { phase: 'failed', title: t('{done}/{total} steps done', { done: total - failed, total }), detail: t('see the Helios panel for details') }
+      : { phase: 'done', title: total === 1 ? summary[0] : t('All {total} steps done', { total }), detail: total === 1 ? undefined : summary[summary.length - 1] })
   }
 
   async function chatReply(history: { role: 'user' | 'assistant'; content: string }[], targetProjectId?: number) {
@@ -497,14 +500,14 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       ...(canPropose ? {
         proposal: {
           label: patches.length > 0
-            ? `Write ${patches.length} file${patches.length > 1 ? 's' : ''} into “${contextPacket.project_name || activeProject?.name || 'the Project'}”`
-            : 'Modify “' + (contextPacket.project_name || activeProject?.name || 'the active Project') + '”',
+            ? t(patches.length === 1 ? 'Write 1 file into “{name}”' : 'Write {count} files into “{name}”', { count: patches.length, name: contextPacket.project_name || activeProject?.name || t('the Project') })
+            : t('Modify “{name}”', { name: contextPacket.project_name || activeProject?.name || t('the active Project') }),
           cost: 'medium' as const,
           safety: 'review' as const,
           targetProjectId: targetProjectId!,
           plan: patches.length > 0
-            ? `Write files: ${patches.map(item => item.path).join(', ')}. Nothing is applied until you approve.`
-            : 'Replace the current Project content with the complete reviewed version shown above. Nothing is applied until you approve.',
+            ? t('Write files: {files}. Nothing is applied until you approve.', { files: patches.map(item => item.path).join(', ') })
+            : t('Replace the current Project content with the complete reviewed version shown above. Nothing is applied until you approve.'),
         },
       } : {}),
     }])
@@ -529,7 +532,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     } catch (err) {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(), role: 'assistant',
-        content: 'Error: ' + ((err as Error).message || 'Request failed.'),
+        content: t('Error: {error}', { error: (err as Error).message || t('Request failed.') }),
         ts: new Date().toISOString(),
       }])
     } finally {
@@ -567,9 +570,9 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     if (!target?.undo) return
     try {
       await target.undo()
-      updateStep(msgId, index, { status: 'undone', detail: 'Restored the previous version', undo: undefined })
+      updateStep(msgId, index, { status: 'undone', detail: t('Restored the previous version'), undo: undefined })
     } catch (error) {
-      updateStep(msgId, index, { detail: 'Undo failed: ' + ((error as Error).message || 'unknown error') })
+      updateStep(msgId, index, { detail: t('Undo failed: {error}', { error: (error as Error).message || t('unknown error') }) })
     }
   }
 
@@ -583,7 +586,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       const target = activeProject?.id === msg.proposal.targetProjectId
         ? activeProject
         : (await api.projects.get(msg.proposal.targetProjectId)).project
-      if (!target.can_edit) throw new Error('You do not have permission to edit this Project.')
+      if (!target.can_edit) throw new Error(t('You do not have permission to edit this Project.'))
       let content: string
       if (patches.length > 0) {
         content = applyFilePatchesToWorkspace(target.content, patches, target.app_kind || 'code')
@@ -641,7 +644,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   return (
     <div className="flex flex-col border-l overflow-hidden"
       style={{ width: 360, flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)' }}
-      role="complementary" aria-label="Helios AI assistant">
+      role="complementary" aria-label={t('Helios AI assistant')}>
 
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: 'var(--helios-border)', flexShrink: 0 }}>
@@ -658,24 +661,24 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           <div style={{ fontSize: 14, fontWeight: 700 }}>Helios</div>
           {contextPacket.project_name || activeProject
             ? <div style={{ fontSize: 11, color: 'var(--helios-accent)' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
-            : <div style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || 'Current Helios context'}</div>}
+            : <div style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || t('Current Helios context')}</div>}
         </div>
-        <button onClick={() => setShowContext(v => !v)} title="Context packet" aria-expanded={showContext}
-          className="p-1.5 rounded-lg cursor-pointer" aria-label="Toggle context"
+        <button onClick={() => setShowContext(v => !v)} title={t('Context packet')} aria-expanded={showContext}
+          className="p-1.5 rounded-lg cursor-pointer" aria-label={t('Toggle context')}
           style={{ background: showContext ? 'var(--helios-surface2)' : 'none', border: 'none', color: 'var(--helios-muted)' }}>
           <Info size={14} />
         </button>
-        <button onClick={onClose} aria-label="Close Helios" className="p-1.5 rounded-lg cursor-pointer"
+        <button onClick={onClose} aria-label={t('Close Helios')} className="p-1.5 rounded-lg cursor-pointer"
           style={{ background: 'none', border: 'none', color: 'var(--helios-muted)' }}>
           <X size={16} />
         </button>
       </div>
 
       {/* Model tabs: free site model vs. the user's own API (VS Code-style) */}
-      <div className="flex border-b flex-shrink-0" role="tablist" aria-label="Model" style={{ borderColor: 'var(--helios-border)' }}>
+      <div className="flex border-b flex-shrink-0" role="tablist" aria-label={t('Model')} style={{ borderColor: 'var(--helios-border)' }}>
         {([
-          { id: 'site' as const, icon: <Sparkles size={12} />, title: 'Free', sub: aiEnabled ? `${siteModelLabel} · no key needed` : 'Built-in model is off', ready: aiEnabled },
-          { id: 'user' as const, icon: <KeyRound size={12} />, title: 'My API', sub: userModelLabel, ready: userAiReady },
+          { id: 'site' as const, icon: <Sparkles size={12} />, title: t('Free'), sub: aiEnabled ? t('{model} · no key needed', { model: siteModelLabel }) : t('Built-in model is off'), ready: aiEnabled },
+          { id: 'user' as const, icon: <KeyRound size={12} />, title: t('My API'), sub: userAi?.configured ? userModelLabel : t('Add your own key'), ready: userAiReady },
         ]).map(tab => {
           const active = modelTab === tab.id
           return (
@@ -691,7 +694,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
               <span className="flex items-center gap-1.5" style={{ fontSize: 12, fontWeight: 650 }}>
                 <span style={{ color: active ? 'var(--helios-accent)' : 'var(--helios-muted)', display: 'flex' }}>{tab.icon}</span>
                 {tab.title}
-                {!tab.ready && <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 999, background: 'var(--helios-surface3)', color: 'var(--helios-muted)' }}>{tab.id === 'user' ? 'set up' : 'off'}</span>}
+                {!tab.ready && <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 999, background: 'var(--helios-surface3)', color: 'var(--helios-muted)' }}>{tab.id === 'user' ? t('set up') : t('off')}</span>}
               </span>
               <span className="block truncate" style={{ fontSize: 10, color: 'var(--helios-muted)', marginTop: 2, maxWidth: 150 }}>{tab.sub}</span>
             </button>
@@ -703,22 +706,22 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       {showContext && (
         <div className="mx-3 mt-2.5 mb-1 rounded-xl overflow-hidden" style={{ border: '1px solid var(--helios-border)', flexShrink: 0 }}>
           <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'color-mix(in srgb, var(--helios-accent) 8%, transparent)', borderBottom: '1px solid var(--helios-border)' }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--helios-accent)', flex: 1 }}>Context packet</span>
-            <span style={{ fontSize: 10, color: 'var(--helios-muted)' }}>minimal · permission-filtered</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--helios-accent)', flex: 1 }}>{t('Context packet')}</span>
+            <span style={{ fontSize: 10, color: 'var(--helios-muted)' }}>{t('minimal · permission-filtered')}</span>
           </div>
           <div className="p-3 flex flex-col gap-1.5" style={{ background: 'var(--helios-surface)', fontSize: 12 }}>
-            <CtxRow label="Active object" val={contextPacket.project_name || activeProject?.name || contextPacket.conversation_title || 'none'} ok={Boolean(contextPacket.project_id || activeProject || contextPacket.conversation_id)} />
-            <CtxRow label="Space" val={contextPacket.space_name || contextPacket.space_id || activeProject?.space_id || 'current'} ok={Boolean(contextPacket.space_id || activeProject?.space_id)} />
-            <CtxRow label="Mini App" val={contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind || 'none'} ok={Boolean(contextPacket.app_kind || activeProject?.app_kind)} />
-            <CtxRow label="Conversation" val={contextPacket.conversation_title || 'none'} ok={Boolean(contextPacket.conversation_id)} />
-            <CtxRow label="Content" val={contextChars > 0 ? contextChars + ' chars' : 'empty'} ok={contextChars > 0} />
-            <CtxRow label="Model" val={modelTab === 'user' ? `My API · ${userModelLabel}` : `Free · ${siteModelLabel}`} ok={aiReady} />
-            <CtxRow label="Mode" val={mode === 'agent' ? 'Agent — acts inside this Space' : 'Chat — previews, you approve'} ok />
-            <CtxRow label="Access" val="Permission-filtered Helios data" ok />
-            <CtxRow label="Computer control" val="Not permitted" ok={false} />
+            <CtxRow label={t('Active object')} val={contextPacket.project_name || activeProject?.name || contextPacket.conversation_title || t('none')} ok={Boolean(contextPacket.project_id || activeProject || contextPacket.conversation_id)} />
+            <CtxRow label={t('Space')} val={contextPacket.space_name || contextPacket.space_id || activeProject?.space_id || t('current')} ok={Boolean(contextPacket.space_id || activeProject?.space_id)} />
+            <CtxRow label={t('Mini App')} val={contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind || t('none')} ok={Boolean(contextPacket.app_kind || activeProject?.app_kind)} />
+            <CtxRow label={t('Conversation')} val={contextPacket.conversation_title || t('none')} ok={Boolean(contextPacket.conversation_id)} />
+            <CtxRow label={t('Content')} val={contextChars > 0 ? t('{count} chars', { count: contextChars }) : t('empty')} ok={contextChars > 0} />
+            <CtxRow label={t('Model')} val={modelTab === 'user' ? `${t('My API')} · ${userModelLabel}` : `${t('Free')} · ${siteModelLabel}`} ok={aiReady} />
+            <CtxRow label={t('Mode')} val={mode === 'agent' ? t('Agent — acts inside this Space') : t('Chat — previews, you approve')} ok />
+            <CtxRow label={t('Access')} val={t('Permission-filtered Helios data')} ok />
+            <CtxRow label={t('Computer control')} val={t('Not permitted')} ok={false} />
           </div>
           <div className="px-3 py-2" style={{ background: 'var(--helios-surface2)', fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.5 }}>
-            Helios resolves Project and conversation access on the server, then sends only the permitted context to the selected model.
+            {t('Helios resolves Project and conversation access on the server, then sends only the permitted context to the selected model.')}
           </div>
         </div>
       )}
@@ -730,8 +733,8 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           <AlertTriangle size={13} style={{ color: 'var(--helios-solar)', flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: 'var(--helios-solar)', lineHeight: 1.5 }}>
             {modelTab === 'user'
-              ? <>No personal API key yet. <button type="button" onClick={openAiSettings} className="cursor-pointer" style={{ background: 'none', border: 'none', padding: 0, color: 'var(--helios-accent)', fontWeight: 650, fontSize: 12, textDecoration: 'underline' }}>Add one in Settings</button> (Groq, OpenAI, Gemini, DeepSeek, Ollama…) or use the Free tab.</>
-              : 'The free Helios model is not connected yet. Ask an administrator to set a site key, or switch to My API with your own key.'}
+              ? <>{t('No personal API key yet.')} <button type="button" onClick={openAiSettings} className="cursor-pointer" style={{ background: 'none', border: 'none', padding: 0, color: 'var(--helios-accent)', fontWeight: 650, fontSize: 12, textDecoration: 'underline' }}>{t('Add one in Settings')}</button> {t('(Groq, OpenAI, Gemini, DeepSeek, Ollama…) or use the Free tab.')}</>
+              : t('The free Helios model is not connected yet. Ask an administrator to set a site key, or switch to My API with your own key.')}
           </div>
         </div>
       )}
@@ -740,13 +743,13 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       <div className="mx-3 mt-2 px-3 py-2 rounded-lg flex-shrink-0"
         style={{ background: 'var(--helios-surface2)', fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.5 }}>
         {mode === 'agent'
-          ? '✦ Agent for this Space · opens pages, creates and fills Mini App files, shares posts · edits can be undone · no computer control'
-          : '✦ Chat · Permission-filtered context · No computer control · Action Preview before significant changes'}
+          ? t('✦ Agent for this Space · opens pages, creates and fills Mini App files, shares posts · edits can be undone · no computer control')
+          : t('✦ Chat · Permission-filtered context · No computer control · Action Preview before significant changes')}
       </div>
 
       {/* Messages */}
       <div ref={listRef} onScroll={handleListScroll} onWheel={handleUserScrollIntent} onTouchMove={handleUserScrollIntent}
-        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" role="log" aria-label="Conversation">
+        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" role="log" aria-label={t('Conversation')}>
         {messages.map(msg => (
           <div key={msg.id} className={'flex items-end gap-2' + (msg.role === 'user' ? ' flex-row-reverse' : '')}>
             {msg.role === 'assistant' && (
@@ -775,7 +778,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                   <button onClick={() => copyContent(msg.content, msg.id)}
                     className="absolute opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus:opacity-100 cursor-pointer"
                     style={{ top: 6, right: 6, background: 'var(--helios-surface3)', border: 'none', borderRadius: 4, padding: '2px 4px', color: 'var(--helios-muted)' }}
-                    title="Copy" aria-label="Copy message">
+                    title={t('Copy')} aria-label={t('Copy message')}>
                     {copied === msg.id ? <Check size={10} style={{ color: 'var(--helios-success)' }} /> : <Copy size={10} />}
                   </button>
                 )}
@@ -787,7 +790,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                   <div className="px-3 py-2 flex items-center gap-2" style={{ background: 'color-mix(in srgb, var(--helios-accent) 8%, transparent)', borderBottom: '1px solid var(--helios-border)' }}>
                     <Bot size={12} style={{ color: 'var(--helios-accent)' }} />
                     <span style={{ fontSize: 12, fontWeight: 650, color: 'var(--helios-accent)', flex: 1 }}>
-                      {msg.finished ? 'Done' : 'Working…'} · {msg.steps.filter(s => s.status === 'done' || s.status === 'undone').length}/{msg.steps.length} steps
+                      {msg.finished ? t('Done') : t('Working…')} · {t('{done}/{total} steps', { done: msg.steps.filter(s => s.status === 'done' || s.status === 'undone').length, total: msg.steps.length })}
                     </span>
                   </div>
                   <ol className="flex flex-col" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
@@ -809,11 +812,11 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                         {item.status === 'done' && item.step.tool === 'update_file' && item.undo && (
                           <button type="button" onClick={() => undoStep(msg.id, index)} className="cursor-pointer flex items-center gap-1"
                             style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)', borderRadius: 6, padding: '2px 6px', fontSize: 10, color: 'var(--helios-text)' }}>
-                            <Undo2 size={10} /> Undo
+                            <Undo2 size={10} /> {t('Undo')}
                           </button>
                         )}
                         {item.status === 'done' && (item.step.tool === 'create_file' || item.step.tool === 'update_file' || item.step.tool === 'open_file') && (
-                          <button type="button" title="Open in workspace" aria-label="Open in workspace" className="cursor-pointer"
+                          <button type="button" title={t('Open in workspace')} aria-label={t('Open in workspace')} className="cursor-pointer"
                             onClick={() => {
                               const step = item.step
                               if (step.tool === 'create_file') {
@@ -841,11 +844,11 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                     style={{ background: proposalHeaderBg(msg.applied), fontSize: 12 }}>
                     <Eye size={12} style={{ color: proposalIconColor(msg.applied), flexShrink: 0 }} />
                     <span style={{ color: proposalTextColor(msg.applied), fontWeight: 600, flex: 1 }}>
-                      {msg.applied ? 'Applied' : 'Proposed action'}
+                      {msg.applied ? t('Applied') : t('Proposed action')}
                     </span>
                     <span className="px-2 py-0.5 rounded-full"
                       style={{ fontSize: 9, fontWeight: 600, background: safetyBg(msg.proposal.safety), color: safetyColor(msg.proposal.safety) }}>
-                      {msg.proposal.safety === 'safe' ? 'Safe' : 'Review'}
+                      {msg.proposal.safety === 'safe' ? t('Safe') : t('Review')}
                     </span>
                   </div>
                   <div className="px-3 py-2" style={{ background: 'var(--helios-surface)', fontSize: 12, color: 'var(--helios-muted)' }}>
@@ -854,27 +857,27 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                   {!msg.applied ? (
                     <>
                       <div className="px-3 py-2" style={{ borderTop: '1px solid var(--helios-border)', background: 'var(--helios-surface2)', fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.45 }}>
-                        <strong style={{ color: 'var(--helios-text)', display: 'block', marginBottom: 3 }}>Action Preview</strong>
+                        <strong style={{ color: 'var(--helios-text)', display: 'block', marginBottom: 3 }}>{t('Action Preview')}</strong>
                         {msg.proposal.plan}
                       </div>
-                      {editingProposal === msg.id && <div className="p-2" style={{ borderTop: '1px solid var(--helios-border)', background: 'var(--helios-surface)' }}><textarea value={planDraft} onChange={event => setPlanDraft(event.target.value)} aria-label="Edit Helios action plan" style={{ width: '100%', minHeight: 72, resize: 'vertical', border: '1px solid var(--helios-border)', borderRadius: 8, padding: 8, background: 'var(--helios-surface2)', color: 'var(--helios-text)', fontSize: 11 }} /><div className="flex gap-2 mt-2"><button type="button" onClick={() => submitEditedPlan(msg)} className="flex-1 py-2 cursor-pointer" style={{ border: 0, borderRadius: 7, background: 'var(--helios-accent)', color: '#fff', fontSize: 11 }}>Preview revised plan</button><button type="button" onClick={() => setEditingProposal(null)} className="px-3 cursor-pointer" style={{ border: '1px solid var(--helios-border)', borderRadius: 7, background: 'transparent', color: 'var(--helios-muted)', fontSize: 11 }}>Back</button></div></div>}
+                      {editingProposal === msg.id && <div className="p-2" style={{ borderTop: '1px solid var(--helios-border)', background: 'var(--helios-surface)' }}><textarea value={planDraft} onChange={event => setPlanDraft(event.target.value)} aria-label={t('Edit Helios action plan')} style={{ width: '100%', minHeight: 72, resize: 'vertical', border: '1px solid var(--helios-border)', borderRadius: 8, padding: 8, background: 'var(--helios-surface2)', color: 'var(--helios-text)', fontSize: 11 }} /><div className="flex gap-2 mt-2"><button type="button" onClick={() => submitEditedPlan(msg)} className="flex-1 py-2 cursor-pointer" style={{ border: 0, borderRadius: 7, background: 'var(--helios-accent)', color: '#fff', fontSize: 11 }}>{t('Preview revised plan')}</button><button type="button" onClick={() => setEditingProposal(null)} className="px-3 cursor-pointer" style={{ border: '1px solid var(--helios-border)', borderRadius: 7, background: 'transparent', color: 'var(--helios-muted)', fontSize: 11 }}>{t('Back')}</button></div></div>}
                       {editingProposal !== msg.id && <div className="flex border-t" style={{ borderColor: 'var(--helios-border)' }}>
-                        <button onClick={() => applyProposal(msg.id)} className="flex-1 py-2 cursor-pointer" style={{ background: 'var(--helios-surface)', border: 'none', color: 'var(--helios-accent)', fontSize: 11, borderRight: '1px solid var(--helios-border)', fontWeight: 650 }}>Approve</button>
-                        <button onClick={() => editPlan(msg)} className="flex-1 py-2 cursor-pointer" style={{ background: 'var(--helios-surface)', border: 'none', color: 'var(--helios-text)', fontSize: 11, borderRight: '1px solid var(--helios-border)' }}>Edit Plan</button>
-                        <button onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, proposal: undefined } : m))} className="flex-1 py-2 cursor-pointer" style={{ background: 'var(--helios-surface)', border: 'none', color: 'var(--helios-muted)', fontSize: 11 }}>Cancel</button>
+                        <button onClick={() => applyProposal(msg.id)} className="flex-1 py-2 cursor-pointer" style={{ background: 'var(--helios-surface)', border: 'none', color: 'var(--helios-accent)', fontSize: 11, borderRight: '1px solid var(--helios-border)', fontWeight: 650 }}>{t('Approve')}</button>
+                        <button onClick={() => editPlan(msg)} className="flex-1 py-2 cursor-pointer" style={{ background: 'var(--helios-surface)', border: 'none', color: 'var(--helios-text)', fontSize: 11, borderRight: '1px solid var(--helios-border)' }}>{t('Edit Plan')}</button>
+                        <button onClick={() => setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, proposal: undefined } : m))} className="flex-1 py-2 cursor-pointer" style={{ background: 'var(--helios-surface)', border: 'none', color: 'var(--helios-muted)', fontSize: 11 }}>{t('Cancel')}</button>
                       </div>}
                     </>
                   ) : (
                     <div className="flex items-center justify-center gap-1.5 py-2"
                       style={{ background: 'var(--helios-surface)', fontSize: 12, color: 'var(--helios-success)' }}>
-                      <Check size={12} /> Applied to project
+                      <Check size={12} /> {t('Applied to project')}
                     </div>
                   )}
                 </div>
               )}
 
               <time dateTime={msg.ts} style={{ fontSize: 10, color: 'var(--helios-muted)' }}>
-                {new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(msg.ts).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
                 {msg.meta && <span> · {msg.meta.source === 'user' ? 'My API' : 'Free'} · {msg.meta.model}</span>}
               </time>
             </div>
@@ -901,7 +904,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                   }} />
               ))}
             </div>
-            <span className="sr-only" aria-live="polite">Helios is thinking</span>
+            <span className="sr-only" aria-live="polite">{t('Helios is thinking')}</span>
           </div>
         )}
       </div>
@@ -909,12 +912,12 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       {/* Quick action chips */}
       {messages.length <= 1 && aiReady && (
         <div className="px-4 pb-3 flex flex-col gap-1.5 flex-shrink-0">
-          <div style={{ fontSize: 11, color: 'var(--helios-muted)', marginBottom: 4 }}>{mode === 'agent' && !activeProject ? 'Try telling the agent:' : 'Try asking:'}</div>
+          <div style={{ fontSize: 11, color: 'var(--helios-muted)', marginBottom: 4 }}>{mode === 'agent' && !activeProject ? t('Try telling the agent:') : t('Try asking:')}</div>
           {(mode === 'agent' && !activeProject && !contextPacket.conversation_id ? AGENT_SUGGESTIONS : contextualActions).map(q => (
             <button key={q} onClick={() => sendMessage(q)}
               className="w-full text-left px-3 py-2 rounded-lg cursor-pointer flex items-center gap-2"
               style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)', color: 'var(--helios-muted)', fontSize: 12 }}>
-              <ChevronRight size={10} style={{ flexShrink: 0 }} /> {q}
+              <ChevronRight size={10} style={{ flexShrink: 0 }} /> {t(q)}
             </button>
           ))}
         </div>
@@ -926,7 +929,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           <button onClick={() => { const prev = [...messages].reverse().find(m => m.role === 'user'); if (prev) sendMessage(prev.content) }}
             className="flex items-center gap-1.5 text-xs cursor-pointer px-3 py-2 rounded-lg"
             style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)', color: 'var(--helios-muted)' }}>
-            <RotateCcw size={11} /> Retry last message
+            <RotateCcw size={11} /> {t('Retry last message')}
           </button>
         </div>
       )}
@@ -939,23 +942,23 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           <div className="flex-1 flex items-center rounded-xl px-3 py-2.5"
             style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)' }}>
             <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
-              placeholder={!aiReady ? 'Model not available on this tab' : mode === 'agent' ? 'Tell the agent what to do — it opens the page and does it…' : 'Ask Helios… (Enter to send)'}
-              disabled={!aiReady || loading} aria-label="Message to Helios"
+              placeholder={!aiReady ? t('Model not available on this tab') : mode === 'agent' ? t('Tell the agent what to do — it opens the page and does it…') : t('Ask Helios… (Enter to send)')}
+              disabled={!aiReady || loading} aria-label={t('Message to Helios')}
               className="flex-1 bg-transparent outline-none"
               style={{ border: 'none', color: 'var(--helios-text)', fontSize: 13 }} />
           </div>
-          <button type="submit" disabled={!aiReady || loading || !input.trim()} aria-label="Send message"
+          <button type="submit" disabled={!aiReady || loading || !input.trim()} aria-label={t('Send message')}>
             className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer flex-shrink-0"
             style={{ background: 'var(--helios-accent)', border: 'none', color: '#fff', opacity: (!aiReady || loading || !input.trim()) ? 0.4 : 1 }}>
             {loading ? <Loader size={14} style={{ animation: 'spin 0.5s linear infinite' }} /> : <Send size={14} />}
           </button>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <div className="flex rounded-lg p-0.5" role="radiogroup" aria-label="Helios mode"
+          <div className="flex rounded-lg p-0.5" role="radiogroup" aria-label={t('Helios mode')}
             style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)' }}>
             {([
-              { id: 'agent' as const, label: 'Agent', icon: <Bot size={11} /> },
-              { id: 'chat' as const, label: 'Chat', icon: <MessageSquare size={11} /> },
+              { id: 'agent' as const, label: t('Agent'), icon: <Bot size={11} /> },
+              { id: 'chat' as const, label: t('Chat'), icon: <MessageSquare size={11} /> },
             ]).map(option => (
               <button key={option.id} type="button" role="radio" aria-checked={mode === option.id} onClick={() => setMode(option.id)}
                 className="flex items-center gap-1 cursor-pointer px-2.5 py-1 rounded-md"

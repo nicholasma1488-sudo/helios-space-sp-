@@ -1,6 +1,7 @@
 import type { Dispatch } from 'react'
 import { api, type Conversation, type LiveSession, type Project } from '../api'
 import type { AppState } from '../store/appStore'
+import { t } from '../i18n'
 
 type AppAction =
   | { type: 'SET_VIEW'; view: AppState['view'] }
@@ -90,7 +91,7 @@ export async function publishLiveReplay(session: LiveSession, project: Project, 
   sessionStorage.setItem('helios-open-post', String(result.post.id))
   dispatch({
     type: 'PUSH_TOAST',
-    toast: { id: String(Date.now()), message: 'Live session kept as Feed-discoverable work', tone: 'success' },
+    toast: { id: String(Date.now()), message: t('Live session kept as Feed-discoverable work'), tone: 'success' },
   })
   return result.post
 }
