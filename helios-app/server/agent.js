@@ -118,18 +118,61 @@ export async function completeText(ai, messages, { temperature = 0.3, json = fal
   return { text, model: data?.model || ai.model }
 }
 
+/**
+ * Best-effort repair of almost-JSON from a model: escapes raw newlines/tabs
+ * inside strings, closes an unterminated string, drops a dangling comma and
+ * appends whatever closing brackets are still open (models writing long code
+ * files regularly forget the final `}`).
+ */
+export function repairJson(text) {
+  let out = ''
+  let inStr = false
+  let esc = false
+  const stack = []
+  for (const ch of text) {
+    if (inStr) {
+      if (esc) { esc = false; out += ch; continue }
+      if (ch === '\\') { esc = true; out += ch; continue }
+      if (ch === '"') { inStr = false; out += ch; continue }
+      if (ch === '\n') { out += '\\n'; continue }
+      if (ch === '\r') continue
+      if (ch === '\t') { out += '\\t'; continue }
+      out += ch
+      continue
+    }
+    if (ch === '"') inStr = true
+    else if (ch === '{') stack.push('}')
+    else if (ch === '[') stack.push(']')
+    else if ((ch === '}' || ch === ']') && stack.length && stack[stack.length - 1] === ch) stack.pop()
+    out += ch
+  }
+  if (esc) out = out.slice(0, -1)
+  if (inStr) out += '"'
+  out = out.trimEnd().replace(/,\s*$/, '')
+  while (stack.length) out += stack.pop()
+  return out
+}
+
 export function extractJson(text) {
   if (!text) return null
   let body = String(text).trim()
-  const fenced = body.match(/```(?:json)?\s*([\s\S]*?)```/i)
+  const fenced = body.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i)
   if (fenced) body = fenced[1].trim()
   const start = body.indexOf('{')
+  if (start === -1) return null
   const end = body.lastIndexOf('}')
-  if (start === -1 || end === -1 || end <= start) return null
-  const candidate = body.slice(start, end + 1)
+  const candidate = end > start ? body.slice(start, end + 1) : body.slice(start)
   try { return JSON.parse(candidate) } catch {}
   // Tolerate trailing commas, a common small-model slip.
   try { return JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1')) } catch {}
+  // Missing closing braces, raw newlines inside code strings, truncated output.
+  for (const source of [candidate, body.slice(start)]) {
+    try {
+      const repaired = repairJson(source)
+      const parsed = JSON.parse(repaired)
+      if (parsed && typeof parsed === 'object') return parsed
+    } catch {}
+  }
   return null
 }
 
