@@ -116,6 +116,14 @@ export const zhCN: Dict = {
   'Leave conversation': '离开对话',
   'Back to conversations': '返回对话列表',
   'Send message': '发送消息',
+  'Chats': '聊天',
+  'All': '全部',
+  'Search a Helios handle to add a friend.': '搜索 Helios 用户名来加好友。',
+  'No conversations yet': '还没有对话',
+  'Say something…': '说点什么…',
+  'Pick a chat, or start a private chat, group, or project thread.': '选一个对话，或开始私聊、群组或项目讨论。',
+  'Helios ({count})': 'Helios（{count}）',
+  'Replay': '回看',
 }
 
 export const zhTW: Dict = {
@@ -234,4 +242,12 @@ export const zhTW: Dict = {
   'Leave conversation': '離開對話',
   'Back to conversations': '返回對話清單',
   'Send message': '傳送訊息',
+  'Chats': '聊天',
+  'All': '全部',
+  'Search a Helios handle to add a friend.': '搜尋 Helios 使用者名稱來加好友。',
+  'No conversations yet': '還沒有對話',
+  'Say something…': '說點什麼…',
+  'Pick a chat, or start a private chat, group, or project thread.': '選一個對話，或開始私訊、群組或專案討論。',
+  'Helios ({count})': 'Helios（{count}）',
+  'Replay': '重播',
 }
