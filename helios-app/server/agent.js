@@ -255,18 +255,31 @@ function findProjectMention(goal, projects) {
   return hits[0] || null
 }
 
+// Leading Chinese request framing + creation verb + measure word ("请帮我做一个…").
+// Chinese verbs are single characters, so they are only stripped here at the
+// start of the phrase — never from inside words like 贪吃蛇 or 写作业.
+const ZH_LEAD_RE = /^(?:请|麻烦|帮我|给我|我要|我想|我需要|能不能|可以|来)*(?:新建|创建|制作|生成|准备|整理|起草|编写|开发|设计|搭建|实现|做|写|列|拟|画)?(?:一?[个份张篇条套段]|一下)?/
+const EN_FILLER_RE = /\b(a|an|the|me|please|for me|quick|short|simple|new|my|some)\b/gi
+
 export function deriveTitle(goal, app) {
-  const cleaned = String(goal).replace(/\s+/g, ' ').trim()
+  let cleaned = String(goal).replace(/\s+/g, ' ').trim()
     // Drop trailing "and post it…" / "然后发到动态" clauses; they are separate steps.
     .replace(/\s*[,，;；]?\s*(?:and then|then|and|after that)\s+(?:post|share|publish|open|go to|switch)\b.*$/i, '')
     .replace(/[,，;；]?\s*(?:然后|并且|并|再|接着|之后|顺便)?(?:发到|分享到|发一?条?动态|发布|发帖|打开|切换|去).*$/, '')
-  const about = cleaned.match(/(?:about|on|titled|called|named|关于|题为|叫做|名为)\s*[:：“"']?\s*([^“”"'.,;!?。，；！？]+)/i)
+  // The first clause names the thing; the rest are instructions about it
+  // ("做一个贪吃蛇游戏，所有代码写在一个文件里" → "做一个贪吃蛇游戏").
+  const clause = cleaned.split(/[,，;；:：。!！?？]|\s[-–—]\s/)[0].trim()
+  if (clause.length >= 2) cleaned = clause
+  const about = cleaned.match(/\b(?:about|on|titled|called|named)\b\s*[:：“"']?\s*([^“”"'.,;!?。，；！？]+)/i)
+    || cleaned.match(/(?:关于|题为|叫做|名为)\s*[:：“"']?\s*([^“”"'.,;!?。，；！？]+)/)
     || cleaned.match(/\b(?:to|for)\s+([^“”"'.,;!?。，；！？]+)/i)
   let title = about ? about[1].trim() : ''
   if (!title) {
     title = cleaned
-      .replace(new RegExp(CREATE_RE.source, 'gi'), ' ')
-      .replace(/\b(a|an|the|me|please|for me|quick|short|simple|new|my)\b|请|一下|一个|一份|一篇|一张|给我|帮我|我要|我想/gi, ' ')
+      .replace(ZH_LEAD_RE, '')
+      .replace(/\b(create|make|write|draft|build|start|generate|prepare|compose|design|plan|put together|set up)\b/gi, ' ')
+      .replace(EN_FILLER_RE, ' ')
+      .replace(/(?:吧|呢|啊|好吗|谢谢)+$/, '')
       .replace(/\s+/g, ' ')
       .trim()
   }
