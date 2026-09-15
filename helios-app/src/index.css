@@ -613,7 +613,7 @@ button, [role="button"], a, input, select, textarea {
   transform: scale(.94);
   transition-duration: var(--dur-press);
 }
-.helios-floating-agent.is-open { right: 380px; }
+.helios-floating-agent.is-open { right: calc(var(--helios-dock-width, 360px) + 20px); }
 .helios-floating-agent > span { display: grid; place-items: center; }
 .helios-floating-agent > i { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border: 2px solid var(--helios-bg); border-radius: 50%; background: var(--helios-success); }
 
@@ -730,4 +730,83 @@ body {
 .helios-language-switcher select:focus-visible {
   outline: 2px solid var(--helios-accent);
   outline-offset: 2px;
+}
+
+.helios-user-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  user-select: none;
+}
+.helios-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+html.helios-is-fullscreen .helios-side-rail,
+html.helios-is-fullscreen .authenticated-topbar,
+html.helios-is-fullscreen .authenticated-topbar-peek-zone,
+html.helios-is-fullscreen .helios-mobile-nav {
+  display: none !important;
+}
+html.helios-is-fullscreen .helios-shell {
+  width: 100vw;
+  height: 100dvh;
+}
+html.helios-is-fullscreen .helios-main {
+  flex: 1;
+}
+
+.helios-exit-fullscreen {
+  position: fixed;
+  z-index: 80;
+  top: calc(10px + env(safe-area-inset-top, 0px));
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background: var(--glass-bg-strong, var(--helios-surface));
+  color: var(--helios-text);
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+.helios-exit-fullscreen:focus-visible {
+  outline: 2px solid var(--helios-accent);
+  outline-offset: 2px;
+}
+
+.forge-preview-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background: #0b0b10;
+}
+.forge-preview-fs header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--helios-border);
+  background: var(--helios-surface);
+  color: var(--helios-text);
+}
+.forge-preview-fs iframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #fff;
 }

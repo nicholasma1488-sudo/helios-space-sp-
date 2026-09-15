@@ -3,12 +3,21 @@ import { api } from '../api'
 import type { AgentStep, AiProviderChoice, Project, UserAiSettings } from '../api'
 import { useApp } from '../store/appStore'
 import { t, useLocale, useT } from '../i18n'
+import { useMediaQuery } from '../hooks/useMediaQuery'
+import {
+  closeActiveAgentChat, deleteAgentChat, getActiveAgentChat, saveAgentChat,
+  useHeliosAgentHistory, openAgentChat, clearAgentHistory, priorWorkContext,
+  type AgentChat, type StoredAgentMessage,
+} from '../lib/heliosAgentHistory'
+import { HeliosApiForm } from './HeliosApiForm'
 import { createSuiteProject, reportAgentStatus, spotlightMiniApp } from '../product/flow'
 import { getSuiteApp, nextSuiteFileName, spaceForSuiteApp } from '../product/miniApps'
 import {
-  X, Send, Eye, Check, ChevronRight, Info, Loader, AlertTriangle, RotateCcw, Copy,
-  Bot, MessageSquare, KeyRound, Sparkles, Circle, Undo2, ExternalLink,
+  X, Send, Eye, Check, Info, Loader, AlertTriangle, RotateCcw, Copy, Pencil,
+  Bot, MessageSquare, KeyRound, Sparkles, Circle, Undo2, ExternalLink, History, Plus, Trash2, Search,
 } from 'lucide-react'
+import { UserAvatar } from './UserAvatar'
+import './HeliosPanel.css'
 
 type StepStatus = 'pending' | 'running' | 'done' | 'failed' | 'undone'
 
@@ -40,14 +49,6 @@ const VIEW_LABELS: Record<'home' | 'lifestyle' | 'apps' | 'chat' | 'profile', st
   chat: 'Messages',
   profile: 'Me / Settings',
 }
-
-const AGENT_SUGGESTIONS = [
-  'Write a short essay about the solar system and share it to the Space feed',
-  'Make a slide deck about photosynthesis for grade 8',
-  'Create a to-do list for this week',
-  '帮我做一个月度预算表格',
-  'Open my messages',
-]
 
 function readStored<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   try {
@@ -168,70 +169,91 @@ function readContext(fallback: HeliosContext): HeliosContext {
   } catch { return fallback }
 }
 
-// Quick actions adapt to the open project's type so suggestions feel native to
-// the medium (code vs. prose vs. design vs. research) rather than generic.
-const NO_PROJECT_ACTIONS = [
-  'What is in this file?',
-  'Do not open the file yet — tell me what it is about in plain language',
-]
-
-const QUICK_ACTIONS_BY_TYPE: Partial<Record<Project['type'], string[]>> = {
-  code: [
-    'Write the first draft of this project',
-    'Review my code and suggest improvements',
-    'Add comments and documentation',
-    'Find and fix potential bugs',
-    'Explain what this code does',
-  ],
-  doc: [
-    'Write the first draft of this document',
-    'Improve clarity and flow',
-    'Tighten the structure and headings',
-    'Proofread grammar and style',
-    'Summarize the key points',
-  ],
-  design: [
-    'Draft a design brief for this project',
-    'Suggest a layout and visual hierarchy',
-    'Propose an accessible color palette',
-    'Critique the current direction',
-    'List next design steps',
-  ],
-  research: [
-    'Outline a reproducible research plan',
-    'Draft the methodology section',
-    'Suggest sources and citations to gather',
-    'Summarize findings so far',
-    'Identify gaps and next experiments',
-  ],
-}
-
-const QUICK_ACTIONS_BY_APP: Record<string, string[]> = {
-  'web-code': ['Find problems in this project code', 'Explain the selected code', 'Plan the next implementation step', 'Improve documentation and API usage'],
-  writing: ['Improve this passage', 'Give paragraph-level feedback', 'Strengthen structure and citations', 'Continue this draft in my voice'],
-  reader: ['Explain the selected passage', 'Create vocabulary notes', 'Summarize this chapter', 'Turn my notes into discussion questions'],
-  'math-lab': ['Explain this maths work', 'Check the reasoning step by step', 'Show another solution', 'Turn this formula into an interactive graph'],
-  spreadsheet: ['Analyze this spreadsheet', 'Find data quality problems', 'Suggest useful formulas', 'Explain the chart and findings'],
-  'lab-notebook': ['Review the experiment method', 'Find uncontrolled variables', 'Summarize findings', 'Draft the report discussion'],
-  drawing: ['Critique composition and hierarchy', 'Suggest the next visual pass', 'Create a concise art direction', 'Check accessibility and contrast'],
-  'comic-studio': ['Improve panel pacing', 'Tighten dialogue', 'Suggest the next page', 'Check visual continuity'],
-  presentation: ['Improve this slide', 'Tighten the narrative', 'Draft speaker notes', 'Find missing evidence'],
-  'business-planner': ['Pressure-test this business idea', 'Find risky assumptions', 'Draft the next validation task', 'Summarize market feedback'],
-  'project-board': ['Turn feedback into tasks', 'Prioritize the next work', 'Find blockers', 'Draft a practical project plan'],
+function HistoryPane({
+  chats, chatId, query, onQuery, onOpen, onDelete, onClear, onNew, formatTime,
+}: {
+  chats: AgentChat[]
+  chatId: string | null
+  query: string
+  onQuery: (value: string) => void
+  onOpen: (id: string) => void
+  onDelete: (id: string) => void
+  onClear: () => void
+  onNew: () => void
+  formatTime: (value: string) => string
+}) {
+  const t = useT()
+  const needle = query.trim().toLowerCase()
+  const visible = needle
+    ? chats.filter(chat => chat.title.toLowerCase().includes(needle) || chat.mode.includes(needle))
+    : chats
+  return (
+    <>
+      <div className="helios-dock-history-head">
+        <button type="button" className="helios-dock-new" onClick={onNew}>
+          <Plus size={14} /> {t('New chat')}
+        </button>
+        <label className="helios-dock-search">
+          <Search size={13} />
+          <input
+            value={query}
+            onChange={event => onQuery(event.target.value)}
+            placeholder={t('Search chats')}
+            aria-label={t('Search chats')}
+          />
+        </label>
+        <p>{t('Stored only on this device.')}</p>
+      </div>
+      {visible.length === 0 ? (
+        <div className="helios-dock-history-empty">
+          <History size={20} />
+          <p>{chats.length === 0 ? t('No saved chats yet') : t('No matching chats')}</p>
+        </div>
+      ) : (
+        <ul className="helios-dock-history-list">
+          {visible.map(chat => (
+            <li key={chat.id} className={chat.id === chatId ? 'is-active' : undefined}>
+              <button type="button" className="helios-dock-history-item" onClick={() => onOpen(chat.id)}>
+                <strong>{chat.title}</strong>
+                <span>{chat.mode === 'agent' ? t('Agent') : t('Chat')} · {formatTime(chat.updatedAt)}</span>
+              </button>
+              <button type="button" className="helios-dock-history-delete" aria-label={t('Delete chat')} onClick={() => onDelete(chat.id)}>
+                <Trash2 size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {chats.length > 0 && (
+        <div className="helios-dock-history-foot">
+          <button type="button" onClick={onClear}>{t('Clear history')}</button>
+        </div>
+      )}
+    </>
+  )
 }
 
 export function HeliosPanel({ onClose, activeProject, onProjectContentChange, aiEnabled, spaceId, currentView }: Props) {
   const { state, dispatch } = useApp()
   const t = useT()
   const locale = useLocale()
-  const [messages, setMessages] = useState<Message[]>([])
+  const restored = getActiveAgentChat()
+  const [chatId, setChatId] = useState<string | null>(() => restored?.id ?? null)
+  const [messages, setMessages] = useState<Message[]>(() => restored?.messages.length ? restored.messages as Message[] : [])
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyQuery, setHistoryQuery] = useState('')
+  const history = useHeliosAgentHistory()
+  const isWide = useMediaQuery('(min-width: 1100px)')
+  const activeTitle = history.chats.find(chat => chat.id === chatId)?.title
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showContext, setShowContext] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const [editingProposal, setEditingProposal] = useState<string | null>(null)
   const [planDraft, setPlanDraft] = useState('')
-  const [mode, setMode] = useState<PanelMode>(() => readStored('helios-panel-mode', ['agent', 'chat'] as const, 'agent'))
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
+  const [userEditDraft, setUserEditDraft] = useState('')
+  const [mode, setMode] = useState<PanelMode>(() => restored?.mode ?? readStored('helios-panel-mode', ['agent', 'chat'] as const, 'agent'))
   const [modelTab, setModelTab] = useState<Exclude<AiProviderChoice, 'auto'>>(() => readStored('helios-model-tab', ['site', 'user'] as const, 'site'))
   const [userAi, setUserAi] = useState<UserAiSettings | null>(null)
   const stateRef = useRef(state)
@@ -257,11 +279,6 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const siteModelLabel = userAi?.site_default?.model || t('Helios default')
   const userModelLabel = userAi?.configured ? `${userAi.presets?.[userAi.provider]?.label || userAi.provider} · ${userAi.model}` : t('Add your own key')
 
-  function openAiSettings() {
-    try { sessionStorage.setItem('helios-open-settings', 'ai') } catch {}
-    if (stateRef.current.codeEditorOpen) dispatch({ type: 'CLOSE_CODE_EDITOR' })
-    dispatch({ type: 'SET_VIEW', view: 'profile' })
-  }
   const [contextPacket] = useState<HeliosContext>(() => readContext({
     space_id: activeProject?.space_id ?? spaceId,
     project_id: activeProject?.id,
@@ -279,21 +296,93 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const pendingHandledRef = useRef(false)
   activeProjectRef.current = activeProject
 
-  useEffect(() => {
+  function buildWelcome(): Message {
     const project = activeProjectRef.current
     const chars = project?.content.length ?? 0
     const status = chars > 0 ? t('{count} chars of content', { count: chars }) : t('empty project')
-    // Only (re)write the welcome while no conversation exists: the agent opens
-    // files mid-run, and that must not wipe the step list the user is watching.
-    setMessages(prev => prev.some(m => m.id !== 'welcome') ? prev : [{
+    return {
       id: 'welcome', role: 'assistant', ts: new Date().toISOString(),
       content: project
         ? t('I have {name} open ({status}). In Agent mode I can rewrite or extend it directly; in Chat mode I prepare a preview you approve first.', { name: project.name, status })
         : contextPacket.conversation_title
           ? t('I have the permitted context for “{title}”. I can summarize it or draft replies, but I will not send anything without your approval.', { title: contextPacket.conversation_title || '' })
           : t('I\'m Helios, the agent for this Space. Tell me what you need — I will open the right page, create the Mini App file, fill it in, and share it if you ask. Pick the Free model or your own API above.'),
-    }])
+    }
+  }
+
+  function relativeTime(value: string) {
+    const timestamp = Date.parse(value)
+    if (!Number.isFinite(timestamp)) return t('recently')
+    const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
+    if (seconds < 60) return t('Just now')
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return t('{count}m ago', { count: minutes })
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return t('{count}h ago', { count: hours })
+    const days = Math.floor(hours / 24)
+    if (days < 7) return t('{count}d ago', { count: days })
+    return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+  }
+
+  useEffect(() => {
+    // Only (re)write the welcome while no conversation exists: the agent opens
+    // files mid-run, and that must not wipe the step list the user is watching.
+    setMessages(prev => prev.some(m => m.id !== 'welcome') ? prev : [buildWelcome()])
   }, [activeProject?.id, contextPacket.conversation_title, contextPacket.space_id, contextPacket.space_name])
+
+  useEffect(() => {
+    const real = messages.filter(item => item.id !== 'welcome')
+    if (!real.length) return
+    const id = saveAgentChat(chatId, { mode, messages: messages as StoredAgentMessage[] })
+    if (id && id !== chatId) setChatId(id)
+  }, [messages, mode, chatId])
+
+  useEffect(() => {
+    const onClear = () => {
+      setChatId(null)
+      setMessages([buildWelcome()])
+      setShowHistory(false)
+      setHistoryQuery('')
+    }
+    window.addEventListener('helios-session-cleared', onClear)
+    return () => window.removeEventListener('helios-session-cleared', onClear)
+  }, [])
+
+  useEffect(() => {
+    if (isWide) setShowHistory(false)
+  }, [isWide])
+
+  function startNewChat() {
+    closeActiveAgentChat()
+    setChatId(null)
+    setMessages([buildWelcome()])
+    setShowHistory(false)
+    setHistoryQuery('')
+    setEditingUserId(null)
+    followRef.current = true
+  }
+
+  function wipeHistory() {
+    if (!window.confirm(t('Clear all saved Helios chats on this device?'))) return
+    clearAgentHistory()
+    startNewChat()
+  }
+
+  function openHistoryChat(id: string) {
+    const chat = history.chats.find(item => item.id === id)
+    if (!chat) return
+    openAgentChat(id)
+    setChatId(id)
+    setMode(chat.mode)
+    setMessages(chat.messages as Message[])
+    setShowHistory(false)
+    followRef.current = true
+  }
+
+  function removeHistoryChat(id: string) {
+    deleteAgentChat(id)
+    if (chatId === id) startNewChat()
+  }
 
   // Scroll the conversation itself rather than scrollIntoView on a sentinel,
   // which also drags every scrollable ancestor (the page) along.
@@ -437,7 +526,13 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     reportAgentStatus({ phase: 'planning', title: t('Planning the steps…') })
     let plan
     try {
-      plan = await api.helios.agent(text, { project_id: targetProjectId, view: currentView }, modelTab)
+      const memory = priorWorkContext(chatId)
+      plan = await api.helios.agent(text, {
+        project_id: targetProjectId,
+        view: currentView,
+        history,
+        ...(memory ? { memory } : {}),
+      }, modelTab)
     } catch (error) {
       reportAgentStatus({ phase: 'idle', title: '' })
       throw error
@@ -487,7 +582,13 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   }
 
   async function chatReply(history: { role: 'user' | 'assistant'; content: string }[], targetProjectId?: number) {
-    const r = await api.helios.chat(history, targetProjectId, contextPacket as Record<string, unknown>, modelTab)
+    const memory = priorWorkContext(chatId)
+    const r = await api.helios.chat(
+      history,
+      targetProjectId,
+      { ...(contextPacket as Record<string, unknown>), ...(memory ? { memory } : {}) },
+      modelTab,
+    )
     const patches = extractFilePatches(r.reply)
     const code = extractCode(r.reply)
     const canPropose = Boolean(targetProjectId && (patches.length > 0 || code))
@@ -515,6 +616,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
 
   async function sendMessage(text: string, forceMode?: PanelMode) {
     if (!text.trim() || loading) return
+    setShowHistory(false)
     const runMode = forceMode ?? mode
     if (forceMode && forceMode !== mode) setMode(forceMode)
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, ts: new Date().toISOString() }
@@ -628,10 +730,6 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   }
 
   const contextChars = activeProject?.content.length ?? 0
-  const contextualActions = contextPacket.conversation_id
-    ? ['Summarize unread and recent messages', 'Group messages into questions, feedback, and requests', 'Draft replies without sending', 'Create tasks from this discussion']
-    : QUICK_ACTIONS_BY_APP[contextPacket.app_kind || activeProject?.app_kind || '']
-      ?? (activeProject ? (QUICK_ACTIONS_BY_TYPE[activeProject.type] ?? QUICK_ACTIONS_BY_TYPE.doc ?? NO_PROJECT_ACTIONS) : NO_PROJECT_ACTIONS)
 
   // Helper: get border color for proposal card
   const proposalBorder = (applied?: boolean) => applied ? 'var(--helios-success)' : 'var(--helios-accent)'
@@ -641,10 +739,32 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const safetyBg = (s: string) => s === 'safe' ? 'var(--helios-success)' : 'var(--helios-solar)'
   const safetyColor = (s: string) => s === 'safe' ? '#fff' : 'var(--helios-surface)'
 
+  const historyPane = (
+    <HistoryPane
+      chats={history.chats}
+      chatId={chatId}
+      query={historyQuery}
+      onQuery={setHistoryQuery}
+      onOpen={openHistoryChat}
+      onDelete={removeHistoryChat}
+      onClear={wipeHistory}
+      onNew={startNewChat}
+      formatTime={relativeTime}
+    />
+  )
+
   return (
-    <div className="flex flex-col border-l overflow-hidden"
-      style={{ width: 360, flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)' }}
-      role="complementary" aria-label={t('Helios AI assistant')}>
+    <div
+      className={'helios-dock' + (isWide ? ' is-wide' : '')}
+      role="complementary"
+      aria-label={t('Helios AI assistant')}
+    >
+      {isWide && (
+        <aside className="helios-dock-history" aria-label={t('Chat history')}>
+          {historyPane}
+        </aside>
+      )}
+      <div className="helios-dock-main">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: 'var(--helios-border)', flexShrink: 0 }}>
@@ -658,11 +778,30 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           }}
           aria-hidden="true">✦</div>
         <div className="flex-1 min-w-0">
-          <div style={{ fontSize: 14, fontWeight: 700 }}>Helios</div>
-          {contextPacket.project_name || activeProject
-            ? <div style={{ fontSize: 11, color: 'var(--helios-accent)' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
-            : <div style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || t('Current Helios context')}</div>}
+          <div className="truncate" style={{ fontSize: 14, fontWeight: 700 }}>{activeTitle || 'Helios'}</div>
+          {activeTitle
+            ? <div className="truncate" style={{ fontSize: 11, color: 'var(--helios-muted)' }}>Helios{contextPacket.project_name || activeProject ? ` · ${contextPacket.project_name || activeProject?.name}` : ''}</div>
+            : contextPacket.project_name || activeProject
+              ? <div className="truncate" style={{ fontSize: 11, color: 'var(--helios-accent)' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
+              : <div className="truncate" style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || t('Current Helios context')}</div>}
         </div>
+        {!isWide && (
+          <>
+            <button type="button" onClick={startNewChat} title={t('New chat')} aria-label={t('New chat')}
+              className="p-1.5 rounded-lg cursor-pointer"
+              style={{ background: 'none', border: 'none', color: 'var(--helios-muted)' }}>
+              <Plus size={15} />
+            </button>
+            <button type="button" onClick={() => setShowHistory(value => !value)} title={t('Chat history')} aria-expanded={showHistory}
+              className="p-1.5 rounded-lg cursor-pointer relative" aria-label={t('Chat history')}
+              style={{ background: showHistory ? 'var(--helios-surface2)' : 'none', border: 'none', color: showHistory ? 'var(--helios-accent)' : 'var(--helios-muted)' }}>
+              <History size={14} />
+              {history.chats.length > 0 && (
+                <span aria-hidden="true" className="absolute" style={{ top: 4, right: 4, width: 6, height: 6, borderRadius: 999, background: 'var(--helios-accent)' }} />
+              )}
+            </button>
+          </>
+        )}
         <button onClick={() => setShowContext(v => !v)} title={t('Context packet')} aria-expanded={showContext}
           className="p-1.5 rounded-lg cursor-pointer" aria-label={t('Toggle context')}
           style={{ background: showContext ? 'var(--helios-surface2)' : 'none', border: 'none', color: 'var(--helios-muted)' }}>
@@ -683,7 +822,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           const active = modelTab === tab.id
           return (
             <button key={tab.id} type="button" role="tab" aria-selected={active}
-              onClick={() => { setModelTab(tab.id); if (tab.id === 'user' && !userAiReady) openAiSettings() }}
+              onClick={() => setModelTab(tab.id)}
               className="flex-1 cursor-pointer text-left px-3 py-2"
               style={{
                 background: active ? 'color-mix(in srgb, var(--helios-accent) 7%, transparent)' : 'transparent',
@@ -726,30 +865,38 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         </div>
       )}
 
-      {/* AI not available for the selected tab */}
-      {!aiReady && (
+      {modelTab === 'user' && (
+        <HeliosApiForm settings={userAi} onSaved={setUserAi} />
+      )}
+
+      {/* Site model unavailable */}
+      {!aiReady && modelTab === 'site' && (
         <div className="mx-3 mt-2 px-3 py-2.5 rounded-xl flex items-start gap-2 flex-shrink-0"
           style={{ background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)' }}>
           <AlertTriangle size={13} style={{ color: 'var(--helios-solar)', flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: 'var(--helios-solar)', lineHeight: 1.5 }}>
-            {modelTab === 'user'
-              ? <>{t('No personal API key yet.')} <button type="button" onClick={openAiSettings} className="cursor-pointer" style={{ background: 'none', border: 'none', padding: 0, color: 'var(--helios-accent)', fontWeight: 650, fontSize: 12, textDecoration: 'underline' }}>{t('Add one in Settings')}</button> {t('(Groq, OpenAI, Gemini, DeepSeek, Ollama…) or use the Free tab.')}</>
-              : t('The free Helios model is not connected yet. Ask an administrator to set a site key, or switch to My API with your own key.')}
+            {t('The free Helios model is not connected yet. Switch to My API and add your key here.')}
           </div>
         </div>
       )}
 
       {/* Permission boundary */}
-      <div className="mx-3 mt-2 px-3 py-2 rounded-lg flex-shrink-0"
-        style={{ background: 'var(--helios-surface2)', fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.5 }}>
+      <div className="helios-dock-boundary" title={mode === 'agent'
+        ? t('✦ Agent for this Space · opens pages, creates and fills Mini App files, shares posts · edits can be undone · no computer control')
+        : t('✦ Chat · Permission-filtered context · No computer control · Action Preview before significant changes')}>
         {mode === 'agent'
           ? t('✦ Agent for this Space · opens pages, creates and fills Mini App files, shares posts · edits can be undone · no computer control')
           : t('✦ Chat · Permission-filtered context · No computer control · Action Preview before significant changes')}
       </div>
 
-      {/* Messages */}
+      <div className="helios-dock-log-wrap">
+      {!isWide && showHistory && (
+        <div className="helios-dock-history-overlay" role="region" aria-label={t('Chat history')}>
+          {historyPane}
+        </div>
+      )}
       <div ref={listRef} onScroll={handleListScroll} onWheel={handleUserScrollIntent} onTouchMove={handleUserScrollIntent}
-        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" role="log" aria-label={t('Conversation')}>
+        className="helios-dock-log" role="log" aria-label={t('Conversation')}>
         {messages.map(msg => (
           <div key={msg.id} className={'flex items-end gap-2' + (msg.role === 'user' ? ' flex-row-reverse' : '')}>
             {msg.role === 'assistant' && (
@@ -760,7 +907,10 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                   border: '1px solid var(--glass-stroke)',
                 }} aria-hidden="true">✦</div>
             )}
-            <div className={'flex flex-col gap-2' + (msg.role === 'user' ? ' items-end' : ' items-start')} style={{ maxWidth: 272 }}>
+            {msg.role === 'user' && (
+              <UserAvatar name={state.user?.name || '?'} src={state.user?.avatar} size={28} />
+            )}
+            <div className={'helios-dock-bubble-col flex flex-col gap-2' + (msg.role === 'user' ? ' items-end' : ' items-start')}>
 
               {/* Bubble */}
               <div className="px-3 py-2.5 relative group/msg"
@@ -770,8 +920,51 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                   border: msg.role === 'assistant' ? '1px solid var(--helios-border)' : 'none',
                   lineHeight: 1.6, fontSize: 13, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                   borderRadius: msg.role === 'user' ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
+                  width: editingUserId === msg.id ? '100%' : undefined,
                 }}>
-                {msg.content.startsWith('Error:')
+                {msg.role === 'user' && editingUserId === msg.id ? (
+                  <div>
+                    <textarea
+                      value={userEditDraft}
+                      onChange={event => setUserEditDraft(event.target.value)}
+                      onKeyDown={event => {
+                        if (event.key === 'Escape') {
+                          event.preventDefault()
+                          setEditingUserId(null)
+                        }
+                        if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                          event.preventDefault()
+                          const next = userEditDraft.trim()
+                          if (!next) return
+                          setMessages(prev => prev.map(item => item.id === msg.id ? { ...item, content: next } : item))
+                          setEditingUserId(null)
+                        }
+                      }}
+                      aria-label={t('Edit message')}
+                      style={{ width: '100%', minHeight: 64, resize: 'vertical', border: 0, borderRadius: 8, padding: 0, background: 'transparent', color: 'inherit', font: 'inherit' }}
+                    />
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = userEditDraft.trim()
+                          if (!next) return
+                          setMessages(prev => prev.map(item => item.id === msg.id ? { ...item, content: next } : item))
+                          setEditingUserId(null)
+                        }}
+                        className="cursor-pointer"
+                        style={{ border: 0, borderRadius: 7, padding: '4px 8px', background: 'rgba(255,255,255,.2)', color: '#fff', fontSize: 11 }}
+                      >{t('Save')}</button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingUserId(null)}
+                        className="cursor-pointer"
+                        style={{ border: 0, borderRadius: 7, padding: '4px 8px', background: 'transparent', color: 'rgba(255,255,255,.8)', fontSize: 11 }}
+                      >{t('Cancel')}</button>
+                    </div>
+                    <small style={{ display: 'block', marginTop: 4, opacity: .8, fontSize: 10 }}>{t('⌘/Ctrl + Enter to save · Esc to cancel')}</small>
+                  </div>
+                ) : msg.content.startsWith('Error:')
                   ? <span style={{ color: 'var(--helios-danger)' }}>{msg.content}</span>
                   : msg.content}
                 {msg.role === 'assistant' && !msg.content.startsWith('Error:') && (
@@ -780,6 +973,17 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
                     style={{ top: 6, right: 6, background: 'var(--helios-surface3)', border: 'none', borderRadius: 4, padding: '2px 4px', color: 'var(--helios-muted)' }}
                     title={t('Copy')} aria-label={t('Copy message')}>
                     {copied === msg.id ? <Check size={10} style={{ color: 'var(--helios-success)' }} /> : <Copy size={10} />}
+                  </button>
+                )}
+                {msg.role === 'user' && editingUserId !== msg.id && (
+                  <button
+                    type="button"
+                    onClick={() => { setEditingUserId(msg.id); setUserEditDraft(msg.content) }}
+                    className="absolute opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 focus:opacity-100 cursor-pointer"
+                    style={{ top: 6, left: 6, background: 'rgba(0,0,0,.25)', border: 'none', borderRadius: 4, padding: '2px 4px', color: '#fff' }}
+                    aria-label={t('Edit message')}
+                  >
+                    <Pencil size={10} />
                   </button>
                 )}
               </div>
@@ -908,23 +1112,10 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           </div>
         )}
       </div>
-
-      {/* Quick action chips */}
-      {messages.length <= 1 && aiReady && (
-        <div className="px-4 pb-3 flex flex-col gap-1.5 flex-shrink-0">
-          <div style={{ fontSize: 11, color: 'var(--helios-muted)', marginBottom: 4 }}>{mode === 'agent' && !activeProject ? t('Try telling the agent:') : t('Try asking:')}</div>
-          {(mode === 'agent' && !activeProject && !contextPacket.conversation_id ? AGENT_SUGGESTIONS : contextualActions).map(q => (
-            <button key={q} onClick={() => sendMessage(q)}
-              className="w-full text-left px-3 py-2 rounded-lg cursor-pointer flex items-center gap-2"
-              style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)', color: 'var(--helios-muted)', fontSize: 12 }}>
-              <ChevronRight size={10} style={{ flexShrink: 0 }} /> {t(q)}
-            </button>
-          ))}
-        </div>
-      )}
+      </div>
 
       {/* Retry on error */}
-      {messages.length > 1 && messages[messages.length - 1]?.content.startsWith('Error:') && (
+      {(!showHistory || isWide) && messages.length > 1 && messages[messages.length - 1]?.content.startsWith('Error:') && (
         <div className="px-4 pb-2 flex-shrink-0">
           <button onClick={() => { const prev = [...messages].reverse().find(m => m.role === 'user'); if (prev) sendMessage(prev.content) }}
             className="flex items-center gap-1.5 text-xs cursor-pointer px-3 py-2 rounded-lg"
@@ -981,6 +1172,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       </form>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
     </div>
   )
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import { zipSync, strToU8 } from 'fflate'
 import {
-  Download, FileCode2, Play, RefreshCw, Sparkles, TerminalSquare, X,
+  Download, FileCode2, Maximize2, Minimize2, Play, RefreshCw, Sparkles, TerminalSquare, X,
 } from 'lucide-react'
 import type { Project } from '../api'
 import { api } from '../api'
@@ -59,6 +59,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   const workspaceFiles = useMemo(() => value.files || {}, [value.files])
   const repo = useProjectRepo(project?.id, canEdit)
   const [rightPanel, setRightPanel] = useState<'preview' | 'terminal' | 'helios'>('preview')
+  const [previewFullscreen, setPreviewFullscreen] = useState(false)
   const [terminalInput, setTerminalInput] = useState('')
   const [previewKey, setPreviewKey] = useState(0)
   const [running, setRunning] = useState(false)
@@ -72,6 +73,18 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     syncedRef.current = false
     seenFilesRef.current = null
   }, [project?.id])
+
+  useEffect(() => {
+    if (!previewFullscreen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        setPreviewFullscreen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [previewFullscreen])
 
   useEffect(() => {
     if (!repo.ready || syncedRef.current) return
@@ -412,8 +425,24 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
         <button type="button" className={rightPanel === 'terminal' ? 'is-active' : ''} onClick={() => setRightPanel('terminal')}><TerminalSquare size={12} /> {t('Terminal')}</button>
         <button type="button" className={rightPanel === 'helios' ? 'is-active' : ''} onClick={() => setRightPanel('helios')}><Sparkles size={12} /> {t('Helios')}</button>
         {rightPanel === 'preview' && <button type="button" onClick={() => setPreviewKey(key => key + 1)} aria-label={t('Refresh preview')}><RefreshCw size={12} /></button>}
+        {rightPanel === 'preview' && (
+          <button type="button" onClick={() => setPreviewFullscreen(true)} aria-label={t('Full-screen preview')}>
+            <Maximize2 size={12} />
+          </button>
+        )}
       </nav>
       {rightPanel === 'preview' && <iframe key={previewKey} title={t('Live project preview')} sandbox="allow-scripts" srcDoc={preview} />}
+      {previewFullscreen && (
+        <div className="forge-preview-fs" role="dialog" aria-modal="true" aria-label={t('Forge preview')}>
+          <header>
+            <strong>{t('Forge preview')}</strong>
+            <button type="button" className="liquid-glass-btn" onClick={() => setPreviewFullscreen(false)}>
+              <Minimize2 size={13} /> {t('Exit preview')}
+            </button>
+          </header>
+          <iframe title={t('Live project preview')} sandbox="allow-scripts" srcDoc={preview} />
+        </div>
+      )}
       {rightPanel === 'terminal' && (
         <div className="browser-terminal">
           <div>{(value.terminal || []).map((line, index) => <p key={index}>{line}</p>)}</div>

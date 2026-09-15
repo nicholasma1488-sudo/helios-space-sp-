@@ -15,6 +15,7 @@ export interface User {
   name: string
   handle: string
   email: string
+  avatar?: string | null
   plan?: BillingPlanId
   plan_selected?: boolean
   edition?: SuiteEdition
@@ -292,6 +293,18 @@ export interface Conversation {
   last_message_at?: string | null
   unread: number
   created_at: string
+  created_by?: number
+  member_role?: string
+}
+
+export interface ConversationMember {
+  id: number
+  name: string
+  handle: string
+  avatar?: string | null
+  role: string
+  last_read_at: string | null
+  owner: boolean
 }
 
 export interface ChatMessage {
@@ -300,11 +313,13 @@ export interface ChatMessage {
   sender_id: number
   sender_name: string
   sender_handle: string
+  sender_avatar?: string | null
   body: string
   attachment_type: 'project' | 'post' | 'file' | null
   attachment_id: number | null
   attachment?: Record<string, unknown>
   created_at: string
+  edited_at?: string | null
   pinned: boolean
   mine: boolean
 }
@@ -440,6 +455,8 @@ export const api = {
   session: () => call<{ user: User | null }>('/api/session'),
 
   me: () => call<{ user: User }>('/api/me'),
+  updateMe: (data: { avatar?: string | null }) =>
+    call<{ user: User }>('/api/me', { method: 'PUT', body: JSON.stringify(data) }),
 
   ai: {
     get: () => call<UserAiSettings>('/api/me/ai'),
@@ -449,9 +466,6 @@ export const api = {
     test: (data: { api_key?: string; base_url: string; model: string }) =>
       call<{ ok: boolean; model: string; reply: string }>('/api/me/ai/test', { method: 'POST', body: JSON.stringify(data) }),
   },
-
-  updateMe: (data: Record<string, unknown> = {}) =>
-    call<{ user: User }>('/api/me', { method: 'PUT', body: JSON.stringify(data) }),
 
   markets: {
     quotes: (symbols: string[]) =>
@@ -636,6 +650,10 @@ export const api = {
       call<{ message: ChatMessage }>(`/api/conversations/${id}/messages`, { method: 'POST', body: JSON.stringify(data) }),
     read: (id: number) => call<{ ok: boolean }>(`/api/conversations/${id}/read`, { method: 'POST' }),
     pin: (conversationId: number, messageId: number) => call<{ pinned: boolean }>(`/api/conversations/${conversationId}/messages/${messageId}/pin`, { method: 'POST' }),
+    edit: (conversationId: number, messageId: number, body: string) =>
+      call<{ message: ChatMessage }>(`/api/conversations/${conversationId}/messages/${messageId}`, { method: 'PATCH', body: JSON.stringify({ body }) }),
+    members: (id: number) => call<{ members: ConversationMember[] }>(`/api/conversations/${id}/members`),
+    leave: (id: number) => call<{ ok: boolean }>(`/api/conversations/${id}/leave`, { method: 'POST' }),
   },
 
   helios: {
@@ -646,7 +664,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ messages, project_id, context: { ...context, language: getLanguage() }, provider }),
       }),
-    agent: (goal: string, context: { project_id?: number; view?: string }, provider: AiProviderChoice = 'auto') =>
+    agent: (goal: string, context: { project_id?: number; view?: string; memory?: string; history?: { role: 'user' | 'assistant'; content: string }[] }, provider: AiProviderChoice = 'auto') =>
       call<AgentPlan>('/api/helios/agent', {
         method: 'POST',
         body: JSON.stringify({ goal, context: { ...context, language: getLanguage() }, provider }),

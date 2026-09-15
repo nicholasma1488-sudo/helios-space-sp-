@@ -1,0 +1,351 @@
+/* Helios dock: phone overlay + desktop history rail. */
+
+.helios-dock {
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+  flex-shrink: 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--helios-border);
+  background: var(--helios-surface);
+}
+
+.helios-dock-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.helios-dock-history {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: color-mix(in srgb, var(--helios-surface2) 92%, var(--helios-surface));
+}
+
+.helios-dock-history-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--helios-border);
+}
+
+.helios-dock-history-head > p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--helios-muted);
+  line-height: 1.4;
+}
+
+.helios-dock-new {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--helios-accent);
+  color: var(--helios-on-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.helios-dock-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--helios-border);
+  border-radius: 9px;
+  background: var(--helios-surface);
+  color: var(--helios-muted);
+}
+
+.helios-dock-search input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.helios-dock-history-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 6px;
+  overflow: auto;
+  list-style: none;
+}
+
+.helios-dock-history-list > li {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  border-radius: 10px;
+}
+
+.helios-dock-history-list > li.is-active {
+  background: color-mix(in srgb, var(--helios-accent) 10%, transparent);
+}
+
+.helios-dock-history-list > li:hover {
+  background: color-mix(in srgb, var(--helios-accent) 7%, transparent);
+}
+
+.helios-dock-history-item {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  color: var(--helios-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.helios-dock-history-item strong,
+.helios-dock-history-item span {
+  display: block;
+}
+
+.helios-dock-history-item strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 650;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.3;
+}
+
+.helios-dock-history-item span {
+  margin-top: 2px;
+  color: var(--helios-muted);
+  font-size: 11px;
+}
+
+.helios-dock-history-delete {
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--helios-muted);
+  cursor: pointer;
+}
+
+.helios-dock-history-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px 16px;
+  color: var(--helios-muted);
+  text-align: center;
+}
+
+.helios-dock-history-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.helios-dock-history-foot {
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--helios-border);
+}
+
+.helios-dock-history-foot button {
+  width: 100%;
+  padding: 6px;
+  border: 0;
+  background: none;
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.helios-dock-log-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.helios-dock-history-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--helios-surface) 97%, transparent);
+  backdrop-filter: blur(12px);
+}
+
+.helios-dock-log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.helios-dock-bubble-col {
+  max-width: 272px;
+}
+
+.helios-dock-boundary {
+  margin: 8px 12px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--helios-surface2);
+  color: var(--helios-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (min-width: 1100px) {
+  .helios-dock.is-wide {
+    width: min(680px, 44vw);
+    flex-direction: row;
+  }
+
+  .helios-dock.is-wide .helios-dock-history {
+    width: 228px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--helios-border);
+  }
+
+  .helios-dock.is-wide .helios-dock-bubble-col {
+    max-width: min(100%, 420px);
+  }
+
+  .helios-dock.is-wide .helios-dock-boundary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.helios-api-form {
+  margin: 8px 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--helios-border);
+  border-radius: 12px;
+  background: var(--helios-surface2);
+  flex-shrink: 0;
+}
+
+.helios-api-form-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.helios-api-form-head svg { color: var(--helios-accent); flex-shrink: 0; margin-top: 2px; }
+.helios-api-form-head > div { flex: 1; min-width: 0; }
+.helios-api-form-head strong { display: block; font-size: 12px; }
+.helios-api-form-head span { display: block; margin-top: 2px; color: var(--helios-muted); font-size: 11px; line-height: 1.4; }
+.helios-api-form-head button {
+  border: 0;
+  background: none;
+  color: var(--helios-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.helios-api-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.helios-api-presets button {
+  padding: 4px 8px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background: var(--helios-surface);
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.helios-api-presets button.is-active {
+  border-color: color-mix(in srgb, var(--helios-accent) 45%, var(--helios-border));
+  background: color-mix(in srgb, var(--helios-accent) 10%, var(--helios-surface));
+  color: var(--helios-text);
+}
+
+.helios-api-form .helios-field { margin-top: 8px; }
+.helios-api-form .helios-field > span { font-size: 11px; }
+.helios-api-form .helios-input { min-height: 36px; padding: 7px 10px; font-size: 12px; }
+.helios-api-form .helios-field small { color: var(--helios-muted); font-size: 10px; line-height: 1.35; }
+
+.helios-api-key { position: relative; }
+.helios-api-key .helios-input { padding-right: 36px; }
+.helios-api-key > button {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--helios-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.helios-api-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.helios-api-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.helios-api-actions .liquid-glass-btn { padding: 6px 10px; font-size: 11px; }
+.helios-api-notice { margin: 8px 0 0; font-size: 11px; line-height: 1.4; }
+.helios-api-notice.is-ok { color: var(--helios-success); }
+.helios-api-notice.is-error { color: var(--helios-danger); }
+
+.helios-main:has(.helios-dock) {
+  --helios-dock-width: 360px;
+}
+
+@media (min-width: 1100px) {
+  .helios-main:has(.helios-dock.is-wide) {
+    --helios-dock-width: min(680px, 44vw);
+  }
+}

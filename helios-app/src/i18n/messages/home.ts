@@ -29,11 +29,13 @@ export const zhCN: Dict = {
   'Model used by the agent': '智能体使用的模型',
   'e.g. Make a slide deck about photosynthesis, then post it to the Space feed': '例如：做一个关于光合作用的幻灯片，然后发到 Space 动态',
   'Helios AI is not connected yet — add a key in Settings': 'Helios AI 尚未连接——请在设置中添加密钥',
+  'Open Helios and add your API key on the My API tab': '打开 Helios，在「我的 API」页签添加密钥',
   'Tell the Helios agent what to do': '告诉 Helios 智能体要做什么',
   'Sent to Helios': '已发送给 Helios',
   'Examples': '示例',
   'Helios agent': 'Helios 智能体',
   'step {step}/{total}': '第 {step}/{total} 步',
+  'New file': '新建文件',
 }
 
 export const zhTW: Dict = {
@@ -64,9 +66,11 @@ export const zhTW: Dict = {
   'Model used by the agent': '代理使用的模型',
   'e.g. Make a slide deck about photosynthesis, then post it to the Space feed': '例如：做一份關於光合作用的簡報，然後發到 Space 動態',
   'Helios AI is not connected yet — add a key in Settings': 'Helios AI 尚未連線——請在設定中新增金鑰',
+  'Open Helios and add your API key on the My API tab': '開啟 Helios，在「我的 API」分頁新增金鑰',
   'Tell the Helios agent what to do': '告訴 Helios 代理要做什麼',
   'Sent to Helios': '已送出給 Helios',
   'Examples': '範例',
   'Helios agent': 'Helios 代理',
   'step {step}/{total}': '第 {step}/{total} 步',
+  'New file': '新增檔案',
 }
