@@ -34,6 +34,7 @@ export const zhCN: Dict = {
   'Examples': '示例',
   'Helios agent': 'Helios 智能体',
   'step {step}/{total}': '第 {step}/{total} 步',
+  'New file': '新建文件',
 }
 
 export const zhTW: Dict = {
@@ -69,4 +70,5 @@ export const zhTW: Dict = {
   'Examples': '範例',
   'Helios agent': 'Helios 代理',
   'step {step}/{total}': '第 {step}/{total} 步',
+  'New file': '新增檔案',
 }

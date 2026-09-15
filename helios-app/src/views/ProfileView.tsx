@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Award, BookOpen, ChevronRight, Download, FolderGit2, LogOut, MessageCircle,
-  Check, Eye, EyeOff, KeyRound, Languages, Monitor, Moon, Palette, Plus, Settings, Sparkles, Star, Sun, Trash2, Users, X,
+  Brain, Check, Eye, EyeOff, ImagePlus, KeyRound, Languages, Monitor, Moon, Palette, Plus, Settings, Sparkles, Star, Sun, Trash2, Users, X,
 } from 'lucide-react'
 import { api, ApiError, type AiProviderId, type Post, type Project, type SolarSummary, type SpaceSummary, type UserAiSettings } from '../api'
 import { NewProjectModal } from '../components/NewProjectModal'
@@ -9,6 +9,9 @@ import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { useApp } from '../store/appStore'
 import type { ThemeMode } from '../store/appStore'
 import { LANGUAGES, setLanguage, useLanguage, useLocale, useT, type Language } from '../i18n'
+import { UserAvatar } from '../components/UserAvatar'
+import { clearHeliosMemory, setHeliosMemory, setMemoryEnabled, useHeliosMemory } from '../lib/heliosMemory'
+import { clearSessionClientState } from '../lib/sessionCleanup'
 import './ProfileView.css'
 
 type ProfileTab = 'Journey' | 'Projects' | 'Posts' | 'Spaces' | 'Settings'
@@ -82,7 +85,11 @@ export function ProfileView() {
     catch (reason) { dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (reason as Error).message, tone: 'warning' } }) }
     finally { setDeleting(null) }
   }
-  async function logout() { try { await api.logout(); dispatch({ type: 'RESET_SESSION' }) } catch {} }
+  async function logout() {
+    try { await api.logout() } catch {}
+    clearSessionClientState()
+    dispatch({ type: 'RESET_SESSION' })
+  }
   async function downloadData() {
     setExporting(true)
     try {
@@ -174,6 +181,113 @@ const LANGUAGE_HINTS: Record<Language, string> = {
   'zh-TW': '繁體中文介面，Helios 也用繁體中文回答。',
 }
 
+function AvatarCard() {
+  const { state, dispatch } = useApp()
+  const t = useT()
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const user = state.user
+  if (!user) return null
+
+  async function onFile(file: File | undefined) {
+    if (!file) return
+    setError('')
+    if (!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) {
+      setError(t('Use a PNG, JPEG, WebP or GIF image.'))
+      return
+    }
+    if (file.size > 80_000) {
+      setError(t('Keep the avatar under 80 KB.'))
+      return
+    }
+    setBusy(true)
+    try {
+      const data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result || ''))
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+      const result = await api.updateMe({ avatar: data })
+      dispatch({ type: 'SET_USER', user: result.user })
+    } catch (reason) {
+      setError((reason as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    setBusy(true)
+    try {
+      const result = await api.updateMe({ avatar: null })
+      dispatch({ type: 'SET_USER', user: result.user })
+    } catch (reason) {
+      setError((reason as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <article>
+      <h3><ImagePlus size={15} /> {t('Profile icon')}</h3>
+      <div className="profile-setting-row">
+        <span className="flex items-center gap-3">
+          <UserAvatar name={user.name} src={user.avatar} size={48} />
+          <span><strong>{user.name}</strong><small>{t('Initials are used until you upload a photo.')}</small></span>
+        </span>
+        <div className="flex gap-2">
+          <label className="profile-export" style={{ cursor: busy ? 'wait' : 'pointer' }}>
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden disabled={busy} onChange={event => { void onFile(event.target.files?.[0]); event.currentTarget.value = '' }} />
+            {t('Upload')}
+          </label>
+          {user.avatar && <button type="button" className="profile-export" onClick={() => void remove()} disabled={busy}>{t('Remove')}</button>}
+        </div>
+      </div>
+      {error && <p role="alert" style={{ color: 'var(--helios-danger)', fontSize: 12 }}>{error}</p>}
+    </article>
+  )
+}
+
+function MemoryCard() {
+  const t = useT()
+  const memory = useHeliosMemory()
+  const [draft, setDraft] = useState('')
+  return (
+    <article>
+      <h3><Brain size={15} /> {t('Helios memory')}</h3>
+      <div className="profile-setting-row">
+        <span><strong>{t('Remember useful context')}</strong><small>{t('Stored only on this device. You can inspect and clear it anytime.')}</small></span>
+        <button type="button" className={'profile-switch' + (memory.enabled ? ' is-active' : '')} onClick={() => setMemoryEnabled(!memory.enabled)} aria-pressed={memory.enabled}><i /></button>
+      </div>
+      {memory.enabled && (
+        <>
+          <form className="flex gap-2 mt-3" onSubmit={event => { event.preventDefault(); if (!draft.trim()) return; setHeliosMemory({ notes: [...memory.notes, draft.trim()] }); setDraft('') }}>
+            <input value={draft} onChange={event => setDraft(event.target.value)} maxLength={280} placeholder={t('Add a note Helios should remember…')} className="flex-1" style={{ padding: '8px 10px', border: '1px solid var(--helios-border)', borderRadius: 10, background: 'var(--helios-surface2)', color: 'var(--helios-text)' }} />
+            <button type="submit" className="profile-export" disabled={!draft.trim()}>{t('Add')}</button>
+          </form>
+          <ul style={{ margin: '10px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {memory.notes.map((note, index) => (
+              <li key={note + index} className="flex items-start justify-between gap-2" style={{ fontSize: 13 }}>
+                <span>{note}</span>
+                <button type="button" onClick={() => setHeliosMemory({ notes: memory.notes.filter((_, i) => i !== index) })} aria-label={t('Remove note')} style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', cursor: 'pointer' }}><X size={13} /></button>
+              </li>
+            ))}
+          </ul>
+          {memory.summary && (
+            <details style={{ marginTop: 10, fontSize: 12, color: 'var(--helios-muted)' }}>
+              <summary>{t('Recent summary')}</summary>
+              <pre style={{ whiteSpace: 'pre-wrap', font: 'inherit', margin: '8px 0 0' }}>{memory.summary}</pre>
+            </details>
+          )}
+          <button type="button" className="profile-export" style={{ marginTop: 10 }} onClick={() => clearHeliosMemory()}>{t('Clear memory')}</button>
+        </>
+      )}
+    </article>
+  )
+}
+
 function LanguageCard() {
   const t = useT()
   const language = useLanguage()
@@ -200,7 +314,9 @@ function SettingsTab({ theme, reducedMotion, exporting, onTheme, onMotion, onExp
   return (
     <section className="profile-settings">
       <header><span>{t('ACCOUNT & ACCESSIBILITY')}</span><h2>{t('Settings')}</h2></header>
+      <AvatarCard />
       <LanguageCard />
+      <MemoryCard />
       <article>
         <h3><Palette size={15} /> {t('Appearance')}</h3>
         <div className="profile-theme-buttons" role="radiogroup" aria-label={t('Theme')}>

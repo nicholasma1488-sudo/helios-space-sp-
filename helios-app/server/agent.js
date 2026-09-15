@@ -387,7 +387,8 @@ function plannerPrompt(ctx) {
     `Existing projects: [${projects}]`,
     ctx.activeProject ? `Currently open project: {"id":${ctx.activeProject.id},"name":${JSON.stringify(ctx.activeProject.name)},"app":"${ctx.activeProject.app_kind}"}` : 'No project is open.',
     `Current page: ${ctx.view || 'home'}`,
-  ].join('\n')
+    ctx.memory ? `User memory notes (optional, local):\n${String(ctx.memory).slice(0, 800)}` : '',
+  ].filter(Boolean).join('\n')
 }
 
 export async function planWithModel(goal, ctx, ai) {

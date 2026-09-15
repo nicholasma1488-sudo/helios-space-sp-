@@ -82,6 +82,17 @@ export const zhCN: Dict = {
   'openrouter.ai → Keys (has free routes)': 'openrouter.ai → Keys（有免费路线）',
   'Any value works, e.g. "ollama". Host must be reachable from the internet.': '任意值都可以，例如 “ollama”。主机必须能从公网访问。',
   'Any OpenAI-compatible /v1/chat/completions endpoint.': '任何兼容 OpenAI 的 /v1/chat/completions 接口。',
+  'Profile icon': '头像',
+  'Initials are used until you upload a photo.': '上传照片前会用姓名首字母。',
+  'Use a PNG, JPEG, WebP or GIF image.': '请使用 PNG、JPEG、WebP 或 GIF 图片。',
+  'Keep the avatar under 80 KB.': '头像请控制在 80 KB 以内。',
+  'Helios memory': 'Helios 记忆',
+  'Remember useful context': '记住有用的上下文',
+  'Stored only on this device. You can inspect and clear it anytime.': '只存在这台设备上。你可以随时查看和清除。',
+  'Add a note Helios should remember…': '添加一条希望 Helios 记住的笔记…',
+  'Remove note': '移除笔记',
+  'Recent summary': '最近摘要',
+  'Clear memory': '清除记忆',
 }
 
 export const zhTW: Dict = {
@@ -165,4 +176,15 @@ export const zhTW: Dict = {
   'openrouter.ai → Keys (has free routes)': 'openrouter.ai → Keys（有免費路線）',
   'Any value works, e.g. "ollama". Host must be reachable from the internet.': '任意值都可以，例如「ollama」。主機必須能從網際網路連線。',
   'Any OpenAI-compatible /v1/chat/completions endpoint.': '任何相容 OpenAI 的 /v1/chat/completions 介面。',
+  'Profile icon': '頭像',
+  'Initials are used until you upload a photo.': '上傳照片前會用姓名首字母。',
+  'Use a PNG, JPEG, WebP or GIF image.': '請使用 PNG、JPEG、WebP 或 GIF 圖片。',
+  'Keep the avatar under 80 KB.': '頭像請控制在 80 KB 以內。',
+  'Helios memory': 'Helios 記憶',
+  'Remember useful context': '記住有用的上下文',
+  'Stored only on this device. You can inspect and clear it anytime.': '只存在這台裝置上。你可以隨時查看和清除。',
+  'Add a note Helios should remember…': '新增一則希望 Helios 記住的筆記…',
+  'Remove note': '移除筆記',
+  'Recent summary': '最近摘要',
+  'Clear memory': '清除記憶',
 }

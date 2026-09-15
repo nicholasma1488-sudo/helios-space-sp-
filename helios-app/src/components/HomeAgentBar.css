@@ -61,24 +61,6 @@
 .home-agent-form input::placeholder { color: var(--helios-muted); }
 .home-agent-form button { padding: 0 18px; border-radius: 14px; white-space: nowrap; }
 .home-agent-form button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-.home-agent-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-.home-agent-chips button {
-  border: 1px solid var(--helios-border);
-  border-radius: 999px;
-  background: var(--helios-surface);
-  color: var(--helios-text2);
-  padding: 6px 11px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: border-color var(--dur-quick) ease, color var(--dur-quick) ease, transform var(--dur-quick) ease;
-}
-.home-agent-chips button:hover { color: var(--helios-text); border-color: color-mix(in srgb, var(--helios-accent) 45%, var(--helios-border)); transform: translateY(-1px); }
-.home-agent-chips button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 @media (max-width: 640px) {
   .home-agent-head { flex-wrap: wrap; }
   .home-agent-form { flex-direction: column; }

@@ -167,7 +167,7 @@ export function HomeView() {
                 <span>{t('Files / Projects')}</span>
                 <h2 id="home-files-title">{t('Recently in progress')}</h2>
               </div>
-              <button type="button" onClick={() => setShowNewProject(true)}><Plus size={14} /> New file</button>
+                <button type="button" onClick={() => setShowNewProject(true)}><Plus size={14} /> {t('New file')}</button>
             </header>
             <div className="home-file-grid">
               {recent.slice(0, 8).map(project => {

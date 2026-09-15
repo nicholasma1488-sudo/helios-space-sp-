@@ -160,10 +160,10 @@ Filled in after each block.
 
 | Block | Completeness | Polish | Robustness | Privacy | Code | A11y/Perf | Notes |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 0–1.5 UI cleanup | — | — | — | — | — | — | |
-| 1.5–3 Full-screen | — | — | — | — | — | — | |
-| 3–4.5 Avatar / sign-out / memory | — | — | — | — | — | — | |
-| 4.5–6 Message editing | — | — | — | — | — | — | |
-| 6–7.5 File sending | — | — | — | — | — | — | |
-| 7.5–9 Language leftovers | — | — | — | — | — | — | |
-| 9–10 Collabs MVP | — | — | — | — | — | — | |
+| 0–1.5 UI cleanup | 5 | 4 | 4 | 5 | 4 | 4 | Home chips + Helios suggestion lists removed; Chat Hub log/composer isolated; mobile back is a real control |
+| 1.5–3 Full-screen | 5 | 4 | 4 | 5 | 4 | 4 | App chrome via `helios-chrome-fullscreen`; Forge preview overlay + capture-phase Escape |
+| 3–4.5 Avatar / sign-out / memory | 5 | 4 | 4 | 5 | 4 | 4 | Initials + bounded upload; session wipe keeps theme/language; memory is local-only |
+| 4.5–6 Message editing | 5 | 4 | 4 | 5 | 4 | 4 | Chat Hub PATCH + inline edit; Helios user bubbles edit locally only |
+| 6–7.5 File sending | 5 | 4 | 4 | 5 | 4 | 4 | DnD, queue of 8, 1 MB cap, image preview, send progress |
+| 7.5–9 Language leftovers | 4 | 4 | 4 | 5 | 4 | 4 | New strings translated; catalog product names stay English by design |
+| 9–10 Collabs MVP | 4 | 4 | 4 | 5 | 4 | 4 | Members + last-read + leave. No typing/presence/CRDT (documented) |

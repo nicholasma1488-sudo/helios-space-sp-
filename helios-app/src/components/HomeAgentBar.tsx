@@ -3,37 +3,12 @@ import { ArrowRight, Bot, KeyRound, Sparkles } from 'lucide-react'
 import { api, type UserAiSettings } from '../api'
 import { useApp } from '../store/appStore'
 import { runHeliosAgent } from '../product/flow'
-import { useLanguage, useT } from '../i18n'
+import { useT } from '../i18n'
 import './HomeAgentBar.css'
-
-// Example prompts are shown in the UI language so the agent's answer language
-// matches what the user reads; the fourth one stays Chinese in English to show
-// that Chinese prompts work too.
-const SUGGESTIONS: Record<string, string[]> = {
-  en: [
-    'Write a short essay about the solar system and share it to the Space feed',
-    'Make a slide deck about photosynthesis for grade 8',
-    'Create a to-do list for this week',
-    '帮我做一个月度预算表格',
-  ],
-  'zh-CN': [
-    '写一篇关于太阳系的短文，然后发到 Space 动态',
-    '做一个八年级光合作用的幻灯片',
-    '做一个本周的待办清单',
-    '帮我做一个月度预算表格',
-  ],
-  'zh-TW': [
-    '寫一篇關於太陽系的短文，然後發到 Space 動態',
-    '做一個八年級光合作用的簡報',
-    '做一個本週的待辦清單',
-    '幫我做一個月度預算表格',
-  ],
-}
 
 export function HomeAgentBar() {
   const { state, dispatch } = useApp()
   const t = useT()
-  const language = useLanguage()
   const [value, setValue] = useState('')
   const [userAi, setUserAi] = useState<UserAiSettings | null>(null)
   const [sent, setSent] = useState(false)
@@ -90,11 +65,6 @@ export function HomeAgentBar() {
         </button>
       </form>
 
-      <div className="home-agent-chips" aria-label={t('Examples')}>
-        {(SUGGESTIONS[language] || SUGGESTIONS.en).map(text => (
-          <button key={text} type="button" onClick={() => submit(text)} disabled={!ready}>{text}</button>
-        ))}
-      </div>
     </section>
   )
 }

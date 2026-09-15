@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  Bell, ChevronDown, ChevronUp, FolderGit2, MessageCircle, Radio, Search, Sparkles, User, Users, X,
+  Bell, ChevronDown, ChevronUp, FolderGit2, Maximize2, MessageCircle, Minimize2, Radio, Search, Sparkles, User, Users, X,
 } from 'lucide-react'
 import { api, type ApiNotification, type SearchResults } from '../api'
 import { useApp } from '../store/appStore'
 import { useLocale, useT } from '../i18n'
 import { TopBarCreatePanel, TopBarCreateTrigger } from './TopBarCreatePanel'
+import { UserAvatar } from './UserAvatar'
+import { setChromeFullscreen, useChromeFullscreen } from '../lib/heliosChrome'
+import { clearSessionClientState } from '../lib/sessionCleanup'
 import './AuthenticatedTopBar.css'
 
 type OpenMenu = 'search' | 'notifications' | 'profile' | null
@@ -28,6 +31,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [createAppId, setCreateAppId] = useState<string | null>(null)
+  const [chromeFullscreen] = useChromeFullscreen()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS)
   const [searching, setSearching] = useState(false)
@@ -176,9 +180,11 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
   async function signOut() {
     try {
       await api.logout()
-      dispatch({ type: 'RESET_SESSION' })
     } catch (error) {
       dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Sign out failed: {error}', { error: (error as Error).message }), tone: 'warning' } })
+    } finally {
+      clearSessionClientState()
+      dispatch({ type: 'RESET_SESSION' })
     }
   }
 
@@ -235,7 +241,7 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
           <Bell size={17} />{unread > 0 && <b>{unread > 9 ? '9+' : unread}</b>}
         </button>
         <button type="button" className="topbar-profile-button" onClick={() => toggle('profile')} aria-label={t('Account menu')} aria-expanded={openMenu === 'profile'}>
-          {(state.user?.name || '?')[0].toUpperCase()}
+          <UserAvatar name={state.user?.name || '?'} src={state.user?.avatar} size={28} />
         </button>
       </div>
 
@@ -269,8 +275,11 @@ export function AuthenticatedTopBar({ compact = false }: { compact?: boolean }) 
 
       {openMenu === 'profile' && (
         <div className="topbar-popover profile-popover" role="menu" aria-label={t('Account')}>
-          <div className="profile-popover-user"><span>{(state.user?.name || '?')[0].toUpperCase()}</span><div><strong>{state.user?.name}</strong><small>{state.user?.handle}</small></div></div>
+          <div className="profile-popover-user"><UserAvatar name={state.user?.name || '?'} src={state.user?.avatar} size={36} /><div><strong>{state.user?.name}</strong><small>{state.user?.handle}</small></div></div>
           <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'SET_VIEW', view: 'profile' }); setOpenMenu(null) }}><User size={15} /> {t('Creator profile')}</button>
+          <button type="button" role="menuitem" onClick={() => { setChromeFullscreen(!chromeFullscreen); setOpenMenu(null) }}>
+            {chromeFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />} {chromeFullscreen ? t('Exit full screen') : t('Full screen')}
+          </button>
           <button type="button" role="menuitem" onClick={() => { dispatch({ type: 'OPEN_HELIOS_PANEL' }); setOpenMenu(null) }}><Sparkles size={15} /> {t('Ask Helios')}</button>
           <button type="button" role="menuitem" onClick={() => void signOut()}><span>↪</span> {t('Sign out')}</button>
         </div>

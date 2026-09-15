@@ -221,6 +221,11 @@ export const zhCN: Dict = {
   'Nova': '新星',
   'Stellar': '恒星',
   'Helios': 'Helios',
+  'Edited': '已编辑',
+  'Edit message': '编辑消息',
+  'Full screen': '全屏',
+  'Exit full screen': '退出全屏',
+  '⌘/Ctrl + Enter to save · Esc to cancel': '⌘/Ctrl + 回车保存 · Esc 取消',
 }
 
 export const zhTW: Dict = {
@@ -434,4 +439,9 @@ export const zhTW: Dict = {
   'Nova': '新星',
   'Stellar': '恆星',
   'Helios': 'Helios',
+  'Edited': '已編輯',
+  'Edit message': '編輯訊息',
+  'Full screen': '全螢幕',
+  'Exit full screen': '結束全螢幕',
+  '⌘/Ctrl + Enter to save · Esc to cancel': '⌘/Ctrl + Enter 儲存 · Esc 取消',
 }

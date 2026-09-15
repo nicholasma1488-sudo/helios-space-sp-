@@ -428,6 +428,8 @@ ensureColumn('posts', 'space_id', "TEXT NOT NULL DEFAULT 'lifestyle'")
 ensureColumn('posts', 'post_type', "TEXT NOT NULL DEFAULT 'progress'")
 ensureColumn('posts', 'media_url', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('chat_messages', 'attachment_json', "TEXT NOT NULL DEFAULT '{}'")
+ensureColumn('chat_messages', 'edited_at', "TEXT")
+ensureColumn('users', 'avatar', 'TEXT')
 ensureColumn('users', 'plan', "TEXT NOT NULL DEFAULT 'free'")
 ensureColumn('users', 'plan_updated_at', "TEXT NOT NULL DEFAULT ''")
 ensureColumn('users', 'birthdate', "TEXT NOT NULL DEFAULT ''")
@@ -761,6 +763,7 @@ function publicUser(user) {
     name: user.name,
     handle: user.handle,
     email: user.email,
+    avatar: user.avatar || null,
     plan: 'free',
     plan_selected: true,
     edition: 'free',
@@ -876,7 +879,7 @@ function serializePaymentMethod(row) {
 }
 
 function billingUserRow(userId) {
-  return db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(userId)
+  return db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected,avatar FROM users WHERE id = ?').get(userId)
 }
 
 function getBillingSnapshot(userLike) {
@@ -1128,7 +1131,7 @@ function requireUser(req, res, next) {
   const token = req.cookies.helios_user
   const s = getFreshSession(token, 'user', USER_SESSION_MS)
   if (!s) return res.status(401).json({ error: 'Not authenticated' })
-  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(s.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected,avatar FROM users WHERE id = ?').get(s.subject_id)
   if (!user || user.status !== 'active') return res.status(403).json({ error: 'Account unavailable' })
   req.user = publicUser(user)
   next()
@@ -1513,7 +1516,7 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/session', (req, res) => {
   const session = getFreshSession(req.cookies.helios_user, 'user', USER_SESSION_MS)
   if (!session) return res.json({ user: null })
-  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected FROM users WHERE id = ?').get(session.subject_id)
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected,avatar FROM users WHERE id = ?').get(session.subject_id)
   if (!user || user.status !== 'active') return res.json({ user: null })
   res.json({ user: publicUser(user) })
 })
@@ -1521,7 +1524,19 @@ app.get('/api/session', (req, res) => {
 app.get('/api/me', requireUser, (req, res) => res.json({ user: req.user }))
 
 app.put('/api/me', requireUser, (req, res) => {
-  res.json({ user: req.user })
+  if (req.body && Object.prototype.hasOwnProperty.call(req.body, 'avatar')) {
+    const raw = req.body.avatar
+    if (raw === null || raw === '') {
+      db.prepare('UPDATE users SET avatar = NULL WHERE id = ?').run(req.user.id)
+    } else {
+      const data = String(raw)
+      if (!/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(data) || data.length > 120_000)
+        return res.status(400).json({ error: 'Avatar must be a PNG, JPEG, WebP or GIF under 80 KB' })
+      db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(data, req.user.id)
+    }
+  }
+  const user = db.prepare('SELECT id,name,handle,email,status,plan,birthdate,audience,plan_selected,avatar FROM users WHERE id = ?').get(req.user.id)
+  res.json({ user: publicUser(user) })
 })
 
 app.get('/api/billing', requireUser, (req, res) => {
@@ -3064,7 +3079,8 @@ function serializeChatMessage(row, userId) {
     id: Number(row.id), conversation_id: Number(row.conversation_id), sender_id: Number(row.sender_id),
     sender_name: row.sender_name || '', sender_handle: row.sender_handle || '', body: row.body,
     attachment_type: row.attachment_type || null, attachment_id: row.attachment_id ? Number(row.attachment_id) : null,
-    created_at: row.created_at, pinned: Boolean(row.pinned), mine: row.sender_id === userId,
+    created_at: row.created_at, edited_at: row.edited_at || null, pinned: Boolean(row.pinned), mine: row.sender_id === userId,
+    sender_avatar: row.sender_avatar || null,
   }
   if (row.attachment_type === 'project' && row.attachment_id) {
     const project = getProjectForUser(Number(row.attachment_id), userId)
@@ -3092,7 +3108,7 @@ function serializeChatMessage(row, userId) {
 }
 
 const CHAT_MESSAGE_SELECT = [
-  'SELECT m.*,u.name AS sender_name,u.handle AS sender_handle,',
+  'SELECT m.*,u.name AS sender_name,u.handle AS sender_handle,u.avatar AS sender_avatar,',
   'CASE WHEN pm.message_id IS NULL THEN 0 ELSE 1 END AS pinned',
   'FROM chat_messages m JOIN users u ON u.id = m.sender_id',
   'LEFT JOIN pinned_messages pm ON pm.conversation_id = m.conversation_id AND pm.message_id = m.id',
@@ -3217,6 +3233,56 @@ app.post('/api/conversations/:id/read', requireUser, (req, res) => {
   if (!conversationId || !conversationForUser(conversationId, req.user.id)) return res.status(404).json({ error: 'Conversation not found' })
   db.prepare('UPDATE conversation_members SET last_read_at = ? WHERE conversation_id = ? AND user_id = ?')
     .run(new Date().toISOString(), conversationId, req.user.id)
+  res.json({ ok: true })
+})
+
+app.patch('/api/conversations/:conversationId/messages/:messageId', requireUser, socialRateLimit, (req, res) => {
+  const conversationId = positiveInt(req.params.conversationId)
+  const messageId = positiveInt(req.params.messageId)
+  if (!conversationId || !messageId || !conversationForUser(conversationId, req.user.id))
+    return res.status(404).json({ error: 'Conversation or message not found' })
+  const existing = db.prepare('SELECT * FROM chat_messages WHERE id = ? AND conversation_id = ?').get(messageId, conversationId)
+  if (!existing) return res.status(404).json({ error: 'Message not found' })
+  if (Number(existing.sender_id) !== Number(req.user.id)) return res.status(403).json({ error: 'You can only edit your own messages' })
+  const checkedBody = checkedString(req.body?.body ?? '', 'Message', MAX_CHAT_MESSAGE_LENGTH, { required: true, trim: true })
+  if (checkedBody.error) return res.status(400).json({ error: checkedBody.error })
+  const now = new Date().toISOString()
+  db.prepare('UPDATE chat_messages SET body = ?, edited_at = ? WHERE id = ?').run(checkedBody.value, now, messageId)
+  const row = db.prepare(CHAT_MESSAGE_SELECT + ' WHERE m.id = ?').get(messageId)
+  res.json({ message: serializeChatMessage(row, req.user.id) })
+})
+
+app.get('/api/conversations/:id/members', requireUser, (req, res) => {
+  const conversationId = positiveInt(req.params.id)
+  const conversation = conversationId ? conversationForUser(conversationId, req.user.id) : null
+  if (!conversation) return res.status(404).json({ error: 'Conversation not found' })
+  const rows = db.prepare(
+    'SELECT u.id,u.name,u.handle,u.avatar,cm.role,cm.last_read_at FROM conversation_members cm JOIN users u ON u.id = cm.user_id WHERE cm.conversation_id = ? ORDER BY u.name'
+  ).all(conversationId)
+  res.json({
+    members: rows.map(row => ({
+      id: Number(row.id),
+      name: row.name,
+      handle: row.handle,
+      avatar: row.avatar || null,
+      role: row.role,
+      last_read_at: row.last_read_at || null,
+      owner: Number(conversation.created_by) === Number(row.id),
+    })),
+  })
+})
+
+app.post('/api/conversations/:id/leave', requireUser, (req, res) => {
+  const conversationId = positiveInt(req.params.id)
+  const conversation = conversationId ? conversationForUser(conversationId, req.user.id) : null
+  if (!conversation) return res.status(404).json({ error: 'Conversation not found' })
+  if (conversation.kind === 'project')
+    return res.status(400).json({ error: 'Leave a Project chat by leaving the Project, not the thread.' })
+  db.prepare('DELETE FROM conversation_members WHERE conversation_id = ? AND user_id = ?').run(conversationId, req.user.id)
+  const remaining = db.prepare('SELECT COUNT(*) AS count FROM conversation_members WHERE conversation_id = ?').get(conversationId)
+  if (!Number(remaining?.count || 0)) {
+    db.prepare('DELETE FROM conversations WHERE id = ?').run(conversationId)
+  }
   res.json({ ok: true })
 })
 
@@ -3365,6 +3431,9 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
 
   if (typeof contextObject.selected_content === 'string' && contextObject.selected_content.trim()) {
     appContext += `\n\nContent explicitly selected by the user in the current Helios view:\n${contextObject.selected_content.trim().slice(0, 4000)}`
+  }
+  if (typeof contextObject.memory === 'string' && contextObject.memory.trim()) {
+    appContext += `\n\nUser-controlled Helios memory (local, optional, treat as the user's own notes):\n${contextObject.memory.trim().slice(0, 1200)}`
   }
 
   const chatLanguage = replyLanguage(safeMessages.map(item => item.content).join('\n'), contextObject.language)
@@ -3549,6 +3618,7 @@ app.post('/api/helios/agent', requireUser, aiRateLimit, async (req, res) => {
     activeProject: activeProject ? { id: Number(activeProject.id), name: activeProject.name, app_kind: activeProject.app_kind || '' } : null,
     view: typeof context.view === 'string' ? context.view.replace(/[^a-z-]/gi, '').slice(0, 40) : '',
     language: replyLanguage(goal, uiLanguage),
+    memory: typeof context.memory === 'string' ? context.memory.slice(0, 800) : '',
   }
 
   try {

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
-  ChevronLeft, ChevronRight, Home, MessageCircle, Sparkles, User, Zap,
+  ChevronLeft, ChevronRight, Home, MessageCircle, Minimize2, Sparkles, User, Zap,
 } from 'lucide-react'
 
 import { api } from '../api'
 import { useIsMobile } from '../hooks/useMediaQuery'
 import { useApp, type NavView } from '../store/appStore'
 import { useT } from '../i18n'
+import { setChromeFullscreen, useChromeFullscreen } from '../lib/heliosChrome'
 import { AuthenticatedTopBar } from './AuthenticatedTopBar'
 import { ErrorBoundary } from './ErrorBoundary'
 
@@ -105,6 +106,18 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
   const isMobile = useIsMobile()
   const [railCollapsed, setRailCollapsed] = useState(() => readCollapsed(RAIL_COLLAPSED_KEY))
   const [railPeek, setRailPeek] = useState(false)
+  const [chromeFullscreen] = useChromeFullscreen()
+
+  useEffect(() => {
+    if (!chromeFullscreen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !document.querySelector('.forge-preview-fs')) {
+        setChromeFullscreen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [chromeFullscreen])
 
   function setRailCollapsedPersist(next: boolean) {
     setRailCollapsed(next)
@@ -156,6 +169,11 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
         <div id="main-content" className="helios-main flex flex-1 overflow-hidden relative" role="main" tabIndex={-1}>
           {children}
           <HeliosFloatingButton />
+          {chromeFullscreen && (
+            <button type="button" className="helios-exit-fullscreen" onClick={() => setChromeFullscreen(false)}>
+              <Minimize2 size={14} /> {t('Exit full screen')}
+            </button>
+          )}
         </div>
         <nav className="helios-mobile-nav flex items-stretch overflow-x-auto border-t" style={{ flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)', paddingBottom: 'env(safe-area-inset-bottom)' }} aria-label={t('Main navigation')}>
           {NAV.map(item => {
@@ -242,6 +260,11 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
         <div id="main-content" className="helios-main flex flex-1 min-h-0 overflow-hidden relative" role="main" tabIndex={-1}>
           <ErrorBoundary>{children}</ErrorBoundary>
           <HeliosFloatingButton />
+          {chromeFullscreen && (
+            <button type="button" className="helios-exit-fullscreen" onClick={() => setChromeFullscreen(false)}>
+              <Minimize2 size={14} /> {t('Exit full screen')}
+            </button>
+          )}
         </div>
       </div>
     </div>

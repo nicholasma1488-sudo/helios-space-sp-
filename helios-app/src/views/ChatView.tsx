@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AtSign, Bot, Check, ChevronRight, Download, File, FolderGit2, Hash, Image,
-  MessageCircle, MoreHorizontal, Paperclip, Pin, Plus, Search, Send, Sparkles,
+  MessageCircle, Paperclip, Pencil, Pin, Plus, Search, Send, Sparkles,
   UserPlus, Users, X,
 } from 'lucide-react'
-import { api, type ChatMessage, type Conversation, type LiveSession, type Project } from '../api'
+import { api, type ChatMessage, type Conversation, type ConversationMember, type LiveSession, type Project } from '../api'
+import { UserAvatar } from '../components/UserAvatar'
 import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { askHeliosWithContext, openLiveSession, openProjectWorkspace } from '../product/flow'
 import { useFocusTrap } from '../hooks/useFocusTrap'
@@ -41,7 +42,11 @@ export function ChatView() {
   const [incomingRequests, setIncomingRequests] = useState<FriendRequestRow[]>([])
   const [friendBusyId, setFriendBusyId] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
-  const [pending, setPending] = useState<PendingAttachment | null>(null)
+  const [pending, setPending] = useState<PendingAttachment[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState('')
+  const [members, setMembers] = useState<ConversationMember[]>([])
+  const [showMembers, setShowMembers] = useState(false)
   const [loading, setLoading] = useState(true)
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [sending, setSending] = useState(false)
@@ -237,6 +242,29 @@ export function ChatView() {
     messagesEnd.current?.scrollIntoView({ behavior: state.reducedMotion ? 'auto' : 'smooth' })
   }, [messages.length, state.reducedMotion])
 
+  useEffect(() => {
+    if (!activeId) {
+      setMembers([])
+      setShowMembers(false)
+      return
+    }
+    let cancelled = false
+    async function loadMembers(id: number) {
+      try {
+        const result = await api.chat.members(id)
+        if (!cancelled) setMembers(result.members || [])
+      } catch {
+        if (!cancelled) setMembers([])
+      }
+    }
+    void loadMembers(activeId)
+    const poll = window.setInterval(() => { void loadMembers(activeId) }, 8000)
+    return () => {
+      cancelled = true
+      window.clearInterval(poll)
+    }
+  }, [activeId])
+
   function selectTab(next: Conversation['kind']) {
     setTab(next)
     const first = conversations.find(item => item.kind === next)
@@ -246,21 +274,31 @@ export function ChatView() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
-    if (!activeId || sending || (!draft.trim() && !pending)) return
+    if (!activeId || sending || (!draft.trim() && pending.length === 0)) return
     setSending(true)
     try {
-      const data: Parameters<typeof api.chat.send>[1] = { body: draft.trim() }
-      if (pending?.type === 'project') { data.attachment_type = 'project'; data.attachment_id = pending.id }
-      if (pending?.type === 'file') { data.attachment_type = 'file'; data.file = pending.file }
-      const result = await api.chat.send(activeId, data)
-      setMessages(current => [...current, result.message])
+      const queue = pending.length ? pending : [null]
+      let first = true
+      for (const item of queue) {
+        const data: Parameters<typeof api.chat.send>[1] = { body: first ? draft.trim() : '' }
+        if (item?.type === 'project') { data.attachment_type = 'project'; data.attachment_id = item.id }
+        if (item?.type === 'file') { data.attachment_type = 'file'; data.file = item.file }
+        if (!data.body && !data.attachment_type) continue
+        setUploadProgress(item ? t('Sending {name}…', { name: item.label }) : t('Sending…'))
+        const result = await api.chat.send(activeId, data)
+        setMessages(current => [...current, result.message])
+        first = false
+      }
       setDraft('')
-      setPending(null)
+      setPending([])
       setShowAttachments(false)
       await loadConversations()
     } catch (error) {
       dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Message not sent: {error}', { error: (error as Error).message }), tone: 'warning' } })
-    } finally { setSending(false) }
+    } finally {
+      setSending(false)
+      setUploadProgress('')
+    }
   }
 
   async function chooseFile(file: globalThis.File | undefined) {
@@ -275,8 +313,69 @@ export function ChatView() {
       reader.onerror = () => reject(reader.error)
       reader.readAsDataURL(file)
     })
-    setPending({ type: 'file', label: file.name, file: { name: file.name, mime: file.type || 'application/octet-stream', size: file.size, data } })
+    let skipped = false
+    setPending(current => {
+      if (current.length >= 8) {
+        skipped = true
+        return current
+      }
+      return [...current, { type: 'file', label: file.name, file: { name: file.name, mime: file.type || 'application/octet-stream', size: file.size, data } }]
+    })
+    if (skipped) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Too many attachments (max 8).'), tone: 'warning' } })
+      return
+    }
     setShowAttachments(false)
+  }
+
+  async function chooseFiles(files: FileList | File[]) {
+    for (const file of Array.from(files)) await chooseFile(file)
+  }
+
+  function hasFileDrag(event: React.DragEvent) {
+    return Array.from(event.dataTransfer.types).includes('Files')
+  }
+
+  function onComposerDragOver(event: React.DragEvent) {
+    if (!hasFileDrag(event)) return
+    event.preventDefault()
+    setDragOver(true)
+  }
+
+  function onComposerDragLeave(event: React.DragEvent) {
+    if (event.currentTarget.contains(event.relatedTarget as Node)) return
+    setDragOver(false)
+  }
+
+  function onComposerDrop(event: React.DragEvent) {
+    if (!hasFileDrag(event) || !activeId) return
+    event.preventDefault()
+    setDragOver(false)
+    void chooseFiles(event.dataTransfer.files)
+  }
+
+  async function editMessage(message: ChatMessage, body: string) {
+    if (!activeId) return
+    try {
+      const result = await api.chat.edit(activeId, message.id, body)
+      setMessages(current => current.map(item => item.id === message.id ? result.message : item))
+    } catch (error) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Could not save edit: {error}', { error: (error as Error).message }), tone: 'warning' } })
+      throw error
+    }
+  }
+
+  async function leaveConversation() {
+    if (!active || active.kind === 'project') return
+    if (!window.confirm(t('Leave this conversation? You will stop receiving new messages.'))) return
+    try {
+      await api.chat.leave(active.id)
+      setActiveId(null)
+      setShowMembers(false)
+      await loadConversations()
+    } catch (error) {
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
+    }
   }
 
   async function pinMessage(message: ChatMessage) {
@@ -322,7 +421,7 @@ export function ChatView() {
   return (
     <div className="chat-hub">
       {showNew && <CreateConversationDialog kind={createKind} projects={state.projects} onClose={() => setShowNew(false)} onCreated={async id => { setShowNew(false); await loadConversations(); setActiveId(id); setTab(createKind) }} />}
-      <input ref={fileInput} hidden type="file" onChange={event => { void chooseFile(event.target.files?.[0]); event.currentTarget.value = '' }} />
+      <input ref={fileInput} hidden type="file" multiple accept="image/*,.pdf,.txt,.md,.csv,.json,application/pdf,text/plain,text/markdown" onChange={event => { if (event.target.files) void chooseFiles(event.target.files); event.currentTarget.value = '' }} />
 
       <aside className="chat-hub-sidebar">
         <header><div><MessageCircle size={19} /><span><strong>{t('Chat Hub')}</strong><small>{t('Work stays connected')}</small></span></div><button type="button" onClick={() => openCreate(tab)} aria-label={t('New conversation')}><Plus size={16} /></button></header>
@@ -334,7 +433,7 @@ export function ChatView() {
             {!peopleSearching && peopleResults.length === 0 && peopleQuery.trim() && <div className="chat-people-empty">{t('No people found')}</div>}
             {!peopleSearching && peopleResults.map(person => (
               <div key={person.id} className="chat-people-row">
-                <span className="chat-people-avatar" aria-hidden="true">{person.name.slice(0, 1)}</span>
+                <UserAvatar name={person.name} size={28} />
                 <span className="chat-people-meta">
                   <strong>{person.name}</strong>
                   <small>{person.handle}</small>
@@ -343,7 +442,7 @@ export function ChatView() {
                 {person.friend_status === 'outgoing' && <span className="chat-friend-badge is-pending">{t('Pending')}</span>}
                 {person.friend_status === 'incoming' && (
                   <button type="button" className="chat-friend-action is-accept" disabled={friendBusyId !== null} onClick={() => void acceptIncomingFromSearch(person)}>
-                    <Check size={12} /> Accept
+                    <Check size={12} /> {t('Accept')}
                   </button>
                 )}
                 {person.friend_status === 'none' && (
@@ -361,7 +460,7 @@ export function ChatView() {
             <div>
               {incomingRequests.map(request => (
                 <div key={request.id} className="chat-people-row">
-                  <span className="chat-people-avatar" aria-hidden="true">{request.name.slice(0, 1)}</span>
+                  <UserAvatar name={request.name} size={28} />
                   <span className="chat-people-meta">
                     <strong>{request.name}</strong>
                     <small>{request.handle}</small>
@@ -386,10 +485,57 @@ export function ChatView() {
         <footer><Sparkles size={13} /><span><strong>{t('Project-aware conversations')}</strong><small>{t('Messages, files and work share one context.')}</small></span></footer>
       </aside>
 
-      <main className="chat-thread">
+      <main
+        className={'chat-thread' + (dragOver ? ' is-dragover' : '')}
+        onDragEnter={onComposerDragOver}
+        onDragOver={onComposerDragOver}
+        onDragLeave={onComposerDragLeave}
+        onDrop={onComposerDrop}
+      >
         {!active && <ChatWelcome projects={state.projects} onCreate={openCreate} />}
         {active && <>
-          <header className="chat-thread-header"><div><ConversationAvatar conversation={active} /><span><strong>{active.title}</strong><small>{active.kind === 'project' && active.project_name ? `${t(getSpaceDefinition(active.space_id || 'coding').name)} · ${getMiniApp(active.app_kind || 'web-code').name} · ${t('{count} messages', { count: messages.length })}` : active.kind === 'group' ? t('Group conversation') : t('Private conversation')}</small></span></div><div>{active.project_id && <button type="button" onClick={() => void openProject(active.project_id!)}><FolderGit2 size={14} /> {t('Open Project')}</button>}{selectedIds.length > 0 && <button type="button" onClick={() => askHelios('selected')}><Bot size={14} /> {t('Message → Helios ({count})', { count: selectedIds.length })}</button>}<button type="button" onClick={() => askHelios('summary')}><Bot size={14} /> {t('Summarize')}</button><button type="button" onClick={() => askHelios('reply')}><Sparkles size={14} /> {t('Draft replies')}</button><button type="button" aria-label={t('Conversation options')}><MoreHorizontal size={16} /></button></div></header>
+          <header className="chat-thread-header">
+            <div>
+              <button type="button" className="chat-thread-back" onClick={() => { setActiveId(null); setShowMembers(false) }} aria-label={t('Back to conversations')}>‹</button>
+              <ConversationAvatar conversation={active} />
+              <span>
+                <strong>{active.title}</strong>
+                <small>{active.kind === 'project' && active.project_name ? `${t(getSpaceDefinition(active.space_id || 'coding').name)} · ${getMiniApp(active.app_kind || 'web-code').name} · ${t('{count} messages', { count: messages.length })}` : active.kind === 'group' ? t('Group conversation') : t('Private conversation')}</small>
+              </span>
+            </div>
+            <div className="chat-thread-actions">
+              {active.project_id && <button type="button" onClick={() => void openProject(active.project_id!)}><FolderGit2 size={14} /> {t('Open Project')}</button>}
+              {selectedIds.length > 0 && <button type="button" className="chat-thread-desktop-only" onClick={() => askHelios('selected')}><Bot size={14} /> {t('Message → Helios ({count})', { count: selectedIds.length })}</button>}
+              <button type="button" className="chat-thread-desktop-only" onClick={() => askHelios('summary')}><Bot size={14} /> {t('Summarize')}</button>
+              <button type="button" className="chat-thread-desktop-only" onClick={() => askHelios('reply')}><Sparkles size={14} /> {t('Draft replies')}</button>
+              <button type="button" aria-expanded={showMembers} aria-controls="chat-members-panel" aria-label={t('Conversation members')} onClick={() => setShowMembers(value => !value)}>
+                <Users size={16} />
+              </button>
+            </div>
+          </header>
+          {showMembers && (
+            <section id="chat-members-panel" className="chat-members-panel" aria-label={t('Members')}>
+              <header>
+                <strong>{t('Members')} · {members.length}</strong>
+                <button type="button" onClick={() => setShowMembers(false)} aria-label={t('Close members')}><X size={14} /></button>
+              </header>
+              <ul>
+                {members.map(member => (
+                  <li key={member.id}>
+                    <UserAvatar name={member.name} src={member.avatar} size={28} />
+                    <span>
+                      <strong>{member.name}{member.owner ? ` · ${t('Owner')}` : ''}</strong>
+                      <small>{member.handle}{member.last_read_at ? ` · ${t('Last read {time}', { time: compactTime(member.last_read_at, locale) })}` : ` · ${t('Not yet read')}`}</small>
+                    </span>
+                  </li>
+                ))}
+                {members.length === 0 && <li className="chat-members-empty">{t('Members are loading…')}</li>}
+              </ul>
+              {active.kind !== 'project' && (
+                <button type="button" className="chat-leave-btn" onClick={() => void leaveConversation()}>{t('Leave conversation')}</button>
+              )}
+            </section>
+          )}
           {active.kind === 'project' && <ProjectChatContext conversation={active} project={state.projects.find(item => item.id === active.project_id) || null} live={liveSessions.find(item => item.project_id === active.project_id) || null} messages={messages.length} onOpenProject={id => void openProject(id)} onOpenLive={id => openLiveSession(id, dispatch)} onOpenMiniApp={() => { if (active.project_id) void openProject(active.project_id) }} />}
 
           {messages.some(message => message.pinned) && <section className="chat-pinned"><header><Pin size={12} /> {t('Pinned context')}</header><div>{messages.filter(message => message.pinned).map(message => <button type="button" key={message.id} onClick={() => document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView({ behavior: 'smooth' })}><strong>{message.sender_name}</strong><span>{message.body || attachmentLabel(message)}</span></button>)}</div></section>}
@@ -397,21 +543,35 @@ export function ChatView() {
           <div className="chat-message-log" role="log" aria-label={t('{title} messages', { title: active.title })}>
             {messagesLoading && <MessageSkeleton />}
             {!messagesLoading && messages.length === 0 && <div className="chat-thread-empty"><MessageCircle size={25} /><h2>{t('Start with the work')}</h2><p>{t('Ask a question, share a Project or file, and keep decisions attached to their context.')}</p></div>}
-            {!messagesLoading && messages.map((message, index) => <ChatMessageRow key={message.id} message={message} compact={index > 0 && messages[index - 1].sender_id === message.sender_id} selected={selectedIds.includes(message.id)} onSelect={() => toggleSelected(message.id)} onPin={() => void pinMessage(message)} onOpenProject={id => void openProject(id)} />)}
+            {!messagesLoading && messages.map((message, index) => <ChatMessageRow key={message.id} message={message} compact={index > 0 && messages[index - 1].sender_id === message.sender_id} selected={selectedIds.includes(message.id)} onSelect={() => toggleSelected(message.id)} onPin={() => void pinMessage(message)} onEdit={editMessage} onOpenProject={id => void openProject(id)} />)}
             <div ref={messagesEnd} />
           </div>
 
           <form className="chat-composer" onSubmit={submit}>
-            {pending && (
-              <div className="chat-pending-attachment">
-                {pending.type === 'project' ? <FolderGit2 size={15} /> : <File size={15} />}
-                <span>
-                  <small>{pending.type === 'project' ? t('PROJECT') : t('FILE')}</small>
-                  <strong>{pending.label}</strong>
-                </span>
-                <button type="button" onClick={() => setPending(null)} aria-label={t('Remove attachment')}><X size={14} /></button>
+            {dragOver && (
+              <div className="chat-drop-overlay" role="status">
+                <Paperclip size={18} />
+                <strong>{t('Drop files to attach')}</strong>
+                <small>{t('Documents or images · up to 1 MB')}</small>
               </div>
             )}
+            {pending.length > 0 && (
+              <div className="chat-pending-attachments" role="list" aria-label={t('Attachments')}>
+                {pending.map((item, index) => (
+                  <div key={`${item.type}-${item.label}-${index}`} className="chat-pending-attachment" role="listitem">
+                    {item.type === 'file' && item.file.mime.startsWith('image/') ? (
+                      <img src={item.file.data} alt="" />
+                    ) : item.type === 'project' ? <FolderGit2 size={15} /> : <File size={15} />}
+                    <span>
+                      <small>{item.type === 'project' ? t('PROJECT') : t('FILE')}</small>
+                      <strong>{item.label}</strong>
+                    </span>
+                    <button type="button" onClick={() => setPending(current => current.filter((_, i) => i !== index))} aria-label={t('Remove attachment')}><X size={14} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {uploadProgress && <div className="chat-upload-progress" role="status">{uploadProgress}</div>}
             {showAttachments && (
               <div
                 className="chat-attach-backdrop"
@@ -450,7 +610,9 @@ export function ChatView() {
                         type="button"
                         key={project.id}
                         onClick={() => {
-                          setPending({ type: 'project', id: project.id, label: project.name })
+                          setPending(current => current.some(item => item.type === 'project' && item.id === project.id)
+                            ? current
+                            : [...current, { type: 'project', id: project.id, label: project.name }])
                           setShowAttachments(false)
                         }}
                       >
@@ -490,7 +652,7 @@ export function ChatView() {
                 }}
                 placeholder={t('Message {name}…', { name: active.title })}
               />
-              <button type="submit" disabled={sending || (!draft.trim() && !pending)}><Send size={15} /></button>
+              <button type="submit" disabled={sending || (!draft.trim() && pending.length === 0)} aria-label={t('Send message')}><Send size={15} /></button>
             </div>
             <small>{t('Enter to send · Shift + Enter for a new line')}</small>
           </form>
@@ -548,10 +710,107 @@ function ProjectChatContext({ conversation, project, live, messages, onOpenProje
   )
 }
 
-function ChatMessageRow({ message, compact, selected, onSelect, onPin, onOpenProject }: { message: ChatMessage; compact: boolean; selected: boolean; onSelect: () => void; onPin: () => void; onOpenProject: (id: number) => void }) {
+function ChatMessageRow({ message, compact, selected, onSelect, onPin, onEdit, onOpenProject }: {
+  message: ChatMessage
+  compact: boolean
+  selected: boolean
+  onSelect: () => void
+  onPin: () => void
+  onEdit: (message: ChatMessage, body: string) => Promise<void>
+  onOpenProject: (id: number) => void
+}) {
   const t = useT()
   const locale = useLocale()
-  return <article className={'chat-message-row' + (message.mine ? ' is-mine' : '') + (compact ? ' is-compact' : '') + (selected ? ' is-selected' : '')} data-message-id={message.id}><button type="button" className="chat-select-message" aria-pressed={selected} onClick={onSelect} aria-label={t('Select message for Helios')} /><span className="chat-message-avatar">{compact ? '' : message.sender_name.slice(0, 1)}</span><div className="chat-message-content">{!compact && <header><strong>{message.sender_name}</strong><small>{message.sender_handle}</small><time>{new Date(message.created_at).toLocaleString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></header>}{message.body && <p>{message.body}</p>}{message.attachment && <RichAttachment message={message} onOpenProject={onOpenProject} />}<button type="button" className={'chat-pin-message' + (message.pinned ? ' is-pinned' : '')} onClick={onPin} aria-label={message.pinned ? t('Unpin message') : t('Pin message')}><Pin size={11} fill={message.pinned ? 'currentColor' : 'none'} /></button></div></article>
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(message.body)
+  const [saving, setSaving] = useState(false)
+  const areaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (!editing) return
+    setDraft(message.body)
+    const node = areaRef.current
+    if (!node) return
+    node.focus()
+    node.setSelectionRange(node.value.length, node.value.length)
+  }, [editing, message.body])
+
+  async function save() {
+    const next = draft.trim()
+    if (!next || next === message.body) {
+      setEditing(false)
+      setDraft(message.body)
+      return
+    }
+    setSaving(true)
+    try {
+      await onEdit(message, next)
+      setEditing(false)
+    } catch {
+      /* toast already shown */
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <article className={'chat-message-row' + (message.mine ? ' is-mine' : '') + (compact ? ' is-compact' : '') + (selected ? ' is-selected' : '')} data-message-id={message.id}>
+      <button type="button" className="chat-select-message" aria-pressed={selected} onClick={onSelect} aria-label={t('Select message for Helios')} />
+      <span className="chat-message-avatar">{compact ? null : <UserAvatar name={message.sender_name} src={message.sender_avatar} size={32} />}</span>
+      <div className="chat-message-content">
+        {!compact && (
+          <header>
+            <strong>{message.sender_name}</strong>
+            <small>{message.sender_handle}</small>
+            <time>{new Date(message.created_at).toLocaleString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time>
+            {message.edited_at && <em>{t('Edited')}</em>}
+          </header>
+        )}
+        {compact && message.edited_at && !editing && <em className="chat-edited-inline">{t('Edited')}</em>}
+        {editing ? (
+          <div className="chat-message-edit">
+            <textarea
+              ref={areaRef}
+              value={draft}
+              maxLength={4000}
+              disabled={saving}
+              onChange={event => setDraft(event.target.value)}
+              onKeyDown={event => {
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  setDraft(message.body)
+                  setEditing(false)
+                }
+                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault()
+                  void save()
+                }
+              }}
+              aria-label={t('Edit message')}
+            />
+            <div className="chat-message-edit-actions">
+              <button type="button" onClick={() => void save()} disabled={saving || !draft.trim()}>{saving ? t('Saving…') : t('Save')}</button>
+              <button type="button" onClick={() => { setDraft(message.body); setEditing(false) }} disabled={saving}>{t('Cancel')}</button>
+              <small>{t('⌘/Ctrl + Enter to save · Esc to cancel')}</small>
+            </div>
+          </div>
+        ) : (
+          <>
+            {message.body && <p>{message.body}</p>}
+            {message.attachment && <RichAttachment message={message} onOpenProject={onOpenProject} />}
+          </>
+        )}
+        <div className="chat-message-tools">
+          {message.mine && Boolean(message.body) && !editing && (
+            <button type="button" className="chat-edit-message" onClick={() => setEditing(true)} aria-label={t('Edit message')}><Pencil size={11} /></button>
+          )}
+          <button type="button" className={'chat-pin-message' + (message.pinned ? ' is-pinned' : '')} onClick={onPin} aria-label={message.pinned ? t('Unpin message') : t('Pin message')}>
+            <Pin size={11} fill={message.pinned ? 'currentColor' : 'none'} />
+          </button>
+        </div>
+      </div>
+    </article>
+  )
 }
 
 function RichAttachment({ message, onOpenProject }: { message: ChatMessage; onOpenProject: (id: number) => void }) {
