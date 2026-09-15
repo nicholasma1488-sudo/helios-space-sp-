@@ -125,15 +125,39 @@ export async function completeText(ai, messages, { temperature = 0.3, json = fal
  * files regularly forget the final `}`).
  */
 export function repairJson(text) {
+  const src = String(text)
   let out = ''
   let inStr = false
   let esc = false
   const stack = []
-  for (const ch of text) {
+  // A quote really closes a string only when JSON structure follows it;
+  // otherwise it is an unescaped quote inside HTML/code (`name="viewport"`).
+  const closesString = from => {
+    let i = from
+    while (i < src.length && /\s/.test(src[i])) i++
+    const c1 = src[i]
+    if (c1 === undefined || c1 === ':') return true
+    if (c1 === ',') {
+      let j = i + 1
+      while (j < src.length && /\s/.test(src[j])) j++
+      return j >= src.length || /["{[\-0-9tfn]/.test(src[j])
+    }
+    if (c1 === '}' || c1 === ']') {
+      let j = i + 1
+      while (j < src.length && /\s/.test(src[j])) j++
+      return j >= src.length || /[,}\]]/.test(src[j]) || src.startsWith('```', j)
+    }
+    return false
+  }
+  for (let idx = 0; idx < src.length; idx++) {
+    const ch = src[idx]
     if (inStr) {
       if (esc) { esc = false; out += ch; continue }
       if (ch === '\\') { esc = true; out += ch; continue }
-      if (ch === '"') { inStr = false; out += ch; continue }
+      if (ch === '"') {
+        if (closesString(idx + 1)) { inStr = false; out += ch } else out += '\\"'
+        continue
+      }
       if (ch === '\n') { out += '\\n'; continue }
       if (ch === '\r') continue
       if (ch === '\t') { out += '\\t'; continue }
