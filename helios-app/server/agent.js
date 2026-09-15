@@ -55,6 +55,34 @@ export function isChinese(text) {
   return /[\u4e00-\u9fff]/.test(String(text || ''))
 }
 
+/** UI / reply languages the client can send with Helios requests. */
+export function normalizeUiLanguage(value) {
+  if (value === 'zh-CN' || value === 'zh-TW' || value === 'en') return value
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase()
+    if (/^zh(-|_)?(hant|tw|hk|mo)/.test(lower)) return 'zh-TW'
+    if (/^zh/.test(lower)) return 'zh-CN'
+  }
+  return ''
+}
+
+/**
+ * Language Helios should speak. A Chinese UI setting always wins; otherwise
+ * we still follow a Chinese prompt so "做一个吃豆人" on English UI stays Chinese.
+ */
+export function replyLanguage(text, uiLanguage) {
+  const ui = normalizeUiLanguage(uiLanguage)
+  if (ui === 'zh-CN' || ui === 'zh-TW') return ui
+  if (isChinese(text)) return 'zh-CN'
+  return 'en'
+}
+
+export function languageDirective(lang) {
+  if (lang === 'zh-TW') return 'Write everything in Traditional Chinese using Taiwan software conventions (設定, 檔案, 訊息, 專案, 金鑰, 預設). Do not use Simplified characters.'
+  if (lang === 'zh-CN') return 'Write everything in Simplified Chinese.'
+  return 'Write in the same language as the request.'
+}
+
 export function aiMode(ai) {
   if (!ai?.apiKey) return 'none'
   if (/helios-local/i.test(ai.apiKey) || /helios\.local/i.test(ai.baseUrl || '') || /helios-local/i.test(ai.model || '')) return 'local'
@@ -338,10 +366,15 @@ export function planLocally(goal, ctx) {
 
 function plannerPrompt(ctx) {
   const projects = (ctx.projects || []).slice(0, 25).map(p => `{"id":${p.id},"name":${JSON.stringify(p.name)},"app":"${p.app_kind}"}`).join(', ')
+  const sayLang = ctx.language === 'zh-TW'
+    ? 'the "say" sentence must be Traditional Chinese (Taiwan conventions)'
+    : ctx.language === 'zh-CN'
+      ? 'the "say" sentence must be Simplified Chinese'
+      : 'the "say" sentence must use the same language as the goal'
   return [
     'You are the planner of the Helios agent inside Helios Space (a learning and creating app with Mini Apps, a Space feed, and Messages).',
     'Turn the user goal into a JSON plan the app will execute automatically. Respond with ONLY a JSON object, no prose.',
-    'Format: {"say": "<one short sentence to the user, same language as the goal>", "steps": [ ...at most 4 steps... ]}',
+    `Format: {"say": "<one short sentence to the user; ${sayLang}>", "steps": [ ...at most 4 steps... ]}`,
     'Available steps:',
     '- {"tool":"create_file","app":"<app id>","name":"<short title>","brief":"<what the content must contain>"}',
     '  app ids: word-docs (Quill, prose documents, essays, reports), spreadsheet (Lattice, tables and numbers), presentation (Stage, slides), notebook (Folio, study notes), homework-board (Pulse, homework tasks), planner-board (Cascade, kanban project board), lists (Tally, to-do lists), calendar-plan (Orbit, schedules), mail-draft (Dispatch, emails), code (Forge, code and web pages).',
@@ -456,8 +489,8 @@ function ensureHtml(text, title) {
   return /<h1/i.test(clean) ? clean : `<h1>${escapeHtml(title)}</h1>${clean}`
 }
 
-export function contentPrompt(app, kind, brief, goal, existing, zh, compact) {
-  const language = zh ? 'Write everything in Simplified Chinese.' : 'Write in the same language as the request.'
+export function contentPrompt(app, kind, brief, goal, existing, lang, compact) {
+  const language = languageDirective(lang === true ? 'zh-CN' : lang === false ? 'en' : lang)
   const base = `You are Helios, producing the actual content of a ${AGENT_APPS[app].name} ${AGENT_APPS[app].label} inside Helios Space. ${language} Be concrete and complete; never leave placeholders like "..." or "TBD". Respond with ONLY JSON.`
   const spec = compact ? {
     writing: 'JSON shape: {"html": "<h1>Title</h1><p>...</p>"} — a concise document (120-220 words): h1 title, 2-3 short h2 sections with p, one ul list. Only h1, h2, p, ul, li, strong tags.',
@@ -488,23 +521,25 @@ export function contentPrompt(app, kind, brief, goal, existing, zh, compact) {
  * writing. It must not look like a finished result (users read an echoed brief
  * as "it just copied my words"), so code projects show a clear placeholder.
  */
-export function starterWorkspace(app, title, brief) {
-  return JSON.stringify({ schema: 'helios-workspace-v1', appKind: app, data: fallbackData(app, title, brief, undefined, { pending: true }) })
+export function starterWorkspace(app, title, brief, language) {
+  return JSON.stringify({ schema: 'helios-workspace-v1', appKind: app, data: fallbackData(app, title, brief, undefined, { pending: true, language }) })
 }
 
 function briefSentences(brief) {
   return String(brief || '').split(/[\n.;。；!！?？]+/).map(s => s.trim()).filter(Boolean)
 }
 
-export function fallbackData(app, title, brief, existing, { pending = false } = {}) {
+export function fallbackData(app, title, brief, existing, { pending = false, language } = {}) {
   const kind = AGENT_APPS[app].kind
   const sentences = briefSentences(brief)
-  const zh = isChinese(brief || title)
+  const lang = replyLanguage(brief || title, language)
+  const zh = lang !== 'en'
+  const tw = lang === 'zh-TW'
   const today = new Date()
   const iso = offset => { const d = new Date(today); d.setDate(today.getDate() + offset); return d.toISOString().slice(0, 10) }
   switch (kind) {
     case 'writing':
-      return { html: `<h1>${escapeHtml(title)}</h1><p>${escapeHtml(brief || title)}</p><h2>Outline</h2><ul>${(sentences.length ? sentences : ['Introduction', 'Key points', 'Conclusion']).slice(0, 6).map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul>`, progress: 0, bookmarks: [], notes: [], readerMode: false }
+      return { html: `<h1>${escapeHtml(title)}</h1><p>${escapeHtml(brief || title)}</p><h2>${tw ? '大綱' : zh ? '大纲' : 'Outline'}</h2><ul>${(sentences.length ? sentences : (tw ? ['引言', '重點', '結論'] : zh ? ['引言', '要点', '结论'] : ['Introduction', 'Key points', 'Conclusion'])).slice(0, 6).map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul>`, progress: 0, bookmarks: [], notes: [], readerMode: false }
     case 'spreadsheet': {
       const cells = [['Item', 'Detail', 'Value', 'Notes', '', '', '', ''], ...sentences.slice(0, 12).map(s => [s, '', '', '', '', '', '', ''])]
       while (cells.length < 24) cells.push(Array(8).fill(''))
@@ -514,7 +549,7 @@ export function fallbackData(app, title, brief, existing, { pending = false } = 
       return {
         slides: [
           { id: uid(), title, body: brief || '', notes: '', layout: 'title', theme: 'terracotta-glass', shapes: [], transition: 'none' },
-          ...(sentences.length ? sentences : ['Key point', 'Next steps']).slice(0, 5).map(s => ({ id: uid(), title: s.slice(0, 60), body: '', notes: '', layout: 'title-content', theme: 'terracotta-glass', shapes: [], transition: 'fade' })),
+          ...(sentences.length ? sentences : (tw ? ['重點', '下一步'] : zh ? ['要点', '下一步'] : ['Key point', 'Next steps'])).slice(0, 5).map(s => ({ id: uid(), title: s.slice(0, 60), body: '', notes: '', layout: 'title-content', theme: 'terracotta-glass', shapes: [], transition: 'fade' })),
         ],
         activeSlide: 0,
       }
@@ -522,9 +557,9 @@ export function fallbackData(app, title, brief, existing, { pending = false } = 
       return { title, activePageId: 'p1', pages: [{ id: 'p1', title, body: `# ${title}\n\n${sentences.map(s => `- ${s}`).join('\n') || '- '}`, tags: ['agent'], updatedAt: today.toISOString() }] }
     case 'board':
       return { columns: [
-        { id: 'todo', name: 'To do', cards: (sentences.length ? sentences : [title]).slice(0, 10).map(s => ({ id: uid(), text: s, due: '', owner: 'You' })) },
-        { id: 'doing', name: 'Doing', cards: [] },
-        { id: 'done', name: 'Done', cards: [] },
+        { id: 'todo', name: tw ? '待辦' : zh ? '待办' : 'To do', cards: (sentences.length ? sentences : [title]).slice(0, 10).map(s => ({ id: uid(), text: s, due: '', owner: tw ? '你' : zh ? '你' : 'You' })) },
+        { id: 'doing', name: tw ? '進行中' : zh ? '进行中' : 'Doing', cards: [] },
+        { id: 'done', name: tw ? '完成' : zh ? '完成' : 'Done', cards: [] },
       ], filter: '' }
     case 'calendar':
       return { view: 'month', focusDate: iso(0), events: (sentences.length ? sentences : [title]).slice(0, 8).map((s, i) => ({ id: uid(), title: s.slice(0, 80), date: iso(i), time: '09:00', notes: '' })) }
@@ -534,11 +569,11 @@ export function fallbackData(app, title, brief, existing, { pending = false } = 
       const files = existing?.files && typeof existing.files === 'object' ? { ...existing.files } : {}
       if (!Object.keys(files).length) {
         const note = pending
-          ? (zh ? 'Helios 正在编写这个项目，代码马上就会出现在这里…' : 'Helios is writing this project — the code will appear here in a moment…')
-          : (zh ? 'Helios 没能生成这个项目，请再试一次。' : 'Helios could not generate this project. Please try again.')
-        files['index.html'] = `<!doctype html>\n<html lang="${zh ? 'zh-CN' : 'en'}">\n<head>\n  <meta charset="utf-8" />\n  <title>${escapeHtml(title)}</title>\n  <link rel="stylesheet" href="styles.css" />\n</head>\n<body>\n  <main id="app">\n    <h1>${escapeHtml(title)}</h1>\n    <p class="note">${escapeHtml(note)}</p>\n    <!-- ${zh ? '需求' : 'Brief'}: ${escapeHtml(brief || '').replace(/--/g, '—')} -->\n  </main>\n  <script src="app.js"></script>\n</body>\n</html>\n`
+          ? (tw ? 'Helios 正在編寫這個專案，程式碼馬上就會出現在這裡…' : zh ? 'Helios 正在编写这个项目，代码马上就会出现在这里…' : 'Helios is writing this project — the code will appear here in a moment…')
+          : (tw ? 'Helios 沒能產生這個專案，請再試一次。' : zh ? 'Helios 没能生成这个项目，请再试一次。' : 'Helios could not generate this project. Please try again.')
+        files['index.html'] = `<!doctype html>\n<html lang="${tw ? 'zh-TW' : zh ? 'zh-CN' : 'en'}">\n<head>\n  <meta charset="utf-8" />\n  <title>${escapeHtml(title)}</title>\n  <link rel="stylesheet" href="styles.css" />\n</head>\n<body>\n  <main id="app">\n    <h1>${escapeHtml(title)}</h1>\n    <p class="note">${escapeHtml(note)}</p>\n    <!-- ${tw ? '需求' : zh ? '需求' : 'Brief'}: ${escapeHtml(brief || '').replace(/--/g, '—')} -->\n  </main>\n  <script src="app.js"></script>\n</body>\n</html>\n`
         files['styles.css'] = 'body { font-family: system-ui, sans-serif; padding: 24px; background: #f6f5f2; color: #1c1917; }\n.note { color: #6b6560; }\n'
-        files['app.js'] = `// ${pending ? (zh ? 'Helios 正在编写…' : 'Helios is writing…') : (zh ? '生成失败' : 'generation failed')}\nconsole.log(${JSON.stringify(title)})\n`
+        files['app.js'] = `// ${pending ? (tw ? 'Helios 正在編寫…' : zh ? 'Helios 正在编写…' : 'Helios is writing…') : (tw ? '產生失敗' : zh ? '生成失败' : 'generation failed')}\nconsole.log(${JSON.stringify(title)})\n`
       }
       return { files, activeFile: 'index.html', openFiles: Object.keys(files).slice(0, 3), terminal: [], language: 'html' }
     }
@@ -548,9 +583,9 @@ export function fallbackData(app, title, brief, existing, { pending = false } = 
 }
 
 /** Convert loosely-shaped model JSON into the exact workspace data each Mini App expects. */
-export function shapeData(app, parsed, title, brief, existing) {
+export function shapeData(app, parsed, title, brief, existing, language) {
   const kind = AGENT_APPS[app].kind
-  const fallback = fallbackData(app, title, brief, existing)
+  const fallback = fallbackData(app, title, brief, existing, { language })
   if (!parsed || typeof parsed !== 'object') return fallback
   try {
     switch (kind) {
@@ -666,15 +701,15 @@ export function parseFencedFiles(text) {
  * structured starter built from the brief when the model is unavailable or
  * returns something unusable, so the agent always finishes the task.
  */
-export async function generateWorkspace({ app, title, brief, goal, ai, existing }) {
+export async function generateWorkspace({ app, title, brief, goal, ai, existing, language }) {
   const kind = AGENT_APPS[app].kind
-  const zh = isChinese(goal || brief)
+  const lang = replyLanguage(goal || brief, language)
   const compact = isCompactModel(ai)
   let generated = null
   let model = ai?.model || ''
   try {
     const { text, model: used, skipped } = await completeText(ai, [
-      { role: 'system', content: contentPrompt(app, kind, brief, goal, existing, zh, compact) },
+      { role: 'system', content: contentPrompt(app, kind, brief, goal, existing, lang, compact) },
       { role: 'user', content: `Title: ${title}\nProduce the ${AGENT_APPS[app].label} now.` },
     // CPU-bound local models slow down sharply under load; the file is already
     // open with starter content, so waiting longer beats giving up.
@@ -694,15 +729,15 @@ export async function generateWorkspace({ app, title, brief, goal, ai, existing 
     if (error instanceof AgentUpstreamError) throw error
     console.warn('agent content generation fell back to starter data:', error?.message || error)
   }
-  const data = shapeData(app, generated, title, brief, existing)
+  const data = shapeData(app, generated, title, brief, existing, lang)
   return { content: JSON.stringify({ schema: 'helios-workspace-v1', appKind: app, data }), model, generated: Boolean(generated) }
 }
 
-export async function generatePostBody({ brief, goal, ai, project }) {
-  const zh = isChinese(goal || brief)
+export async function generatePostBody({ brief, goal, ai, project, language }) {
+  const lang = replyLanguage(goal || brief, language)
   try {
     const { text, skipped } = await completeText(ai, [
-      { role: 'system', content: `Write one short, friendly social post (max 60 words, 1-2 sentences, optionally one hashtag) for the Helios Space community feed. ${zh ? 'Write in Simplified Chinese.' : 'Match the language of the request.'} Output only the post text.` },
+      { role: 'system', content: `Write one short, friendly social post (max 60 words, 1-2 sentences, optionally one hashtag) for the Helios Space community feed. ${languageDirective(lang)} Output only the post text.` },
       { role: 'user', content: `${brief || goal}${project ? `\nThe post shares the project "${project.name}".` : ''}` },
     ], { temperature: 0.7, timeoutMs: 60_000, maxTokens: 160 })
     if (!skipped && text.trim()) return text.trim().replace(/^["“]|["”]$/g, '').slice(0, 1800)
@@ -710,21 +745,43 @@ export async function generatePostBody({ brief, goal, ai, project }) {
     if (error instanceof AgentUpstreamError) throw error
     console.warn('agent post generation fell back to a template:', error?.message || error)
   }
-  return (project ? `${zh ? '刚用 Helios 完成了' : 'Just finished'} “${project.name}” ${zh ? '，欢迎来看看！' : 'with Helios — take a look!'}` : String(goal).slice(0, 280))
+  if (!project) return String(goal).slice(0, 280)
+  if (lang === 'zh-TW') return `剛用 Helios 完成了「${project.name}」，歡迎來看看！`
+  if (lang === 'zh-CN') return `刚用 Helios 完成了“${project.name}”，欢迎来看看！`
+  return `Just finished “${project.name}” with Helios — take a look!`
 }
 
-export function describePlan(steps, zh) {
+export function describePlan(steps, language) {
+  const lang = language === true ? 'zh-CN' : language === false || language === undefined ? '' : normalizeUiLanguage(language)
+  const zh = lang === 'zh-CN' || lang === 'zh-TW' || language === true
+  const tw = lang === 'zh-TW'
+  const views = tw
+    ? { home: '首頁', lifestyle: 'Space 動態', apps: '小應用', chat: '訊息', profile: '我的 / 設定' }
+    : { home: '主页', lifestyle: 'Space 动态', apps: '小应用', chat: '消息', profile: '我的 / 设置' }
+  const themes = tw
+    ? { light: '淺色', dark: '深色', system: '跟隨系統' }
+    : { light: '浅色', dark: '深色', system: '跟随系统' }
   const parts = steps.map(step => {
     switch (step.tool) {
-      case 'create_file': return zh ? `新建 ${AGENT_APPS[step.app].name} 文件《${step.name}》并写入内容` : `create the ${AGENT_APPS[step.app].name} file “${step.name}” and fill it in`
-      case 'update_file': return zh ? `修改《${step.project_name || '当前文件'}》` : `update “${step.project_name || 'the current file'}”`
-      case 'open_file': return zh ? `打开《${step.project_name || '文件'}》` : `open “${step.project_name || 'the file'}”`
-      case 'navigate': return zh ? `切换到「${{ home: '主页', lifestyle: 'Space 动态', apps: '小应用', chat: '消息', profile: '我的 / 设置' }[step.view]}」页面` : `go to the ${{ home: 'Home', lifestyle: 'Space feed', apps: 'Mini Apps', chat: 'Messages', profile: 'Me / Settings' }[step.view]} page`
-      case 'post': return zh ? '在 Space 动态发布一条帖子' : 'share a post in the Space feed'
-      case 'set_theme': return zh ? `切换到${{ light: '浅色', dark: '深色', system: '跟随系统' }[step.theme]}主题` : `switch to the ${step.theme} theme`
+      case 'create_file': return tw
+        ? `新增 ${AGENT_APPS[step.app].name} 檔案《${step.name}》並寫入內容`
+        : zh ? `新建 ${AGENT_APPS[step.app].name} 文件《${step.name}》并写入内容` : `create the ${AGENT_APPS[step.app].name} file “${step.name}” and fill it in`
+      case 'update_file': return tw
+        ? `修改《${step.project_name || '目前檔案'}》`
+        : zh ? `修改《${step.project_name || '当前文件'}》` : `update “${step.project_name || 'the current file'}”`
+      case 'open_file': return tw
+        ? `開啟《${step.project_name || '檔案'}》`
+        : zh ? `打开《${step.project_name || '文件'}》` : `open “${step.project_name || 'the file'}”`
+      case 'navigate': return tw
+        ? `切換到「${views[step.view]}」頁面`
+        : zh ? `切换到「${views[step.view]}」页面` : `go to the ${{ home: 'Home', lifestyle: 'Space feed', apps: 'Mini Apps', chat: 'Messages', profile: 'Me / Settings' }[step.view]} page`
+      case 'post': return tw ? '在 Space 動態發佈一則貼文' : zh ? '在 Space 动态发布一条帖子' : 'share a post in the Space feed'
+      case 'set_theme': return tw
+        ? `切換到${themes[step.theme]}主題`
+        : zh ? `切换到${themes[step.theme]}主题` : `switch to the ${step.theme} theme`
       default: return step.tool
     }
   })
   if (!parts.length) return ''
-  return zh ? `好，我来${parts.join('，然后')}。` : `On it: I will ${parts.join(', then ')}.`
+  return tw ? `好，我來${parts.join('，然後')}。` : zh ? `好，我来${parts.join('，然后')}。` : `On it: I will ${parts.join(', then ')}.`
 }

@@ -1,4 +1,5 @@
 // Typed API client for Helios Space backend
+import { getLanguage } from './i18n'
 
 export type BillingPlanId = 'free' | 'orbit'
 export type PayMethod = 'card'
@@ -638,20 +639,22 @@ export const api = {
   },
 
   helios: {
+    // The UI language rides along so Helios answers, plans and writes in the
+    // language the user is reading, not just the language they typed in.
     chat: (messages: { role: string; content: string }[], project_id?: number, context?: Record<string, unknown>, provider: AiProviderChoice = 'auto') =>
       call<{ reply: string; model: string; source: 'user' | 'site' }>('/api/helios/chat', {
         method: 'POST',
-        body: JSON.stringify({ messages, project_id, context, provider }),
+        body: JSON.stringify({ messages, project_id, context: { ...context, language: getLanguage() }, provider }),
       }),
     agent: (goal: string, context: { project_id?: number; view?: string }, provider: AiProviderChoice = 'auto') =>
       call<AgentPlan>('/api/helios/agent', {
         method: 'POST',
-        body: JSON.stringify({ goal, context, provider }),
+        body: JSON.stringify({ goal, context: { ...context, language: getLanguage() }, provider }),
       }),
     agentContent: (request: AgentContentRequest, provider: AiProviderChoice = 'auto') =>
       call<{ content?: string; body?: string; generated?: boolean; model: string; source: 'user' | 'site'; project?: Project }>('/api/helios/agent/content', {
         method: 'POST',
-        body: JSON.stringify({ ...request, provider }),
+        body: JSON.stringify({ ...request, language: getLanguage(), provider }),
       }),
   },
 

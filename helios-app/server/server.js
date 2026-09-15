@@ -26,6 +26,7 @@ import {
   generatePostBody,
   generateWorkspace,
   isChinese,
+  replyLanguage,
   planLocally,
   planWithModel,
   sanitizeSteps,
@@ -3366,6 +3367,13 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
     appContext += `\n\nContent explicitly selected by the user in the current Helios view:\n${contextObject.selected_content.trim().slice(0, 4000)}`
   }
 
+  const chatLanguage = replyLanguage(safeMessages.map(item => item.content).join('\n'), contextObject.language)
+  const languageClause = chatLanguage === 'zh-TW'
+    ? 'Reply in Traditional Chinese using Taiwan software conventions (設定, 檔案, 訊息, 專案). '
+    : chatLanguage === 'zh-CN'
+      ? 'Reply in Simplified Chinese. '
+      : ''
+
   const system = {
     role: 'system',
     content:
@@ -3380,7 +3388,8 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       `You may also return the full updated serialized project JSON (schema helios-workspace-v1) in one fenced code block. ` +
       `First explain the intended change in one concise line, then return the file/content preview so the UI can Approve and write files. ` +
       `If you cannot perform an external action, state the boundary in one short clause and then provide the best Helios-scoped next action or preview. ` +
-      `If the current content has schema "helios-workspace-v1", preserve that complete JSON structure when returning full workspace JSON. Respect view-only permissions. Be concise, concrete, and honest.` +
+      `If the current content has schema "helios-workspace-v1", preserve that complete JSON structure when returning full workspace JSON. Respect view-only permissions. Be concise, concrete, and honest. ` +
+      languageClause +
       projectContext + appContext,
   }
 
@@ -3398,6 +3407,7 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
       const lastUser = [...safeMessages].reverse().find(message => message.role === 'user')?.content || ''
       const compactSystem = [
         'You are Helios inside Helios Space. Be concise and helpful.',
+        languageClause.trim(),
         'For code edits, return path-tagged fenced blocks like ```cpp:main.cpp ... ``` so the UI can write files.',
         permittedProject ? `Active project: ${permittedProject.name} (${permittedProject.app_kind}).` : '',
         appContext.slice(0, 500),
@@ -3533,10 +3543,12 @@ app.post('/api/helios/agent', requireUser, aiRateLimit, async (req, res) => {
   const ownProjects = db.prepare(
     'SELECT id, name, app_kind FROM projects WHERE user_id = ? ORDER BY updated_at DESC LIMIT 40'
   ).all(req.user.id)
+  const uiLanguage = typeof context.language === 'string' ? context.language : ''
   const planningContext = {
     projects: ownProjects.map(row => ({ id: Number(row.id), name: row.name, app_kind: row.app_kind || '' })),
     activeProject: activeProject ? { id: Number(activeProject.id), name: activeProject.name, app_kind: activeProject.app_kind || '' } : null,
     view: typeof context.view === 'string' ? context.view.replace(/[^a-z-]/gi, '').slice(0, 40) : '',
+    language: replyLanguage(goal, uiLanguage),
   }
 
   try {
@@ -3562,7 +3574,7 @@ app.post('/api/helios/agent', requireUser, aiRateLimit, async (req, res) => {
           type: AGENT_APPS[step.app].type,
           name: title,
           brief,
-          starter_content: starterWorkspace(step.app, title, brief),
+          starter_content: starterWorkspace(step.app, title, brief, planningContext.language),
         })
       } else if (step.tool === 'update_file') {
         const project = getProjectForUser(step.project_id, req.user.id, { edit: true })
@@ -3583,7 +3595,7 @@ app.post('/api/helios/agent', requireUser, aiRateLimit, async (req, res) => {
 
     res.json({
       goal,
-      say: say || describePlan(steps, isChinese(goal)),
+      say: say || describePlan(steps, planningContext.language || isChinese(goal)),
       steps,
       planner: plan.planner,
       model: plannerModel,
@@ -3609,7 +3621,7 @@ app.post('/api/helios/agent/content', requireUser, aiRateLimit, async (req, res)
   try {
     if (body.kind === 'post') {
       const projectName = typeof body.project_name === 'string' ? body.project_name.slice(0, 120) : ''
-      const text = await generatePostBody({ brief, goal, ai: aiConfig, project: projectName ? { name: projectName } : null })
+      const text = await generatePostBody({ brief, goal, ai: aiConfig, project: projectName ? { name: projectName } : null, language: body.language })
       return res.json({ body: text.slice(0, MAX_POST_BODY_LENGTH), model: aiConfig.model, source: aiConfig.source })
     }
 
@@ -3626,7 +3638,7 @@ app.post('/api/helios/agent/content', requireUser, aiRateLimit, async (req, res)
       } catch {}
       // A freshly created agent file still holds the starter placeholder; treat it as empty.
       if (body.fresh === true) existing = null
-      const result = await generateWorkspace({ app, title: project.name, brief, goal, ai: aiConfig, existing })
+      const result = await generateWorkspace({ app, title: project.name, brief, goal, ai: aiConfig, existing, language: body.language })
       // Write the result here rather than trusting the browser to do it: the
       // model can take half a minute and the user may reload or navigate away
       // in the meantime. A fallback never overwrites an existing file's content.
@@ -3643,7 +3655,7 @@ app.post('/api/helios/agent/content', requireUser, aiRateLimit, async (req, res)
     const app = String(body.app || '')
     if (!AGENT_APPS[app]) return res.status(400).json({ error: 'Unknown Mini App' })
     const title = String(body.title || deriveTitle(goal, app)).slice(0, 120)
-    const result = await generateWorkspace({ app, title, brief, goal, ai: aiConfig })
+    const result = await generateWorkspace({ app, title, brief, goal, ai: aiConfig, language: body.language })
     res.json({ content: result.content, generated: result.generated, model: result.model || aiConfig.model, source: aiConfig.source })
   } catch (error) {
     sendAgentFailure(res, error)
