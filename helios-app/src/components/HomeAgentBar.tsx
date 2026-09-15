@@ -29,7 +29,11 @@ export function HomeAgentBar() {
   const ready = state.aiEnabled || Boolean(userAi?.configured)
 
   function submit(text: string) {
-    if (!ready) return
+    if (!ready) {
+      try { localStorage.setItem('helios-model-tab', 'user') } catch {}
+      dispatch({ type: 'OPEN_HELIOS_PANEL' })
+      return
+    }
     runHeliosAgent(text, state.heliosPanelOpen, () => dispatch({ type: 'OPEN_HELIOS_PANEL' }))
     setValue('')
     setSent(true)
@@ -56,7 +60,7 @@ export function HomeAgentBar() {
         <input
           value={value}
           onChange={event => setValue(event.target.value)}
-          placeholder={ready ? t('e.g. Make a slide deck about photosynthesis, then post it to the Space feed') : t('Helios AI is not connected yet — add a key in Settings')}
+          placeholder={ready ? t('e.g. Make a slide deck about photosynthesis, then post it to the Space feed') : t('Open Helios and add your API key on the My API tab')}
           aria-label={t('Tell the Helios agent what to do')}
           disabled={!ready}
         />

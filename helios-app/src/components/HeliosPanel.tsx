@@ -4,7 +4,12 @@ import type { AgentStep, AiProviderChoice, Project, UserAiSettings } from '../ap
 import { useApp } from '../store/appStore'
 import { t, useLocale, useT } from '../i18n'
 import { useMediaQuery } from '../hooks/useMediaQuery'
-import { memoryContextBlock, rememberTurn } from '../lib/heliosMemory'
+import {
+  closeActiveAgentChat, deleteAgentChat, getActiveAgentChat, saveAgentChat,
+  useHeliosAgentHistory, openAgentChat, clearAgentHistory, priorWorkContext,
+  type AgentChat, type StoredAgentMessage,
+} from '../lib/heliosAgentHistory'
+import { HeliosApiForm } from './HeliosApiForm'
 import { createSuiteProject, reportAgentStatus, spotlightMiniApp } from '../product/flow'
 import { getSuiteApp, nextSuiteFileName, spaceForSuiteApp } from '../product/miniApps'
 import {
@@ -12,11 +17,6 @@ import {
   Bot, MessageSquare, KeyRound, Sparkles, Circle, Undo2, ExternalLink, History, Plus, Trash2, Search,
 } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
-import {
-  closeActiveAgentChat, deleteAgentChat, getActiveAgentChat, saveAgentChat,
-  useHeliosAgentHistory, openAgentChat, clearAgentHistory,
-  type AgentChat, type StoredAgentMessage,
-} from '../lib/heliosAgentHistory'
 import './HeliosPanel.css'
 
 type StepStatus = 'pending' | 'running' | 'done' | 'failed' | 'undone'
@@ -279,11 +279,6 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const siteModelLabel = userAi?.site_default?.model || t('Helios default')
   const userModelLabel = userAi?.configured ? `${userAi.presets?.[userAi.provider]?.label || userAi.provider} · ${userAi.model}` : t('Add your own key')
 
-  function openAiSettings() {
-    try { sessionStorage.setItem('helios-open-settings', 'ai') } catch {}
-    if (stateRef.current.codeEditorOpen) dispatch({ type: 'CLOSE_CODE_EDITOR' })
-    dispatch({ type: 'SET_VIEW', view: 'profile' })
-  }
   const [contextPacket] = useState<HeliosContext>(() => readContext({
     space_id: activeProject?.space_id ?? spaceId,
     project_id: activeProject?.id,
@@ -531,8 +526,13 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     reportAgentStatus({ phase: 'planning', title: t('Planning the steps…') })
     let plan
     try {
-      const memory = memoryContextBlock()
-      plan = await api.helios.agent(text, { project_id: targetProjectId, view: currentView, ...(memory ? { memory } : {}) }, modelTab)
+      const memory = priorWorkContext(chatId)
+      plan = await api.helios.agent(text, {
+        project_id: targetProjectId,
+        view: currentView,
+        history,
+        ...(memory ? { memory } : {}),
+      }, modelTab)
     } catch (error) {
       reportAgentStatus({ phase: 'idle', title: '' })
       throw error
@@ -582,15 +582,13 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   }
 
   async function chatReply(history: { role: 'user' | 'assistant'; content: string }[], targetProjectId?: number) {
-    const memory = memoryContextBlock()
+    const memory = priorWorkContext(chatId)
     const r = await api.helios.chat(
       history,
       targetProjectId,
       { ...(contextPacket as Record<string, unknown>), ...(memory ? { memory } : {}) },
       modelTab,
     )
-    const lastUser = [...history].reverse().find(item => item.role === 'user')
-    if (lastUser) rememberTurn(lastUser.content, r.reply)
     const patches = extractFilePatches(r.reply)
     const code = extractCode(r.reply)
     const canPropose = Boolean(targetProjectId && (patches.length > 0 || code))
@@ -824,7 +822,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           const active = modelTab === tab.id
           return (
             <button key={tab.id} type="button" role="tab" aria-selected={active}
-              onClick={() => { setModelTab(tab.id); if (tab.id === 'user' && !userAiReady) openAiSettings() }}
+              onClick={() => setModelTab(tab.id)}
               className="flex-1 cursor-pointer text-left px-3 py-2"
               style={{
                 background: active ? 'color-mix(in srgb, var(--helios-accent) 7%, transparent)' : 'transparent',
@@ -867,15 +865,17 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         </div>
       )}
 
-      {/* AI not available for the selected tab */}
-      {!aiReady && (
+      {modelTab === 'user' && (
+        <HeliosApiForm settings={userAi} onSaved={setUserAi} />
+      )}
+
+      {/* Site model unavailable */}
+      {!aiReady && modelTab === 'site' && (
         <div className="mx-3 mt-2 px-3 py-2.5 rounded-xl flex items-start gap-2 flex-shrink-0"
           style={{ background: 'rgba(245,166,35,0.08)', border: '1px solid rgba(245,166,35,0.25)' }}>
           <AlertTriangle size={13} style={{ color: 'var(--helios-solar)', flexShrink: 0, marginTop: 1 }} />
           <div style={{ fontSize: 12, color: 'var(--helios-solar)', lineHeight: 1.5 }}>
-            {modelTab === 'user'
-              ? <>{t('No personal API key yet.')} <button type="button" onClick={openAiSettings} className="cursor-pointer" style={{ background: 'none', border: 'none', padding: 0, color: 'var(--helios-accent)', fontWeight: 650, fontSize: 12, textDecoration: 'underline' }}>{t('Add one in Settings')}</button> {t('(Groq, OpenAI, Gemini, DeepSeek, Ollama…) or use the Free tab.')}</>
-              : t('The free Helios model is not connected yet. Ask an administrator to set a site key, or switch to My API with your own key.')}
+            {t('The free Helios model is not connected yet. Switch to My API and add your key here.')}
           </div>
         </div>
       )}

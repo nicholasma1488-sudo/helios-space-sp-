@@ -162,6 +162,37 @@ export function clearAgentHistory() {
   persist({ activeId: null, chats: [] })
 }
 
+function oneLine(value: string, max: number) {
+  return value.replace(/\s+/g, ' ').trim().slice(0, max)
+}
+
+function chatOutcome(chat: AgentChat) {
+  const lastUser = [...chat.messages].reverse().find(item => item.role === 'user' && item.content.trim())
+  const lastAssistant = [...chat.messages].reverse().find(item => item.role === 'assistant')
+  const done = lastAssistant?.steps
+    ?.filter(item => item.status === 'done' || item.status === 'failed')
+    .map(item => item.detail || item.step.tool)
+    .filter(Boolean)
+    .slice(0, 3) ?? []
+  const parts = [`${chat.mode}: ${oneLine(chat.title, 72)}`]
+  if (lastUser) parts.push(`last ask: ${oneLine(lastUser.content, 140)}`)
+  if (done.length) parts.push(`done: ${oneLine(done.join('; '), 180)}`)
+  else if (lastAssistant?.content) parts.push(`last reply: ${oneLine(lastAssistant.content, 140)}`)
+  return `- ${parts.join(' · ')}`
+}
+
+/** Compact recap of earlier local chats so Helios can continue that work. */
+export function priorWorkContext(excludeId?: string | null, maxChars = 1800) {
+  const chats = current.chats.filter(chat => chat.id !== excludeId && chat.messages.some(item => item.id !== 'welcome'))
+  if (!chats.length) return null
+  const lines = [
+    'Earlier Helios chats on this device. If the user says continue, keep going, finish that, or refers to prior work, resume the matching chat instead of starting over.',
+    ...chats.slice(0, 8).map(chatOutcome),
+  ]
+  const text = lines.join('\n').trim()
+  return text ? text.slice(0, maxChars) : null
+}
+
 export function useHeliosAgentHistory() {
   return useSyncExternalStore(
     listener => {

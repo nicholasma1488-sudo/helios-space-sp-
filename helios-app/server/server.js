@@ -3433,7 +3433,7 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
     appContext += `\n\nContent explicitly selected by the user in the current Helios view:\n${contextObject.selected_content.trim().slice(0, 4000)}`
   }
   if (typeof contextObject.memory === 'string' && contextObject.memory.trim()) {
-    appContext += `\n\nUser-controlled Helios memory (local, optional, treat as the user's own notes):\n${contextObject.memory.trim().slice(0, 1200)}`
+    appContext += `\n\nEarlier Helios chats on this device. Continue that work if the user refers to it:\n${contextObject.memory.trim().slice(0, 2000)}`
   }
 
   const chatLanguage = replyLanguage(safeMessages.map(item => item.content).join('\n'), contextObject.language)
@@ -3618,7 +3618,15 @@ app.post('/api/helios/agent', requireUser, aiRateLimit, async (req, res) => {
     activeProject: activeProject ? { id: Number(activeProject.id), name: activeProject.name, app_kind: activeProject.app_kind || '' } : null,
     view: typeof context.view === 'string' ? context.view.replace(/[^a-z-]/gi, '').slice(0, 40) : '',
     language: replyLanguage(goal, uiLanguage),
-    memory: typeof context.memory === 'string' ? context.memory.slice(0, 800) : '',
+    memory: typeof context.memory === 'string' ? context.memory.slice(0, 1800) : '',
+    history: Array.isArray(context.history)
+      ? context.history.slice(-10).map(item => {
+        if (!item || typeof item !== 'object') return null
+        const role = item.role === 'assistant' ? 'assistant' : 'user'
+        const content = String(item.content || '').replace(/\s+/g, ' ').trim().slice(0, 240)
+        return content ? `${role}: ${content}` : null
+      }).filter(Boolean).join('\n').slice(0, 1600)
+      : '',
   }
 
   try {

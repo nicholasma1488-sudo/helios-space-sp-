@@ -142,6 +142,9 @@ export const zhCN: Dict = {
   'Clear all saved Helios chats on this device?': '清空这台设备上保存的全部 Helios 对话？',
   'Search chats': '搜索对话',
   'No matching chats': '没有匹配的对话',
+  'Add your API key here': '在这里添加 API 密钥',
+  'Stays in this panel. Groq, OpenAI, Gemini, DeepSeek, Ollama…': '就在这个面板里添加。Groq、OpenAI、Gemini、DeepSeek、Ollama…',
+  'The free Helios model is not connected yet. Switch to My API and add your key here.': '免费 Helios 模型尚未连接。请切换到「我的 API」并在这里添加密钥。',
 }
 
 export const zhTW: Dict = {
@@ -285,4 +288,7 @@ export const zhTW: Dict = {
   'Clear all saved Helios chats on this device?': '清空這台裝置上儲存的全部 Helios 對話？',
   'Search chats': '搜尋對話',
   'No matching chats': '沒有符合的對話',
+  'Add your API key here': '在這裡新增 API 金鑰',
+  'Stays in this panel. Groq, OpenAI, Gemini, DeepSeek, Ollama…': '就在這個面板裡新增。Groq、OpenAI、Gemini、DeepSeek、Ollama…',
+  'The free Helios model is not connected yet. Switch to My API and add your key here.': '免費 Helios 模型尚未連線。請切換到「我的 API」並在這裡新增金鑰。',
 }

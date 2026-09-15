@@ -245,6 +245,96 @@
   }
 }
 
+.helios-api-form {
+  margin: 8px 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--helios-border);
+  border-radius: 12px;
+  background: var(--helios-surface2);
+  flex-shrink: 0;
+}
+
+.helios-api-form-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.helios-api-form-head svg { color: var(--helios-accent); flex-shrink: 0; margin-top: 2px; }
+.helios-api-form-head > div { flex: 1; min-width: 0; }
+.helios-api-form-head strong { display: block; font-size: 12px; }
+.helios-api-form-head span { display: block; margin-top: 2px; color: var(--helios-muted); font-size: 11px; line-height: 1.4; }
+.helios-api-form-head button {
+  border: 0;
+  background: none;
+  color: var(--helios-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.helios-api-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 8px;
+}
+
+.helios-api-presets button {
+  padding: 4px 8px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background: var(--helios-surface);
+  color: var(--helios-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.helios-api-presets button.is-active {
+  border-color: color-mix(in srgb, var(--helios-accent) 45%, var(--helios-border));
+  background: color-mix(in srgb, var(--helios-accent) 10%, var(--helios-surface));
+  color: var(--helios-text);
+}
+
+.helios-api-key { position: relative; }
+.helios-api-key .helios-input { padding-right: 36px; }
+.helios-api-key > button {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--helios-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.helios-api-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.helios-api-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.helios-api-actions .liquid-glass-btn { padding: 6px 10px; font-size: 11px; }
+.helios-api-notice { margin: 8px 0 0; font-size: 11px; line-height: 1.4; }
+.helios-api-notice.is-ok { color: var(--helios-success); }
+.helios-api-notice.is-error { color: var(--helios-danger); }
+
 .helios-main:has(.helios-dock) {
   --helios-dock-width: 360px;
 }

@@ -74,13 +74,12 @@ inventing a second architecture:
 2. Complete sign-out: `POST /api/logout`, `RESET_SESSION`, clear
    sessionStorage + Helios memory + pending agent prompts + composer drafts.
    Land on the public landing page.
-3. Helios memory (privacy-first):
-   - Local only (`helios-memory-v1`)
-   - Toggle on/off
-   - Inspect notes + last auto-summary
-   - Clear all
-   - When on, a short memory block is appended to Helios chat/agent context
-   - Cap size and summarize so it cannot bloat the request
+3. Helios continuity (privacy-first):
+   - No Settings “add a note” memory card
+   - Prior local Helios chats (`helios-agent-history-v1`) are summarized into
+     the next request so the agent can continue earlier work
+   - Current thread turns are sent to the agent planner
+   - Sign-out still wipes that on-device history
 
 ### Hour 4.5–6 — Message editing UI (HARD)
 
@@ -149,8 +148,8 @@ fix anything below 4 before the next block.
   transcripts stay in `helios-agent-history-v1` on this device only.
 - Desktop (≥1100px) keeps a persistent Helios history rail beside the thread;
   narrower viewports overlay history without unmounting the conversation.
-- Memory can be turned off, inspected, and cleared; with it on, Helios
-  requests include a bounded memory block.
+- Helios My API keys are added in the panel, not by leaving for Settings.
+- New Helios turns include a bounded recap of earlier on-device chats.
 - Own messages edit in place; pins and Helios selection still work.
 - Files can be dropped, previewed, rejected with a clear error, and sent.
 - New UI strings have 简体 and 繁體 entries.

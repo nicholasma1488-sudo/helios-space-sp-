@@ -384,10 +384,12 @@ function plannerPrompt(ctx) {
     '- {"tool":"post","body":"<short post text>"}  share in the Space feed',
     '- {"tool":"set_theme","theme":"light|dark|system"}',
     'If the goal is a question, a request for explanation, or nothing in the app should change, return {"say":"","steps":[]}.',
+    'If the user says continue, keep going, finish that, 继续, or refers to earlier work, resume the matching prior chat or this thread. Prefer update_file or open_file on an existing project over create_file.',
     `Existing projects: [${projects}]`,
     ctx.activeProject ? `Currently open project: {"id":${ctx.activeProject.id},"name":${JSON.stringify(ctx.activeProject.name)},"app":"${ctx.activeProject.app_kind}"}` : 'No project is open.',
     `Current page: ${ctx.view || 'home'}`,
-    ctx.memory ? `User memory notes (optional, local):\n${String(ctx.memory).slice(0, 800)}` : '',
+    ctx.history ? `This Helios thread so far:\n${String(ctx.history).slice(0, 1600)}` : '',
+    ctx.memory ? `Earlier Helios chats on this device:\n${String(ctx.memory).slice(0, 1800)}` : '',
   ].filter(Boolean).join('\n')
 }
 

@@ -664,7 +664,7 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ messages, project_id, context: { ...context, language: getLanguage() }, provider }),
       }),
-    agent: (goal: string, context: { project_id?: number; view?: string; memory?: string }, provider: AiProviderChoice = 'auto') =>
+    agent: (goal: string, context: { project_id?: number; view?: string; memory?: string; history?: { role: 'user' | 'assistant'; content: string }[] }, provider: AiProviderChoice = 'auto') =>
       call<AgentPlan>('/api/helios/agent', {
         method: 'POST',
         body: JSON.stringify({ goal, context: { ...context, language: getLanguage() }, provider }),
