@@ -8,9 +8,13 @@ import { createSuiteProject, reportAgentStatus, spotlightMiniApp } from '../prod
 import { getSuiteApp, nextSuiteFileName, spaceForSuiteApp } from '../product/miniApps'
 import {
   X, Send, Eye, Check, Info, Loader, AlertTriangle, RotateCcw, Copy, Pencil,
-  Bot, MessageSquare, KeyRound, Sparkles, Circle, Undo2, ExternalLink,
+  Bot, MessageSquare, KeyRound, Sparkles, Circle, Undo2, ExternalLink, History, Plus, Trash2,
 } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
+import {
+  closeActiveAgentChat, deleteAgentChat, getActiveAgentChat, saveAgentChat,
+  useHeliosAgentHistory, openAgentChat, clearAgentHistory, type StoredAgentMessage,
+} from '../lib/heliosAgentHistory'
 
 type StepStatus = 'pending' | 'running' | 'done' | 'failed' | 'undone'
 
@@ -166,7 +170,11 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const { state, dispatch } = useApp()
   const t = useT()
   const locale = useLocale()
-  const [messages, setMessages] = useState<Message[]>([])
+  const restored = getActiveAgentChat()
+  const [chatId, setChatId] = useState<string | null>(() => restored?.id ?? null)
+  const [messages, setMessages] = useState<Message[]>(() => restored?.messages.length ? restored.messages as Message[] : [])
+  const [showHistory, setShowHistory] = useState(false)
+  const history = useHeliosAgentHistory()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showContext, setShowContext] = useState(false)
@@ -175,7 +183,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const [planDraft, setPlanDraft] = useState('')
   const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [userEditDraft, setUserEditDraft] = useState('')
-  const [mode, setMode] = useState<PanelMode>(() => readStored('helios-panel-mode', ['agent', 'chat'] as const, 'agent'))
+  const [mode, setMode] = useState<PanelMode>(() => restored?.mode ?? readStored('helios-panel-mode', ['agent', 'chat'] as const, 'agent'))
   const [modelTab, setModelTab] = useState<Exclude<AiProviderChoice, 'auto'>>(() => readStored('helios-model-tab', ['site', 'user'] as const, 'site'))
   const [userAi, setUserAi] = useState<UserAiSettings | null>(null)
   const stateRef = useRef(state)
@@ -223,21 +231,87 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const pendingHandledRef = useRef(false)
   activeProjectRef.current = activeProject
 
-  useEffect(() => {
+  function buildWelcome(): Message {
     const project = activeProjectRef.current
     const chars = project?.content.length ?? 0
     const status = chars > 0 ? t('{count} chars of content', { count: chars }) : t('empty project')
-    // Only (re)write the welcome while no conversation exists: the agent opens
-    // files mid-run, and that must not wipe the step list the user is watching.
-    setMessages(prev => prev.some(m => m.id !== 'welcome') ? prev : [{
+    return {
       id: 'welcome', role: 'assistant', ts: new Date().toISOString(),
       content: project
         ? t('I have {name} open ({status}). In Agent mode I can rewrite or extend it directly; in Chat mode I prepare a preview you approve first.', { name: project.name, status })
         : contextPacket.conversation_title
           ? t('I have the permitted context for “{title}”. I can summarize it or draft replies, but I will not send anything without your approval.', { title: contextPacket.conversation_title || '' })
           : t('I\'m Helios, the agent for this Space. Tell me what you need — I will open the right page, create the Mini App file, fill it in, and share it if you ask. Pick the Free model or your own API above.'),
-    }])
+    }
+  }
+
+  function relativeTime(value: string) {
+    const timestamp = Date.parse(value)
+    if (!Number.isFinite(timestamp)) return t('recently')
+    const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
+    if (seconds < 60) return t('Just now')
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return t('{count}m ago', { count: minutes })
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return t('{count}h ago', { count: hours })
+    const days = Math.floor(hours / 24)
+    if (days < 7) return t('{count}d ago', { count: days })
+    return new Date(value).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+  }
+
+  useEffect(() => {
+    // Only (re)write the welcome while no conversation exists: the agent opens
+    // files mid-run, and that must not wipe the step list the user is watching.
+    setMessages(prev => prev.some(m => m.id !== 'welcome') ? prev : [buildWelcome()])
   }, [activeProject?.id, contextPacket.conversation_title, contextPacket.space_id, contextPacket.space_name])
+
+  useEffect(() => {
+    const real = messages.filter(item => item.id !== 'welcome')
+    if (!real.length) return
+    const id = saveAgentChat(chatId, { mode, messages: messages as StoredAgentMessage[] })
+    if (id && id !== chatId) setChatId(id)
+  }, [messages, mode, chatId])
+
+  useEffect(() => {
+    const onClear = () => {
+      setChatId(null)
+      setMessages([buildWelcome()])
+      setShowHistory(false)
+    }
+    window.addEventListener('helios-session-cleared', onClear)
+    return () => window.removeEventListener('helios-session-cleared', onClear)
+  }, [])
+
+  function startNewChat() {
+    closeActiveAgentChat()
+    setChatId(null)
+    setMessages([buildWelcome()])
+    setShowHistory(false)
+    setEditingUserId(null)
+    followRef.current = true
+  }
+
+  function wipeHistory() {
+    if (!window.confirm(t('Clear all saved Helios chats on this device?'))) return
+    clearAgentHistory()
+    startNewChat()
+  }
+
+  function openHistoryChat(id: string) {
+    const chat = history.chats.find(item => item.id === id)
+    if (!chat) return
+    openAgentChat(id)
+    setChatId(id)
+    setMode(chat.mode)
+    setMessages(chat.messages as Message[])
+    setShowHistory(false)
+    followRef.current = true
+  }
+
+  function removeHistoryChat(id: string) {
+    deleteAgentChat(id)
+    if (chatId === id) startNewChat()
+  }
 
   // Scroll the conversation itself rather than scrollIntoView on a sentinel,
   // which also drags every scrollable ancestor (the page) along.
@@ -468,6 +542,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
 
   async function sendMessage(text: string, forceMode?: PanelMode) {
     if (!text.trim() || loading) return
+    setShowHistory(false)
     const runMode = forceMode ?? mode
     if (forceMode && forceMode !== mode) setMode(forceMode)
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, ts: new Date().toISOString() }
@@ -612,6 +687,19 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
             ? <div style={{ fontSize: 11, color: 'var(--helios-accent)' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
             : <div style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || t('Current Helios context')}</div>}
         </div>
+        <button type="button" onClick={startNewChat} title={t('New chat')} aria-label={t('New chat')}
+          className="p-1.5 rounded-lg cursor-pointer"
+          style={{ background: 'none', border: 'none', color: 'var(--helios-muted)' }}>
+          <Plus size={15} />
+        </button>
+        <button type="button" onClick={() => setShowHistory(value => !value)} title={t('Chat history')} aria-expanded={showHistory}
+          className="p-1.5 rounded-lg cursor-pointer relative" aria-label={t('Chat history')}
+          style={{ background: showHistory ? 'var(--helios-surface2)' : 'none', border: 'none', color: showHistory ? 'var(--helios-accent)' : 'var(--helios-muted)' }}>
+          <History size={14} />
+          {history.chats.length > 0 && (
+            <span aria-hidden="true" className="absolute" style={{ top: 4, right: 4, width: 6, height: 6, borderRadius: 999, background: 'var(--helios-accent)' }} />
+          )}
+        </button>
         <button onClick={() => setShowContext(v => !v)} title={t('Context packet')} aria-expanded={showContext}
           className="p-1.5 rounded-lg cursor-pointer" aria-label={t('Toggle context')}
           style={{ background: showContext ? 'var(--helios-surface2)' : 'none', border: 'none', color: 'var(--helios-muted)' }}>
@@ -696,7 +784,51 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           : t('✦ Chat · Permission-filtered context · No computer control · Action Preview before significant changes')}
       </div>
 
-      {/* Messages */}
+      {/* On-device history or the live conversation */}
+      {showHistory ? (
+        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3" role="region" aria-label={t('Chat history')}>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 650, margin: 0 }}>{t('Chat history')}</p>
+              <p style={{ fontSize: 11, color: 'var(--helios-muted)', margin: '3px 0 0' }}>{t('Stored only on this device.')}</p>
+            </div>
+            {history.chats.length > 0 && (
+              <button type="button" onClick={wipeHistory} className="cursor-pointer"
+                style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', fontSize: 11, padding: '4px 0' }}>
+                {t('Clear history')}
+              </button>
+            )}
+          </div>
+          {history.chats.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-2" style={{ color: 'var(--helios-muted)', textAlign: 'center' }}>
+              <History size={22} />
+              <p style={{ fontSize: 13, margin: 0 }}>{t('No saved chats yet')}</p>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-1" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+              {history.chats.map(chat => (
+                <li key={chat.id} className="flex items-stretch gap-1"
+                  style={{
+                    borderRadius: 12,
+                    background: chat.id === chatId ? 'color-mix(in srgb, var(--helios-accent) 8%, transparent)' : 'transparent',
+                  }}>
+                  <button type="button" onClick={() => openHistoryChat(chat.id)} className="flex-1 text-left px-3 py-2 cursor-pointer min-w-0"
+                    style={{ background: 'none', border: 'none', color: 'var(--helios-text)' }}>
+                    <span className="block truncate" style={{ fontSize: 13, fontWeight: 600 }}>{chat.title}</span>
+                    <span className="block" style={{ fontSize: 11, color: 'var(--helios-muted)', marginTop: 2 }}>
+                      {chat.mode === 'agent' ? t('Agent') : t('Chat')} · {relativeTime(chat.updatedAt)}
+                    </span>
+                  </button>
+                  <button type="button" onClick={() => removeHistoryChat(chat.id)} aria-label={t('Delete chat')}
+                    className="px-2 cursor-pointer" style={{ background: 'none', border: 'none', color: 'var(--helios-muted)' }}>
+                    <Trash2 size={14} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : (
       <div ref={listRef} onScroll={handleListScroll} onWheel={handleUserScrollIntent} onTouchMove={handleUserScrollIntent}
         className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" role="log" aria-label={t('Conversation')}>
         {messages.map(msg => (
@@ -914,9 +1046,10 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           </div>
         )}
       </div>
+      )}
 
       {/* Retry on error */}
-      {messages.length > 1 && messages[messages.length - 1]?.content.startsWith('Error:') && (
+      {!showHistory && messages.length > 1 && messages[messages.length - 1]?.content.startsWith('Error:') && (
         <div className="px-4 pb-2 flex-shrink-0">
           <button onClick={() => { const prev = [...messages].reverse().find(m => m.role === 'user'); if (prev) sendMessage(prev.content) }}
             className="flex items-center gap-1.5 text-xs cursor-pointer px-3 py-2 rounded-lg"

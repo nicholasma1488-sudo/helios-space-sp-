@@ -1,5 +1,6 @@
 const SESSION_KEYS = [
   'helios-memory-v1',
+  'helios-agent-history-v1',
   'helios-model-tab',
   'helios-pending-prompt',
   'helios-workspace-context',

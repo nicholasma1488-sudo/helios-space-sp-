@@ -33,8 +33,9 @@ inventing a second architecture:
   uses the existing session cookie, same as Chat Hub today.
 - Sign-out cannot become “passphrase-only”: this product has email accounts.
   Sign-out will revoke the session and wipe **session-scoped** client data
-  (memory, pending prompts, composer drafts, model-tab cache). Device
-  accessibility prefs (theme, reduced motion, UI language) stay.
+  (memory, Helios agent chat history, pending prompts, composer drafts,
+  model-tab cache). Device accessibility prefs (theme, reduced motion, UI
+  language) stay.
 - BYOK keys stay in `/api/me/ai`. Sign-out does not delete the user’s stored
   key on the server (that would be data loss); it clears the local session so
   the key is unreachable until they sign in again.
@@ -143,7 +144,9 @@ fix anything below 4 before the next block.
   full-screen is independent.
 - Avatars render consistently; upload rejects oversized/non-image files.
 - Sign-out returns to landing; a new session does not see the previous
-  user’s Helios memory or pending prompts.
+  user’s Helios memory, agent chat history, or pending prompts.
+- Helios panel History restores prior local chats after the panel unmounts;
+  transcripts stay in `helios-agent-history-v1` on this device only.
 - Memory can be turned off, inspected, and cleared; with it on, Helios
   requests include a bounded memory block.
 - Own messages edit in place; pins and Helios selection still work.

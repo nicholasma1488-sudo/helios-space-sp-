@@ -133,6 +133,13 @@ export const zhCN: Dict = {
   'Group messages into questions, feedback, and requests': '把消息归类为问题、反馈和请求',
   'Draft replies without sending': '起草回复但不要发送',
   'Create tasks from this discussion': '从这次讨论里生成任务',
+  'New chat': '新对话',
+  'Chat history': '对话历史',
+  'Delete chat': '删除对话',
+  'No saved chats yet': '还没有保存的对话',
+  'Stored only on this device.': '仅保存在这台设备上。',
+  'Clear history': '清空历史',
+  'Clear all saved Helios chats on this device?': '清空这台设备上保存的全部 Helios 对话？',
 }
 
 export const zhTW: Dict = {
@@ -267,4 +274,11 @@ export const zhTW: Dict = {
   'Group messages into questions, feedback, and requests': '把訊息歸類為問題、回饋和請求',
   'Draft replies without sending': '起草回覆但不要傳送',
   'Create tasks from this discussion': '從這次討論裡產生任務',
+  'New chat': '新對話',
+  'Chat history': '對話歷史',
+  'Delete chat': '刪除對話',
+  'No saved chats yet': '還沒有儲存的對話',
+  'Stored only on this device.': '僅保存在這台裝置上。',
+  'Clear history': '清空歷史',
+  'Clear all saved Helios chats on this device?': '清空這台裝置上儲存的全部 Helios 對話？',
 }
