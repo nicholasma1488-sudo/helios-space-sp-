@@ -9,6 +9,7 @@ import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { askHeliosWithContext, openLiveSession, openProjectWorkspace } from '../product/flow'
 import { useFocusTrap } from '../hooks/useFocusTrap'
 import { useApp } from '../store/appStore'
+import { getLocale, t, useLocale, useT } from '../i18n'
 import './ChatView.css'
 
 type PendingAttachment =
@@ -27,6 +28,8 @@ const TAB_COPY: Array<{ id: Conversation['kind']; label: string; icon: React.Rea
 
 export function ChatView() {
   const { state, dispatch } = useApp()
+  const t = useT()
+  const locale = useLocale()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [tab, setTab] = useState<Conversation['kind']>('project')
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -82,7 +85,7 @@ export function ChatView() {
         if (target) { setTab(target.kind); setActiveId(target.id) }
       }
     } catch (error) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Chat Hub could not load: ${(error as Error).message}`, tone: 'warning' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Chat Hub could not load: {error}', { error: (error as Error).message }), tone: 'warning' } })
     } finally { setLoading(false) }
   }, [dispatch])
 
@@ -142,7 +145,7 @@ export function ChatView() {
     try {
       await api.friends.request({ user_id: person.id })
       patchPersonStatus(person.id, 'outgoing')
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Friend request sent to ${person.name}`, tone: 'success' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Friend request sent to {name}', { name: person.name }), tone: 'success' } })
     } catch (error) {
       dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
     } finally {
@@ -161,7 +164,7 @@ export function ChatView() {
         type: 'PUSH_TOAST',
         toast: {
           id: String(Date.now()),
-          message: decision === 'accept' ? 'Friend request accepted' : 'Friend request declined',
+          message: decision === 'accept' ? t('Friend request accepted') : t('Friend request declined'),
           tone: decision === 'accept' ? 'success' : 'info',
         },
       })
@@ -183,7 +186,7 @@ export function ChatView() {
       setIncomingRequests(result.incoming || [])
       const found = (result.incoming || []).find(item => item.user_id === person.id)
       if (found) await respondFriendRequest(found.id, 'accept', person.id)
-      else dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'Incoming request not found. Refresh and try again.', tone: 'warning' } })
+      else dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Incoming request not found. Refresh and try again.'), tone: 'warning' } })
     } catch (error) {
       dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
     }
@@ -256,14 +259,14 @@ export function ChatView() {
       setShowAttachments(false)
       await loadConversations()
     } catch (error) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Message not sent: ${(error as Error).message}`, tone: 'warning' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Message not sent: {error}', { error: (error as Error).message }), tone: 'warning' } })
     } finally { setSending(false) }
   }
 
   async function chooseFile(file: globalThis.File | undefined) {
     if (!file) return
     if (file.size > 1_000_000) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'Chat file attachments are limited to 1 MB.', tone: 'warning' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Chat file attachments are limited to 1 MB.'), tone: 'warning' } })
       return
     }
     const data = await new Promise<string>((resolve, reject) => {
@@ -308,12 +311,12 @@ export function ChatView() {
       app_kind: active.app_kind,
       space_id: active.space_id,
       messages: contextMessages,
-      selected_content: action === 'selected' ? 'Selected messages' : 'Current permitted conversation',
+      selected_content: action === 'selected' ? t('Selected messages') : t('Current permitted conversation'),
     }, action === 'reply'
-      ? 'Draft concise suggested replies to the open questions. Do not send anything.'
+      ? t('Draft concise suggested replies to the open questions. Do not send anything.')
       : action === 'selected'
-        ? 'Use only the selected messages. Summarize them, extract tasks, and draft a reply.'
-        : 'Summarize unread and recent messages. Group them into questions, feedback, and tasks.', dispatch)
+        ? t('Use only the selected messages. Summarize them, extract tasks, and draft a reply.')
+        : t('Summarize unread and recent messages. Group them into questions, feedback, and tasks.'), dispatch)
   }
 
   return (
@@ -322,13 +325,13 @@ export function ChatView() {
       <input ref={fileInput} hidden type="file" onChange={event => { void chooseFile(event.target.files?.[0]); event.currentTarget.value = '' }} />
 
       <aside className="chat-hub-sidebar">
-        <header><div><MessageCircle size={19} /><span><strong>Chat Hub</strong><small>Work stays connected</small></span></div><button type="button" onClick={() => openCreate(tab)} aria-label="New conversation"><Plus size={16} /></button></header>
-        <label className="chat-hub-search"><Search size={14} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search conversations" /></label>
-        <label className="chat-hub-search chat-people-search"><UserPlus size={14} /><input value={peopleQuery} onChange={event => setPeopleQuery(event.target.value)} placeholder="Search username" aria-label="Search username" /></label>
+        <header><div><MessageCircle size={19} /><span><strong>{t('Chat Hub')}</strong><small>{t('Work stays connected')}</small></span></div><button type="button" onClick={() => openCreate(tab)} aria-label={t('New conversation')}><Plus size={16} /></button></header>
+        <label className="chat-hub-search"><Search size={14} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('Search conversations')} /></label>
+        <label className="chat-hub-search chat-people-search"><UserPlus size={14} /><input value={peopleQuery} onChange={event => setPeopleQuery(event.target.value)} placeholder={t('Search username')} aria-label={t('Search username')} /></label>
         {(peopleQuery.trim() || peopleResults.length > 0) && (
           <div className="chat-people-results" aria-live="polite">
-            {peopleSearching && <div className="chat-people-empty">Searching…</div>}
-            {!peopleSearching && peopleResults.length === 0 && peopleQuery.trim() && <div className="chat-people-empty">No people found</div>}
+            {peopleSearching && <div className="chat-people-empty">{t('Searching…')}</div>}
+            {!peopleSearching && peopleResults.length === 0 && peopleQuery.trim() && <div className="chat-people-empty">{t('No people found')}</div>}
             {!peopleSearching && peopleResults.map(person => (
               <div key={person.id} className="chat-people-row">
                 <span className="chat-people-avatar" aria-hidden="true">{person.name.slice(0, 1)}</span>
@@ -336,8 +339,8 @@ export function ChatView() {
                   <strong>{person.name}</strong>
                   <small>{person.handle}</small>
                 </span>
-                {person.friend_status === 'friends' && <span className="chat-friend-badge">Friends</span>}
-                {person.friend_status === 'outgoing' && <span className="chat-friend-badge is-pending">Pending</span>}
+                {person.friend_status === 'friends' && <span className="chat-friend-badge">{t('Friends')}</span>}
+                {person.friend_status === 'outgoing' && <span className="chat-friend-badge is-pending">{t('Pending')}</span>}
                 {person.friend_status === 'incoming' && (
                   <button type="button" className="chat-friend-action is-accept" disabled={friendBusyId !== null} onClick={() => void acceptIncomingFromSearch(person)}>
                     <Check size={12} /> Accept
@@ -345,7 +348,7 @@ export function ChatView() {
                 )}
                 {person.friend_status === 'none' && (
                   <button type="button" className="chat-friend-action" disabled={friendBusyId === person.id} onClick={() => void sendFriendRequest(person)}>
-                    <UserPlus size={12} /> Add friend
+                    <UserPlus size={12} /> {t('Add friend')}
                   </button>
                 )}
               </div>
@@ -353,8 +356,8 @@ export function ChatView() {
           </div>
         )}
         {incomingRequests.length > 0 && (
-          <section className="chat-friend-requests" aria-label="Friend requests">
-            <header><UserPlus size={12} /><span>Friend requests</span><b>{incomingRequests.length}</b></header>
+          <section className="chat-friend-requests" aria-label={t('Friend requests')}>
+            <header><UserPlus size={12} /><span>{t('Friend requests')}</span><b>{incomingRequests.length}</b></header>
             <div>
               {incomingRequests.map(request => (
                 <div key={request.id} className="chat-people-row">
@@ -364,36 +367,36 @@ export function ChatView() {
                     <small>{request.handle}</small>
                   </span>
                   <button type="button" className="chat-friend-action is-accept" disabled={friendBusyId === request.id} onClick={() => void respondFriendRequest(request.id, 'accept', request.user_id)}>
-                    Accept
+                    {t('Accept')}
                   </button>
                   <button type="button" className="chat-friend-action is-decline" disabled={friendBusyId === request.id} onClick={() => void respondFriendRequest(request.id, 'decline', request.user_id)}>
-                    Decline
+                    {t('Decline')}
                   </button>
                 </div>
               ))}
             </div>
           </section>
         )}
-        <nav className="chat-kind-tabs" aria-label="Conversation types">{TAB_COPY.map(item => <button type="button" key={item.id} className={tab === item.id ? 'is-active' : ''} onClick={() => selectTab(item.id)}>{item.icon}<span>{item.label}</span>{conversations.filter(conversation => conversation.kind === item.id).reduce((sum, conversation) => sum + conversation.unread, 0) > 0 && <b>{conversations.filter(conversation => conversation.kind === item.id).reduce((sum, conversation) => sum + conversation.unread, 0)}</b>}</button>)}</nav>
+        <nav className="chat-kind-tabs" aria-label={t('Conversation types')}>{TAB_COPY.map(item => <button type="button" key={item.id} className={tab === item.id ? 'is-active' : ''} onClick={() => selectTab(item.id)}>{item.icon}<span>{t(item.label)}</span>{conversations.filter(conversation => conversation.kind === item.id).reduce((sum, conversation) => sum + conversation.unread, 0) > 0 && <b>{conversations.filter(conversation => conversation.kind === item.id).reduce((sum, conversation) => sum + conversation.unread, 0)}</b>}</button>)}</nav>
         <div className="chat-conversation-list">
           {loading && <><ConversationSkeleton /><ConversationSkeleton /><ConversationSkeleton /></>}
-          {!loading && visibleConversations.map(conversation => <button type="button" key={conversation.id} className={activeId === conversation.id ? 'is-active' : ''} onClick={() => setActiveId(conversation.id)}><ConversationAvatar conversation={conversation} /><span><strong>{conversation.title}</strong><small>{conversation.last_message || (conversation.kind === 'project' ? 'Project discussion is ready' : 'Start the conversation')}</small></span><time>{conversation.last_message_at ? compactTime(conversation.last_message_at) : ''}</time>{conversation.unread > 0 && <b>{conversation.unread}</b>}</button>)}
-          {!loading && visibleConversations.length === 0 && <div className="chat-list-empty"><span>{tab === 'project' ? <FolderGit2 size={21} /> : tab === 'group' ? <Users size={21} /> : <AtSign size={21} />}</span><strong>No {TAB_COPY.find(item => item.id === tab)?.label.toLowerCase()}</strong><p>{tab === 'project' ? 'Start a chat from a durable Project.' : 'Create a conversation using Helios handles.'}</p><button type="button" onClick={() => openCreate(tab)}><Plus size={13} /> Create one</button></div>}
+          {!loading && visibleConversations.map(conversation => <button type="button" key={conversation.id} className={activeId === conversation.id ? 'is-active' : ''} onClick={() => setActiveId(conversation.id)}><ConversationAvatar conversation={conversation} /><span><strong>{conversation.title}</strong><small>{conversation.last_message || (conversation.kind === 'project' ? t('Project discussion is ready') : t('Start the conversation'))}</small></span><time>{conversation.last_message_at ? compactTime(conversation.last_message_at, locale) : ''}</time>{conversation.unread > 0 && <b>{conversation.unread}</b>}</button>)}
+          {!loading && visibleConversations.length === 0 && <div className="chat-list-empty"><span>{tab === 'project' ? <FolderGit2 size={21} /> : tab === 'group' ? <Users size={21} /> : <AtSign size={21} />}</span><strong>{tab === 'project' ? t('No project chats') : tab === 'group' ? t('No groups') : t('No private chats')}</strong><p>{tab === 'project' ? t('Start a chat from a durable Project.') : t('Create a conversation using Helios handles.')}</p><button type="button" onClick={() => openCreate(tab)}><Plus size={13} /> {t('Create one')}</button></div>}
         </div>
-        <footer><Sparkles size={13} /><span><strong>Project-aware conversations</strong><small>Messages, files and work share one context.</small></span></footer>
+        <footer><Sparkles size={13} /><span><strong>{t('Project-aware conversations')}</strong><small>{t('Messages, files and work share one context.')}</small></span></footer>
       </aside>
 
       <main className="chat-thread">
         {!active && <ChatWelcome projects={state.projects} onCreate={openCreate} />}
         {active && <>
-          <header className="chat-thread-header"><div><ConversationAvatar conversation={active} /><span><strong>{active.title}</strong><small>{active.kind === 'project' && active.project_name ? `${getSpaceDefinition(active.space_id || 'coding').name} · ${getMiniApp(active.app_kind || 'web-code').name} · ${messages.length} messages` : active.kind === 'group' ? 'Group conversation' : 'Private conversation'}</small></span></div><div>{active.project_id && <button type="button" onClick={() => void openProject(active.project_id!)}><FolderGit2 size={14} /> Open Project</button>}{selectedIds.length > 0 && <button type="button" onClick={() => askHelios('selected')}><Bot size={14} /> Message → Helios ({selectedIds.length})</button>}<button type="button" onClick={() => askHelios('summary')}><Bot size={14} /> Summarize</button><button type="button" onClick={() => askHelios('reply')}><Sparkles size={14} /> Draft replies</button><button type="button" aria-label="Conversation options"><MoreHorizontal size={16} /></button></div></header>
+          <header className="chat-thread-header"><div><ConversationAvatar conversation={active} /><span><strong>{active.title}</strong><small>{active.kind === 'project' && active.project_name ? `${t(getSpaceDefinition(active.space_id || 'coding').name)} · ${getMiniApp(active.app_kind || 'web-code').name} · ${t('{count} messages', { count: messages.length })}` : active.kind === 'group' ? t('Group conversation') : t('Private conversation')}</small></span></div><div>{active.project_id && <button type="button" onClick={() => void openProject(active.project_id!)}><FolderGit2 size={14} /> {t('Open Project')}</button>}{selectedIds.length > 0 && <button type="button" onClick={() => askHelios('selected')}><Bot size={14} /> {t('Message → Helios ({count})', { count: selectedIds.length })}</button>}<button type="button" onClick={() => askHelios('summary')}><Bot size={14} /> {t('Summarize')}</button><button type="button" onClick={() => askHelios('reply')}><Sparkles size={14} /> {t('Draft replies')}</button><button type="button" aria-label={t('Conversation options')}><MoreHorizontal size={16} /></button></div></header>
           {active.kind === 'project' && <ProjectChatContext conversation={active} project={state.projects.find(item => item.id === active.project_id) || null} live={liveSessions.find(item => item.project_id === active.project_id) || null} messages={messages.length} onOpenProject={id => void openProject(id)} onOpenLive={id => openLiveSession(id, dispatch)} onOpenMiniApp={() => { if (active.project_id) void openProject(active.project_id) }} />}
 
-          {messages.some(message => message.pinned) && <section className="chat-pinned"><header><Pin size={12} /> Pinned context</header><div>{messages.filter(message => message.pinned).map(message => <button type="button" key={message.id} onClick={() => document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView({ behavior: 'smooth' })}><strong>{message.sender_name}</strong><span>{message.body || attachmentLabel(message)}</span></button>)}</div></section>}
+          {messages.some(message => message.pinned) && <section className="chat-pinned"><header><Pin size={12} /> {t('Pinned context')}</header><div>{messages.filter(message => message.pinned).map(message => <button type="button" key={message.id} onClick={() => document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView({ behavior: 'smooth' })}><strong>{message.sender_name}</strong><span>{message.body || attachmentLabel(message)}</span></button>)}</div></section>}
 
-          <div className="chat-message-log" role="log" aria-label={`${active.title} messages`}>
+          <div className="chat-message-log" role="log" aria-label={t('{title} messages', { title: active.title })}>
             {messagesLoading && <MessageSkeleton />}
-            {!messagesLoading && messages.length === 0 && <div className="chat-thread-empty"><MessageCircle size={25} /><h2>Start with the work</h2><p>Ask a question, share a Project or file, and keep decisions attached to their context.</p></div>}
+            {!messagesLoading && messages.length === 0 && <div className="chat-thread-empty"><MessageCircle size={25} /><h2>{t('Start with the work')}</h2><p>{t('Ask a question, share a Project or file, and keep decisions attached to their context.')}</p></div>}
             {!messagesLoading && messages.map((message, index) => <ChatMessageRow key={message.id} message={message} compact={index > 0 && messages[index - 1].sender_id === message.sender_id} selected={selectedIds.includes(message.id)} onSelect={() => toggleSelected(message.id)} onPin={() => void pinMessage(message)} onOpenProject={id => void openProject(id)} />)}
             <div ref={messagesEnd} />
           </div>
@@ -403,10 +406,10 @@ export function ChatView() {
               <div className="chat-pending-attachment">
                 {pending.type === 'project' ? <FolderGit2 size={15} /> : <File size={15} />}
                 <span>
-                  <small>{pending.type === 'project' ? 'PROJECT' : 'FILE'}</small>
+                  <small>{pending.type === 'project' ? t('PROJECT') : t('FILE')}</small>
                   <strong>{pending.label}</strong>
                 </span>
-                <button type="button" onClick={() => setPending(null)} aria-label="Remove attachment"><X size={14} /></button>
+                <button type="button" onClick={() => setPending(null)} aria-label={t('Remove attachment')}><X size={14} /></button>
               </div>
             )}
             {showAttachments && (
@@ -424,10 +427,10 @@ export function ChatView() {
                 >
                   <header>
                     <div>
-                      <small>Attach</small>
-                      <strong id="chat-attach-title">Share into this conversation</strong>
+                      <small>{t('Attach')}</small>
+                      <strong id="chat-attach-title">{t('Share into this conversation')}</strong>
                     </div>
-                    <button type="button" onClick={() => setShowAttachments(false)} aria-label="Close attach window"><X size={15} /></button>
+                    <button type="button" onClick={() => setShowAttachments(false)} aria-label={t('Close attach window')}><X size={15} /></button>
                   </header>
                   <button
                     type="button"
@@ -436,11 +439,11 @@ export function ChatView() {
                   >
                     <Paperclip size={16} />
                     <span>
-                      <strong>Upload a file</strong>
-                      <small>Documents or images · up to 1 MB</small>
+                      <strong>{t('Upload a file')}</strong>
+                      <small>{t('Documents or images · up to 1 MB')}</small>
                     </span>
                   </button>
-                  <p className="chat-attach-label">Projects</p>
+                  <p className="chat-attach-label">{t('Projects')}</p>
                   <div className="chat-attach-list">
                     {state.projects.slice(0, 8).map(project => (
                       <button
@@ -454,12 +457,12 @@ export function ChatView() {
                         <FolderGit2 size={15} />
                         <span>
                           <strong>{project.name}</strong>
-                          <small>{getSpaceDefinition(project.space_id).name} · {getMiniApp(project.app_kind).name}</small>
+                          <small>{t(getSpaceDefinition(project.space_id).name)} · {getMiniApp(project.app_kind).name}</small>
                         </span>
                       </button>
                     ))}
                     {state.projects.length === 0 && (
-                      <div className="chat-attach-empty">No projects yet — create one in Create, then attach it here.</div>
+                      <div className="chat-attach-empty">{t('No projects yet — create one in Create, then attach it here.')}</div>
                     )}
                   </div>
                 </div>
@@ -470,7 +473,7 @@ export function ChatView() {
                 type="button"
                 className={showAttachments ? 'is-active' : ''}
                 onClick={() => setShowAttachments(value => !value)}
-                aria-label="Attach file or Project"
+                aria-label={t('Attach file or Project')}
                 aria-expanded={showAttachments}
               >
                 <Plus size={17} />
@@ -485,11 +488,11 @@ export function ChatView() {
                     event.currentTarget.form?.requestSubmit()
                   }
                 }}
-                placeholder={`Message ${active.title}…`}
+                placeholder={t('Message {name}…', { name: active.title })}
               />
               <button type="submit" disabled={sending || (!draft.trim() && !pending)}><Send size={15} /></button>
             </div>
-            <small>Enter to send · Shift + Enter for a new line</small>
+            <small>{t('Enter to send · Shift + Enter for a new line')}</small>
           </form>
         </>}
       </main>
@@ -498,6 +501,7 @@ export function ChatView() {
 }
 
 function CreateConversationDialog({ kind, projects, onClose, onCreated }: { kind: Conversation['kind']; projects: Project[]; onClose: () => void; onCreated: (id: number) => void }) {
+  const t = useT()
   const [selectedKind, setSelectedKind] = useState(kind)
   const [title, setTitle] = useState(() => sessionStorage.getItem('helios-invite-name') ? `Collab with ${sessionStorage.getItem('helios-invite-name')}` : '')
   const [projectId, setProjectId] = useState(projects[0]?.id ?? 0)
@@ -518,7 +522,7 @@ function CreateConversationDialog({ kind, projects, onClose, onCreated }: { kind
     } catch (reason) { setError((reason as Error).message) }
     finally { setSaving(false) }
   }
-  return <div className="chat-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><form className="chat-dialog" onSubmit={submit}><header><div><small>Collaboration chat</small><h2>New conversation</h2></div><button type="button" onClick={onClose}><X size={16} /></button></header><div className="chat-dialog-kinds">{TAB_COPY.map(item => <button type="button" key={item.id} className={selectedKind === item.id ? 'is-active' : ''} onClick={() => setSelectedKind(item.id)}>{item.icon}{item.label}</button>)}</div>{selectedKind === 'project' ? <label><span>Project</span><select value={projectId} onChange={event => setProjectId(Number(event.target.value))}>{projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}</select>{projects.length === 0 && <small>Create a Project before starting a Project Chat.</small>}</label> : <><label><span>{selectedKind === 'private' ? 'Conversation name' : 'Group name'}</span><input value={title} onChange={event => setTitle(event.target.value)} placeholder={selectedKind === 'private' ? 'Private chat' : 'Study group'} /></label><label><span>{selectedKind === 'private' ? 'Helios handle' : 'Member handles'}</span><input value={handles} onChange={event => setHandles(event.target.value)} placeholder={selectedKind === 'private' ? '@alex' : '@alex, @maya, @sam'} /><small>Only users with valid Helios handles are added.</small></label></>}{error && <div className="chat-dialog-error">{error}</div>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" disabled={saving || (selectedKind === 'project' && !projectId)}>{saving ? 'Creating…' : 'Create Chat'}</button></footer></form></div>
+  return <div className="chat-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><form className="chat-dialog" onSubmit={submit}><header><div><small>{t('Collaboration chat')}</small><h2>{t('New conversation')}</h2></div><button type="button" onClick={onClose}><X size={16} /></button></header><div className="chat-dialog-kinds">{TAB_COPY.map(item => <button type="button" key={item.id} className={selectedKind === item.id ? 'is-active' : ''} onClick={() => setSelectedKind(item.id)}>{item.icon}{t(item.label)}</button>)}</div>{selectedKind === 'project' ? <label><span>{t('Project')}</span><select value={projectId} onChange={event => setProjectId(Number(event.target.value))}>{projects.map(project => <option key={project.id} value={project.id}>{project.name} · {getMiniApp(project.app_kind).name}</option>)}</select>{projects.length === 0 && <small>{t('Create a Project before starting a Project Chat.')}</small>}</label> : <><label><span>{selectedKind === 'private' ? t('Conversation name') : t('Group name')}</span><input value={title} onChange={event => setTitle(event.target.value)} placeholder={selectedKind === 'private' ? t('Private chat') : t('Study group')} /></label><label><span>{selectedKind === 'private' ? t('Helios handle') : t('Member handles')}</span><input value={handles} onChange={event => setHandles(event.target.value)} placeholder={selectedKind === 'private' ? '@alex' : '@alex, @maya, @sam'} /><small>{t('Only users with valid Helios handles are added.')}</small></label></>}{error && <div className="chat-dialog-error">{error}</div>}<footer><button type="button" onClick={onClose}>{t('Cancel')}</button><button type="submit" disabled={saving || (selectedKind === 'project' && !projectId)}>{saving ? t('Creating…') : t('Create Chat')}</button></footer></form></div>
 }
 
 function ProjectChatContext({ conversation, project, live, messages, onOpenProject, onOpenLive, onOpenMiniApp }: {
@@ -530,38 +534,42 @@ function ProjectChatContext({ conversation, project, live, messages, onOpenProje
   onOpenLive: (id: number) => void
   onOpenMiniApp: () => void
 }) {
+  const t = useT()
   const app = getMiniApp(conversation.app_kind || project?.app_kind || 'web-code')
   return (
     <section className="project-chat-context">
-      <div><small>PROJECT CHAT</small><strong>{conversation.project_name || conversation.title}</strong><span>{messages} messages · {app.name}{live?.status === 'live' ? ' · LIVE' : ''}</span></div>
+      <div><small>{t('PROJECT CHAT')}</small><strong>{conversation.project_name || conversation.title}</strong><span>{t('{count} messages', { count: messages })} · {app.name}{live?.status === 'live' ? ` · ${t('LIVE')}` : ''}</span></div>
       <div>
-        {conversation.project_id && <button type="button" onClick={() => onOpenProject(conversation.project_id!)}>Open Project</button>}
-        <button type="button" onClick={onOpenMiniApp}>Open Mini App</button>
-        {live && <button type="button" onClick={() => onOpenLive(live.id)}>{live.status === 'live' ? 'Watch Live' : 'Replay Live'}</button>}
+        {conversation.project_id && <button type="button" onClick={() => onOpenProject(conversation.project_id!)}>{t('Open Project')}</button>}
+        <button type="button" onClick={onOpenMiniApp}>{t('Open Mini App')}</button>
+        {live && <button type="button" onClick={() => onOpenLive(live.id)}>{live.status === 'live' ? t('Watch Live') : t('Replay Live')}</button>}
       </div>
     </section>
   )
 }
 
 function ChatMessageRow({ message, compact, selected, onSelect, onPin, onOpenProject }: { message: ChatMessage; compact: boolean; selected: boolean; onSelect: () => void; onPin: () => void; onOpenProject: (id: number) => void }) {
-  return <article className={'chat-message-row' + (message.mine ? ' is-mine' : '') + (compact ? ' is-compact' : '') + (selected ? ' is-selected' : '')} data-message-id={message.id}><button type="button" className="chat-select-message" aria-pressed={selected} onClick={onSelect} aria-label="Select message for Helios" /><span className="chat-message-avatar">{compact ? '' : message.sender_name.slice(0, 1)}</span><div className="chat-message-content">{!compact && <header><strong>{message.sender_name}</strong><small>{message.sender_handle}</small><time>{new Date(message.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></header>}{message.body && <p>{message.body}</p>}{message.attachment && <RichAttachment message={message} onOpenProject={onOpenProject} />}<button type="button" className={'chat-pin-message' + (message.pinned ? ' is-pinned' : '')} onClick={onPin} aria-label={message.pinned ? 'Unpin message' : 'Pin message'}><Pin size={11} fill={message.pinned ? 'currentColor' : 'none'} /></button></div></article>
+  const t = useT()
+  const locale = useLocale()
+  return <article className={'chat-message-row' + (message.mine ? ' is-mine' : '') + (compact ? ' is-compact' : '') + (selected ? ' is-selected' : '')} data-message-id={message.id}><button type="button" className="chat-select-message" aria-pressed={selected} onClick={onSelect} aria-label={t('Select message for Helios')} /><span className="chat-message-avatar">{compact ? '' : message.sender_name.slice(0, 1)}</span><div className="chat-message-content">{!compact && <header><strong>{message.sender_name}</strong><small>{message.sender_handle}</small><time>{new Date(message.created_at).toLocaleString(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</time></header>}{message.body && <p>{message.body}</p>}{message.attachment && <RichAttachment message={message} onOpenProject={onOpenProject} />}<button type="button" className={'chat-pin-message' + (message.pinned ? ' is-pinned' : '')} onClick={onPin} aria-label={message.pinned ? t('Unpin message') : t('Pin message')}><Pin size={11} fill={message.pinned ? 'currentColor' : 'none'} /></button></div></article>
 }
 
 function RichAttachment({ message, onOpenProject }: { message: ChatMessage; onOpenProject: (id: number) => void }) {
+  const t = useT()
   const attachment = message.attachment || {}
   if (message.attachment_type === 'project') {
     const projectId = Number(attachment.id || message.attachment_id)
     const app = getMiniApp(String(attachment.app_kind || 'web-code'))
     const space = getSpaceDefinition(String(attachment.space_id || 'coding'))
-    return <button type="button" className="chat-project-attachment" onClick={() => onOpenProject(projectId)}><i><FolderGit2 size={19} /></i><span><small>HELIO​S PROJECT · {space.name}</small><strong>{String(attachment.name || 'Shared Project')}</strong><b>{app.name} · Open actual work <ChevronRight size={12} /></b></span></button>
+    return <button type="button" className="chat-project-attachment" onClick={() => onOpenProject(projectId)}><i><FolderGit2 size={19} /></i><span><small>{t('HELIOS PROJECT')} · {t(space.name)}</small><strong>{String(attachment.name || t('Shared Project'))}</strong><b>{app.name} · {t('Open actual work')} <ChevronRight size={12} /></b></span></button>
   }
   if (message.attachment_type === 'file') {
     const data = String(attachment.data || '')
     const mime = String(attachment.mime || '')
     const isImage = mime.startsWith('image/')
-    return <div className="chat-file-attachment">{isImage ? <img src={data} alt={String(attachment.name || 'Shared image')} /> : <i><File size={20} /></i>}<span><small>{isImage ? 'IMAGE' : 'FILE'} · {formatBytes(Number(attachment.size || 0))}</small><strong>{String(attachment.name || 'Shared file')}</strong></span><a href={data} download={String(attachment.name || 'download')} aria-label="Download file"><Download size={15} /></a></div>
+    return <div className="chat-file-attachment">{isImage ? <img src={data} alt={String(attachment.name || t('Shared image'))} /> : <i><File size={20} /></i>}<span><small>{isImage ? t('IMAGE') : t('FILE')} · {formatBytes(Number(attachment.size || 0))}</small><strong>{String(attachment.name || t('Shared file'))}</strong></span><a href={data} download={String(attachment.name || t('download'))} aria-label={t('Download file')}><Download size={15} /></a></div>
   }
-  if (message.attachment_type === 'post') return <div className="chat-post-attachment"><Image size={17} /><span><small>LIFESTYLE PROGRESS</small><strong>{String(attachment.body || 'Shared progress post')}</strong></span></div>
+  if (message.attachment_type === 'post') return <div className="chat-post-attachment"><Image size={17} /><span><small>{t('LIFESTYLE PROGRESS')}</small><strong>{String(attachment.body || t('Shared progress post'))}</strong></span></div>
   return null
 }
 
@@ -570,30 +578,31 @@ function ConversationAvatar({ conversation }: { conversation: Conversation }) {
 }
 
 function ChatWelcome({ projects, onCreate }: { projects: Project[]; onCreate: (kind: Conversation['kind']) => void }) {
+  const t = useT()
   return (
     <div className="chat-welcome">
       <div className="chat-welcome-mark" aria-hidden="true"><MessageCircle size={26} /></div>
-      <span>MESSAGES</span>
-      <h1>Start a conversation</h1>
-      <p>Private chat, group, or project discussion — keep it light and tied to what you are making.</p>
+      <span>{t('MESSAGES')}</span>
+      <h1>{t('Start a conversation')}</h1>
+      <p>{t('Private chat, group, or project discussion — keep it light and tied to what you are making.')}</p>
       <div>
         <button type="button" className="liquid-glass-btn is-primary" onClick={() => onCreate('private')}>
-          <AtSign size={15} /> New private chat
+          <AtSign size={15} /> {t('New private chat')}
         </button>
         <button type="button" className="liquid-glass-btn" onClick={() => onCreate('group')}>
-          <Users size={15} /> New group
+          <Users size={15} /> {t('New group')}
         </button>
         <button type="button" className="liquid-glass-btn" onClick={() => onCreate('project')} disabled={projects.length === 0}>
-          <FolderGit2 size={15} /> Project chat
+          <FolderGit2 size={15} /> {t('Project chat')}
         </button>
       </div>
-      {projects.length === 0 && <small>No projects yet? You can still start a private chat or group.</small>}
+      {projects.length === 0 && <small>{t('No projects yet? You can still start a private chat or group.')}</small>}
     </div>
   )
 }
 
-function attachmentLabel(message: ChatMessage) { return message.attachment_type === 'project' ? 'Shared a Project' : message.attachment_type === 'file' ? 'Shared a file' : 'Shared progress' }
-function compactTime(value: string) { const date = new Date(value); const today = new Date(); return date.toDateString() === today.toDateString() ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : date.toLocaleDateString([], { month: 'short', day: 'numeric' }) }
+function attachmentLabel(message: ChatMessage) { return message.attachment_type === 'project' ? t('Shared a Project') : message.attachment_type === 'file' ? t('Shared a file') : t('Shared progress') }
+function compactTime(value: string, locale = getLocale()) { const date = new Date(value); const today = new Date(); return date.toDateString() === today.toDateString() ? date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }) }
 function formatBytes(size: number) { return size > 999_999 ? `${(size / 1_000_000).toFixed(1)} MB` : size > 999 ? `${Math.round(size / 1000)} KB` : `${size} B` }
 function ConversationSkeleton() { return <div className="chat-conversation-skeleton"><i /><span><b /><b /></span></div> }
 function MessageSkeleton() { return <div className="chat-message-skeleton"><i /><span><b /><b /><b /></span></div> }
