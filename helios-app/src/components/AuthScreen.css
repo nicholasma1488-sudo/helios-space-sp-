@@ -4,7 +4,7 @@
   gap: clamp(45px, 8vw, 110px);
   padding: 55px clamp(25px, 7vw, 100px) !important;
   background:
-    radial-gradient(circle at 22% 30%, rgba(133, 118, 245, .13), transparent 34%),
+    radial-gradient(circle at 22% 30%, rgba(201, 100, 66, .13), transparent 34%),
     radial-gradient(circle at 76% 72%, rgba(79, 195, 247, .06), transparent 31%),
     var(--helios-bg) !important;
   animation: auth-world-enter 520ms var(--ease-enter) both;
@@ -79,7 +79,7 @@
   background:
     linear-gradient(155deg, rgba(255, 255, 255, .025), transparent 32%),
     color-mix(in srgb, var(--helios-surface) 96%, #161927) !important;
-  box-shadow: 0 34px 90px rgba(0, 0, 0, .43), 0 0 0 1px rgba(133, 118, 245, .03) !important;
+  box-shadow: 0 34px 90px rgba(0, 0, 0, .43), 0 0 0 1px rgba(201, 100, 66, .03) !important;
   animation: auth-card-enter 600ms 70ms var(--ease-enter) both;
 }
 
@@ -100,7 +100,7 @@
 
 .auth-card-v2 form > button[type='submit'] {
   min-height: 44px;
-  box-shadow: 0 12px 34px rgba(133, 118, 245, .16);
+  box-shadow: 0 12px 34px rgba(201, 100, 66, .16);
 }
 
 .auth-screen-v2.is-leaving {

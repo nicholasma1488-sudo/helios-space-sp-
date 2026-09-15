@@ -10,17 +10,12 @@ import { CommandPalette } from './components/CommandPalette'
 import { ShortcutsHelp } from './components/ShortcutsHelp'
 import { ToastLayer } from './components/ToastLayer'
 import { HomeView } from './views/HomeView'
-import { ExploreView } from './views/ExploreView'
-import { SpacesView } from './views/SpacesView'
-import { SpaceView } from './views/SpaceView'
 import { LifestyleView } from './views/LifestyleView'
-import { LiveView } from './views/LiveView'
 import { ChatView } from './views/ChatView'
 import { ProfileView } from './views/ProfileView'
 import { MiniAppsView } from './views/MiniAppsView'
 import { ProjectWorkspace } from './workspaces/ProjectWorkspace'
-import { PaymentPage } from './views/PaymentPage'
-import { goToPay, isPayPath } from './product/pay'
+import { leavePay, isPayPath } from './product/pay'
 import './App.css'
 
 function MainContent() {
@@ -41,14 +36,14 @@ function MainContent() {
   let content: React.ReactNode
   switch (state.view) {
     case 'home':      content = <HomeView />; break
-    case 'explore':   content = <ExploreView />; break
-    case 'spaces':    content = <SpaceView />; break
-    case 'lifestyle': content = <LifestyleView currentUser={state.user} />; break
+    case 'lifestyle':
+    case 'live':      content = <LifestyleView currentUser={state.user} />; break
     case 'apps':      content = <MiniAppsView />; break
-    case 'live':      content = <LiveView />; break
     case 'chat':      content = <ChatView />; break
-    case 'projects':  content = <SpacesView />; break
     case 'profile':   content = <ProfileView />; break
+    case 'projects':
+    case 'explore':
+    case 'spaces':    content = <HomeView />; break
     default:          content = <HomeView />
   }
   return (
@@ -91,17 +86,17 @@ function AppInner() {
   useEffect(() => {
     const VIEW_TITLES: Record<string, string> = {
       home: 'Home',
-      explore: 'Explore',
-      spaces: 'Spaces',
-      lifestyle: 'Lifestyle',
-      apps: 'Mini Apps',
-      live: 'Live',
-      chat: 'Chat Hub',
-      projects: 'Projects',
-      profile: 'Profile',
+      lifestyle: 'Space',
+      apps: 'Create',
+      chat: 'Messages',
+      profile: 'Me',
+      live: 'Lifestyle',
+      explore: 'Home',
+      spaces: 'Home',
+      projects: 'Home',
     }
     if (onPayPage) {
-      document.title = '付款 — Helios Space'
+      leavePay('/')
       return
     }
     if (!state.user) {
@@ -132,32 +127,7 @@ function AppInner() {
           return
         }
         dispatch({ type: 'SET_USER', user: r.user })
-        const params = new URLSearchParams(window.location.search)
-        const stripeSession = params.get('session_id')
-        if (params.get('billing') === 'success' && stripeSession) {
-          api.billing.confirmStripe(stripeSession)
-            .then(result => {
-              if (cancelled) return
-              dispatch({ type: 'SET_USER', user: result.user })
-              dispatch({
-                type: 'PUSH_TOAST',
-                toast: { id: Date.now().toString(), message: 'Stripe 已确认银行卡付款，Orbit 已开通。', tone: 'success' },
-              })
-            })
-            .catch(err => {
-              if (!cancelled) dispatch({
-                type: 'PUSH_TOAST',
-                toast: { id: Date.now().toString(), message: (err as Error).message, tone: 'warning' },
-              })
-            })
-            .finally(() => {
-              params.delete('billing')
-              params.delete('session_id')
-              const next = params.toString()
-              window.history.replaceState({}, '', '/pay' + (next ? '?' + next : ''))
-              window.dispatchEvent(new PopStateEvent('popstate'))
-            })
-        }
+        if (isPayPath()) leavePay('/')
         api.projects.list()
           .then(projects => { if (!cancelled) dispatch({ type: 'SET_PROJECTS', projects: projects.projects }) })
           .catch(err => {
@@ -184,16 +154,18 @@ function AppInner() {
     else document.documentElement.classList.remove('motion-reduced')
   }, [state.reducedMotion])
 
+  // Legacy /pay URLs and upgrade actions just return to the free app.
   useEffect(() => {
-    if (state.user && state.user.plan_selected === false && !onPayPage && !state.authLoading) {
-      goToPay()
-    }
-  }, [state.user, onPayPage, state.authLoading])
+    if (onPayPage) leavePay('/')
+  }, [onPayPage])
 
   useEffect(() => {
     if (!state.upgradeOpen) return
     dispatch({ type: 'CLOSE_UPGRADE' })
-    goToPay()
+    dispatch({
+      type: 'PUSH_TOAST',
+      toast: { id: String(Date.now()), message: 'Helios Space is completely free — no upgrade needed.', tone: 'success' },
+    })
   }, [state.upgradeOpen, dispatch])
 
   // Respect OS reduced-motion
@@ -205,26 +177,37 @@ function AppInner() {
     return () => mq.removeEventListener('change', h)
   }, [dispatch])
 
-  // Auth loading splash
+  // Auth loading splash — calm glass mark, no pulsing orb
   if (state.authLoading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center" style={{ background: 'var(--helios-bg)' }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #7c6af7, #4fc3f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 22, animation: 'pulse-fade 1.5s ease-in-out infinite' }}>
+        <div
+          aria-label="Loading Helios Space"
+          role="status"
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 14,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--codex-gray)',
+            fontSize: 20,
+            fontWeight: 700,
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.72), rgba(120,128,140,0.22))',
+            border: '1px solid rgba(255,255,255,0.55)',
+            boxShadow: 'var(--glass-shadow)',
+            animation: 'helios-fade-in var(--dur-standard) var(--ease-enter) both',
+          }}
+        >
           ✦
         </div>
-        <style>{`@keyframes pulse-fade { 0%,100%{opacity:.4;transform:scale(.9)} 50%{opacity:1;transform:scale(1)} }`}</style>
       </div>
     )
   }
 
-  if (onPayPage) {
-    return (
-      <>
-        <PaymentPage />
-        <ToastLayer />
-      </>
-    )
-  }
+  // Legacy /pay URLs just return to the free app (effect above).
+  // Do not call leavePay during render — that is a side effect.
 
   // Not logged in — show auth screen
   if (!state.user) {

@@ -35,16 +35,55 @@ interface HeliosContext {
 }
 
 function extractCode(text: string): string | null {
-  const m = text.match(/```[\w]*\n([\s\S]+?)```/)
+  const m = text.match(/```[\w.-]*\n([\s\S]+?)```/)
   return m ? m[1].trimEnd() : null
 }
 
-function readContext(fallback: HeliosContext): HeliosContext {
+function extractFilePatches(text: string): Array<{ path: string; content: string }> {
+  const patches: Array<{ path: string; content: string }> = []
+  const re = /```([^\n`]*)\n([\s\S]*?)```/g
+  let match: RegExpExecArray | null
+  while ((match = re.exec(text))) {
+    const meta = match[1].trim()
+    const content = match[2].replace(/\n$/, '')
+    if (!meta && !content) continue
+    if (/helios-workspace-v1/.test(content) || content.trim().startsWith('{')) continue
+    let path = ''
+    const pathEq = meta.match(/(?:path\s*=\s*|file\s*=\s*)["']?([^\s"']+)/i)
+    if (pathEq) path = pathEq[1]
+    else if (meta.includes(':')) path = meta.slice(meta.indexOf(':') + 1).trim()
+    else if (meta.includes('/') || /\.\w+$/.test(meta)) path = meta.replace(/^[\w+-]+\s+/, '').trim()
+    if (path && /^[\w./-]+$/.test(path)) patches.push({ path, content })
+  }
+  return patches
+}
+
+function applyFilePatchesToWorkspace(current: string, patches: Array<{ path: string; content: string }>, fallbackAppKind = 'code') {
+  let payload: { schema: string; appKind: string; data: Record<string, unknown> }
   try {
-    const stored = JSON.parse(sessionStorage.getItem('helios-workspace-context') || '{}')
-    sessionStorage.removeItem('helios-workspace-context')
-    return stored && typeof stored === 'object' ? { ...fallback, ...stored } : fallback
-  } catch { return fallback }
+    const parsed = JSON.parse(current)
+    if (parsed?.schema === 'helios-workspace-v1' && parsed.data && typeof parsed.data === 'object') {
+      payload = {
+        schema: 'helios-workspace-v1',
+        appKind: parsed.appKind || fallbackAppKind,
+        data: { ...parsed.data },
+      }
+    } else {
+      throw new Error('not workspace')
+    }
+  } catch {
+    payload = {
+      schema: 'helios-workspace-v1',
+      appKind: fallbackAppKind,
+      data: { files: {}, activeFile: '', openFiles: [], terminal: [] },
+    }
+  }
+  const files = { ...((payload.data.files as Record<string, string>) || {}) }
+  for (const patch of patches) files[patch.path] = patch.content
+  const active = patches[0]?.path || String(payload.data.activeFile || Object.keys(files)[0] || '')
+  const openFiles = Array.from(new Set([...(Array.isArray(payload.data.openFiles) ? payload.data.openFiles as string[] : []), ...patches.map(item => item.path)]))
+  payload.data = { ...payload.data, files, activeFile: active, openFiles }
+  return JSON.stringify(payload)
 }
 
 function validateUpdatedContent(current: string, proposed: string) {
@@ -63,11 +102,19 @@ function validateUpdatedContent(current: string, proposed: string) {
   }
 }
 
+function readContext(fallback: HeliosContext): HeliosContext {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem('helios-workspace-context') || '{}')
+    sessionStorage.removeItem('helios-workspace-context')
+    return stored && typeof stored === 'object' ? { ...fallback, ...stored } : fallback
+  } catch { return fallback }
+}
+
 // Quick actions adapt to the open project's type so suggestions feel native to
 // the medium (code vs. prose vs. design vs. research) rather than generic.
 const NO_PROJECT_ACTIONS = [
-  'What can you help me with?',
-  'How does Helios keep my work private?',
+  'What is in this file?',
+  'Do not open the file yet — tell me what it is about in plain language',
 ]
 
 const QUICK_ACTIONS_BY_TYPE: Partial<Record<Project['type'], string[]>> = {
@@ -166,19 +213,25 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
       const targetProjectId = Number(contextPacket.project_id || activeProject?.id || 0) || undefined
       const r = await api.helios.chat(history, targetProjectId, contextPacket as Record<string, unknown>)
+      const patches = extractFilePatches(r.reply)
       const code = extractCode(r.reply)
+      const canPropose = Boolean(targetProjectId && (patches.length > 0 || code))
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: r.reply,
         ts: new Date().toISOString(),
-        ...(code && targetProjectId ? {
+        ...(canPropose ? {
           proposal: {
-            label: 'Modify “' + (contextPacket.project_name || activeProject?.name || 'the active Project') + '”',
+            label: patches.length > 0
+              ? `Write ${patches.length} file${patches.length > 1 ? 's' : ''} into “${contextPacket.project_name || activeProject?.name || 'the Project'}”`
+              : 'Modify “' + (contextPacket.project_name || activeProject?.name || 'the active Project') + '”',
             cost: 'medium' as const,
             safety: 'review' as const,
-            targetProjectId,
-            plan: 'Replace the current Project content with the complete reviewed version shown above. Nothing is applied until you approve.',
+            targetProjectId: targetProjectId!,
+            plan: patches.length > 0
+              ? `Write files: ${patches.map(item => item.path).join(', ')}. Nothing is applied until you approve.`
+              : 'Replace the current Project content with the complete reviewed version shown above. Nothing is applied until you approve.',
           },
         } : {}),
       }])
@@ -207,14 +260,20 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   async function applyProposal(msgId: string) {
     const msg = messages.find(m => m.id === msgId)
     if (!msg?.proposal) return
+    const patches = extractFilePatches(msg.content)
     const code = extractCode(msg.content)
-    if (!code) return
+    if (!patches.length && !code) return
     try {
       const target = activeProject?.id === msg.proposal.targetProjectId
         ? activeProject
         : (await api.projects.get(msg.proposal.targetProjectId)).project
       if (!target.can_edit) throw new Error('You do not have permission to edit this Project.')
-      const content = validateUpdatedContent(target.content, code)
+      let content: string
+      if (patches.length > 0) {
+        content = applyFilePatchesToWorkspace(target.content, patches, target.app_kind || 'code')
+      } else {
+        content = validateUpdatedContent(target.content, code!)
+      }
       const updated = await api.projects.update(target.id, { content })
       onProjectContentChange?.(target.id, updated.project.content)
       setMessages(prev => prev.map(m => m.id === msgId ? { ...m, applied: true } : m))
@@ -257,7 +316,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
 
   // Helper: get border color for proposal card
   const proposalBorder = (applied?: boolean) => applied ? 'var(--helios-success)' : 'var(--helios-accent)'
-  const proposalHeaderBg = (applied?: boolean) => applied ? 'rgba(110,214,154,0.1)' : 'rgba(124,106,247,0.1)'
+  const proposalHeaderBg = (applied?: boolean) => applied ? 'rgba(61,139,110,0.1)' : 'rgba(201,100,66,0.1)'
   const proposalIconColor = (applied?: boolean) => applied ? 'var(--helios-success)' : 'var(--helios-accent)'
   const proposalTextColor = (applied?: boolean) => applied ? 'var(--helios-success)' : 'var(--helios-accent)'
   const safetyBg = (s: string) => s === 'safe' ? 'var(--helios-success)' : 'var(--helios-solar)'
@@ -271,12 +330,18 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: 'var(--helios-border)', flexShrink: 0 }}>
         <div className="w-8 h-8 rounded-xl flex items-center justify-center font-bold flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, #7c6af7, #4fc3f7)', color: '#fff', fontSize: 16 }}
+          style={{
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.25))',
+            color: 'var(--codex-gray)',
+            fontSize: 16,
+            border: '1px solid var(--glass-stroke)',
+            boxShadow: 'var(--glass-shadow)',
+          }}
           aria-hidden="true">✦</div>
         <div className="flex-1 min-w-0">
           <div style={{ fontSize: 14, fontWeight: 700 }}>Helios</div>
           {contextPacket.project_name || activeProject
-            ? <div style={{ fontSize: 11, color: '#7c6af7' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
+            ? <div style={{ fontSize: 11, color: 'var(--helios-accent)' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
             : <div style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || 'Current Helios context'}</div>}
         </div>
         <button onClick={() => setShowContext(v => !v)} title="Context packet" aria-expanded={showContext}
@@ -293,7 +358,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       {/* Context packet */}
       {showContext && (
         <div className="mx-3 mt-2.5 mb-1 rounded-xl overflow-hidden" style={{ border: '1px solid var(--helios-border)', flexShrink: 0 }}>
-          <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'rgba(124,106,247,0.08)', borderBottom: '1px solid var(--helios-border)' }}>
+          <div className="flex items-center gap-2 px-3 py-2" style={{ background: 'color-mix(in srgb, var(--helios-accent) 8%, transparent)', borderBottom: '1px solid var(--helios-border)' }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--helios-accent)', flex: 1 }}>Context packet</span>
             <span style={{ fontSize: 10, color: 'var(--helios-muted)' }}>minimal · permission-filtered</span>
           </div>
@@ -303,7 +368,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
             <CtxRow label="Mini App" val={contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind || 'none'} ok={Boolean(contextPacket.app_kind || activeProject?.app_kind)} />
             <CtxRow label="Conversation" val={contextPacket.conversation_title || 'none'} ok={Boolean(contextPacket.conversation_id)} />
             <CtxRow label="Content" val={contextChars > 0 ? contextChars + ' chars' : 'empty'} ok={contextChars > 0} />
-            <CtxRow label="AI status" val={aiEnabled ? 'OpenAI connected' : 'Not configured'} ok={aiEnabled} />
+            <CtxRow label="AI status" val={aiEnabled ? 'Helios ready (free)' : 'Not configured'} ok={aiEnabled} />
             <CtxRow label="Access" val="Permission-filtered Helios data" ok />
             <CtxRow label="Computer control" val="Not permitted" ok={false} />
           </div>
@@ -336,7 +401,11 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           <div key={msg.id} className={'flex items-end gap-2' + (msg.role === 'user' ? ' flex-row-reverse' : '')}>
             {msg.role === 'assistant' && (
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #7c6af7, #4fc3f7)', color: '#fff' }} aria-hidden="true">✦</div>
+                style={{
+                  background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.28))',
+                  color: 'var(--codex-gray)',
+                  border: '1px solid var(--glass-stroke)',
+                }} aria-hidden="true">✦</div>
             )}
             <div className={'flex flex-col gap-2' + (msg.role === 'user' ? ' items-end' : ' items-start')} style={{ maxWidth: 272 }}>
 
@@ -413,12 +482,20 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         {loading && (
           <div className="flex items-end gap-2">
             <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #7c6af7, #4fc3f7)', color: '#fff', fontSize: 12 }}>✦</div>
+              style={{
+                background: 'linear-gradient(145deg, rgba(255,255,255,0.7), rgba(120,128,140,0.28))',
+                color: 'var(--codex-gray)',
+                fontSize: 12,
+                border: '1px solid var(--glass-stroke)',
+              }}>✦</div>
             <div className="px-3 py-3 rounded-2xl flex items-center gap-1.5"
               style={{ background: 'var(--helios-surface2)', border: '1px solid var(--helios-border)' }}>
               {[0, 1, 2].map(i => (
-                <div key={i} className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: 'var(--helios-muted)', animationName: 'pulse-dot', animationDuration: '1.2s', animationTimingFunction: 'ease-in-out', animationIterationCount: 'infinite', animationDelay: i === 0 ? '0s' : i === 1 ? '0.18s' : '0.36s' }} />
+                <div key={i} className="w-1.5 h-1.5 rounded-full helios-typing-dot"
+                  style={{
+                    background: 'var(--helios-muted)',
+                    animationDelay: i === 0 ? '0s' : i === 1 ? '0.18s' : '0.36s',
+                  }} />
               ))}
             </div>
             <span className="sr-only" aria-live="polite">Helios is thinking</span>

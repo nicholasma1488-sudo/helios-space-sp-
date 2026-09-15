@@ -1,4 +1,4 @@
-import { Sparkles, X } from 'lucide-react'
+import { Gift, X } from 'lucide-react'
 import { PaymentTool } from './PaymentTool'
 import { useApp } from '../store/appStore'
 import './PlanPicker.css'
@@ -9,16 +9,14 @@ export function UpgradeModal() {
     <div className="plan-picker" role="dialog" aria-modal="true" aria-labelledby="upgrade-title">
       <div className="plan-picker-panel">
         <header>
-          <span><Sparkles size={14} /> UPGRADE</span>
-          <h1 id="upgrade-title">Need more writing room?</h1>
-          <p>
-            Spreadsheets and the core apps stay on Free. Orbit is for unlimited drafts, 500,000 characters per document, and the extra Mini Apps. Pay with a Stripe card — Helios detects the payment automatically.
-          </p>
+          <span><Gift size={14} /> FREE FOREVER</span>
+          <h1 id="upgrade-title">No upgrade needed</h1>
+          <p>Helios Space is completely free. There is no Orbit, and no paywall.</p>
           <button
             type="button"
             className="upgrade-modal-close"
             onClick={() => dispatch({ type: 'CLOSE_UPGRADE' })}
-            aria-label="Close upgrade"
+            aria-label="Close"
           >
             <X size={16} />
           </button>

@@ -5,9 +5,8 @@
   flex: 1;
   flex-direction: column;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 62% -10%, rgba(133, 118, 245, .09), transparent 30%),
-    var(--helios-bg);
+  background: transparent;
+  animation: helios-fade-in var(--dur-standard) var(--ease-enter) both;
 }
 
 .lifestyle-topbar {
@@ -37,11 +36,11 @@
   height: 36px;
   flex-shrink: 0;
   place-items: center;
-  border: 1px solid rgba(133, 118, 245, .28);
+  border: 1px solid var(--glass-stroke);
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(133, 118, 245, .2), rgba(79, 195, 247, .08));
+  background: var(--glass-bg);
   color: var(--helios-accent);
-  box-shadow: 0 8px 28px rgba(133, 118, 245, .12);
+  box-shadow: var(--glass-shadow);
 }
 
 .lifestyle-title > div {
@@ -76,8 +75,8 @@
 }
 
 .lifestyle-search:focus-within {
-  border-color: rgba(133, 118, 245, .62);
-  box-shadow: 0 0 0 3px rgba(133, 118, 245, .1);
+  border-color: rgba(201, 100, 66, .62);
+  box-shadow: 0 0 0 3px rgba(201, 100, 66, .1);
 }
 
 .lifestyle-search input {
@@ -122,32 +121,35 @@
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(133, 118, 245, .16);
+  box-shadow: 0 8px 24px rgba(201, 100, 66, .16);
 }
 
 .lifestyle-layout {
   display: grid;
   width: 100%;
-  max-width: 1440px;
+  max-width: min(920px, 100%);
+  margin: 0 auto;
   min-height: 0;
   flex: 1;
-  grid-template-columns: minmax(190px, 220px) minmax(490px, 690px) minmax(230px, 270px);
   align-items: start;
-  gap: 20px;
-  margin: 0 auto;
-  padding: 18px 24px 52px;
+  gap: 12px;
+  padding: 8px 12px 24px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  grid-template-columns: minmax(160px, 200px) minmax(0, 1fr);
 }
 
-.lifestyle-left,
-.lifestyle-right {
+.lifestyle-left {
   position: sticky;
   top: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+}
+
+.lifestyle-right {
+  display: none !important;
 }
 
 .lifestyle-profile-shortcut {
@@ -191,15 +193,12 @@
   display: inline-grid;
   flex-shrink: 0;
   place-items: center;
-  border: 1px solid rgba(133, 118, 245, .28);
+  border: 1px solid var(--glass-stroke);
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, .18), transparent 30%),
-    linear-gradient(135deg, #7666ed, #3e8cb4);
-  color: #fff;
+  background: linear-gradient(145deg, rgba(255, 255, 255, .78), rgba(120, 128, 140, .28));
+  color: var(--codex-gray);
   font-weight: 780;
   letter-spacing: -.02em;
-  box-shadow: inset 0 0 18px rgba(255, 255, 255, .06);
 }
 
 .avatar-sm {
@@ -209,9 +208,9 @@
 }
 
 .avatar-md {
-  width: 41px;
-  height: 41px;
-  font-size: 11px;
+  width: 36px;
+  height: 36px;
+  font-size: 10px;
 }
 
 .lifestyle-side-nav {
@@ -329,9 +328,9 @@
 
 .tweet-post {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 12px;
-  padding: 14px 16px 10px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 12px 8px;
   border: 0;
   border-bottom: 1px solid var(--helios-border);
   border-radius: 0;
@@ -366,17 +365,17 @@
   cursor: pointer;
 }
 
-.tweet-main .post-author strong { font-size: 15px; }
+.tweet-main .post-author strong { font-size: 13px; }
 .tweet-main .post-author span,
 .tweet-main time {
   color: var(--helios-muted);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .tweet-post .post-body {
-  margin: 4px 0 10px;
-  font-size: 15px;
-  line-height: 1.45;
+  margin: 2px 0 8px;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .tweet-actions {
@@ -460,7 +459,7 @@
 }
 
 .highlight-card:hover {
-  border-color: rgba(133, 118, 245, .55);
+  border-color: rgba(201, 100, 66, .55);
   transform: translateY(-3px);
 }
 
@@ -513,7 +512,7 @@
 .create-highlight {
   justify-content: flex-end;
   background:
-    radial-gradient(circle at 50% 20%, rgba(133, 118, 245, .24), transparent 34%),
+    radial-gradient(circle at 50% 20%, rgba(201, 100, 66, .24), transparent 34%),
     var(--helios-surface);
 }
 
@@ -529,7 +528,7 @@
   width: 38px;
   height: 38px;
   place-items: center;
-  border: 1px solid rgba(133, 118, 245, .42);
+  border: 1px solid rgba(201, 100, 66, .42);
   border-radius: 50%;
   background: var(--helios-accent);
   transform: translateX(-50%);
@@ -549,8 +548,8 @@
 }
 
 .lifestyle-composer.is-open {
-  border-color: rgba(133, 118, 245, .3);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, .18), 0 0 0 1px rgba(133, 118, 245, .04);
+  border-color: rgba(201, 100, 66, .3);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .18), 0 0 0 1px rgba(201, 100, 66, .04);
 }
 
 .composer-compact {
@@ -575,7 +574,7 @@
 }
 
 .composer-compact > button:hover {
-  border-color: rgba(133, 118, 245, .35);
+  border-color: rgba(201, 100, 66, .35);
   color: var(--helios-text2);
 }
 
@@ -716,11 +715,20 @@
 
 .composer-options {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
   padding: 10px 14px;
   border-top: 1px solid var(--helios-border);
+}
+
+.composer-options > * {
+  min-width: 0;
+}
+
+.composer-options select {
+  max-width: min(100%, 220px);
 }
 
 .composer-audience {
@@ -744,8 +752,8 @@
 }
 
 .composer-audience button[aria-pressed='true'] {
-  border-color: rgba(133, 118, 245, .25);
-  background: rgba(133, 118, 245, .1);
+  border-color: rgba(201, 100, 66, .25);
+  background: rgba(201, 100, 66, .1);
   color: var(--helios-accent);
 }
 
@@ -858,7 +866,7 @@
 
 .lifestyle-post {
   position: relative;
-  padding: 15px 15px 10px;
+  padding: 10px 12px 8px;
   animation: post-enter 360ms var(--ease-enter) both;
 }
 
@@ -930,7 +938,7 @@
   border: 1px solid var(--helios-border);
   border-radius: 10px;
   background:
-    linear-gradient(90deg, rgba(133, 118, 245, .08), transparent),
+    linear-gradient(90deg, rgba(201, 100, 66, .08), transparent),
     var(--helios-surface2);
   color: var(--helios-accent);
   font: inherit;
@@ -1246,7 +1254,7 @@
   margin-bottom: 12px;
   place-items: center;
   border-radius: 15px;
-  background: rgba(133, 118, 245, .1);
+  background: rgba(201, 100, 66, .1);
   color: var(--helios-accent);
 }
 
@@ -1280,7 +1288,7 @@
 }
 
 .feed-load-more:hover {
-  border-color: rgba(133, 118, 245, .4);
+  border-color: rgba(201, 100, 66, .4);
   color: var(--helios-accent);
 }
 
@@ -1307,44 +1315,33 @@
 
 .lifestyle-pulse-card {
   padding: 14px;
-  background:
-    radial-gradient(circle at 50% 15%, rgba(133, 118, 245, .14), transparent 36%),
-    var(--helios-surface);
+  background: var(--glass-bg);
 }
 
-.pulse-orbit {
-  display: grid;
-  width: 112px;
-  height: 112px;
-  margin: 8px auto 13px;
-  place-items: center;
-  border: 1px solid rgba(133, 118, 245, .3);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(133, 118, 245, .12), transparent 55%),
-    conic-gradient(from 30deg, rgba(133, 118, 245, .7), transparent 18%, rgba(79, 195, 247, .5), transparent 60%, rgba(133, 118, 245, .7));
-  box-shadow: 0 0 38px rgba(133, 118, 245, .08);
-}
-
-.pulse-orbit > div {
+.pulse-summary {
   display: flex;
-  width: 88px;
-  height: 88px;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--helios-surface);
+  gap: 12px;
+  margin: 10px 0 12px;
+  color: var(--helios-accent);
 }
 
-.pulse-orbit strong {
+.pulse-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pulse-summary strong {
   font-size: 26px;
   letter-spacing: -.05em;
+  color: var(--helios-text);
+  line-height: 1;
 }
 
-.pulse-orbit span {
+.pulse-summary span {
   color: var(--helios-muted);
-  font-size: 7px;
+  font-size: 12px;
 }
 
 .pulse-stats {
@@ -1360,7 +1357,7 @@
   border-radius: 10px;
   background: var(--helios-surface2);
   color: var(--helios-muted);
-  font-size: 7px;
+  font-size: 11px;
 }
 
 .pulse-stats strong {
@@ -1440,7 +1437,7 @@
   padding: 16px;
   background:
     radial-gradient(circle at 100% 0, rgba(79, 195, 247, .13), transparent 40%),
-    linear-gradient(140deg, rgba(133, 118, 245, .09), transparent),
+    linear-gradient(140deg, rgba(201, 100, 66, .09), transparent),
     var(--helios-surface);
 }
 
@@ -1471,9 +1468,9 @@
 .lifestyle-app-callout button {
   width: 100%;
   min-height: 35px;
-  border: 1px solid rgba(133, 118, 245, .3);
+  border: 1px solid rgba(201, 100, 66, .3);
   border-radius: 10px;
-  background: rgba(133, 118, 245, .1);
+  background: rgba(201, 100, 66, .1);
   color: var(--helios-accent);
   font: inherit;
   font-size: 9px;
@@ -1502,7 +1499,7 @@
   border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 27px;
   background:
-    radial-gradient(circle at 50% 10%, rgba(133, 118, 245, .32), transparent 35%),
+    radial-gradient(circle at 50% 10%, rgba(201, 100, 66, .32), transparent 35%),
     linear-gradient(160deg, #282247, #11131a 68%);
   box-shadow: 0 36px 100px rgba(0, 0, 0, .55);
   animation: highlight-dialog-in 420ms var(--ease-enter) both;
@@ -1528,18 +1525,17 @@
   cursor: pointer;
 }
 
-.highlight-dialog-orbit {
+.highlight-dialog-mark {
   display: grid;
-  width: 120px;
-  height: 120px;
-  margin: 45px auto 48px;
+  width: 52px;
+  height: 52px;
+  margin: 28px auto 20px;
   place-items: center;
-  border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, .13), transparent 65%);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .12);
   color: #fff;
-  box-shadow: 0 0 70px rgba(133, 118, 245, .2), inset 0 0 40px rgba(255, 255, 255, .05);
-  animation: highlight-orbit 8s linear infinite;
+  box-shadow: none;
 }
 
 .highlight-dialog-category {
@@ -1620,25 +1616,13 @@
 }
 
 @keyframes highlight-dialog-in {
-  from { opacity: 0; transform: translateY(16px) scale(.96); clip-path: inset(22% 18% round 27px); }
-  to { opacity: 1; transform: translateY(0) scale(1); clip-path: inset(0 round 27px); }
-}
-
-@keyframes highlight-orbit {
-  to { transform: rotate(360deg); }
-}
-
-@media (max-width: 1180px) {
-  .lifestyle-layout {
-    max-width: 1030px;
-    grid-template-columns: 210px minmax(490px, 720px);
-  }
-  .lifestyle-right { display: none; }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 930px) {
   .lifestyle-layout {
-    max-width: 730px;
+    max-width: 640px;
     grid-template-columns: minmax(0, 1fr);
   }
   .lifestyle-left { display: none; }
@@ -1745,7 +1729,7 @@
   gap: 10px;
   margin: 0 14px 10px;
   padding: 9px;
-  border: 1px solid rgba(133, 118, 245, .24);
+  border: 1px solid rgba(201, 100, 66, .24);
   border-radius: 12px;
   background: rgba(119, 92, 216, .08);
 }
@@ -1766,25 +1750,36 @@
 
 .post-media {
   display: block;
-  width: 100%;
-  max-height: 520px;
-  margin: 0 0 14px;
-  border: 1px solid var(--helios-border);
-  border-radius: 14px;
+  width: calc(100% + 24px);
+  max-width: none;
+  max-height: 560px;
+  margin: 0 -12px 10px;
+  border: 0;
+  border-radius: 0;
   background: #09090d;
   object-fit: cover;
+}
+
+.tweet-post .post-media {
+  width: calc(100% + 62px);
+  margin-left: -50px;
+  margin-right: -12px;
 }
 
 .lifestyle-post.is-targeted { animation: lifestyle-target 2.2s ease both; }
 @keyframes lifestyle-target {
   0%, 100% { border-color: var(--helios-border); box-shadow: none; }
-  18%, 70% { border-color: rgba(171, 148, 255, .7); box-shadow: 0 0 0 4px rgba(133, 118, 245, .12), 0 22px 55px rgba(0, 0, 0, .3); }
+  18%, 70% { border-color: rgba(216, 150, 120, .7); box-shadow: 0 0 0 4px rgba(201, 100, 66, .12), 0 22px 55px rgba(0, 0, 0, .3); }
 }
 
 .solar-integrity-note { margin: 12px 0 0; color: var(--helios-muted); font-size: 8px; line-height: 1.5; text-align: center; }
 .composer-kind-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 8px; }
 .composer-kind-row button { min-height: 30px; padding: 0 10px; border: 1px solid var(--helios-border); border-radius: 999px; background: transparent; color: var(--helios-muted); font: inherit; font-size: 9px; cursor: pointer; }
-.composer-kind-row button[aria-pressed='true'] { border-color: rgba(133,118,245,.4); background: rgba(133,118,245,.12); color: var(--helios-text); }
+.composer-kind-row button[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--helios-accent) 40%, var(--glass-stroke));
+  background: color-mix(in srgb, var(--helios-accent) 12%, white);
+  color: var(--helios-text);
+}
 .post-project-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .post-author-button { padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
 
@@ -1796,7 +1791,7 @@
   .comments-section,
   .highlight-dialog-backdrop,
   .highlight-dialog,
-  .highlight-dialog-orbit {
+  .highlight-dialog-mark {
     animation: none !important;
     transition: none !important;
   }
@@ -1809,7 +1804,257 @@
 .motion-reduced .comments-section,
 .motion-reduced .highlight-dialog-backdrop,
 .motion-reduced .highlight-dialog,
-.motion-reduced .highlight-dialog-orbit {
+.motion-reduced .highlight-dialog-mark {
   animation: none !important;
   transition: none !important;
+}
+
+
+/* helios-social-premium — Instagram-packed feed column */
+.lifestyle-page,
+.lifestyle-shell,
+.lifestyle-layout {
+  background: transparent !important;
+}
+.lifestyle-feed,
+.twitter-feed {
+  max-width: 580px;
+  margin-inline: auto;
+}
+.lifestyle-composer,
+.lifestyle-composer.liquid-glass {
+  border-radius: 14px !important;
+  border: 1px solid var(--glass-stroke) !important;
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: var(--glass-shadow);
+  margin-bottom: 8px;
+}
+.lifestyle-post,
+.post-card,
+.feed-post {
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--glass-stroke) !important;
+  background: transparent !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none !important;
+  margin-bottom: 0;
+  transition:
+    background var(--dur-quick) var(--ease-move),
+    filter var(--dur-quick) var(--ease-move);
+}
+.lifestyle-post:hover,
+.post-card:hover,
+.feed-post:hover {
+  transform: none;
+  border-color: var(--glass-stroke) !important;
+  box-shadow: none !important;
+  filter: brightness(1.01);
+  background: color-mix(in srgb, var(--helios-surface) 55%, transparent) !important;
+}
+.lifestyle-tabs button.is-active,
+.feed-tabs button.is-active {
+  color: var(--helios-accent) !important;
+  border-bottom-color: var(--helios-accent) !important;
+}
+.composer-publish.liquid-glass-btn,
+button.liquid-glass-btn.is-primary {
+  border-radius: 999px;
+}
+/* Soften dense category chrome when present */
+.lifestyle-category-rail,
+.category-filters,
+.composer-category-row {
+  opacity: 0.72;
+}
+.home-solar,
+.solar-card,
+.lifestyle-solar {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-stroke) !important;
+  backdrop-filter: blur(14px);
+}
+
+/* Social feed — glass Moments style (not a full X clone) */
+.lifestyle-topbar {
+  grid-template-columns: minmax(160px, 1fr) minmax(200px, 420px) auto;
+  gap: 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--glass-stroke);
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+.lifestyle-title strong { font-size: 18px; letter-spacing: -0.03em; color: var(--helios-text); }
+.lifestyle-title small { font-size: 12px; max-width: 42ch; white-space: normal; }
+.lifestyle-search {
+  border: 1px solid var(--glass-stroke) !important;
+  background: var(--glass-bg-strong) !important;
+  color: var(--codex-gray);
+}
+.lifestyle-search input { font-size: 13px; }
+
+.feed-home-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 4px;
+  border: 1px solid var(--glass-stroke);
+  border-radius: 999px;
+  background: var(--glass-bg);
+}
+.feed-home-tabs button {
+  flex: 1;
+  min-height: 32px;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--helios-muted) !important;
+  font-size: 13px !important;
+  font-weight: 650;
+}
+.feed-home-tabs button.is-active {
+  background: color-mix(in srgb, var(--codex-gray) 16%, white) !important;
+  color: var(--helios-text) !important;
+  box-shadow: inset 0 0 0 1px var(--glass-stroke);
+  border-bottom: 0 !important;
+}
+
+.tweet-post,
+.lifestyle-post.tweet-post {
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--glass-stroke) !important;
+  background: transparent !important;
+  padding: 10px 12px 8px !important;
+}
+.tweet-actions button,
+.post-actions button {
+  color: var(--codex-gray) !important;
+  font-size: 12px !important;
+}
+.tweet-actions button:hover,
+.post-actions button:hover {
+  color: var(--helios-accent) !important;
+  background: color-mix(in srgb, var(--helios-accent) 10%, transparent) !important;
+}
+.tweet-actions button.is-liked,
+.tweet-actions .is-liked {
+  color: var(--helios-accent) !important;
+}
+
+.composer-quick-actions {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 8px;
+  grid-template-columns: none !important;
+}
+.composer-quick-actions button,
+.composer-kind-row button,
+.feed-filter-scroll button,
+.lifestyle-side-nav button {
+  min-height: 34px;
+  font-size: 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--glass-stroke) !important;
+  background: var(--glass-bg) !important;
+  color: var(--codex-gray) !important;
+}
+.composer-quick-actions button:hover,
+.feed-filter-scroll button.is-active,
+.lifestyle-side-nav button.is-active {
+  color: var(--helios-text) !important;
+  border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--glass-stroke)) !important;
+  background: color-mix(in srgb, var(--helios-accent) 10%, white) !important;
+}
+
+.lifestyle-left,
+.lifestyle-side-nav,
+.lifestyle-profile-shortcut {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-stroke) !important;
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(14px);
+}
+.lifestyle-profile-shortcut,
+.lifestyle-side-nav {
+  padding: 8px;
+}
+.lifestyle-side-nav { gap: 2px; }
+.lifestyle-feed.twitter-feed {
+  max-width: none;
+  width: min(580px, 100%);
+  border-left: 1px solid var(--glass-stroke);
+  border-right: 1px solid var(--glass-stroke);
+}
+
+@media (max-width: 900px) {
+  .lifestyle-layout { grid-template-columns: minmax(0, 1fr); padding: 6px 0 88px; }
+  .lifestyle-left { display: none; }
+  .lifestyle-topbar { grid-template-columns: 1fr auto; }
+  .lifestyle-search { grid-column: 1 / -1; }
+  .lifestyle-feed.twitter-feed { border-left: 0; border-right: 0; width: 100%; }
+  .tweet-post .post-media {
+    width: calc(100% + 62px);
+    margin-left: -50px;
+    margin-right: -12px;
+  }
+}
+
+/* WorkBuddy collaboration strip */
+.workbuddy-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+.workbuddy-strip > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.workbuddy-strip > header strong {
+  font-size: 13px;
+  letter-spacing: -0.02em;
+}
+.workbuddy-strip > header small {
+  color: var(--codex-gray);
+  font-size: 12px;
+}
+.workbuddy-strip-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.workbuddy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  flex-shrink: 0;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid var(--glass-stroke);
+  border-radius: 999px;
+  background: var(--glass-bg-strong);
+  color: var(--helios-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+.workbuddy-chip.is-you {
+  border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--glass-stroke));
+  color: var(--helios-accent);
+}
+.collab-actions button span {
+  font-size: 12px;
+}
+.collab-actions button.is-friend-pending {
+  color: var(--helios-accent);
+  opacity: 0.85;
 }

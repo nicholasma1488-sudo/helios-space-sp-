@@ -5,6 +5,7 @@
   Chapter 12 (Design System) + exact token reference pages 359-368
   Raw tokens are fixed; semantic tokens carry meaning across themes.
 */
+@import "./ui/primitives.css";
 
 :root {
   /* ── Raw graphite neutral scale (P359) ── */
@@ -32,32 +33,39 @@
   --s-danger: #ff6b6b;
   --s-collab: #b794ff;
 
-  /* ── Semantic tokens — dark theme default ── */
-  --helios-bg:       var(--graphite-950);
-  --helios-surface:  var(--graphite-900);
-  --helios-surface2: var(--graphite-800);
-  --helios-surface3: var(--graphite-700);
-  --helios-border:   var(--divider);
+  /* ── Semantic tokens — artistic liquid glass (Claude × Gemini × Codex) ── */
+  --helios-bg:       #eceff3;
+  --helios-surface:  rgba(255, 255, 255, 0.55);
+  --helios-surface2: rgba(255, 255, 255, 0.72);
+  --helios-surface3: rgba(236, 239, 243, 0.92);
+  --helios-border:   rgba(90, 98, 112, 0.16);
 
-  --helios-text:  var(--white);
-  --helios-text2: var(--text-secondary);
-  --helios-muted: var(--text-tertiary);
+  --helios-text:  #1c1917;
+  --helios-text2: #4b5563;
+  --helios-muted: #6b7280;
 
-  /* Primary accent (violet) and info accent (blue) */
-  --helios-accent:  #8576f5;
-  --helios-accent2: #4fc3f7;
+  /* Claude warm terracotta + Gemini soft blue */
+  --helios-accent:  #c96442;
+  --helios-accent2: #5b8def;
 
-  /* Foregrounds for filled semantic colours. */
-  --helios-on-accent:  #0f1012;
-  --helios-on-accent2: #0f1012;
-  --helios-on-success: #0f1012;
+  --helios-on-accent:  #fffaf7;
+  --helios-on-accent2: #f8fbff;
+  --helios-on-success: #ffffff;
 
-  --helios-solar:   var(--solar-400);
-  --helios-success: var(--s-success);
-  --helios-info:    var(--s-info);
-  --helios-warning: var(--s-warning);
-  --helios-danger:  var(--s-danger);
-  --helios-collab:  var(--s-collab);
+  --helios-solar:   #d4a017;
+  --helios-success: #3d8b6e;
+  --helios-info:    #5b8def;
+  --helios-warning: #c47a2c;
+  --helios-danger:  #c2414b;
+  --helios-collab:  #7a8bb8;
+
+  /* Glass / Codex grey */
+  --glass-bg:        rgba(255, 255, 255, 0.42);
+  --glass-bg-strong: rgba(255, 255, 255, 0.68);
+  --glass-stroke:    rgba(255, 255, 255, 0.62);
+  --glass-shadow:    0 12px 40px rgba(90, 98, 112, 0.12), inset 0 1px 0 rgba(255,255,255,0.7);
+  --codex-gray:      rgba(90, 98, 112, 0.82);
+  --codex-gray-soft: rgba(120, 128, 140, 0.42);
 
   /* ── Radius scale (P361) ── */
   --radius-xs: 4px;
@@ -66,30 +74,49 @@
   --radius-lg: 16px;
   --radius-full: 9999px;
 
-  /* ── Motion tokens (P362) ── */
+  /* ── Motion tokens ── */
   --dur-instant:    80ms;
+  --dur-press:      100ms;
   --dur-quick:      160ms;
-  --dur-standard:   240ms;
-  --dur-deliberate: 360ms;
+  --dur-bounce:     220ms;
+  --dur-standard:   200ms;
+  --dur-deliberate: 280ms;
   --ease-enter:  cubic-bezier(.16, 1, .3, 1);
   --ease-exit:   cubic-bezier(.7, 0, .84, 0);
   --ease-move:   cubic-bezier(.4, 0, .2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.45, 0.64, 1);
 
-  /* ── Typography scale (P360) ── */
-  --type-display-lg: 600 40px/44px 'Inter', system-ui, sans-serif;
-  --type-display-md: 600 32px/38px 'Inter', system-ui, sans-serif;
-  --type-title-lg:   600 28px/34px 'Inter', system-ui, sans-serif;
-  --type-title-md:   600 24px/30px 'Inter', system-ui, sans-serif;
-  --type-heading-lg: 600 20px/26px 'Inter', system-ui, sans-serif;
-  --type-heading-md: 600 17px/23px 'Inter', system-ui, sans-serif;
-  --type-heading-sm: 600 15px/20px 'Inter', system-ui, sans-serif;
-  --type-label:      600 13px/16px 'Inter', system-ui, sans-serif;
-  --type-body-lg:    400 17px/25px 'Inter', system-ui, sans-serif;
-  --type-body-md:    400 15px/22px 'Inter', system-ui, sans-serif;
-  --type-body-sm:    400 13px/19px 'Inter', system-ui, sans-serif;
-  --type-caption:    400 11px/16px 'Inter', system-ui, sans-serif;
-  --type-mono-md:    400 13px/19px 'Fira Code', monospace;
-  --type-mono-sm:    400 11px/16px 'Fira Code', monospace;
+  /* ── Spacing scale ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* ── Blur / shadow ── */
+  --blur-glass: 16px;
+  --shadow-glass: var(--glass-shadow);
+  --shadow-lift: 0 12px 28px rgba(28, 25, 23, 0.10), inset 0 1px 0 rgba(255,255,255,0.7);
+
+  /* ── Typography scale ── */
+  --font-sans: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Source Serif 4', 'Source Sans 3', Georgia, serif;
+  --type-display-lg: 600 40px/44px var(--font-display);
+  --type-display-md: 600 32px/38px var(--font-display);
+  --type-title-lg:   600 28px/34px var(--font-display);
+  --type-title-md:   600 24px/30px var(--font-sans);
+  --type-heading-lg: 600 20px/26px var(--font-sans);
+  --type-heading-md: 600 17px/23px var(--font-sans);
+  --type-heading-sm: 600 15px/20px var(--font-sans);
+  --type-label:      600 13px/16px var(--font-sans);
+  --type-body-lg:    400 17px/25px var(--font-sans);
+  --type-body-md:    400 15px/22px var(--font-sans);
+  --type-body-sm:    400 13px/19px var(--font-sans);
+  --type-caption:    400 11px/16px var(--font-sans);
+  --type-mono-md:    400 13px/19px 'Fira Code', ui-monospace, monospace;
+  --type-mono-sm:    400 11px/16px 'Fira Code', ui-monospace, monospace;
 }
 
 /* ── High-contrast theme (P330, P357) ── */
@@ -102,8 +129,8 @@
   --helios-text:     #ffffff;
   --helios-text2:    #e4e4e4;
   --helios-muted:    #c0c0c0;
-  --helios-accent:   #a596ff;
-  --helios-accent2:  #7fd6ff;
+  --helios-accent:   #c96442;
+  --helios-accent2:  #5b8def;
   --helios-on-accent:  #000000;
   --helios-on-accent2: #000000;
   --helios-on-success: #000000;
@@ -137,7 +164,7 @@ html, body, #root { height: 100%; }
 body {
   margin: 0;
   font: var(--type-body-md);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   background: var(--helios-bg);
   color: var(--helios-text);
   overflow: hidden;
@@ -216,6 +243,19 @@ body {
   50%       { opacity: 1; transform: translateY(-3px); }
 }
 
+.helios-typing-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helios-typing-dot { animation: none; opacity: 0.7; }
+}
+
+.motion-reduced .helios-typing-dot {
+  animation: none;
+  opacity: 0.7;
+}
+
 /* ── Elevation (P339, P361) ── */
 .elevation-1 { border: 1px solid var(--helios-border); }
 .elevation-2 { box-shadow: 0 8px 24px rgba(0,0,0,.18); }
@@ -280,12 +320,29 @@ body {
   }
 }
 
-/* ── Glass card (P339) ── */
+/* ── Glass card (light translucent gray) ── */
 .glass-card {
-  background: rgba(23, 24, 25, 0.72);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--helios-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--blur-glass)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.2);
+  border: 1px solid var(--glass-stroke);
   border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-lift {
+  transition:
+    transform var(--dur-quick) var(--ease-enter),
+    box-shadow var(--dur-quick) var(--ease-move),
+    border-color var(--dur-quick) var(--ease-move),
+    filter var(--dur-quick) var(--ease-move);
+}
+.glass-lift:hover,
+.glass-lift:focus-within {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--helios-accent) 22%, var(--glass-stroke));
+  box-shadow: var(--shadow-lift);
+  filter: brightness(1.02);
 }
 
 /* ── Touch target minimums (P366: 44pt mobile, 32pt pointer) ── */
@@ -353,7 +410,6 @@ button, [role="button"], a, input, select, textarea {
   min-width: 0;
   flex: 1;
   overflow: hidden;
-  will-change: transform, opacity;
 }
 
 .helios-view-frame.view-forward {
@@ -365,13 +421,13 @@ button, [role="button"], a, input, select, textarea {
 }
 
 @keyframes helios-view-forward {
-  from { opacity: 0; transform: translateX(16px) scale(.995); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes helios-view-backward {
-  from { opacity: 0; transform: translateX(-16px) scale(.995); }
-  to { opacity: 1; transform: translateX(0) scale(1); }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .helios-rail-btn {
@@ -390,7 +446,7 @@ button, [role="button"], a, input, select, textarea {
   inset: 0;
   border-radius: inherit;
   background: var(--helios-accent);
-  box-shadow: 0 7px 22px rgba(133, 118, 245, .22);
+  box-shadow: 0 6px 16px rgba(201, 100, 66, .18);
   animation: rail-indicator-in var(--dur-standard) var(--ease-enter) both;
 }
 
@@ -435,10 +491,26 @@ button, [role="button"], a, input, select, textarea {
 }
 
 /* ── Authenticated shell additions ── */
+.helios-shell {
+  position: relative;
+}
+
 .helios-internal-frame {
   background:
-    radial-gradient(circle at 78% -20%, rgba(133, 118, 245, .055), transparent 36%),
+    radial-gradient(circle at 82% -18%, rgba(201, 100, 66, .05), transparent 38%),
+    radial-gradient(circle at 8% 0%, rgba(91, 141, 239, .05), transparent 34%),
     var(--helios-bg);
+}
+
+.helios-side-rail {
+  position: relative;
+  z-index: 40;
+}
+
+.helios-shell.is-rail-collapsed .helios-internal-frame {
+  /* main content fills after rail collapses */
+  min-width: 0;
+  flex: 1;
 }
 
 .helios-rail-space-context {
@@ -448,10 +520,11 @@ button, [role="button"], a, input, select, textarea {
   height: 38px;
   margin-top: 7px;
   place-items: center;
-  border: 1px solid var(--helios-border);
+  border: 1px solid var(--glass-stroke);
   border-radius: 12px;
-  background: var(--helios-surface2);
-  color: var(--helios-accent);
+  background: var(--glass-bg);
+  color: var(--codex-gray);
+  box-shadow: var(--glass-shadow);
 }
 
 .helios-rail-space-context span { font-size: 15px; }
@@ -463,7 +536,6 @@ button, [role="button"], a, input, select, textarea {
   height: 5px;
   border-radius: 50%;
   background: var(--helios-success);
-  box-shadow: 0 0 8px var(--helios-success);
 }
 
 .helios-floating-agent {
@@ -475,17 +547,28 @@ button, [role="button"], a, input, select, textarea {
   width: 48px;
   height: 48px;
   place-items: center;
-  border: 1px solid rgba(189, 183, 255, .28);
+  border: 1px solid var(--glass-stroke);
   border-radius: 16px;
-  background: linear-gradient(145deg, rgba(133, 118, 245, .92), rgba(79, 195, 247, .72));
-  color: #fff;
-  box-shadow: 0 16px 45px rgba(0, 0, 0, .42), 0 0 28px rgba(133, 118, 245, .18);
+  background:
+    linear-gradient(160deg, rgba(255,255,255,0.72), rgba(255,255,255,0.22)),
+    color-mix(in srgb, var(--helios-accent) 82%, white);
+  color: var(--helios-on-accent);
+  box-shadow: 0 12px 32px rgba(28, 25, 23, .14);
   cursor: pointer;
-  transition: right var(--dur-deliberate) var(--ease-enter), transform var(--dur-quick) var(--ease-enter), box-shadow var(--dur-quick);
+  transition:
+    right var(--dur-deliberate) var(--ease-enter),
+    transform var(--dur-bounce) var(--ease-bounce),
+    box-shadow var(--dur-quick);
 }
 
-.helios-floating-agent:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 20px 55px rgba(0, 0, 0, .48), 0 0 36px rgba(133, 118, 245, .25); }
-.helios-floating-agent:active { transform: scale(.94); }
+.helios-floating-agent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(201, 100, 66, .18);
+}
+.helios-floating-agent:active {
+  transform: scale(.94);
+  transition-duration: var(--dur-press);
+}
 .helios-floating-agent.is-open { right: 380px; }
 .helios-floating-agent > span { display: grid; place-items: center; }
 .helios-floating-agent > i { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border: 2px solid var(--helios-bg); border-radius: 50%; background: var(--helios-success); }
@@ -493,4 +576,89 @@ button, [role="button"], a, input, select, textarea {
 @media (max-width: 720px) {
   .helios-floating-agent,
   .helios-floating-agent.is-open { right: 14px; bottom: 14px; width: 45px; height: 45px; border-radius: 15px; }
+}
+
+
+/* ── Liquid Glass surfaces & bounce buttons ── */
+body {
+  background:
+    radial-gradient(1200px 600px at 12% -10%, rgba(201, 100, 66, 0.10), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(91, 141, 239, 0.12), transparent 50%),
+    linear-gradient(180deg, rgba(90, 98, 112, 0.06), transparent 42%),
+    var(--helios-bg);
+}
+
+.liquid-glass,
+.helios-shell nav,
+.helios-mobile-nav,
+.suite-tile-guide,
+.home-section,
+.home-file-card,
+.authenticated-topbar,
+.helios-internal-frame > .authenticated-topbar {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-stroke);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.liquid-glass-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-stroke);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.72), rgba(255,255,255,0.28)),
+    var(--glass-bg);
+  color: var(--helios-text);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  font: var(--type-label);
+  cursor: pointer;
+  transition:
+    transform var(--dur-bounce) var(--ease-bounce),
+    box-shadow var(--dur-quick) ease,
+    background var(--dur-quick) ease,
+    border-color var(--dur-quick) ease;
+  transform: translateZ(0) translateY(0) scale(1);
+}
+.liquid-glass-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--helios-accent) 35%, var(--glass-stroke));
+  box-shadow: 0 14px 36px rgba(201, 100, 66, 0.12), inset 0 1px 0 rgba(255,255,255,0.75);
+}
+.liquid-glass-btn:active {
+  transform: scale(0.95);
+  transition-duration: var(--dur-press);
+  transition-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
+}
+.liquid-glass-btn.is-primary,
+.liquid-glass-btn[data-variant="primary"] {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08)),
+    color-mix(in srgb, var(--helios-accent) 88%, white);
+  color: var(--helios-on-accent);
+  border-color: color-mix(in srgb, var(--helios-accent) 55%, white);
+}
+.liquid-glass-btn.is-primary:hover,
+.liquid-glass-btn[data-variant="primary"]:hover {
+  box-shadow: 0 14px 36px rgba(201, 100, 66, 0.22), inset 0 1px 0 rgba(255,255,255,0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass-btn,
+  .liquid-glass-btn:active {
+    transition: opacity 120ms ease !important;
+    transform: none !important;
+  }
+}
+
+.motion-reduced .liquid-glass-btn:active {
+  transform: none !important;
 }

@@ -1,0 +1,261 @@
+HELIOS SPACE — DESIGN LANGUAGE
+Social Collaboration Space
+Version: 1.0
+Source: product direction (Liquid Glass × Codex × Claude/Gemini)
+
+
+============================================================
+1. PRODUCT FEEL
+============================================================
+
+Helios is not an Office suite, not a study dashboard, and not a
+hobbies marketplace.
+
+It is a premium social collaboration space:
+  - artistic / literary (文艺)
+  - calm, translucent, high-end
+  - create → share → collaborate in one place
+
+Mental model:
+  Space (Lifestyle)  ≈  Instagram × X
+  Messages           ≈  iMessage
+  Create (Apps)      ≈  a few tools only (single-digit)
+  Me                 ≈  account / settings
+
+
+============================================================
+2. DESIGN DNA (THREE REFERENCES MIXED)
+============================================================
+
+A) APPLE LIQUID GLASS
+   - frosted glass surfaces
+   - soft edges, light refraction, top highlight line
+   - translucent layers over a warm mist background
+   - buttons compress on press, then spring back (bounce)
+
+B) CODEX TRANSLUCENT GRAY + LOGO
+   - cool mist-gray glass
+   - restrained tool aesthetic (not neon, not playful toys)
+   - logo: translucent gray emblem + thin stroke
+   - no glowing orbs, no orbit theater in the daily shell
+
+C) CLAUDE × GEMINI COLOR TEMPERATURE
+   - Claude: warm terracotta / clay accent
+   - Gemini: soft sky-blue secondary accent
+   - together: warm + cool contrast, never AI purple glow
+
+
+============================================================
+3. COLOR TOKENS
+============================================================
+
+Backgrounds
+  --helios-bg            #f4f1ec   warm mist paper
+  --helios-surface       rgba(255,255,255,0.62)   glass
+  --helios-surface2      rgba(255,255,255,0.78)
+  --helios-surface3      rgba(245,241,235,0.92)
+  --helios-border        rgba(28,25,23,0.10)
+
+Text
+  --helios-text          #1c1917   ink
+  --helios-text2         #57534e
+  --helios-muted         #78716c
+
+Accents (Claude × Gemini)
+  --helios-accent        #c96442   Claude terracotta (primary)
+  --helios-accent2       #5b8def   Gemini soft blue
+  --helios-on-accent     #fffaf7
+  --helios-on-accent2    #f8fbff
+
+Status
+  --helios-success       #3d8b6e
+  --helios-info          #5b8def
+  --helios-warning       #c47a2c
+  --helios-danger        #c2414b
+  --helios-solar         #d4a017
+  --helios-collab        #7a8bb8
+
+Glass / Codex
+  --glass-bg             rgba(255,255,255,0.48)
+  --glass-bg-strong      rgba(255,255,255,0.72)
+  --glass-stroke         rgba(255,255,255,0.55)
+  --glass-shadow         0 10px 40px rgba(28,25,23,0.08),
+                         inset 0 1px 0 rgba(255,255,255,0.65)
+  --codex-gray           rgba(90,98,112,0.72)
+  --codex-gray-soft      rgba(120,128,140,0.35)
+
+Atmosphere (page wash)
+  soft terracotta radial haze (top-left)
+  soft blue radial haze (top-right)
+  over warm mist base — never flat single white, never purple neon
+
+
+============================================================
+4. LIQUID GLASS MATERIALS
+============================================================
+
+Surface recipe
+  background:      var(--glass-bg) or gradient white → clear
+  border:          1px solid var(--glass-stroke)
+  backdrop-filter: blur(16–20px) saturate(1.2–1.3)
+  box-shadow:      soft outer shadow + inset top highlight
+  radius:          16–22px for cards; pill (999px) for buttons
+
+Use liquid glass on
+  - primary buttons
+  - nav rail / mobile nav
+  - Create tiles
+  - Space composer
+  - feed cards
+  - logo mark
+
+Do NOT use liquid glass for
+  - long body text blocks (readability first)
+  - dense data tables (keep clear)
+  - error states that need hard contrast
+
+
+============================================================
+5. LIQUID GLASS BUTTON (BOUNCE)
+============================================================
+
+Class: .liquid-glass-btn
+
+Default
+  frosted fill + light stroke + inset highlight
+  calm ink text (or on-accent for primary)
+
+Hover
+  slightly warmer border (mix accent into stroke)
+  shadow softens upward
+
+Active / press
+  scale to ~0.94 quickly (~80ms)
+  on release: spring rebound to 1.0
+  spring curve: cubic-bezier(0.34, 1.56, 0.64, 1)
+  rebound window: ~180–280ms
+
+Primary variant (.is-primary)
+  terracotta glass fill (accent)
+  light text
+  warmer bounce shadow
+
+Reduced motion
+  no scale bounce — opacity only
+
+
+============================================================
+6. LOGO
+============================================================
+
+Mark
+  rounded square
+  translucent gray Codex glass fill
+  thin light stroke
+  subtle inset highlight
+  glyph: ✦ in codex gray (no neon gradient)
+
+Wordmark
+  "helios"  — medium weight, ink
+  "space"   — bold, codex gray, slightly translucent
+  letter-spacing tight (−0.03em)
+  no rainbow gradient text
+
+
+============================================================
+7. TYPOGRAPHY
+============================================================
+
+Feel: literary, quiet, premium — not default AI Inter-only look.
+
+UI / body
+  Segoe UI / PingFang SC / Hiragino Sans GB / Noto Sans SC / system-ui
+
+Hierarchy
+  titles: generous tracking-tight, calm weight
+  body: readable ink on mist
+  captions: muted stone gray
+
+Voice
+  fewer words, more whitespace
+  one idea per section
+  no “Subjects / Hobbies / Solar dashboard” tone
+
+
+============================================================
+8. LAYOUT & IA (SIMPLIFIED UI)
+============================================================
+
+Primary nav (keep it tiny)
+  Space · Create · Messages · Home · Me
+
+Space (Lifestyle)
+  Instagram × X premium feed
+  For you / Following
+  light composer: text + media + go-live post
+  live collab appears as a feed post (no separate Live tab)
+  clean post card: avatar, name, body, media, actions
+
+Create
+  single-digit Mini Apps only (target 5):
+    墨语 / 小墨
+    随身本 / 小本
+    格间 / 小格
+    今日事 / 小办
+    搭子码 / 小码
+  each tile: icon + name + 小姐姐 tip
+  no Orbit paywall walls on the first screen
+  no hobbies / subjects catalog
+
+Removed from first-class UI
+  Explore maze
+  Subjects / Hobbies navigation
+  separate Live page
+  separate Projects page
+  giant mini-app warehouse
+
+
+============================================================
+9. MOTION LANGUAGE
+============================================================
+
+Purpose: presence and hierarchy — not noise.
+
+Allowed
+  liquid button bounce
+  short fade/slide for view enter (~160–240ms)
+  soft glass hover lift
+
+Forbidden
+  orbit fireworks
+  multi-layer neon glow
+  constant pulsing AI orbs
+  long decorative loops in the logged-in shell
+
+
+============================================================
+10. DO / DON'T
+============================================================
+
+DO
+  translucent gray glass + warm terracotta + soft blue
+  bounce on glass presses
+  Instagram/X-level social calm
+  single-digit Create tools
+  one clear action per screen
+
+DON'T
+  purple AI startup gradients
+  Microsoft-365 corporate blue as the brand soul
+  hobbies / subjects labyrinths
+  empty or locked tool tiles on the home grid
+  make users explore the product instead of using it
+
+
+============================================================
+11. ONE-LINE BRAND
+============================================================
+
+Helios Space is a liquid-glass social collaboration room —
+warm like Claude, lucid like Gemini, translucent like Codex —
+where people create a little, share beautifully, and work together live.

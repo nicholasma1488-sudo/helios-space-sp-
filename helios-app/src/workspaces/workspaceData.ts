@@ -111,7 +111,15 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
     const slides = (decks[appKind] || [
       { title: 'Untitled presentation', body: 'A clear idea, one slide at a time.' },
       { title: 'The important context', body: 'Add the evidence your audience needs.' },
-    ]).map(slide => ({ id: crypto.randomUUID(), notes: '', ...slide }))
+    ]).map(slide => ({
+      id: crypto.randomUUID(),
+      notes: '',
+      layout: 'title-content' as const,
+      theme: 'terracotta-glass' as const,
+      shapes: [],
+      transition: 'none' as const,
+      ...slide,
+    }))
     return { slides, activeSlide: 0 }
   }
 
@@ -213,20 +221,76 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
       'content-calendar': ['Ideas', 'Drafting', 'Scheduled', 'Published'],
       'event-planner': ['To arrange', 'Confirmed', 'Day-of', 'Done'],
       'game-strategy': ['Goals', 'Tactics', 'In play', 'Review'],
-      checklist: ['To do', 'Doing', 'Done'],
+      checklist: ['To do', 'Done'],
+      lists: ['To do', 'Doing', 'Done'],
       'swot-board': ['Strengths', 'Weaknesses', 'Opportunities', 'Threats'],
       'practice-routine': ['Warmup', 'Focus', 'Cooldown'],
       'goal-tracker': ['This week', 'In progress', 'Won'],
-      'homework-board': ['Due', 'Doing', 'Need help', 'Handed in'],
+      'homework-board': ['To do', 'Doing', 'Done'],
+      'planner-board': ['To do', 'Doing', 'Done'],
       'club-planner': ['Ideas', 'Planning', 'Running', 'Done'],
     }
     const names = boards[appKind] || ['To do', 'Doing', 'Done']
+    const starters: Record<string, Array<{ text: string; due?: string; owner?: string }>> = {
+      'homework-board': [{ text: 'Math worksheet — chapter 4', due: '', owner: 'You' }, { text: 'Read history pages 12–18', due: '', owner: '' }],
+      'planner-board': [{ text: 'Ship this week’s milestone', due: '', owner: 'You' }],
+      lists: [{ text: 'First checklist item', due: '', owner: 'You' }],
+      checklist: [{ text: 'First item', due: '', owner: '' }],
+    }
+    const starterCards = starters[appKind] || [{ text: 'Define the next meaningful outcome' }]
     return {
       columns: names.map((name, index) => ({
         id: crypto.randomUUID(),
         name,
-        cards: index === 0 ? [{ id: crypto.randomUUID(), text: 'Define the next meaningful outcome' }] : [],
+        cards: index === 0
+          ? starterCards.map(card => ({ id: crypto.randomUUID(), text: card.text, due: card.due || '', owner: card.owner || '' }))
+          : [],
       })),
+      filter: '',
+    }
+  }
+
+  if (kind === 'calendar') {
+    const today = new Date()
+    const iso = (offset: number) => {
+      const next = new Date(today)
+      next.setDate(today.getDate() + offset)
+      return next.toISOString().slice(0, 10)
+    }
+    return {
+      view: 'month',
+      focusDate: iso(0),
+      events: [
+        { id: crypto.randomUUID(), title: 'Collab sync', date: iso(0), time: '15:00', notes: 'Agree next milestone' },
+        { id: crypto.randomUUID(), title: 'Checkpoint', date: iso(2), time: '10:00', notes: 'Review progress' },
+      ],
+    }
+  }
+
+  if (kind === 'mail') {
+    return {
+      to: '',
+      cc: '',
+      subject: '',
+      body: 'Hi,\n\n\n\nThanks,\n',
+      savedAt: '',
+    }
+  }
+
+  if (kind === 'weave') {
+    return {
+      html: '<h1>Weave page</h1><h2>Goals</h2><p>What are we trying to finish together?</p><h2>Decisions</h2><p>Capture choices here so nobody re-litigates them.</p><h2>To-dos</h2><ul><li>Decide today</li><li>Whose input is still needed</li></ul>',
+      sections: [
+        { id: 'goals', title: 'Goals' },
+        { id: 'decisions', title: 'Decisions' },
+        { id: 'todos', title: 'To-dos' },
+      ],
+      presence: [
+        { id: 'you', name: 'You', color: '#c96442' },
+        { id: 'maya', name: 'Maya', color: '#5b8def' },
+        { id: 'sam', name: 'Sam', color: '#7a8bb8' },
+      ],
+      activeSectionId: 'goals',
     }
   }
 
@@ -242,11 +306,23 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
 
   if (kind === 'notebook' && appKind === 'notebook') {
     return {
-      title: 'Notebook',
-      cells: [
-        { id: 'today', kind: 'markdown', body: '# Today\nWhat are you working on?' },
-        { id: 'open', kind: 'markdown', body: '## Open threads\n' },
-        { id: 'next', kind: 'markdown', body: '## Next\n' },
+      title: 'Folio',
+      activePageId: 'today',
+      pages: [
+        {
+          id: 'today',
+          title: 'Today',
+          body: '# Today\nKey points from class:\n\n- ',
+          tags: ['daily'],
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'todo',
+          title: 'To do later',
+          body: '## To do later\n- [ ] ',
+          tags: ['follow-up'],
+          updatedAt: new Date().toISOString(),
+        },
       ],
     }
   }
@@ -334,11 +410,14 @@ function defaultData(appKind: string, legacyContent = ''): Record<string, unknow
   }
 }
 
-export function resolveWorkspaceKind(appKind: string): 'code' | 'spreadsheet' | 'presentation' | 'drawing' | 'math' | 'survey' | 'board' | 'reader' | 'notebook' | 'writing' | 'stocks' {
+export function resolveWorkspaceKind(appKind: string): 'code' | 'spreadsheet' | 'presentation' | 'drawing' | 'math' | 'survey' | 'board' | 'calendar' | 'mail' | 'weave' | 'reader' | 'notebook' | 'writing' | 'stocks' {
   if (appKind === 'stocks') return 'stocks'
+  if (appKind === 'mail-draft') return 'mail'
+  if (appKind === 'calendar-plan') return 'calendar'
+  if (appKind === 'loop-page') return 'weave'
   if ([
-    'web-code', 'api-playground', 'game-prototype', 'web-prototype', 'algorithm-lab', 'data-script',
-  ].includes(appKind)) return 'code'
+    'code', 'web-code', 'api-playground', 'game-prototype', 'web-prototype', 'algorithm-lab', 'data-script',
+  ].includes(appKind) || appKind.endsWith('-code')) return 'code'
 
   if ([
     'spreadsheet', 'data-visualization', 'budget-sheet', 'gradebook', 'stats-lab', 'experiment-tracker',
@@ -368,6 +447,7 @@ export function resolveWorkspaceKind(appKind: string): 'code' | 'spreadsheet' | 
   if ([
     'project-board', 'sprint-board', 'kanban', 'roadmap', 'bug-tracker', 'research-board', 'content-calendar',
     'event-planner', 'game-strategy', 'club-planner', 'checklist', 'swot-board', 'practice-routine', 'goal-tracker',
+    'homework-board', 'planner-board', 'lists',
   ].includes(appKind) || appKind.endsWith('-board') || appKind.includes('kanban') || appKind.includes('checklist')) return 'board'
 
   if (['reader', 'book-creator'].includes(appKind)) return 'reader'

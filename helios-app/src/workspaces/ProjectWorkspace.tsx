@@ -12,9 +12,9 @@ import { getMiniApp, getSpaceDefinition } from '../product/catalog'
 import { getSuiteApp } from '../product/miniApps'
 import { useApp } from '../store/appStore'
 import { CodeWorkspace } from './CodeWorkspace'
-import { DrawingWorkspace, MathWorkspace, ProjectBoardWorkspace, SurveyWorkspace } from './CreativeWorkspaces'
+import { DrawingWorkspace, MathWorkspace, ProjectBoardWorkspace, SurveyWorkspace, CalendarWorkspace } from './CreativeWorkspaces'
 import { NotebookWorkspace } from './NotebookWorkspace'
-import { PresentationWorkspace, SpreadsheetWorkspace, WritingWorkspace } from './ProductivityWorkspaces'
+import { MailWorkspace, PresentationWorkspace, SpreadsheetWorkspace, WeaveWorkspace, WritingWorkspace } from './ProductivityWorkspaces'
 import { StocksWorkspace } from './StocksWorkspace'
 import { RepoBoundWorkspace } from './RepoFrame'
 import { askHeliosWithContext, openOrCreateProjectChat, publishLiveReplay } from '../product/flow'
@@ -391,7 +391,10 @@ function WorkspaceEditor({ project, payload, canEdit, onChange, onCheckpoint, on
   else if (kind === 'drawing') editor = <DrawingWorkspace {...props} appKind={payload.appKind} />
   else if (kind === 'math') editor = <MathWorkspace {...props} />
   else if (kind === 'survey') editor = <SurveyWorkspace {...props} />
-  else if (kind === 'board') editor = <ProjectBoardWorkspace {...props} />
+  else if (kind === 'board') editor = <ProjectBoardWorkspace {...props} appKind={payload.appKind} />
+  else if (kind === 'calendar') editor = <CalendarWorkspace {...props} />
+  else if (kind === 'mail') editor = <MailWorkspace {...props} />
+  else if (kind === 'weave') editor = <WeaveWorkspace {...props} />
   else if (kind === 'writing') editor = <RepoBoundWorkspace project={project} canEdit={canEdit} kind="writing" data={payload.data} onChange={props.onChange}><WritingWorkspace {...props} /></RepoBoundWorkspace>
   else if (kind === 'stocks') editor = <StocksWorkspace data={payload.data} onChange={props.onChange} />
   else editor = <WritingWorkspace {...props} />

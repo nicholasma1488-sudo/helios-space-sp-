@@ -4,7 +4,20 @@ The production server uses versioned releases under `/opt/helios-space/releases`
 a `current` symlink, and the `helios-space.service` systemd unit.
 
 Persistent SQLite data lives in `/var/lib/helios-space`, outside every release.
-The Node service binds to `127.0.0.1:8080`; Caddy owns public HTTP/HTTPS.
+The Node service binds to `127.0.0.1:8080`; nginx owns public HTTP/HTTPS for
+`helioschat.space` (Let's Encrypt).
+
+## Host notes (CentOS 7)
+
+Current production host: `154.222.19.38`.
+
+CentOS 7 ships glibc 2.17. Official Node 22 Linux builds need a newer glibc, so
+this box uses an unofficial Node 22 `linux-x64-glibc-217` binary under
+`/opt/node-unofficial`, with `/usr/local/bin/node` pointing at it. Always prefer
+`PATH=/usr/local/bin:$PATH` on the VPS; nvm installs on this image may be broken.
+
+Do not re-enable the old Docker Compose `helios` container on port 8080 — it
+conflicts with the systemd unit. Keep its restart policy `no`.
 
 ## Push a release
 
@@ -12,7 +25,7 @@ From `helios-app/`, with the VPS root password in `SSHPASS` (never commit it):
 
 ```bash
 chmod +x deploy/push-release.sh
-SSHPASS='...' ./deploy/push-release.sh 149.88.73.252
+SSHPASS='...' ./deploy/push-release.sh 154.222.19.38
 ```
 
 That builds the frontend, rsyncs `dist/` and `server/` into
@@ -27,7 +40,7 @@ Application admin access is disabled unless `HELIOS_ADMIN_EMAIL` and
 `HELIOS_ADMIN_PASSWORD` are added through a root-readable systemd environment
 file or drop-in. Never commit those values.
 
-Orbit is **¥68 / month in CNY**. Checkout always uses that catalog amount, so
-do not leave an old USD `STRIPE_ORBIT_PRICE_ID` on the server. Set
-`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, and `STRIPE_WEBHOOK_SECRET`
-on the server, never in git. Without those keys, people can still stay on Free.
+Billing keys are optional. Helios Space is completely free in product copy;
+without Stripe keys, checkout stays unavailable and the free path remains open.
+Set `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, and `STRIPE_WEBHOOK_SECRET`
+on the server only if you intentionally re-enable paid checkout — never in git.

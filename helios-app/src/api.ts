@@ -483,6 +483,42 @@ export const api = {
 
   follow: (userId: number) => call<{ following: boolean }>(`/api/users/${userId}/follow`, { method: 'POST' }),
 
+  users: {
+    search: (query: string) =>
+      call<{ people: Array<{ id: number; name: string; handle: string; friend_status: 'none' | 'friends' | 'outgoing' | 'incoming' }> }>(
+        '/api/users/search?q=' + encodeURIComponent(query),
+      ),
+  },
+
+  friends: {
+    list: () => call<{ friends: Array<{ id: number; name: string; handle: string; created_at: string }> }>('/api/friends'),
+    request: (payload: { user_id?: number; handle?: string }) =>
+      call<{ ok: boolean; status: string }>('/api/friends/request', { method: 'POST', body: JSON.stringify(payload) }),
+    requests: () =>
+      call<{
+        incoming: Array<{ id: number; user_id: number; name: string; handle: string; created_at: string }>
+        outgoing: Array<{ id: number; user_id: number; name: string; handle: string; created_at: string }>
+      }>('/api/friends/requests'),
+    respond: (id: number, decision: 'accept' | 'decline') =>
+      call<{ ok: boolean; status: string }>(`/api/friends/requests/${id}/respond`, {
+        method: 'POST',
+        body: JSON.stringify({ decision }),
+      }),
+  },
+
+  heliosPatch: (projectId: number, instruction: string, path?: string) =>
+    call<{
+      ok: boolean
+      engine?: string
+      mode?: string
+      target?: string
+      project: Project
+      preview: { before: string; after: string }
+    }>(
+      `/api/projects/${projectId}/helios-patch`,
+      { method: 'POST', body: JSON.stringify({ instruction, path }) },
+    ),
+
   spaces: {
     list: () => call<{ spaces: SpaceSummary[] }>('/api/spaces'),
     create: (name: string) => call<{ space: SpaceSummary }>('/api/spaces', { method: 'POST', body: JSON.stringify({ name }) }),
@@ -559,4 +595,10 @@ export const api = {
         body: JSON.stringify({ messages, project_id, context }),
       }),
   },
+
+  codeRun: (data: { language: string; filename: string; source: string; files?: Record<string, string> }) =>
+    call<{ stdout: string; stderr: string; status: string | number }>('/api/code/run', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }

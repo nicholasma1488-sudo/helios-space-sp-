@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
-  Compass, FolderGit2, Grid3X3, Home, MessageCircle, Radio, Sparkles, User, Users, Zap,
+  ChevronLeft, ChevronRight, Home, MessageCircle, Sparkles, User, Zap,
 } from 'lucide-react'
+
 import { api } from '../api'
 import { useIsMobile } from '../hooks/useMediaQuery'
 import { useApp, type NavView } from '../store/appStore'
@@ -11,16 +12,21 @@ import { ErrorBoundary } from './ErrorBoundary'
 interface NavItem { id: NavView; label: string; icon: React.ReactNode; shortLabel?: string }
 
 const NAV: NavItem[] = [
+  { id: 'lifestyle', label: 'Space', shortLabel: 'Space', icon: <Zap size={20} /> },
+  { id: 'chat', label: 'Messages', shortLabel: 'Chat', icon: <MessageCircle size={20} /> },
   { id: 'home', label: 'Home', icon: <Home size={20} /> },
-  { id: 'explore', label: 'Explore', icon: <Compass size={20} /> },
-  { id: 'spaces', label: 'Spaces', icon: <Users size={20} /> },
-  { id: 'lifestyle', label: 'Lifestyle', icon: <Zap size={20} /> },
-  { id: 'apps', label: 'Apps', shortLabel: 'Apps', icon: <Grid3X3 size={20} /> },
-  { id: 'live', label: 'Live', icon: <Radio size={20} /> },
-  { id: 'chat', label: 'Chat Hub', shortLabel: 'Chat', icon: <MessageCircle size={20} /> },
-  { id: 'projects', label: 'Projects', icon: <FolderGit2 size={20} /> },
-  { id: 'profile', label: 'Profile', icon: <User size={20} /> },
+  { id: 'profile', label: 'Me', shortLabel: 'Me', icon: <User size={20} /> },
 ]
+
+const RAIL_COLLAPSED_KEY = 'helios-rail-collapsed'
+
+function readCollapsed(key: string) {
+  try { return localStorage.getItem(key) === '1' } catch { return false }
+}
+
+function writeCollapsed(key: string, value: boolean) {
+  try { localStorage.setItem(key, value ? '1' : '0') } catch { /* ignore */ }
+}
 
 function RailBtn({
   icon, label, active, onClick, badge,
@@ -40,7 +46,7 @@ function RailBtn({
         title={label}
         aria-label={label}
         aria-current={active ? 'page' : undefined}
-        className={`helios-rail-btn w-12 h-12 rounded-xl flex items-center justify-center cursor-pointer ${active ? 'helios-rail-btn-active' : ''}`}
+        className={`helios-rail-btn liquid-glass-btn w-12 h-12 rounded-xl flex items-center justify-center cursor-pointer ${active ? 'helios-rail-btn-active' : ''}`}
         style={{
           background: active ? 'var(--helios-accent)' : 'transparent',
           color: active ? 'var(--helios-on-accent)' : 'var(--helios-muted)',
@@ -93,6 +99,14 @@ function HeliosFloatingButton() {
 export function GlobalShell({ children }: { children: React.ReactNode }) {
   const { state, dispatch } = useApp()
   const isMobile = useIsMobile()
+  const [railCollapsed, setRailCollapsed] = useState(() => readCollapsed(RAIL_COLLAPSED_KEY))
+  const [railPeek, setRailPeek] = useState(false)
+
+  function setRailCollapsedPersist(next: boolean) {
+    setRailCollapsed(next)
+    writeCollapsed(RAIL_COLLAPSED_KEY, next)
+    if (!next) setRailPeek(false)
+  }
 
   useEffect(() => {
     if (!state.user) return
@@ -160,18 +174,65 @@ export function GlobalShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="helios-shell flex h-screen w-screen overflow-hidden" style={{ background: 'var(--helios-bg)', color: 'var(--helios-text)' }}>
+    <div
+      className={'helios-shell flex h-screen w-screen overflow-hidden' + (railCollapsed ? ' is-rail-collapsed' : '')}
+      style={{ background: 'var(--helios-bg)', color: 'var(--helios-text)' }}
+      data-rail-collapsed={railCollapsed ? '1' : '0'}
+    >
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <nav className="flex flex-col items-center gap-0.5 py-3 px-2 border-r" style={{ width: 72, flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)' }} aria-label="Main navigation">
-        <div className="flex flex-col gap-0.5 w-full items-center">
-          {NAV.map(item => (
-            // desktop rail
-            <RailBtn key={item.id} icon={item.icon} label={item.label} active={state.view === item.id && !state.codeEditorOpen} onClick={() => dispatch({ type: 'SET_VIEW', view: item.id })} badge={item.id === 'chat' ? state.chatUnreadCount : undefined} />
-          ))}
-        </div>
-        <div className="flex-1" aria-hidden="true" />
-        <div className="helios-rail-space-context" title={`Current Space: ${state.activeSpaceId}`} aria-hidden="true"><span>✦</span><i /></div>
+      <nav
+        className={'helios-side-rail flex flex-col items-center gap-0.5 py-3 px-2 border-r' + (railCollapsed ? ' is-collapsed' : '')}
+        style={{
+          width: railCollapsed ? 8 : 72,
+          flexShrink: 0,
+          borderColor: 'var(--helios-border)',
+          background: 'var(--helios-surface)',
+          overflow: 'hidden',
+          padding: railCollapsed ? 0 : undefined,
+          borderRightWidth: railCollapsed ? 0 : undefined,
+          transition: 'width 280ms var(--ease-enter, ease), padding 280ms ease',
+        }}
+        aria-label="Main navigation"
+        aria-hidden={railCollapsed || undefined}
+      >
+        {!railCollapsed && (
+          <>
+            <div className="flex flex-col gap-0.5 w-full items-center">
+              {NAV.map(item => (
+                <RailBtn key={item.id} icon={item.icon} label={item.label} active={state.view === item.id && !state.codeEditorOpen} onClick={() => dispatch({ type: 'SET_VIEW', view: item.id })} badge={item.id === 'chat' ? state.chatUnreadCount : undefined} />
+              ))}
+            </div>
+            <div className="flex-1" aria-hidden="true" />
+            <button
+              type="button"
+              className="helios-rail-collapse-btn"
+              onClick={() => setRailCollapsedPersist(true)}
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <div className="helios-rail-space-context" title={`Current Space: ${state.activeSpaceId}`} aria-hidden="true"><span>✦</span><i /></div>
+          </>
+        )}
       </nav>
+      {railCollapsed && (
+        <div
+          className={'helios-rail-peek-zone' + (railPeek ? ' is-visible' : '')}
+          onMouseEnter={() => setRailPeek(true)}
+          onMouseLeave={() => setRailPeek(false)}
+        >
+          <button
+            type="button"
+            className="helios-chrome-peek-arrow helios-rail-peek-arrow"
+            onClick={() => setRailCollapsedPersist(false)}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
       <div className="helios-internal-frame flex flex-col flex-1 min-w-0 overflow-hidden">
         <AuthenticatedTopBar />
         <div id="main-content" className="helios-main flex flex-1 min-h-0 overflow-hidden relative" role="main" tabIndex={-1}>
