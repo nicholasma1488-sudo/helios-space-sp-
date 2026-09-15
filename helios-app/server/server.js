@@ -3335,7 +3335,7 @@ app.post('/api/helios/chat', requireUser, aiRateLimit, async (req, res) => {
   }
   const requestedSpaceId = contextObject.space_id === undefined ? '' : normalizeSpaceId(contextObject.space_id, '')
   if (requestedSpaceId) {
-    const knownSpace = STATIC_SPACES.some(space => space.id === requestedSpaceId)
+    const knownSpace = SPACE_CATALOG.some(([id]) => id === requestedSpaceId)
       || db.prepare('SELECT 1 FROM user_spaces WHERE user_id = ? AND id = ?').get(req.user.id, requestedSpaceId)
     if (knownSpace) appContext += `\nCurrent Space: ${requestedSpaceId}`
   }
