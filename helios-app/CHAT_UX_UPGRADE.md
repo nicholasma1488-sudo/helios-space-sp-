@@ -147,6 +147,8 @@ fix anything below 4 before the next block.
   user’s Helios memory, agent chat history, or pending prompts.
 - Helios panel History restores prior local chats after the panel unmounts;
   transcripts stay in `helios-agent-history-v1` on this device only.
+- Desktop (≥1100px) keeps a persistent Helios history rail beside the thread;
+  narrower viewports overlay history without unmounting the conversation.
 - Memory can be turned off, inspected, and cleared; with it on, Helios
   requests include a bounded memory block.
 - Own messages edit in place; pins and Helios selection still work.

@@ -613,7 +613,7 @@ button, [role="button"], a, input, select, textarea {
   transform: scale(.94);
   transition-duration: var(--dur-press);
 }
-.helios-floating-agent.is-open { right: 380px; }
+.helios-floating-agent.is-open { right: calc(var(--helios-dock-width, 360px) + 20px); }
 .helios-floating-agent > span { display: grid; place-items: center; }
 .helios-floating-agent > i { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border: 2px solid var(--helios-bg); border-radius: 50%; background: var(--helios-success); }
 

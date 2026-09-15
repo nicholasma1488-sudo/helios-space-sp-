@@ -3,18 +3,21 @@ import { api } from '../api'
 import type { AgentStep, AiProviderChoice, Project, UserAiSettings } from '../api'
 import { useApp } from '../store/appStore'
 import { t, useLocale, useT } from '../i18n'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import { memoryContextBlock, rememberTurn } from '../lib/heliosMemory'
 import { createSuiteProject, reportAgentStatus, spotlightMiniApp } from '../product/flow'
 import { getSuiteApp, nextSuiteFileName, spaceForSuiteApp } from '../product/miniApps'
 import {
   X, Send, Eye, Check, Info, Loader, AlertTriangle, RotateCcw, Copy, Pencil,
-  Bot, MessageSquare, KeyRound, Sparkles, Circle, Undo2, ExternalLink, History, Plus, Trash2,
+  Bot, MessageSquare, KeyRound, Sparkles, Circle, Undo2, ExternalLink, History, Plus, Trash2, Search,
 } from 'lucide-react'
 import { UserAvatar } from './UserAvatar'
 import {
   closeActiveAgentChat, deleteAgentChat, getActiveAgentChat, saveAgentChat,
-  useHeliosAgentHistory, openAgentChat, clearAgentHistory, type StoredAgentMessage,
+  useHeliosAgentHistory, openAgentChat, clearAgentHistory,
+  type AgentChat, type StoredAgentMessage,
 } from '../lib/heliosAgentHistory'
+import './HeliosPanel.css'
 
 type StepStatus = 'pending' | 'running' | 'done' | 'failed' | 'undone'
 
@@ -166,6 +169,70 @@ function readContext(fallback: HeliosContext): HeliosContext {
   } catch { return fallback }
 }
 
+function HistoryPane({
+  chats, chatId, query, onQuery, onOpen, onDelete, onClear, onNew, formatTime,
+}: {
+  chats: AgentChat[]
+  chatId: string | null
+  query: string
+  onQuery: (value: string) => void
+  onOpen: (id: string) => void
+  onDelete: (id: string) => void
+  onClear: () => void
+  onNew: () => void
+  formatTime: (value: string) => string
+}) {
+  const t = useT()
+  const needle = query.trim().toLowerCase()
+  const visible = needle
+    ? chats.filter(chat => chat.title.toLowerCase().includes(needle) || chat.mode.includes(needle))
+    : chats
+  return (
+    <>
+      <div className="helios-dock-history-head">
+        <button type="button" className="helios-dock-new" onClick={onNew}>
+          <Plus size={14} /> {t('New chat')}
+        </button>
+        <label className="helios-dock-search">
+          <Search size={13} />
+          <input
+            value={query}
+            onChange={event => onQuery(event.target.value)}
+            placeholder={t('Search chats')}
+            aria-label={t('Search chats')}
+          />
+        </label>
+        <p>{t('Stored only on this device.')}</p>
+      </div>
+      {visible.length === 0 ? (
+        <div className="helios-dock-history-empty">
+          <History size={20} />
+          <p>{chats.length === 0 ? t('No saved chats yet') : t('No matching chats')}</p>
+        </div>
+      ) : (
+        <ul className="helios-dock-history-list">
+          {visible.map(chat => (
+            <li key={chat.id} className={chat.id === chatId ? 'is-active' : undefined}>
+              <button type="button" className="helios-dock-history-item" onClick={() => onOpen(chat.id)}>
+                <strong>{chat.title}</strong>
+                <span>{chat.mode === 'agent' ? t('Agent') : t('Chat')} · {formatTime(chat.updatedAt)}</span>
+              </button>
+              <button type="button" className="helios-dock-history-delete" aria-label={t('Delete chat')} onClick={() => onDelete(chat.id)}>
+                <Trash2 size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {chats.length > 0 && (
+        <div className="helios-dock-history-foot">
+          <button type="button" onClick={onClear}>{t('Clear history')}</button>
+        </div>
+      )}
+    </>
+  )
+}
+
 export function HeliosPanel({ onClose, activeProject, onProjectContentChange, aiEnabled, spaceId, currentView }: Props) {
   const { state, dispatch } = useApp()
   const t = useT()
@@ -174,7 +241,10 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const [chatId, setChatId] = useState<string | null>(() => restored?.id ?? null)
   const [messages, setMessages] = useState<Message[]>(() => restored?.messages.length ? restored.messages as Message[] : [])
   const [showHistory, setShowHistory] = useState(false)
+  const [historyQuery, setHistoryQuery] = useState('')
   const history = useHeliosAgentHistory()
+  const isWide = useMediaQuery('(min-width: 1100px)')
+  const activeTitle = history.chats.find(chat => chat.id === chatId)?.title
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showContext, setShowContext] = useState(false)
@@ -277,16 +347,22 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       setChatId(null)
       setMessages([buildWelcome()])
       setShowHistory(false)
+      setHistoryQuery('')
     }
     window.addEventListener('helios-session-cleared', onClear)
     return () => window.removeEventListener('helios-session-cleared', onClear)
   }, [])
+
+  useEffect(() => {
+    if (isWide) setShowHistory(false)
+  }, [isWide])
 
   function startNewChat() {
     closeActiveAgentChat()
     setChatId(null)
     setMessages([buildWelcome()])
     setShowHistory(false)
+    setHistoryQuery('')
     setEditingUserId(null)
     followRef.current = true
   }
@@ -665,10 +741,32 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   const safetyBg = (s: string) => s === 'safe' ? 'var(--helios-success)' : 'var(--helios-solar)'
   const safetyColor = (s: string) => s === 'safe' ? '#fff' : 'var(--helios-surface)'
 
+  const historyPane = (
+    <HistoryPane
+      chats={history.chats}
+      chatId={chatId}
+      query={historyQuery}
+      onQuery={setHistoryQuery}
+      onOpen={openHistoryChat}
+      onDelete={removeHistoryChat}
+      onClear={wipeHistory}
+      onNew={startNewChat}
+      formatTime={relativeTime}
+    />
+  )
+
   return (
-    <div className="flex flex-col border-l overflow-hidden"
-      style={{ width: 360, flexShrink: 0, borderColor: 'var(--helios-border)', background: 'var(--helios-surface)' }}
-      role="complementary" aria-label={t('Helios AI assistant')}>
+    <div
+      className={'helios-dock' + (isWide ? ' is-wide' : '')}
+      role="complementary"
+      aria-label={t('Helios AI assistant')}
+    >
+      {isWide && (
+        <aside className="helios-dock-history" aria-label={t('Chat history')}>
+          {historyPane}
+        </aside>
+      )}
+      <div className="helios-dock-main">
 
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3.5 border-b" style={{ borderColor: 'var(--helios-border)', flexShrink: 0 }}>
@@ -682,24 +780,30 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           }}
           aria-hidden="true">✦</div>
         <div className="flex-1 min-w-0">
-          <div style={{ fontSize: 14, fontWeight: 700 }}>Helios</div>
-          {contextPacket.project_name || activeProject
-            ? <div style={{ fontSize: 11, color: 'var(--helios-accent)' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
-            : <div style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || t('Current Helios context')}</div>}
+          <div className="truncate" style={{ fontSize: 14, fontWeight: 700 }}>{activeTitle || 'Helios'}</div>
+          {activeTitle
+            ? <div className="truncate" style={{ fontSize: 11, color: 'var(--helios-muted)' }}>Helios{contextPacket.project_name || activeProject ? ` · ${contextPacket.project_name || activeProject?.name}` : ''}</div>
+            : contextPacket.project_name || activeProject
+              ? <div className="truncate" style={{ fontSize: 11, color: 'var(--helios-accent)' }}>{contextPacket.project_name || activeProject?.name} · {contextPacket.app_name || contextPacket.app_kind || activeProject?.app_kind}</div>
+              : <div className="truncate" style={{ fontSize: 11, color: 'var(--helios-muted)' }}>{contextPacket.conversation_title || contextPacket.space_name || contextPacket.space_id || t('Current Helios context')}</div>}
         </div>
-        <button type="button" onClick={startNewChat} title={t('New chat')} aria-label={t('New chat')}
-          className="p-1.5 rounded-lg cursor-pointer"
-          style={{ background: 'none', border: 'none', color: 'var(--helios-muted)' }}>
-          <Plus size={15} />
-        </button>
-        <button type="button" onClick={() => setShowHistory(value => !value)} title={t('Chat history')} aria-expanded={showHistory}
-          className="p-1.5 rounded-lg cursor-pointer relative" aria-label={t('Chat history')}
-          style={{ background: showHistory ? 'var(--helios-surface2)' : 'none', border: 'none', color: showHistory ? 'var(--helios-accent)' : 'var(--helios-muted)' }}>
-          <History size={14} />
-          {history.chats.length > 0 && (
-            <span aria-hidden="true" className="absolute" style={{ top: 4, right: 4, width: 6, height: 6, borderRadius: 999, background: 'var(--helios-accent)' }} />
-          )}
-        </button>
+        {!isWide && (
+          <>
+            <button type="button" onClick={startNewChat} title={t('New chat')} aria-label={t('New chat')}
+              className="p-1.5 rounded-lg cursor-pointer"
+              style={{ background: 'none', border: 'none', color: 'var(--helios-muted)' }}>
+              <Plus size={15} />
+            </button>
+            <button type="button" onClick={() => setShowHistory(value => !value)} title={t('Chat history')} aria-expanded={showHistory}
+              className="p-1.5 rounded-lg cursor-pointer relative" aria-label={t('Chat history')}
+              style={{ background: showHistory ? 'var(--helios-surface2)' : 'none', border: 'none', color: showHistory ? 'var(--helios-accent)' : 'var(--helios-muted)' }}>
+              <History size={14} />
+              {history.chats.length > 0 && (
+                <span aria-hidden="true" className="absolute" style={{ top: 4, right: 4, width: 6, height: 6, borderRadius: 999, background: 'var(--helios-accent)' }} />
+              )}
+            </button>
+          </>
+        )}
         <button onClick={() => setShowContext(v => !v)} title={t('Context packet')} aria-expanded={showContext}
           className="p-1.5 rounded-lg cursor-pointer" aria-label={t('Toggle context')}
           style={{ background: showContext ? 'var(--helios-surface2)' : 'none', border: 'none', color: 'var(--helios-muted)' }}>
@@ -777,60 +881,22 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       )}
 
       {/* Permission boundary */}
-      <div className="mx-3 mt-2 px-3 py-2 rounded-lg flex-shrink-0"
-        style={{ background: 'var(--helios-surface2)', fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.5 }}>
+      <div className="helios-dock-boundary" title={mode === 'agent'
+        ? t('✦ Agent for this Space · opens pages, creates and fills Mini App files, shares posts · edits can be undone · no computer control')
+        : t('✦ Chat · Permission-filtered context · No computer control · Action Preview before significant changes')}>
         {mode === 'agent'
           ? t('✦ Agent for this Space · opens pages, creates and fills Mini App files, shares posts · edits can be undone · no computer control')
           : t('✦ Chat · Permission-filtered context · No computer control · Action Preview before significant changes')}
       </div>
 
-      {/* On-device history or the live conversation */}
-      {showHistory ? (
-        <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3" role="region" aria-label={t('Chat history')}>
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 650, margin: 0 }}>{t('Chat history')}</p>
-              <p style={{ fontSize: 11, color: 'var(--helios-muted)', margin: '3px 0 0' }}>{t('Stored only on this device.')}</p>
-            </div>
-            {history.chats.length > 0 && (
-              <button type="button" onClick={wipeHistory} className="cursor-pointer"
-                style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', fontSize: 11, padding: '4px 0' }}>
-                {t('Clear history')}
-              </button>
-            )}
-          </div>
-          {history.chats.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center gap-2" style={{ color: 'var(--helios-muted)', textAlign: 'center' }}>
-              <History size={22} />
-              <p style={{ fontSize: 13, margin: 0 }}>{t('No saved chats yet')}</p>
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-1" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {history.chats.map(chat => (
-                <li key={chat.id} className="flex items-stretch gap-1"
-                  style={{
-                    borderRadius: 12,
-                    background: chat.id === chatId ? 'color-mix(in srgb, var(--helios-accent) 8%, transparent)' : 'transparent',
-                  }}>
-                  <button type="button" onClick={() => openHistoryChat(chat.id)} className="flex-1 text-left px-3 py-2 cursor-pointer min-w-0"
-                    style={{ background: 'none', border: 'none', color: 'var(--helios-text)' }}>
-                    <span className="block truncate" style={{ fontSize: 13, fontWeight: 600 }}>{chat.title}</span>
-                    <span className="block" style={{ fontSize: 11, color: 'var(--helios-muted)', marginTop: 2 }}>
-                      {chat.mode === 'agent' ? t('Agent') : t('Chat')} · {relativeTime(chat.updatedAt)}
-                    </span>
-                  </button>
-                  <button type="button" onClick={() => removeHistoryChat(chat.id)} aria-label={t('Delete chat')}
-                    className="px-2 cursor-pointer" style={{ background: 'none', border: 'none', color: 'var(--helios-muted)' }}>
-                    <Trash2 size={14} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="helios-dock-log-wrap">
+      {!isWide && showHistory && (
+        <div className="helios-dock-history-overlay" role="region" aria-label={t('Chat history')}>
+          {historyPane}
         </div>
-      ) : (
+      )}
       <div ref={listRef} onScroll={handleListScroll} onWheel={handleUserScrollIntent} onTouchMove={handleUserScrollIntent}
-        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" role="log" aria-label={t('Conversation')}>
+        className="helios-dock-log" role="log" aria-label={t('Conversation')}>
         {messages.map(msg => (
           <div key={msg.id} className={'flex items-end gap-2' + (msg.role === 'user' ? ' flex-row-reverse' : '')}>
             {msg.role === 'assistant' && (
@@ -844,7 +910,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
             {msg.role === 'user' && (
               <UserAvatar name={state.user?.name || '?'} src={state.user?.avatar} size={28} />
             )}
-            <div className={'flex flex-col gap-2' + (msg.role === 'user' ? ' items-end' : ' items-start')} style={{ maxWidth: 272 }}>
+            <div className={'helios-dock-bubble-col flex flex-col gap-2' + (msg.role === 'user' ? ' items-end' : ' items-start')}>
 
               {/* Bubble */}
               <div className="px-3 py-2.5 relative group/msg"
@@ -1046,10 +1112,10 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           </div>
         )}
       </div>
-      )}
+      </div>
 
       {/* Retry on error */}
-      {!showHistory && messages.length > 1 && messages[messages.length - 1]?.content.startsWith('Error:') && (
+      {(!showHistory || isWide) && messages.length > 1 && messages[messages.length - 1]?.content.startsWith('Error:') && (
         <div className="px-4 pb-2 flex-shrink-0">
           <button onClick={() => { const prev = [...messages].reverse().find(m => m.role === 'user'); if (prev) sendMessage(prev.content) }}
             className="flex items-center gap-1.5 text-xs cursor-pointer px-3 py-2 rounded-lg"
@@ -1106,6 +1172,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       </form>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
     </div>
   )
 }

@@ -140,6 +140,8 @@ export const zhCN: Dict = {
   'Stored only on this device.': '仅保存在这台设备上。',
   'Clear history': '清空历史',
   'Clear all saved Helios chats on this device?': '清空这台设备上保存的全部 Helios 对话？',
+  'Search chats': '搜索对话',
+  'No matching chats': '没有匹配的对话',
 }
 
 export const zhTW: Dict = {
@@ -281,4 +283,6 @@ export const zhTW: Dict = {
   'Stored only on this device.': '僅保存在這台裝置上。',
   'Clear history': '清空歷史',
   'Clear all saved Helios chats on this device?': '清空這台裝置上儲存的全部 Helios 對話？',
+  'Search chats': '搜尋對話',
+  'No matching chats': '沒有符合的對話',
 }
