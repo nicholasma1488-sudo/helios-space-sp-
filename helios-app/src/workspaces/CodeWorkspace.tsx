@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import Editor from '@monaco-editor/react'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import { zipSync, strToU8 } from 'fflate'
 import {
   Download, FileCode2, Play, RefreshCw, Sparkles, TerminalSquare, X,
@@ -63,6 +63,8 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   const [heliosPrompt, setHeliosPrompt] = useState('')
   const syncedRef = useRef(false)
   const seenFilesRef = useRef<Record<string, string> | null>(null)
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
+  const [externalWrites, setExternalWrites] = useState(0)
 
   useEffect(() => {
     syncedRef.current = false
@@ -100,7 +102,26 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     if (!Object.keys(workspaceFiles).length || sameFiles(workspaceFiles, repo.workingFiles)) return
     repo.setWorkingFiles(workspaceFiles)
     repo.persist(workspaceFiles)
+    setExternalWrites(count => count + 1)
   }, [workspaceFiles, repo.ready])
+
+  // Monaco applies an external value as one edit that leaves the cursor at the
+  // end and scrolls there; a file that was just written should be read from
+  // the top. Runs after the editor's own effect because children commit first.
+  useEffect(() => {
+    if (!externalWrites) return
+    const editor = editorRef.current
+    if (!editor) return
+    const top = () => {
+      editor.setPosition({ lineNumber: 1, column: 1 })
+      editor.revealLine(1)
+      editor.setScrollTop(0)
+    }
+    // Monaco processes the edit's own reveal-cursor request on its next frame.
+    top()
+    const frame = window.requestAnimationFrame(top)
+    return () => window.cancelAnimationFrame(frame)
+  }, [externalWrites])
 
   const files = repo.viewingCommit ? repo.files : (Object.keys(repo.workingFiles).length ? repo.workingFiles : workspaceFiles)
   const activeFile = files[value.activeFile] !== undefined ? value.activeFile : Object.keys(files)[0] || ''
@@ -352,6 +373,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
             <Editor
               language={monacoLanguageFor(activeLanguage)}
               value={editorValue}
+              onMount={editor => { editorRef.current = editor }}
               onChange={next => {
                 if (!canEdit || repo.viewingCommit || !activeFile) return
                 patch({ files: { ...files, [activeFile]: next || '' } })

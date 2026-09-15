@@ -266,7 +266,11 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     app_kind: activeProject?.app_kind,
     current_view: currentView,
   }))
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  // Follow new messages only while the user is already reading the end of the
+  // conversation; scrolling up to re-read a step must not be undone by the next
+  // status tick of a running agent.
+  const followRef = useRef(true)
   const inputRef = useRef<HTMLInputElement>(null)
   const activeProjectRef = useRef(activeProject)
   const pendingHandledRef = useRef(false)
@@ -288,7 +292,27 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     }])
   }, [activeProject?.id, contextPacket.conversation_title, contextPacket.space_id, contextPacket.space_name])
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
+  // Scroll the conversation itself rather than scrollIntoView on a sentinel,
+  // which also drags every scrollable ancestor (the page) along.
+  const autoScrollUntilRef = useRef(0)
+  useEffect(() => {
+    const list = listRef.current
+    if (!list || !followRef.current) return
+    autoScrollUntilRef.current = Date.now() + 600
+    list.scrollTo({ top: list.scrollHeight, behavior: 'smooth' })
+  }, [messages, loading])
+
+  function handleListScroll() {
+    const list = listRef.current
+    // Intermediate frames of our own smooth scroll are not the user scrolling up.
+    if (!list || Date.now() < autoScrollUntilRef.current) return
+    followRef.current = list.scrollHeight - list.scrollTop - list.clientHeight < 48
+  }
+
+  // A wheel or touch gesture is the user taking over, even mid-animation.
+  function handleUserScrollIntent() {
+    autoScrollUntilRef.current = 0
+  }
 
   function updateStep(msgId: string, index: number, patch: Partial<AgentStepState>) {
     setMessages(prev => prev.map(m => m.id === msgId && m.steps
@@ -491,6 +515,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
     const runMode = forceMode ?? mode
     if (forceMode && forceMode !== mode) setMode(forceMode)
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text, ts: new Date().toISOString() }
+    followRef.current = true
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setLoading(true)
@@ -720,7 +745,8 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" role="log" aria-label="Conversation">
+      <div ref={listRef} onScroll={handleListScroll} onWheel={handleUserScrollIntent} onTouchMove={handleUserScrollIntent}
+        className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4" role="log" aria-label="Conversation">
         {messages.map(msg => (
           <div key={msg.id} className={'flex items-end gap-2' + (msg.role === 'user' ? ' flex-row-reverse' : '')}>
             {msg.role === 'assistant' && (
@@ -878,7 +904,6 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
             <span className="sr-only" aria-live="polite">Helios is thinking</span>
           </div>
         )}
-        <div ref={bottomRef} aria-hidden="true" />
       </div>
 
       {/* Quick action chips */}

@@ -144,7 +144,8 @@ export function reportAgentStatus(status: AgentStatus) {
 export function spotlightMiniApp(appId: string, ms = 1400) {
   const tile = document.querySelector<HTMLElement>(`[data-app-id="${appId}"]`)
   if (!tile) return false
-  tile.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // Only move the page when the tile is actually off-screen.
+  tile.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
   tile.classList.add('is-agent-target')
   window.setTimeout(() => tile.classList.remove('is-agent-target'), ms)
   return true
