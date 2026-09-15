@@ -947,7 +947,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
               className="flex-1 bg-transparent outline-none"
               style={{ border: 'none', color: 'var(--helios-text)', fontSize: 13 }} />
           </div>
-          <button type="submit" disabled={!aiReady || loading || !input.trim()} aria-label={t('Send message')}>
+          <button type="submit" disabled={!aiReady || loading || !input.trim()} aria-label={t('Send message')}
             className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer flex-shrink-0"
             style={{ background: 'var(--helios-accent)', border: 'none', color: '#fff', opacity: (!aiReady || loading || !input.trim()) ? 0.4 : 1 }}>
             {loading ? <Loader size={14} style={{ animation: 'spin 0.5s linear infinite' }} /> : <Send size={14} />}
