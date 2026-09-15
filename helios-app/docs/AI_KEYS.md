@@ -116,6 +116,12 @@ The Home page also carries a **Helios Agent** card (input + example chips) so th
 usable straight from the main page: it switches the panel to Agent mode, opens it if needed,
 and runs the goal.
 
+The agent works *visibly*: a floating "Helios agent · step 1/2" pill (`AgentStatusBar`) sits over
+the page while it runs, `create_file` first shows the Mini Apps page and rings the chosen app
+tile before opening the file, and `post` switches to the Space feed and highlights the new post.
+Status is broadcast through the `helios-agent-status` DOM event (`reportAgentStatus` in
+`product/flow.ts`).
+
 Flow: `POST /api/helios/agent` returns the plan instantly (rule planner for clear intents in
 English or Chinese, model planner otherwise). The browser executes the steps and calls
 `POST /api/helios/agent/content` per file, so the page opens first and the content streams in

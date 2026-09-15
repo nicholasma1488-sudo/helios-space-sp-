@@ -106,6 +106,7 @@ export function MiniAppsView() {
               <button
                 key={app.id}
                 type="button"
+                data-app-id={app.id}
                 className="suite-tile suite-tile-guide liquid-glass-btn"
                 title={app.guideTip}
                 onClick={() => openTopBarCreatePanel(app)}

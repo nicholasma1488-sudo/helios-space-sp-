@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { api } from '../api'
 import type { AgentStep, AiProviderChoice, Project, UserAiSettings } from '../api'
 import { useApp } from '../store/appStore'
-import { createSuiteProject } from '../product/flow'
+import { createSuiteProject, reportAgentStatus, spotlightMiniApp } from '../product/flow'
 import { getSuiteApp, nextSuiteFileName, spaceForSuiteApp } from '../product/miniApps'
 import {
   X, Send, Eye, Check, ChevronRight, Info, Loader, AlertTriangle, RotateCcw, Copy,
@@ -252,7 +252,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   // makes Helios usable even when no site default exists.
   const aiReady = modelTab === 'user' ? userAiReady : (aiEnabled || userAiReady)
   const siteModelLabel = userAi?.site_default?.model || 'Helios default'
-  const userModelLabel = userAi?.configured ? `${userAi.presets?.[userAi.provider]?.label || userAi.provider} · ${userAi.model}` : 'Not set up'
+  const userModelLabel = userAi?.configured ? `${userAi.presets?.[userAi.provider]?.label || userAi.provider} · ${userAi.model}` : 'Add your own key'
 
   function openAiSettings() {
     try { sessionStorage.setItem('helios-open-settings', 'ai') } catch {}
@@ -311,6 +311,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       case 'navigate': {
         if (current.codeEditorOpen) dispatch({ type: 'CLOSE_CODE_EDITOR' })
         dispatch({ type: 'SET_VIEW', view: step.view })
+        await sleep(650)
         return { detail: `Switched to ${VIEW_LABELS[step.view]}` }
       }
       case 'set_theme': {
@@ -318,9 +319,16 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
         return { detail: `Theme is now ${step.theme}` }
       }
       case 'create_file': {
-        // Open the Mini App immediately with starter content, then let the
-        // model fill it in while the user watches the page.
+        // Walk the user through the UI the way they would do it by hand: show
+        // the Mini Apps page, ring the app tile, open the file with starter
+        // content, then let the model fill it in while the page is visible.
         const suite = getSuiteApp(step.app)
+        report(`Opening Mini Apps → ${step.app_name}…`)
+        if (current.codeEditorOpen) dispatch({ type: 'CLOSE_CODE_EDITOR' })
+        dispatch({ type: 'SET_VIEW', view: 'apps' })
+        await sleep(550)
+        if (spotlightMiniApp(step.app)) await sleep(1100)
+        report(`Creating “${step.name}” in ${step.app_name}…`)
         const project = await createSuiteProject({
           name: nextSuiteFileName(step.name, current.projects, step.app),
           spaceId: suite ? spaceForSuiteApp(suite) : 'english',
@@ -344,10 +352,12 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       }
       case 'open_file': {
         dispatch({ type: 'OPEN_CODE_EDITOR', projectId: step.project_id })
+        await sleep(500)
         return { detail: `Opened “${step.project_name}”` }
       }
       case 'update_file': {
         dispatch({ type: 'OPEN_CODE_EDITOR', projectId: step.project_id })
+        await sleep(450)
         report(`${modelName} is writing the new version…`)
         const before = (await api.projects.get(step.project_id)).project
         const generated = await api.helios.agentContent({ kind: 'file', project_id: step.project_id, brief: step.brief, goal }, modelTab)
@@ -373,16 +383,20 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
           body = generated.body || ''
         }
         if (!body.trim()) throw new Error('No post text was generated')
-        await api.posts.create({
+        report('Publishing to the Space feed…')
+        const { post } = await api.posts.create({
           body,
           category: 'reflection',
           post_type: 'progress',
           audience: 'public',
           ...(step.link_previous && created ? { project_id: created.id } : {}),
         })
+        // The feed scrolls to and highlights this id once it mounts.
+        try { sessionStorage.setItem('helios-open-post', String(post.id)) } catch {}
         if (stateRef.current.codeEditorOpen) dispatch({ type: 'CLOSE_CODE_EDITOR' })
         dispatch({ type: 'SET_VIEW', view: 'lifestyle' })
-        return { detail: `Posted: “${body.slice(0, 80)}${body.length > 80 ? '…' : ''}”` }
+        await sleep(700)
+        return { detail: `Posted to the Space feed: “${body.slice(0, 80)}${body.length > 80 ? '…' : ''}”` }
       }
       default:
         return { detail: 'Skipped' }
@@ -390,9 +404,17 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
   }
 
   async function runAgent(text: string, history: { role: 'user' | 'assistant'; content: string }[], targetProjectId?: number) {
-    const plan = await api.helios.agent(text, { project_id: targetProjectId, view: currentView }, modelTab)
+    reportAgentStatus({ phase: 'planning', title: 'Planning the steps…' })
+    let plan
+    try {
+      plan = await api.helios.agent(text, { project_id: targetProjectId, view: currentView }, modelTab)
+    } catch (error) {
+      reportAgentStatus({ phase: 'idle', title: '' })
+      throw error
+    }
     if (!plan.steps.length) {
       // Nothing to do in the app: answer like a normal chat turn instead.
+      reportAgentStatus({ phase: 'idle', title: '' })
       await chatReply(history, targetProjectId)
       return
     }
@@ -406,18 +428,32 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       meta: { model: plan.model, source: plan.source, planner: plan.planner },
     }])
     let created: Project | null = null
-    for (let index = 0; index < plan.steps.length; index += 1) {
+    const total = plan.steps.length
+    const summary: string[] = []
+    let failed = 0
+    for (let index = 0; index < total; index += 1) {
+      const step = plan.steps[index]
+      const title = stepTitle(step)
       updateStep(msgId, index, { status: 'running' })
+      reportAgentStatus({ phase: 'running', title, step: index + 1, total })
       await sleep(350)
       try {
-        const result = await executeStep(plan.steps[index], created, plan.goal || text, detail => updateStep(msgId, index, { detail }))
+        const result = await executeStep(step, created, plan.goal || text, detail => {
+          updateStep(msgId, index, { detail })
+          reportAgentStatus({ phase: 'running', title, detail, step: index + 1, total })
+        })
         if (result.project) created = result.project
         updateStep(msgId, index, { status: 'done', detail: result.detail, undo: result.undo })
+        summary.push(result.detail)
       } catch (error) {
+        failed += 1
         updateStep(msgId, index, { status: 'failed', detail: (error as Error).message || 'Step failed' })
       }
     }
     setMessages(prev => prev.map(m => m.id === msgId ? { ...m, finished: true } : m))
+    reportAgentStatus(failed
+      ? { phase: 'failed', title: `${total - failed}/${total} steps done`, detail: 'see the Helios panel for details' }
+      : { phase: 'done', title: total === 1 ? summary[0] : `All ${total} steps done`, detail: total === 1 ? undefined : summary[summary.length - 1] })
   }
 
   async function chatReply(history: { role: 'user' | 'assistant'; content: string }[], targetProjectId?: number) {
@@ -610,7 +646,7 @@ export function HeliosPanel({ onClose, activeProject, onProjectContentChange, ai
       {/* Model tabs: free site model vs. the user's own API (VS Code-style) */}
       <div className="flex border-b flex-shrink-0" role="tablist" aria-label="Model" style={{ borderColor: 'var(--helios-border)' }}>
         {([
-          { id: 'site' as const, icon: <Sparkles size={12} />, title: 'Free · Helios', sub: siteModelLabel, ready: aiEnabled },
+          { id: 'site' as const, icon: <Sparkles size={12} />, title: 'Free', sub: aiEnabled ? `${siteModelLabel} · no key needed` : 'Built-in model is off', ready: aiEnabled },
           { id: 'user' as const, icon: <KeyRound size={12} />, title: 'My API', sub: userModelLabel, ready: userAiReady },
         ]).map(tab => {
           const active = modelTab === tab.id

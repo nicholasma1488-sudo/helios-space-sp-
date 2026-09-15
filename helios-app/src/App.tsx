@@ -9,6 +9,7 @@ import { HeliosPanel } from './components/HeliosPanel'
 import { CommandPalette } from './components/CommandPalette'
 import { ShortcutsHelp } from './components/ShortcutsHelp'
 import { ToastLayer } from './components/ToastLayer'
+import { AgentStatusBar } from './components/AgentStatusBar'
 import { HomeView } from './views/HomeView'
 import { LifestyleView } from './views/LifestyleView'
 import { ChatView } from './views/ChatView'
@@ -266,6 +267,7 @@ function AppInner() {
         )}
       </GlobalShell>
       <CommandPalette />
+      <AgentStatusBar />
       <ToastLayer />
       <ShortcutsHelp />
     </>

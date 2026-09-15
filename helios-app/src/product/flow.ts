@@ -124,3 +124,28 @@ export function runHeliosAgent(text: string, panelOpen: boolean, openPanel: () =
   try { sessionStorage.setItem('helios-pending-prompt', goal) } catch {}
   openPanel()
 }
+
+export const AGENT_STATUS_EVENT = 'helios-agent-status'
+
+export interface AgentStatus {
+  phase: 'planning' | 'running' | 'done' | 'failed' | 'idle'
+  title: string
+  detail?: string
+  step?: number
+  total?: number
+}
+
+/** Broadcast what the agent is doing so the floating status bar can show it over the page. */
+export function reportAgentStatus(status: AgentStatus) {
+  window.dispatchEvent(new CustomEvent<AgentStatus>(AGENT_STATUS_EVENT, { detail: status }))
+}
+
+/** Briefly ring a Mini App tile on the Mini Apps page so the user sees which app the agent picked. */
+export function spotlightMiniApp(appId: string, ms = 1400) {
+  const tile = document.querySelector<HTMLElement>(`[data-app-id="${appId}"]`)
+  if (!tile) return false
+  tile.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  tile.classList.add('is-agent-target')
+  window.setTimeout(() => tile.classList.remove('is-agent-target'), ms)
+  return true
+}
