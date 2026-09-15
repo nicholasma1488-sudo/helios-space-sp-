@@ -575,7 +575,7 @@ export function LifestyleView({ currentUser }: Props) {
                 sessionStorage.setItem('helios-invite-handle', post.author_handle || '')
                 sessionStorage.setItem('helios-invite-name', post.author_name || '')
                 dispatch({ type: 'SET_VIEW', view: 'chat' })
-                dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Invite ${post.author_name} to collaborate in Messages`, tone: 'success' } })
+                dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Invite {name} to collaborate in Messages', { name: post.author_name }), tone: 'success' } })
               }}
               onToggleComments={() => toggleComments(post.id)}
               onToggleSave={() => void toggleSave(post)}
@@ -600,11 +600,11 @@ export function LifestyleView({ currentUser }: Props) {
               disabled={loadingMore}
               onClick={() => void loadPosts(nextCursor, true)}
             >
-              {loadingMore ? 'Loading more…' : 'Load more progress'}
+              {loadingMore ? t('Loading more…') : t('Load more progress')}
             </button>
           )}
           {!loading && !loadError && timeline.length > 0 && !nextCursor && (
-            <div className="feed-end"><span>✦</span> You're all caught up.</div>
+            <div className="feed-end"><span>✦</span> {t("You're all caught up.")}</div>
           )}
         </main>
       </div>
@@ -694,7 +694,7 @@ function PostCard({
 
         {post.media_url && (post.media_url.startsWith('data:video/') || /\.(mp4|webm|mov)(\?|$)/i.test(post.media_url)
           ? <video className="post-media" src={post.media_url} controls preload="metadata" />
-          : <img className="post-media" src={post.media_url} alt="Collaboration post media" />)}
+          : <img className="post-media" src={post.media_url} alt={t('Collaboration post media')} />)}
 
         {post.project_name && (
           <div className="post-project-row">
@@ -707,10 +707,10 @@ function PostCard({
         )}
 
         <div className="post-actions tweet-actions collab-actions">
-          <button type="button" onClick={onToggleComments} aria-expanded={commentsOpen} title="Comment">
+          <button type="button" onClick={onToggleComments} aria-expanded={commentsOpen} title={t('Comment')}>
             <MessageCircle size={18} /> <span>{post.comment_count || ''}</span>
           </button>
-          <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''} title="Like">
+          <button type="button" onClick={onLike} disabled={busy} aria-pressed={liked} className={liked ? 'is-liked' : ''} title={t('Like')}>
             <Heart size={18} fill={liked ? 'currentColor' : 'none'} /> <span>{likeCount || reactionTotal || ''}</span>
           </button>
           {showAddFriend && (
@@ -719,34 +719,34 @@ function PostCard({
               onClick={onAddFriend}
               disabled={friendBusy || friendPending}
               className={friendPending ? 'is-friend-pending' : ''}
-              title={friendPending ? 'Friend request pending' : 'Add friend'}
+              title={friendPending ? t('Friend request pending') : t('Add friend')}
             >
-              <UserPlus size={18} /> <span>{friendPending ? 'Pending' : 'Add friend'}</span>
+              <UserPlus size={18} /> <span>{friendPending ? t('Pending') : t('Add friend')}</span>
             </button>
           )}
-          <button type="button" onClick={onInvite} title="Invite to collaborate">
-            <UserPlus size={18} /> <span>Invite</span>
+          <button type="button" onClick={onInvite} title={t('Invite to collaborate')}>
+            <UserPlus size={18} /> <span>{t('Invite')}</span>
           </button>
-          <button type="button" onClick={onToggleSave} aria-pressed={post.is_saved} className={post.is_saved ? 'is-saved' : ''} disabled={busy} title="Save">
+          <button type="button" onClick={onToggleSave} aria-pressed={post.is_saved} className={post.is_saved ? 'is-saved' : ''} disabled={busy} title={t('Save')}>
             <Bookmark size={18} fill={post.is_saved ? 'currentColor' : 'none'} />
           </button>
-          <button type="button" onClick={onCopy} title="Copy link"><Share size={17} /></button>
+          <button type="button" onClick={onCopy} title={t('Copy link')}><Share size={17} /></button>
           <button type="button" className="tweet-more-react" onClick={onTogglePicker} aria-haspopup="menu" aria-expanded={pickerOpen}>
-            {pickerOpen ? 'Close' : 'React'}
+            {pickerOpen ? t('Close') : t('React')}
           </button>
         </div>
         {pickerOpen && (
-          <div className="reaction-picker tweet-picker" role="menu" aria-label="Choose a reaction">
+          <div className="reaction-picker tweet-picker" role="menu" aria-label={t('Choose a reaction')}>
             {REACTIONS.map(item => (
               <button
                 key={item.emoji}
                 type="button"
                 role="menuitem"
-                title={item.label}
+                title={t(item.label)}
                 onClick={() => onReact(item.emoji)}
                 className={post.my_reactions.includes(item.emoji) ? 'is-active' : ''}
               >
-                <span>{item.emoji}</span><small>{item.label}</small>
+                <span>{item.emoji}</span><small>{t(item.label)}</small>
               </button>
             ))}
           </div>
@@ -773,6 +773,7 @@ function CommentsSection({
   currentUser: User
   onCountChange: (delta: number) => void
 }) {
+  const t = useT()
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -818,8 +819,8 @@ function CommentsSection({
   }
 
   return (
-    <section className="comments-section" aria-label="Comments">
-      {loading && <div className="comments-loading">Loading comments…</div>}
+    <section className="comments-section" aria-label={t('Comments')}>
+      {loading && <div className="comments-loading">{t('Loading comments…')}</div>}
       {!loading && comments.map(comment => (
         <article key={comment.id} className="comment-item">
           <Avatar name={comment.author_name} size="sm" />
@@ -828,15 +829,15 @@ function CommentsSection({
             <p>{comment.body}</p>
           </div>
           {comment.can_delete && (
-            <button type="button" onClick={() => void remove(comment)} aria-label="Delete comment"><X size={13} /></button>
+            <button type="button" onClick={() => void remove(comment)} aria-label={t('Delete comment')}><X size={13} /></button>
           )}
         </article>
       ))}
-      {!loading && comments.length === 0 && <div className="comments-empty">No comments yet. Add something useful or kind.</div>}
+      {!loading && comments.length === 0 && <div className="comments-empty">{t('No comments yet. Add something useful or kind.')}</div>}
       <form onSubmit={submit} className="comment-form">
         <Avatar name={currentUser.name} size="sm" />
         <label>
-          <span className="sr-only">Write a comment</span>
+          <span className="sr-only">{t('Write a comment')}</span>
           <textarea
             value={draft}
             maxLength={600}
@@ -844,10 +845,10 @@ function CommentsSection({
             onKeyDown={event => {
               if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') event.currentTarget.form?.requestSubmit()
             }}
-            placeholder="Write a thoughtful comment…"
+            placeholder={t('Write a thoughtful comment…')}
             rows={1}
           />
-          <button type="submit" disabled={!draft.trim() || submitting} aria-label="Post comment"><Send size={14} /></button>
+          <button type="submit" disabled={!draft.trim() || submitting} aria-label={t('Post comment')}><Send size={14} /></button>
         </label>
       </form>
       {error && <div className="comments-error" role="alert">{error}</div>}
@@ -877,7 +878,7 @@ function HighlightDialog({ post, onClose }: { post: Post; onClose: () => void })
       <div className={'highlight-dialog category-' + post.category} role="dialog" aria-modal="true" aria-labelledby="highlight-dialog-title" ref={dialogRef}>
         <button type="button" onClick={onClose} className="highlight-dialog-close" aria-label="Close highlight"><X size={17} /></button>
         <div className="highlight-dialog-mark" aria-hidden="true"><Sparkles size={22} /></div>
-        <span className="highlight-dialog-category">{categoryLabel(post.category)}</span>
+        <span className="highlight-dialog-category">{t(categoryLabel(post.category))}</span>
         <h2 id="highlight-dialog-title">{post.author_name} took a step forward</h2>
         <p>{post.body}</p>
         <footer><Avatar name={post.author_name} size="sm" /><span><strong>{post.author_name}</strong><small>{post.author_handle} · {relativeTime(post.created_at)}</small></span></footer>
