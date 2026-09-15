@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useT } from '../i18n'
 import { AlertTriangle, Bot, Check } from 'lucide-react'
 import { AGENT_STATUS_EVENT, type AgentStatus } from '../product/flow'
 import './AgentStatusBar.css'
@@ -24,6 +25,7 @@ export function AgentStatusBar() {
     return () => { window.removeEventListener(AGENT_STATUS_EVENT, onStatus); window.clearTimeout(hide) }
   }, [])
 
+  const t = useT()
   if (!status) return null
   const busy = status.phase === 'planning' || status.phase === 'running'
   return (
@@ -33,8 +35,8 @@ export function AgentStatusBar() {
       </span>
       <span className="agent-status-text">
         <strong>
-          Helios agent
-          {busy && status.total ? ` · step ${Math.min(status.step || 1, status.total)}/${status.total}` : ''}
+          {t('Helios agent')}
+          {busy && status.total ? ` · ${t('step {step}/{total}', { step: Math.min(status.step || 1, status.total), total: status.total })}` : ''}
         </strong>
         <span>{status.title}{status.detail ? ` — ${status.detail}` : ''}</span>
       </span>

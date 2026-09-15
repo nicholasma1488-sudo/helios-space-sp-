@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useApp } from '../store/appStore'
 import { X, Command } from 'lucide-react'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { useT } from '../i18n'
 
 const SHORTCUTS: { keys: string; label: string; group: string }[] = [
   { keys: 'Ctrl/⌘ K', label: 'Open command palette', group: 'Global' },
@@ -34,6 +35,7 @@ export function ShortcutsHelp() {
 
   if (!state.shortcutsOpen) return null
 
+  const t = useT()
   const groups = [...new Set(SHORTCUTS.map(s => s.group))]
 
   return (
@@ -53,12 +55,12 @@ export function ShortcutsHelp() {
       >
         <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: 'var(--helios-border)' }}>
           <Command size={16} style={{ color: 'var(--helios-accent)' }} />
-          <h2 id="shortcuts-title" style={{ fontSize: 15, fontWeight: 700, flex: 1, margin: 0 }}>Keyboard shortcuts</h2>
+          <h2 id="shortcuts-title" style={{ fontSize: 15, fontWeight: 700, flex: 1, margin: 0 }}>{t('Keyboard shortcuts')}</h2>
           <button
             type="button"
             onClick={() => dispatch({ type: 'SET_SHORTCUTS', open: false })}
             style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', cursor: 'pointer', padding: 4 }}
-            aria-label="Close"
+            aria-label={t('Close')}
           >
             <X size={16} />
           </button>
@@ -67,12 +69,12 @@ export function ShortcutsHelp() {
           {groups.map(group => (
             <div key={group}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--helios-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                {group}
+                {t(group)}
               </div>
               <div className="flex flex-col gap-1">
                 {SHORTCUTS.filter(s => s.group === group).map(s => (
                   <div key={s.label} className="flex items-center justify-between py-1.5">
-                    <span style={{ fontSize: 13 }}>{s.label}</span>
+                    <span style={{ fontSize: 13 }}>{t(s.label)}</span>
                     <kbd style={{ fontSize: 11, color: 'var(--helios-text)', background: 'var(--helios-surface2)', padding: '3px 8px', borderRadius: 6, border: '1px solid var(--helios-border)', fontFamily: 'ui-monospace, monospace' }}>
                       {s.keys}
                     </kbd>
