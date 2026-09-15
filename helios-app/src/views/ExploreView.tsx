@@ -120,12 +120,12 @@ function PostDiscoveryCard({ post, onReact, onOpenProject }: { post: Post; onRea
 }
 function SpaceDiscoveryRow({ space, onOpen }: { space: ExploreResults['spaces'][number]; onOpen: () => void }) {
   const t = useT()
-  return <button type="button" onClick={onOpen}><i style={{ background: getSpaceDefinition(space.id).accent }}>{space.name.slice(0, 1)}</i><span><strong>{space.name}</strong><small>{t('{count} Projects', { count: space.project_count })} · {t('{count} Live', { count: space.live_count })}</small></span><ChevronRight size={13} /></button>
+  return <button type="button" onClick={onOpen}><i style={{ background: getSpaceDefinition(space.id).accent }}>{space.name.slice(0, 1)}</i><span><strong>{t(space.name)}</strong><small>{t('{count} Projects', { count: space.project_count })} · {t('{count} Live', { count: space.live_count })}</small></span><ChevronRight size={13} /></button>
 }
 function SpaceDiscoveryCard({ space, onOpen }: { space: ExploreResults['spaces'][number]; onOpen: () => void }) {
   const t = useT()
   const definition = getSpaceDefinition(space.id)
-  return <button type="button" className="explore-space-card" onClick={onOpen} style={{ '--explore-accent': definition.accent } as React.CSSProperties}><i>{space.name.slice(0, 1)}</i><span>{t('{kind} Space', { kind: t(space.kind) })}</span><h3>{space.name}</h3><p>{t(definition.description)}</p><footer><b>{t('{count} Projects', { count: space.project_count })}</b><b>{t('{count} posts', { count: space.post_count })}</b><b>{t('{count} Live', { count: space.live_count })}</b></footer></button>
+  return <button type="button" className="explore-space-card" onClick={onOpen} style={{ '--explore-accent': definition.accent } as React.CSSProperties}><i>{space.name.slice(0, 1)}</i><span>{t('{kind} Space', { kind: t(space.kind) })}</span><h3>{t(space.name)}</h3><p>{t(definition.description)}</p><footer><b>{t('{count} Projects', { count: space.project_count })}</b><b>{t('{count} posts', { count: space.post_count })}</b><b>{t('{count} Live', { count: space.live_count })}</b></footer></button>
 }
 function CreatorRow({ creator, current }: { creator: ExploreResults['creators'][number]; current: boolean }) {
   const t = useT()
