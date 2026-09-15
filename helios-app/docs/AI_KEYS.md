@@ -125,7 +125,11 @@ Status is broadcast through the `helios-agent-status` DOM event (`reportAgentSta
 Flow: `POST /api/helios/agent` returns the plan instantly (rule planner for clear intents in
 English or Chinese, model planner otherwise). The browser executes the steps and calls
 `POST /api/helios/agent/content` per file, so the page opens first and the content streams in
-afterwards. Small local models (Ollama, "instant"/"mini" cloud models) get compact prompts and
+afterwards. While the model writes, a Forge project shows a "Helios is writing this project…"
+placeholder rather than the brief; the content endpoint saves the finished result (project
+content **and** repo files) on the server, so reloading mid-generation loses nothing, and the
+open Forge editor swaps its files in place when the result lands.
+Small local models (Ollama, "instant"/"mini" cloud models) get compact prompts and
 token caps; a Stage deck or Tally list takes ~25–30 s on a 4-core CPU with `llama3.2:3b`,
 a Chinese Quill document ~45–60 s. Prompts that need no action fall back to a normal chat reply.
 
