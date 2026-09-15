@@ -1,4 +1,5 @@
 import type { BillingPlanId, Project } from '../api'
+import { t } from '../i18n'
 
 export type SuiteEdition = 'free' | 'orbit'
 export type SuiteTrack = 'core' | 'orbit'
@@ -245,11 +246,11 @@ export function editionFor(plan?: BillingPlanId | null): SuiteEdition {
 }
 
 export function editionLabel(_edition: SuiteEdition) {
-  return 'Helios'
+  return t('Helios')
 }
 
 export function editionKicker(_edition: SuiteEdition) {
-  return 'FREE FOREVER'
+  return t('FREE FOREVER')
 }
 
 export const WRITING_LIMITS = {
@@ -258,7 +259,7 @@ export const WRITING_LIMITS = {
 }
 
 export function editionBlurb(_edition: SuiteEdition) {
-  return 'Helios Mini Apps — Quill, Lattice, Stage, Folio, Forge, and more — then share on Space.'
+  return t('Helios Mini Apps — Quill, Lattice, Stage, Folio, Forge, and more — then share on Space.')
 }
 
 export function suiteAppsForEdition(_edition: SuiteEdition) {
@@ -270,7 +271,7 @@ export function suiteAppUnlocked(_app: SuiteApp, _edition: SuiteEdition) {
 }
 
 export function unlockLabel(_edition: SuiteEdition) {
-  return 'All available'
+  return t('All available')
 }
 
 export function spaceForSuiteApp(app: SuiteApp) {
@@ -291,7 +292,7 @@ export function getSuiteApp(id: string) {
 }
 
 export function suiteHomeTitle(_edition: SuiteEdition) {
-  return 'Mini Apps'
+  return t('Mini Apps')
 }
 
 function writingData(html: string) {

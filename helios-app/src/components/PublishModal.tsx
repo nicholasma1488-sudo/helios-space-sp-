@@ -3,6 +3,7 @@ import { Check, Send, X } from 'lucide-react'
 import { api } from '../api'
 import type { Project } from '../api'
 import { useFocusTrap } from '../hooks/useFocusTrap'
+import { useT } from '../i18n'
 import { useApp } from '../store/appStore'
 
 type Audience = 'public' | 'private'
@@ -15,6 +16,7 @@ interface Props {
 const MIN_UPDATE_LENGTH = 10
 
 export function PublishModal({ project, onClose }: Props) {
+  const t = useT()
   const { dispatch } = useApp()
   const [body, setBody] = useState('')
   const [audience, setAudience] = useState<Audience>('public')
@@ -40,7 +42,7 @@ export function PublishModal({ project, onClose }: Props) {
     event.preventDefault()
     const update = body.trim()
     if (update.length < MIN_UPDATE_LENGTH) {
-      setError(`Describe what changed in at least ${MIN_UPDATE_LENGTH} characters.`)
+      setError(t('Describe what changed in at least {count} characters.', { count: MIN_UPDATE_LENGTH }))
       return
     }
 
@@ -60,12 +62,12 @@ export function PublishModal({ project, onClose }: Props) {
         type: 'PUSH_TOAST',
         toast: {
           id: Date.now().toString(),
-          message: audience === 'public' ? 'Project update published' : 'Private project update saved',
+          message: audience === 'public' ? t('Project update published') : t('Private project update saved'),
           tone: 'success',
         },
       })
     } catch (publishError) {
-      setError((publishError as Error).message || 'Could not publish this update.')
+      setError((publishError as Error).message || t('Could not publish this update.'))
     } finally {
       setSubmitting(false)
     }
@@ -82,12 +84,12 @@ export function PublishModal({ project, onClose }: Props) {
         <header className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: 'var(--helios-border)' }}>
           <Send size={16} style={{ color: 'var(--helios-accent)' }} aria-hidden="true" />
           <div className="flex-1 min-w-0">
-            <div id="publish-title" style={{ fontSize: 15, fontWeight: 700 }}>Publish project update</div>
+            <div id="publish-title" style={{ fontSize: 15, fontWeight: 700 }}>{t('Publish project update')}</div>
             <div style={{ fontSize: 12, color: 'var(--helios-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {project.name}
             </div>
           </div>
-          <button type="button" onClick={close} disabled={submitting} aria-label="Close publish dialog"
+          <button type="button" onClick={close} disabled={submitting} aria-label={t('Close publish dialog')}
             className="p-1.5 rounded-lg cursor-pointer"
             style={{ background: 'none', border: 'none', color: 'var(--helios-muted)', opacity: submitting ? 0.5 : 1 }}>
             <X size={16} />
@@ -100,44 +102,44 @@ export function PublishModal({ project, onClose }: Props) {
               <Check size={24} color="#fff" aria-hidden="true" />
             </div>
             <div style={{ fontSize: 16, fontWeight: 700 }}>
-              {audience === 'public' ? 'Update published' : 'Private update saved'}
+              {audience === 'public' ? t('Update published') : t('Private update saved')}
             </div>
             <div id="publish-description" style={{ fontSize: 13, color: 'var(--helios-muted)', lineHeight: 1.5 }}>
               {audience === 'public'
-                ? 'Your project update is now available in the public post feed.'
-                : 'This update is visible only to you.'}
+                ? t('Your project update is now available in the public post feed.')
+                : t('This update is visible only to you.')}
             </div>
             <button type="button" onClick={close} autoFocus
               className="mt-2 px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer"
               style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none' }}>
-              Close
+              {t('Close')}
             </button>
           </div>
         ) : (
           <form onSubmit={publish} className="flex flex-col gap-4 p-5">
             <p id="publish-description" style={{ fontSize: 12, color: 'var(--helios-muted)', lineHeight: 1.55, margin: 0 }}>
-              Share a concise update about what changed. Publishing links this post to the project; it does not include private editor history.
+              {t('Share a concise update about what changed. Publishing links this post to the project; it does not include private editor history.')}
             </p>
 
             <div>
               <label htmlFor="publish-update" style={{ fontSize: 12, fontWeight: 600, color: 'var(--helios-muted)', display: 'block', marginBottom: 6 }}>
-                What changed?
+                {t('What changed?')}
               </label>
               <textarea id="publish-update" autoFocus value={body}
                 onChange={event => { setBody(event.target.value); if (error) setError('') }}
                 rows={4} maxLength={2000} required
-                placeholder="Describe the progress, decision, or result you want to share…"
+                placeholder={t('Describe the progress, decision, or result you want to share…')}
                 className="w-full rounded-xl px-3 py-2.5 outline-none resize-none"
                 style={{ background: 'var(--helios-surface2)', border: `1px solid ${error ? 'var(--helios-danger)' : 'var(--helios-border)'}`, color: 'var(--helios-text)', fontSize: 13, lineHeight: 1.55 }}
                 aria-invalid={!!error} aria-describedby={error ? 'publish-error' : 'publish-body-help'} />
               <div id="publish-body-help" className="flex justify-between gap-3 mt-1.5" style={{ fontSize: 11, color: 'var(--helios-muted)' }}>
-                <span>At least {MIN_UPDATE_LENGTH} characters</span>
+                <span>{t('At least {count} characters', { count: MIN_UPDATE_LENGTH })}</span>
                 <span>{body.length}/2000</span>
               </div>
             </div>
 
             <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-              <legend style={{ fontSize: 12, fontWeight: 600, color: 'var(--helios-muted)', marginBottom: 8 }}>Audience</legend>
+              <legend style={{ fontSize: 12, fontWeight: 600, color: 'var(--helios-muted)', marginBottom: 8 }}>{t('Audience')}</legend>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   ['public', 'Public', 'Visible in the public post feed'],
@@ -146,8 +148,8 @@ export function PublishModal({ project, onClose }: Props) {
                   <button key={value} type="button" onClick={() => setAudience(value)} aria-pressed={audience === value}
                     className="flex flex-col items-start gap-1 px-3 py-2.5 rounded-xl text-left cursor-pointer"
                     style={{ background: audience === value ? 'rgba(124,106,247,0.15)' : 'var(--helios-surface2)', color: audience === value ? 'var(--helios-accent)' : 'var(--helios-text)', border: `1px solid ${audience === value ? 'var(--helios-accent)' : 'var(--helios-border)'}` }}>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
-                    <span style={{ fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.4 }}>{detail}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{t(label)}</span>
+                    <span style={{ fontSize: 11, color: 'var(--helios-muted)', lineHeight: 1.4 }}>{t(detail)}</span>
                   </button>
                 ))}
               </div>
@@ -163,7 +165,7 @@ export function PublishModal({ project, onClose }: Props) {
             <button type="submit" disabled={submitting || !meaningfulBody}
               className="py-3 rounded-xl text-sm font-semibold cursor-pointer flex items-center justify-center gap-2"
               style={{ background: 'var(--helios-accent)', color: '#fff', border: 'none', opacity: (submitting || !meaningfulBody) ? 0.55 : 1 }}>
-              <Send size={14} aria-hidden="true" /> {submitting ? 'Publishing…' : audience === 'public' ? 'Publish update' : 'Save private update'}
+              <Send size={14} aria-hidden="true" /> {submitting ? t('Publishing…') : audience === 'public' ? t('Publish update') : t('Save private update')}
             </button>
           </form>
         )}

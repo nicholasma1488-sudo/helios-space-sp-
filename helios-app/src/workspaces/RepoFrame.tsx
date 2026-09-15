@@ -7,6 +7,7 @@ import {
 import { api, type Project, type ProjectCommit } from '../api'
 import { artifactPathForKind, filesFromList, isValidRepoPath, languageForFile, README_STARTER, sortFilePaths } from './repoModel'
 import { monacoThemeFor, useResolvedTheme } from '../hooks/useResolvedTheme'
+import { useLocale, useT } from '../i18n'
 
 interface RepoFrameProps {
   project: Project
@@ -39,18 +40,21 @@ export function RepoFrame({
   remoteUrl = '', onRemoteUrlChange, onOpenFile, onCreateFile, onRenameFile,
   onDeleteFile, onCommit, onViewCommit, onRestoreCommit,
 }: RepoFrameProps) {
+  const t = useT()
+  const locale = useLocale()
   const [newPath, setNewPath] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [message, setMessage] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [remoteDraft, setRemoteDraft] = useState(remoteUrl)
   const [gitStatus, setGitStatus] = useState(remoteUrl.trim() ? 'Connected' : 'Not connected')
+  const connected = gitStatus === 'Connected'
   const names = sortFilePaths(Object.keys(files))
   const empty = names.length === 0
   const handle = project.owner_handle || 'repo'
   const slug = project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project'
   const branch = 'main'
-  const autosaveLabel = dirtyPaths.length > 0 ? 'Saving…' : 'Autosaved'
+  const autosaveLabel = dirtyPaths.length > 0 ? t('Saving…') : t('Autosaved')
 
   useEffect(() => {
     setRemoteDraft(remoteUrl)
@@ -91,14 +95,14 @@ export function RepoFrame({
             <strong>{handle}/{slug}</strong>
           </div>
           <span className="repo-branch">{branch}</span>
-          {(uncommitted || dirtyPaths.length > 0) && <i className="repo-dirty-dot" title="Unsaved local changes pending autosave" />}
+          {(uncommitted || dirtyPaths.length > 0) && <i className="repo-dirty-dot" title={t('Unsaved local changes pending autosave')} />}
           <small className="repo-autosave-status">{autosaveLabel}</small>
-          <small>{names.length} {names.length === 1 ? 'file' : 'files'}</small>
+          <small>{names.length === 1 ? t('1 file') : t('{count} files', { count: names.length })}</small>
         </div>
         <div className="repo-toolbar-actions">
-          {canEdit && <button type="button" onClick={() => setShowNew(true)} disabled={creating}><FilePlus2 size={13} /> Add file</button>}
+          {canEdit && <button type="button" onClick={() => setShowNew(true)} disabled={creating}><FilePlus2 size={13} /> {t('Add file')}</button>}
           <button type="button" className={showHistory ? 'is-active' : ''} onClick={() => setShowHistory(open => !open)} aria-pressed={showHistory}>
-            <History size={13} /> History
+            <History size={13} /> {t('History')}
           </button>
         </div>
       </header>
@@ -106,39 +110,39 @@ export function RepoFrame({
       <form className="repo-git-strip" onSubmit={connectRemote}>
         <Link2 size={13} />
         <label>
-          <span>Remote URL</span>
+          <span>{t('Remote URL')}</span>
           <input
             value={remoteDraft}
             onChange={event => setRemoteDraft(event.target.value)}
             placeholder="https://github.com/org/repo.git"
-            aria-label="Git remote URL"
+            aria-label={t('Git remote URL')}
             disabled={!canEdit && !onRemoteUrlChange}
           />
         </label>
-        <button type="submit" disabled={!onRemoteUrlChange}>Connect</button>
-        <small className={gitStatus === 'Connected' ? 'is-connected' : ''}>{gitStatus} · {branch}</small>
+        <button type="submit" disabled={!onRemoteUrlChange}>{t('Connect')}</button>
+        <small className={connected ? 'is-connected' : ''}>{t(gitStatus)} · {branch}</small>
       </form>
 
       {viewingCommit && (
         <div className="repo-commit-banner">
           <History size={13} />
-          <span>Viewing snapshot · {viewingCommit.message}</span>
-          <small>{viewingCommit.author_name} · {new Date(viewingCommit.created_at).toLocaleString()}</small>
-          <button type="button" onClick={() => onViewCommit(null)}>Back to current</button>
-          {canEdit && onRestoreCommit && <button type="button" onClick={() => onRestoreCommit(viewingCommit)}>Restore this snapshot</button>}
+          <span>{t('Viewing snapshot · {message}', { message: viewingCommit.message })}</span>
+          <small>{viewingCommit.author_name} · {new Date(viewingCommit.created_at).toLocaleString(locale)}</small>
+          <button type="button" onClick={() => onViewCommit(null)}>{t('Back to current')}</button>
+          {canEdit && onRestoreCommit && <button type="button" onClick={() => onRestoreCommit(viewingCommit)}>{t('Restore this snapshot')}</button>}
         </div>
       )}
 
       <div className={'repo-body' + (showHistory ? ' has-history' : '')}>
         <aside className="repo-tree">
           <header>
-            <span>Files</span>
-            {canEdit && !viewingCommit && <button type="button" onClick={() => setShowNew(true)} aria-label="Add file"><FilePlus2 size={13} /></button>}
+            <span>{t('Files')}</span>
+            {canEdit && !viewingCommit && <button type="button" onClick={() => setShowNew(true)} aria-label={t('Add file')}><FilePlus2 size={13} /></button>}
           </header>
           {showNew && canEdit && (
             <form className="repo-new-file" onSubmit={submitNew}>
-              <input value={newPath} onChange={event => setNewPath(event.target.value)} placeholder="src/app.ts" autoFocus aria-label="New file path" />
-              <button type="submit" disabled={!isValidRepoPath(newPath.trim()) || files[newPath.trim()] !== undefined}>Create</button>
+              <input value={newPath} onChange={event => setNewPath(event.target.value)} placeholder="src/app.ts" autoFocus aria-label={t('New file path')} />
+              <button type="submit" disabled={!isValidRepoPath(newPath.trim()) || files[newPath.trim()] !== undefined}>{t('Create')}</button>
             </form>
           )}
           <div>
@@ -149,21 +153,21 @@ export function RepoFrame({
                 <span>{name}</span>
                 {dirtyPaths.includes(name) && <i className="repo-dirty-dot" />}
                 {canEdit && !viewingCommit && onRenameFile && (
-                  <b role="button" tabIndex={0} aria-label={`Rename ${name}`} onClick={event => {
+                  <b role="button" tabIndex={0} aria-label={t('Rename {name}', { name })} onClick={event => {
                     event.stopPropagation()
-                    const next = window.prompt('Rename file', name)?.trim()
+                    const next = window.prompt(t('Rename file'), name)?.trim()
                     if (next && next !== name && isValidRepoPath(next) && files[next] === undefined) onRenameFile(name, next)
                   }}><Pencil size={11} /></b>
                 )}
                 {canEdit && !viewingCommit && onDeleteFile && (
-                  <i role="button" tabIndex={0} aria-label={`Delete ${name}`} onClick={event => {
+                  <i role="button" tabIndex={0} aria-label={t('Delete {name}', { name })} onClick={event => {
                     event.stopPropagation()
-                    if (window.confirm(`Delete ${name}?`)) onDeleteFile(name)
+                    if (window.confirm(t('Delete {name}?', { name }))) onDeleteFile(name)
                   }}><Trash2 size={11} /></i>
                 )}
               </button>
             ))}
-            {empty && <p className="repo-tree-empty">No files yet</p>}
+            {empty && <p className="repo-tree-empty">{t('No files yet')}</p>}
           </div>
         </aside>
 
@@ -174,25 +178,25 @@ export function RepoFrame({
         {showHistory && (
           <aside className="repo-history">
             <header>
-              <span><History size={13} /> Advanced history</span>
+              <span><History size={13} /> {t('Advanced history')}</span>
               <small>{branch}</small>
             </header>
             {canEdit && !viewingCommit && (
               <form className="repo-commit-form" onSubmit={submitCommit}>
-                <p>Optional snapshot. Edits already autosave.</p>
-                <textarea value={message} maxLength={200} onChange={event => setMessage(event.target.value)} placeholder="Snapshot message" />
-                <button type="submit" disabled={!message.trim() || committing}><GitCommitHorizontal size={13} /> {committing ? 'Saving snapshot…' : 'Save snapshot'}</button>
+                <p>{t('Optional snapshot. Edits already autosave.')}</p>
+                <textarea value={message} maxLength={200} onChange={event => setMessage(event.target.value)} placeholder={t('Snapshot message')} />
+                <button type="submit" disabled={!message.trim() || committing}><GitCommitHorizontal size={13} /> {committing ? t('Saving snapshot…') : t('Save snapshot')}</button>
               </form>
             )}
             <div>
               {commits.map(commit => (
                 <button type="button" key={commit.id} className={viewingCommit?.id === commit.id ? 'is-active' : ''} onClick={() => onViewCommit(commit)}>
                   <strong>{commit.message}</strong>
-                  <small>{commit.author_name} · {new Date(commit.created_at).toLocaleString()}</small>
-                  <em>{commit.file_count} files</em>
+                  <small>{commit.author_name} · {new Date(commit.created_at).toLocaleString(locale)}</small>
+                  <em>{commit.file_count === 1 ? t('1 file') : t('{count} files', { count: commit.file_count })}</em>
                 </button>
               ))}
-              {commits.length === 0 && <p className="repo-tree-empty">No snapshots yet. Work autosaves as you edit.</p>}
+              {commits.length === 0 && <p className="repo-tree-empty">{t('No snapshots yet. Work autosaves as you edit.')}</p>}
             </div>
           </aside>
         )}
@@ -369,6 +373,7 @@ export function RepoBoundWorkspace({
   onChange: (data: Record<string, unknown>) => void
   children: React.ReactNode
 }) {
+  const t = useT()
   const repo = useProjectRepo(project.id, canEdit)
   const monacoTheme = monacoThemeFor(useResolvedTheme())
   const artifact = artifactPathForKind(kind)
@@ -414,7 +419,7 @@ export function RepoBoundWorkspace({
       commits={repo.commits}
       viewingCommit={repo.viewingCommit}
       committing={repo.committing}
-      nativeLabel={`${kind} repository`}
+      nativeLabel={t(kind === 'notebook' ? 'notebook repository' : kind === 'writing' ? 'writing repository' : 'spreadsheet repository')}
       productLabel="Helios IDE"
       onOpenFile={setActiveFile}
       onCreateFile={(path, content) => { void repo.createFile(path, content); setActiveFile(path) }}
@@ -427,7 +432,7 @@ export function RepoBoundWorkspace({
       {empty ? (
         <RepoEmptyState
           onAddFile={() => {
-            const path = window.prompt('File name, including extension', artifact)?.trim()
+            const path = window.prompt(t('File name, including extension'), artifact)?.trim()
             if (path && isValidRepoPath(path)) {
               void repo.createFile(path, path.toLowerCase() === 'readme.md' ? README_STARTER : '')
               setActiveFile(path)
@@ -467,14 +472,15 @@ export function RepoEmptyState({
   onCommit?: () => void
   canEdit: boolean
 }) {
+  const t = useT()
   return (
     <div className="repo-empty">
       <FolderGit2 size={28} />
       <h2>Helios IDE</h2>
-      <p>Create a file or README to get started. Edits autosave to this Project — no commit required to keep your work.</p>
+      <p>{t('Create a file or README to get started. Edits autosave to this Project — no commit required to keep your work.')}</p>
       <div className="repo-empty-actions">
-        <button type="button" onClick={onAddFile} disabled={!canEdit}><FilePlus2 size={14} /> Create a new file</button>
-        <button type="button" onClick={onAddReadme} disabled={!canEdit}>Add a README</button>
+        <button type="button" onClick={onAddFile} disabled={!canEdit}><FilePlus2 size={14} /> {t('Create a new file')}</button>
+        <button type="button" onClick={onAddReadme} disabled={!canEdit}>{t('Add a README')}</button>
       </div>
     </div>
   )

@@ -7,6 +7,7 @@ import {
   Square, Strikethrough, Table2, Trash2, Type, Underline, Undo2, Upload, Users,
 } from 'lucide-react'
 import { useApp } from '../store/appStore'
+import { getLocale, useLocale, useT } from '../i18n'
 
 function writingCharacterCount(html: string) {
   return [...(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()].length
@@ -39,6 +40,8 @@ function sanitizeHtml(html: string) {
 }
 
 export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const t = useT()
+  const locale = useLocale()
   const { state } = useApp()
   const value = data as unknown as WritingData
   const editorRef = useRef<HTMLDivElement>(null)
@@ -57,8 +60,8 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   const characterRatio = characterLimit == null ? 0 : characterUsed / Math.max(1, characterLimit)
   const headings = useMemo(() => {
     const documentValue = new DOMParser().parseFromString(safeHtml, 'text/html')
-    return [...documentValue.querySelectorAll('h1,h2,h3')].map((heading, index) => heading.textContent?.trim() || `Section ${index + 1}`)
-  }, [safeHtml])
+    return [...documentValue.querySelectorAll('h1,h2,h3')].map((heading, index) => heading.textContent?.trim() || t('Section {n}', { n: index + 1 }))
+  }, [safeHtml, t])
 
   useEffect(() => {
     if (editorRef.current && document.activeElement !== editorRef.current && editorRef.current.innerHTML !== safeHtml)
@@ -76,17 +79,17 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   }
 
   function insertImage() {
-    const url = window.prompt('HTTPS image URL')?.trim()
+    const url = window.prompt(t('HTTPS image URL'))?.trim()
     if (!url || !/^https:\/\//i.test(url)) return
-    command('insertHTML', `<figure><img src="${url.replace(/"/g, '&quot;')}" alt="Document image"><figcaption>Image caption</figcaption></figure>`)
+    command('insertHTML', `<figure><img src="${url.replace(/"/g, '&quot;')}" alt="${t('Document image')}"><figcaption>${t('Image caption')}</figcaption></figure>`)
   }
 
   function insertTable() {
-    command('insertHTML', '<table><tbody><tr><th>Heading</th><th>Heading</th></tr><tr><td>Data</td><td>Data</td></tr></tbody></table><p><br></p>')
+    command('insertHTML', `<table><tbody><tr><th>${t('Heading')}</th><th>${t('Heading')}</th></tr><tr><td>${t('Data')}</td><td>${t('Data')}</td></tr></tbody></table><p><br></p>`)
   }
 
   function insertLink() {
-    const url = window.prompt('Link URL (https://…)')?.trim()
+    const url = window.prompt(t('Link URL (https://…)'))?.trim()
     if (!url || !/^https?:\/\//i.test(url)) return
     command('createLink', url)
   }
@@ -118,7 +121,7 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   }
 
   function addCitation() {
-    const citation = window.prompt('Citation or source')?.trim()
+    const citation = window.prompt(t('Citation or source'))?.trim()
     if (!citation) return
     command('insertHTML', `<sup>[${Math.max(1, (value.html.match(/<sup>/g) || []).length + 1)}]</sup>`)
     if (editorRef.current) editorRef.current.innerHTML += `<p class="document-citation">${sanitizeHtml(citation)}</p>`
@@ -162,7 +165,7 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
     if (!query) return
     const index = findTextIndex(query)
     if (index < 0) {
-      window.alert('No matches found')
+      window.alert(t('No matches found'))
       return
     }
     selectMatch(query, index)
@@ -173,7 +176,7 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
     if (!query || !editorRef.current) return
     const index = findTextIndex(query)
     if (index < 0) {
-      window.alert('No matches found')
+      window.alert(t('No matches found'))
       return
     }
     if (!selectMatch(query, index)) return
@@ -191,78 +194,78 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   return (
     <div className="writing-workspace">
       <header className="writing-toolbar">
-        <div className="workspace-mode-switch"><button type="button" className={mode === 'edit' ? 'is-active' : ''} onClick={() => setMode('edit')}>Edit</button><button type="button" className={mode === 'reader' ? 'is-active' : ''} onClick={() => setMode('reader')}>Reader</button></div>
+        <div className="workspace-mode-switch"><button type="button" className={mode === 'edit' ? 'is-active' : ''} onClick={() => setMode('edit')}>{t('Edit')}</button><button type="button" className={mode === 'reader' ? 'is-active' : ''} onClick={() => setMode('reader')}>{t('Reader')}</button></div>
         {mode === 'edit' && <>
           <strong className="writing-toolbar-group">Home</strong>
-          <button type="button" onClick={() => command('undo')} title="Undo"><Undo2 size={14} /></button>
-          <button type="button" onClick={() => command('redo')} title="Redo"><Redo2 size={14} /></button>
+          <button type="button" onClick={() => command('undo')} title={t('Undo')}><Undo2 size={14} /></button>
+          <button type="button" onClick={() => command('redo')} title={t('Redo')}><Redo2 size={14} /></button>
           <span />
-          <button type="button" onClick={() => command('bold')} title="Bold"><Bold size={14} /></button>
-          <button type="button" onClick={() => command('italic')} title="Italic"><Italic size={14} /></button>
-          <button type="button" onClick={() => command('underline')} title="Underline"><Underline size={14} /></button>
-          <button type="button" onClick={() => command('strikeThrough')} title="Strikethrough"><Strikethrough size={14} /></button>
-          <label className="writing-color-picker" title="Text color">
+          <button type="button" onClick={() => command('bold')} title={t('Bold')}><Bold size={14} /></button>
+          <button type="button" onClick={() => command('italic')} title={t('Italic')}><Italic size={14} /></button>
+          <button type="button" onClick={() => command('underline')} title={t('Underline')}><Underline size={14} /></button>
+          <button type="button" onClick={() => command('strikeThrough')} title={t('Strikethrough')}><Strikethrough size={14} /></button>
+          <label className="writing-color-picker" title={t('Text color')}>
             <Type size={12} />
-            <input type="color" value={textColor} onChange={event => { setTextColor(event.target.value); command('foreColor', event.target.value) }} aria-label="Text color" />
+            <input type="color" value={textColor} onChange={event => { setTextColor(event.target.value); command('foreColor', event.target.value) }} aria-label={t('Text color')} />
           </label>
-          <label className="writing-color-picker" title="Highlight color">
+          <label className="writing-color-picker" title={t('Highlight color')}>
             <Highlighter size={12} />
-            <input type="color" value={highlightColor} onChange={event => { setHighlightColor(event.target.value); command('hiliteColor', event.target.value) }} aria-label="Highlight color" />
+            <input type="color" value={highlightColor} onChange={event => { setHighlightColor(event.target.value); command('hiliteColor', event.target.value) }} aria-label={t('Highlight color')} />
           </label>
-          <button type="button" onClick={() => command('hiliteColor', highlightColor)} title="Highlight"><Highlighter size={14} /></button>
-          <button type="button" onClick={() => command('removeFormat')} title="Clear formatting"><Eraser size={14} /></button>
+          <button type="button" onClick={() => command('hiliteColor', highlightColor)} title={t('Highlight')}><Highlighter size={14} /></button>
+          <button type="button" onClick={() => command('removeFormat')} title={t('Clear formatting')}><Eraser size={14} /></button>
           <span />
-          <button type="button" onClick={() => command('formatBlock', 'h1')} title="Heading 1"><Heading1 size={14} /></button>
-          <button type="button" onClick={() => command('formatBlock', 'h2')} title="Heading 2"><Heading2 size={14} /></button>
-          <button type="button" onClick={() => command('formatBlock', 'h3')} title="Heading 3"><Heading3 size={14} /></button>
-          <label className="writing-font-size" title="Font size">
+          <button type="button" onClick={() => command('formatBlock', 'h1')} title={t('Heading 1')}><Heading1 size={14} /></button>
+          <button type="button" onClick={() => command('formatBlock', 'h2')} title={t('Heading 2')}><Heading2 size={14} /></button>
+          <button type="button" onClick={() => command('formatBlock', 'h3')} title={t('Heading 3')}><Heading3 size={14} /></button>
+          <label className="writing-font-size" title={t('Font size')}>
             <Type size={13} />
-            <select value={fontSize} onChange={event => { setFontSize(event.target.value); command('fontSize', event.target.value) }} aria-label="Font size">
-              <option value="2">Small</option>
-              <option value="3">Normal</option>
-              <option value="4">Large</option>
+            <select value={fontSize} onChange={event => { setFontSize(event.target.value); command('fontSize', event.target.value) }} aria-label={t('Font size')}>
+              <option value="2">{t('Small')}</option>
+              <option value="3">{t('Normal')}</option>
+              <option value="4">{t('Large')}</option>
               <option value="5">XL</option>
             </select>
           </label>
-          <label className="writing-font-size" title="Line spacing">
-            <select value={lineSpacing} onChange={event => applyLineSpacing(event.target.value)} aria-label="Line spacing">
-              <option value="1.15">Single</option>
+          <label className="writing-font-size" title={t('Line spacing')}>
+            <select value={lineSpacing} onChange={event => applyLineSpacing(event.target.value)} aria-label={t('Line spacing')}>
+              <option value="1.15">{t('Single')}</option>
               <option value="1.5">1.5</option>
-              <option value="1.75">Default</option>
-              <option value="2">Double</option>
+              <option value="1.75">{t('Default')}</option>
+              <option value="2">{t('Double')}</option>
             </select>
           </label>
           <span />
-          <button type="button" onClick={() => command('justifyLeft')} title="Align left"><AlignLeft size={14} /></button>
-          <button type="button" onClick={() => command('justifyCenter')} title="Align center"><AlignCenter size={14} /></button>
-          <button type="button" onClick={() => command('justifyRight')} title="Align right"><AlignRight size={14} /></button>
-          <button type="button" onClick={() => command('justifyFull')} title="Justify"><AlignJustify size={14} /></button>
-          <button type="button" onClick={() => command('indent')} title="Indent"><IndentIncrease size={14} /></button>
-          <button type="button" onClick={() => command('outdent')} title="Outdent"><IndentDecrease size={14} /></button>
-          <button type="button" onClick={() => command('insertUnorderedList')} title="Bullet list"><List size={14} /></button>
-          <button type="button" onClick={() => command('insertOrderedList')} title="Numbered list"><ListOrdered size={14} /></button>
-          <button type="button" onClick={() => command('formatBlock', 'blockquote')} title="Quote"><Quote size={14} /></button>
-          <strong className="writing-toolbar-group">Insert</strong>
-          <button type="button" onClick={insertLink} title="Insert link"><Link2 size={14} /></button>
-          <button type="button" onClick={insertImage} title="Image"><Image size={14} /></button>
-          <button type="button" onClick={insertTable} title="Table"><Table2 size={14} /></button>
-          <button type="button" onClick={insertPageBreak} title="Page break">Break</button>
-          <button type="button" onClick={addCitation} title="Citation"><BookOpen size={14} /></button>
-          <strong className="writing-toolbar-group">Review</strong>
-          <button type="button" onClick={() => setFindOpen(open => !open)} title="Find & replace" className={findOpen ? 'is-active' : ''}><Search size={14} /></button>
-          <button type="button" onClick={() => onAskHelios('Check this Quill document for grammar, clarity, structure and citation gaps')} className="writing-helios-action"><Sparkles size={14} /> Grammar & clarity</button>
+          <button type="button" onClick={() => command('justifyLeft')} title={t('Align left')}><AlignLeft size={14} /></button>
+          <button type="button" onClick={() => command('justifyCenter')} title={t('Align center')}><AlignCenter size={14} /></button>
+          <button type="button" onClick={() => command('justifyRight')} title={t('Align right')}><AlignRight size={14} /></button>
+          <button type="button" onClick={() => command('justifyFull')} title={t('Justify')}><AlignJustify size={14} /></button>
+          <button type="button" onClick={() => command('indent')} title={t('Indent')}><IndentIncrease size={14} /></button>
+          <button type="button" onClick={() => command('outdent')} title={t('Outdent')}><IndentDecrease size={14} /></button>
+          <button type="button" onClick={() => command('insertUnorderedList')} title={t('Bullet list')}><List size={14} /></button>
+          <button type="button" onClick={() => command('insertOrderedList')} title={t('Numbered list')}><ListOrdered size={14} /></button>
+          <button type="button" onClick={() => command('formatBlock', 'blockquote')} title={t('Quote')}><Quote size={14} /></button>
+          <strong className="writing-toolbar-group">{t('Insert')}</strong>
+          <button type="button" onClick={insertLink} title={t('Insert link')}><Link2 size={14} /></button>
+          <button type="button" onClick={insertImage} title={t('Image')}><Image size={14} /></button>
+          <button type="button" onClick={insertTable} title={t('Table')}><Table2 size={14} /></button>
+          <button type="button" onClick={insertPageBreak} title={t('Page break')}>{t('Break')}</button>
+          <button type="button" onClick={addCitation} title={t('Citation')}><BookOpen size={14} /></button>
+          <strong className="writing-toolbar-group">{t('Review')}</strong>
+          <button type="button" onClick={() => setFindOpen(open => !open)} title={t('Find & replace')} className={findOpen ? 'is-active' : ''}><Search size={14} /></button>
+          <button type="button" onClick={() => onAskHelios(t('Check this Quill document for grammar, clarity, structure and citation gaps'))} className="writing-helios-action"><Sparkles size={14} /> {t('Grammar & clarity')}</button>
         </>}
         <span className={'writing-usage' + (characterRatio >= 1 ? ' is-over' : characterRatio >= 0.85 ? ' is-warn' : '')}>
-          {characterUsed.toLocaleString()} chars
+          {t('{count} chars', { count: characterUsed.toLocaleString(locale) })}
         </span>
       </header>
       {mode === 'edit' && findOpen && (
         <form className="writing-find-bar" onSubmit={event => { event.preventDefault(); findInDocument() }}>
           <Search size={13} />
-          <input value={findQuery} onChange={event => setFindQuery(event.target.value)} placeholder="Find in Quill…" aria-label="Find in document" autoFocus />
-          <input value={replaceQuery} onChange={event => setReplaceQuery(event.target.value)} placeholder="Replace with…" aria-label="Replace with" />
-          <button type="submit">Find</button>
-          <button type="button" onClick={replaceOnce}>Replace</button>
+          <input value={findQuery} onChange={event => setFindQuery(event.target.value)} placeholder={t('Find in Quill…')} aria-label={t('Find in document')} autoFocus />
+          <input value={replaceQuery} onChange={event => setReplaceQuery(event.target.value)} placeholder={t('Replace with…')} aria-label={t('Replace with')} />
+          <button type="submit">{t('Find')}</button>
+          <button type="button" onClick={replaceOnce}>{t('Replace')}</button>
         </form>
       )}
 
@@ -275,15 +278,15 @@ export function WritingWorkspace({ data, onChange, onAskHelios }: EditorProps) {
             suppressContentEditableWarning
             role="textbox"
             aria-multiline="true"
-            aria-label="Quill document"
+            aria-label={t('Quill document')}
             onInput={event => update({ html: sanitizeHtml(event.currentTarget.innerHTML) })}
           />
         </div>
       ) : (
         <div className="reader-layout">
-          <aside><strong>CONTENTS</strong>{headings.map((heading, index) => <button type="button" key={`${heading}-${index}`}>{heading}</button>)}<div><span>Reading progress</span><input type="range" min="0" max="100" value={value.progress || 0} onChange={event => update({ progress: Number(event.target.value) })} /><small>{value.progress || 0}% complete</small></div></aside>
-          <article className="reader-page"><div className="reader-actions"><button type="button" onClick={() => update({ bookmarks: [...new Set([...(value.bookmarks || []), headings[0] || 'Current page'])] })}><Bookmark size={14} /> Bookmark</button><button type="button" onClick={() => onAskHelios('Explain the selected passage and define difficult vocabulary')}><Sparkles size={14} /> Ask Helios</button></div><div dangerouslySetInnerHTML={{ __html: safeHtml }} /></article>
-          <aside className="reader-notes"><strong>NOTES & VOCABULARY</strong><form onSubmit={addNote}><textarea value={note} onChange={event => setNote(event.target.value)} placeholder="Add a note or unfamiliar word…" /><button type="submit" disabled={!note.trim()}><Plus size={13} /> Add</button></form>{(value.notes || []).map(item => <article key={item.id}><p>{item.body}</p><button type="button" onClick={() => update({ notes: value.notes.filter(noteItem => noteItem.id !== item.id) })}><Trash2 size={12} /></button></article>)}</aside>
+          <aside><strong>{t('CONTENTS')}</strong>{headings.map((heading, index) => <button type="button" key={`${heading}-${index}`}>{heading}</button>)}<div><span>{t('Reading progress')}</span><input type="range" min="0" max="100" value={value.progress || 0} onChange={event => update({ progress: Number(event.target.value) })} /><small>{t('{percent}% complete', { percent: value.progress || 0 })}</small></div></aside>
+          <article className="reader-page"><div className="reader-actions"><button type="button" onClick={() => update({ bookmarks: [...new Set([...(value.bookmarks || []), headings[0] || t('Current page')])] })}><Bookmark size={14} /> {t('Bookmark')}</button><button type="button" onClick={() => onAskHelios(t('Explain the selected passage and define difficult vocabulary'))}><Sparkles size={14} /> {t('Ask Helios')}</button></div><div dangerouslySetInnerHTML={{ __html: safeHtml }} /></article>
+          <aside className="reader-notes"><strong>{t('NOTES & VOCABULARY')}</strong><form onSubmit={addNote}><textarea value={note} onChange={event => setNote(event.target.value)} placeholder={t('Add a note or unfamiliar word…')} /><button type="submit" disabled={!note.trim()}><Plus size={13} /> {t('Add')}</button></form>{(value.notes || []).map(item => <article key={item.id}><p>{item.body}</p><button type="button" onClick={() => update({ notes: value.notes.filter(noteItem => noteItem.id !== item.id) })}><Trash2 size={12} /></button></article>)}</aside>
         </div>
       )}
     </div>
@@ -487,6 +490,7 @@ function csvToCells(text: string) {
 }
 
 export function SpreadsheetWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const t = useT()
   const value = data as unknown as SpreadsheetData
   const cells = value.cells || []
   const selected = cellPosition(value.selected || 'A1') || { row: 0, column: 0 }
@@ -543,7 +547,7 @@ export function SpreadsheetWorkspace({ data, onChange, onAskHelios }: EditorProp
       const rightNumeric = Number.isFinite(rightValue) && rightRaw !== ''
       let result = 0
       if (leftNumeric && rightNumeric) result = leftValue - rightValue
-      else result = String(leftRaw).localeCompare(String(rightRaw), undefined, { numeric: true, sensitivity: 'base' })
+      else result = String(leftRaw).localeCompare(String(rightRaw), getLocale(), { numeric: true, sensitivity: 'base' })
       return direction === 'asc' ? result : -result
     })
     update({ cells: [header, ...body] })
@@ -565,31 +569,31 @@ export function SpreadsheetWorkspace({ data, onChange, onAskHelios }: EditorProp
     reader.readAsText(file)
   }
 
-  const chartValues = cells.slice(1, 9).map((row, index) => ({ label: row[0] || `Row ${index + 2}`, value: Number(computeCell(cells, row[value.chartColumn] || '0')) || 0 }))
+  const chartValues = cells.slice(1, 9).map((row, index) => ({ label: row[0] || t('Row {n}', { n: index + 2 }), value: Number(computeCell(cells, row[value.chartColumn] || '0')) || 0 }))
   const chartMax = Math.max(1, ...chartValues.map(item => Math.abs(item.value)))
 
   return (
     <div className="spreadsheet-workspace">
       <header className="sheet-toolbar">
-        <button type="button" onClick={insertRow}><Plus size={13} /> Insert row</button>
-        <button type="button" onClick={insertColumn}><Columns3 size={13} /> Insert column</button>
-        <button type="button" onClick={deleteRow}><Trash2 size={13} /> Delete row</button>
+        <button type="button" onClick={insertRow}><Plus size={13} /> {t('Insert row')}</button>
+        <button type="button" onClick={insertColumn}><Columns3 size={13} /> {t('Insert column')}</button>
+        <button type="button" onClick={deleteRow}><Trash2 size={13} /> {t('Delete row')}</button>
         <span />
-        <button type="button" className={freezeHeader ? 'is-active' : ''} onClick={() => update({ freezeHeader: !freezeHeader })}>Freeze header</button>
-        <button type="button" onClick={() => sortSelectedColumn('asc')} title="Sort ascending"><ArrowUp size={13} /> Sort A→Z</button>
-        <button type="button" onClick={() => sortSelectedColumn('desc')} title="Sort descending"><ArrowDown size={13} /> Sort Z→A</button>
+        <button type="button" className={freezeHeader ? 'is-active' : ''} onClick={() => update({ freezeHeader: !freezeHeader })}>{t('Freeze header')}</button>
+        <button type="button" onClick={() => sortSelectedColumn('asc')} title={t('Sort ascending')}><ArrowUp size={13} /> {t('Sort A→Z')}</button>
+        <button type="button" onClick={() => sortSelectedColumn('desc')} title={t('Sort descending')}><ArrowDown size={13} /> {t('Sort Z→A')}</button>
         <span />
-        <button type="button" className={numberFormat === 'raw' ? 'is-active' : ''} onClick={() => update({ numberFormat: 'raw' })}>Raw</button>
+        <button type="button" className={numberFormat === 'raw' ? 'is-active' : ''} onClick={() => update({ numberFormat: 'raw' })}>{t('Raw')}</button>
         <button type="button" className={numberFormat === 'fixed2' ? 'is-active' : ''} onClick={() => update({ numberFormat: 'fixed2' })}>0.00</button>
         <button type="button" className={numberFormat === 'percent' ? 'is-active' : ''} onClick={() => update({ numberFormat: 'percent' })}>%</button>
         <span />
         <button type="button" onClick={exportCsv}><Download size={13} /> CSV</button>
-        <button type="button" onClick={() => csvInputRef.current?.click()}><Upload size={13} /> Import</button>
+        <button type="button" onClick={() => csvInputRef.current?.click()}><Upload size={13} /> {t('Import')}</button>
         <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={event => { importCsv(event.target.files?.[0]); event.target.value = '' }} />
         <span />
-        <button type="button" onClick={() => onAskHelios('Analyze this Lattice spreadsheet, identify patterns, formula problems and useful next charts')}><Sparkles size={13} /> Analyze with Helios</button>
+        <button type="button" onClick={() => onAskHelios(t('Analyze this Lattice spreadsheet, identify patterns, formula problems and useful next charts'))}><Sparkles size={13} /> {t('Analyze with Helios')}</button>
       </header>
-      <div className="sheet-formula-bar"><strong>{columnName(selected.column)}{selected.row + 1}</strong><span>fx</span><input value={cells[selected.row]?.[selected.column] || ''} onChange={event => updateCell(selected.row, selected.column, event.target.value)} aria-label="Formula bar" /></div>
+      <div className="sheet-formula-bar"><strong>{columnName(selected.column)}{selected.row + 1}</strong><span>fx</span><input value={cells[selected.row]?.[selected.column] || ''} onChange={event => updateCell(selected.row, selected.column, event.target.value)} aria-label={t('Formula bar')} /></div>
       <div className="spreadsheet-layout">
         <div className={`sheet-grid-scroll${freezeHeader ? ' is-frozen-header' : ''}`}>
           <table>
@@ -625,9 +629,9 @@ export function SpreadsheetWorkspace({ data, onChange, onAskHelios }: EditorProp
         <aside className="sheet-chart">
           <header>
             <BarChart3 size={15} />
-            <strong>Quick chart</strong>
+            <strong>{t('Quick chart')}</strong>
             <select value={value.chartColumn || 1} onChange={event => update({ chartColumn: Number(event.target.value) })}>
-              {Array.from({ length: cells[0]?.length || 8 }, (_, index) => <option key={index} value={index}>Column {columnName(index)}</option>)}
+              {Array.from({ length: cells[0]?.length || 8 }, (_, index) => <option key={index} value={index}>{t('Column {name}', { name: columnName(index) })}</option>)}
             </select>
           </header>
           <div>
@@ -756,6 +760,7 @@ function createBlankSlide(partial?: Partial<Slide>): Slide {
 }
 
 export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const t = useT()
   const value = data as unknown as PresentationData
   const [presenting, setPresenting] = useState(false)
   const [imageUrlDraft, setImageUrlDraft] = useState('')
@@ -888,8 +893,8 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
               style={titleStyle}
               value={slide.title}
               onChange={event => patchSlide({ title: event.target.value })}
-              aria-label="Slide title"
-              placeholder={layout === 'section' ? 'Section title' : 'Slide title'}
+              aria-label={t('Slide title')}
+              placeholder={layout === 'section' ? t('Section title') : t('Slide title')}
             />
           ) : (
             <h1 className="slide-title-field" style={titleStyle}>{slide.title}</h1>
@@ -902,8 +907,8 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
               style={bodyStyle}
               value={slide.body}
               onChange={event => patchSlide({ body: event.target.value })}
-              aria-label="Slide body"
-              placeholder={layout === 'title' ? 'Supporting line' : 'Body'}
+              aria-label={t('Slide body')}
+              placeholder={layout === 'title' ? t('Supporting line') : t('Body')}
             />
           ) : (
             <p className="slide-body-field" style={bodyStyle}>{slide.body}</p>
@@ -913,8 +918,8 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
           <div className="slide-two-column">
             {editable ? (
               <>
-                <textarea style={bodyStyle} value={slide.body} onChange={event => patchSlide({ body: event.target.value })} aria-label="Left column" placeholder="Left column" />
-                <textarea style={bodyStyle} value={slide.secondary || ''} onChange={event => patchSlide({ secondary: event.target.value })} aria-label="Right column" placeholder="Right column" />
+                <textarea style={bodyStyle} value={slide.body} onChange={event => patchSlide({ body: event.target.value })} aria-label={t('Left column')} placeholder={t('Left column')} />
+                <textarea style={bodyStyle} value={slide.secondary || ''} onChange={event => patchSlide({ secondary: event.target.value })} aria-label={t('Right column')} placeholder={t('Right column')} />
               </>
             ) : (
               <>
@@ -928,7 +933,7 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
           <figure className={`slide-media fit-${slide.imageFit || 'cover'}`}>
             <img src={slide.imageUrl} alt="" style={{ objectFit: slide.imageFit || 'cover' }} />
             {editable && (
-              <button type="button" onClick={() => patchSlide({ imageUrl: undefined })} aria-label="Remove image">
+              <button type="button" onClick={() => patchSlide({ imageUrl: undefined })} aria-label={t('Remove image')}>
                 <Trash2 size={12} />
               </button>
             )}
@@ -951,14 +956,14 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
                 <textarea
                   value={shape.text || ''}
                   onChange={event => patchShape(shape.id, { text: event.target.value })}
-                  aria-label="Shape text"
+                  aria-label={t('Shape text')}
                 />
               ) : (
                 <span>{shape.text}</span>
               )
             )}
             {editable && (
-              <button type="button" className="slide-shape-remove" onClick={() => removeShape(shape.id)} aria-label="Remove shape">
+              <button type="button" className="slide-shape-remove" onClick={() => removeShape(shape.id)} aria-label={t('Remove shape')}>
                 <Trash2 size={11} />
               </button>
             )}
@@ -972,8 +977,8 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
     <div className="presentation-workspace">
       <aside className="slide-thumbnails">
         <header>
-          <strong>SLIDES</strong>
-          <button type="button" onClick={addSlide} aria-label="Add slide"><Plus size={13} /></button>
+          <strong>{t('SLIDES')}</strong>
+          <button type="button" onClick={addSlide} aria-label={t('Add slide')}><Plus size={13} /></button>
         </header>
         {slides.map((slide, index) => (
           <button
@@ -993,13 +998,13 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
 
       <section className="slide-editor">
         <header className="slide-editor-toolbar">
-          <button type="button" onClick={() => setPresenting(true)}><Presentation size={14} /> Present</button>
-          <button type="button" onClick={duplicateSlide} disabled={!active}><Copy size={14} /> Duplicate</button>
-          <button type="button" onClick={() => moveSlide(-1)} disabled={activeIndex === 0} aria-label="Move slide up"><ArrowUp size={14} /></button>
-          <button type="button" onClick={() => moveSlide(1)} disabled={activeIndex >= slides.length - 1} aria-label="Move slide down"><ArrowDown size={14} /></button>
-          <button type="button" onClick={exportSlideText} disabled={!active}><Download size={14} /> Export .txt</button>
-          <button type="button" onClick={() => onAskHelios('Improve this Stage presentation structure and make each slide clearer')}><Sparkles size={14} /> Improve</button>
-          <button type="button" onClick={deleteSlide} aria-label="Delete slide"><Trash2 size={14} /></button>
+          <button type="button" onClick={() => setPresenting(true)}><Presentation size={14} /> {t('Present')}</button>
+          <button type="button" onClick={duplicateSlide} disabled={!active}><Copy size={14} /> {t('Duplicate')}</button>
+          <button type="button" onClick={() => moveSlide(-1)} disabled={activeIndex === 0} aria-label={t('Move slide up')}><ArrowUp size={14} /></button>
+          <button type="button" onClick={() => moveSlide(1)} disabled={activeIndex >= slides.length - 1} aria-label={t('Move slide down')}><ArrowDown size={14} /></button>
+          <button type="button" onClick={exportSlideText} disabled={!active}><Download size={14} /> {t('Export .txt')}</button>
+          <button type="button" onClick={() => onAskHelios(t('Improve this Stage presentation structure and make each slide clearer'))}><Sparkles size={14} /> {t('Improve')}</button>
+          <button type="button" onClick={deleteSlide} aria-label={t('Delete slide')}><Trash2 size={14} /></button>
         </header>
 
         {active && (
@@ -1007,44 +1012,44 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
             <div className="slide-stage">
               {renderCanvas(active, true)}
               <label className="slide-notes is-always-visible">
-                Speaker notes
-                <textarea value={active.notes} onChange={event => patchSlide({ notes: event.target.value })} placeholder="Notes stay visible while you edit…" />
+                {t('Speaker notes')}
+                <textarea value={active.notes} onChange={event => patchSlide({ notes: event.target.value })} placeholder={t('Notes stay visible while you edit…')} />
               </label>
             </div>
 
             <aside className="slide-designer liquid-glass">
-              <strong>Designer</strong>
+              <strong>{t('Designer')}</strong>
               <label>
-                Layout
-                <select value={active.layout} onChange={event => patchSlide({ layout: event.target.value as SlideLayout })} aria-label="Slide layout">
-                  {LAYOUT_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+                {t('Layout')}
+                <select value={active.layout} onChange={event => patchSlide({ layout: event.target.value as SlideLayout })} aria-label={t('Slide layout')}>
+                  {LAYOUT_OPTIONS.map(option => <option key={option.id} value={option.id}>{t(option.label)}</option>)}
                 </select>
               </label>
               <label>
-                Transition
-                <select value={active.transition || 'none'} onChange={event => patchSlide({ transition: event.target.value as SlideTransition })} aria-label="Slide transition">
-                  <option value="none">None</option>
-                  <option value="fade">Fade</option>
-                  <option value="push">Push</option>
+                {t('Transition')}
+                <select value={active.transition || 'none'} onChange={event => patchSlide({ transition: event.target.value as SlideTransition })} aria-label={t('Slide transition')}>
+                  <option value="none">{t('None')}</option>
+                  <option value="fade">{t('Fade')}</option>
+                  <option value="push">{t('Push')}</option>
                 </select>
               </label>
               <div className="slide-text-controls">
-                <span>Text</span>
+                <span>{t('Text')}</span>
                 <div>
-                  <button type="button" className={active.titleBold ? 'is-active' : ''} onClick={() => patchSlide({ titleBold: !active.titleBold })} title="Title bold"><Bold size={13} /> Title</button>
-                  <button type="button" className={active.bodyBold ? 'is-active' : ''} onClick={() => patchSlide({ bodyBold: !active.bodyBold })} title="Body bold"><Bold size={13} /> Body</button>
+                  <button type="button" className={active.titleBold ? 'is-active' : ''} onClick={() => patchSlide({ titleBold: !active.titleBold })} title={t('Title bold')}><Bold size={13} /> {t('Title')}</button>
+                  <button type="button" className={active.bodyBold ? 'is-active' : ''} onClick={() => patchSlide({ bodyBold: !active.bodyBold })} title={t('Body bold')}><Bold size={13} /> {t('Body')}</button>
                 </div>
                 <div>
-                  <button type="button" className={active.titleAlign === 'left' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'left' })} title="Title align left"><AlignLeft size={13} /></button>
-                  <button type="button" className={active.titleAlign === 'center' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'center' })} title="Title align center"><AlignCenter size={13} /></button>
-                  <button type="button" className={active.titleAlign === 'right' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'right' })} title="Title align right"><AlignRight size={13} /></button>
-                  <button type="button" className={active.bodyAlign === 'left' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'left' })} title="Body align left">Body L</button>
-                  <button type="button" className={active.bodyAlign === 'center' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'center' })} title="Body align center">Body C</button>
-                  <button type="button" className={active.bodyAlign === 'right' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'right' })} title="Body align right">Body R</button>
+                  <button type="button" className={active.titleAlign === 'left' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'left' })} title={t('Title align left')}><AlignLeft size={13} /></button>
+                  <button type="button" className={active.titleAlign === 'center' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'center' })} title={t('Title align center')}><AlignCenter size={13} /></button>
+                  <button type="button" className={active.titleAlign === 'right' ? 'is-active' : ''} onClick={() => patchSlide({ titleAlign: 'right' })} title={t('Title align right')}><AlignRight size={13} /></button>
+                  <button type="button" className={active.bodyAlign === 'left' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'left' })} title={t('Body align left')}>{t('Body L')}</button>
+                  <button type="button" className={active.bodyAlign === 'center' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'center' })} title={t('Body align center')}>{t('Body C')}</button>
+                  <button type="button" className={active.bodyAlign === 'right' ? 'is-active' : ''} onClick={() => patchSlide({ bodyAlign: 'right' })} title={t('Body align right')}>{t('Body R')}</button>
                 </div>
               </div>
               <div className="slide-theme-presets">
-                <span>Theme</span>
+                <span>{t('Theme')}</span>
                 {(Object.keys(SLIDE_THEMES) as SlideThemeId[]).map(themeId => (
                   <button
                     type="button"
@@ -1053,12 +1058,12 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
                     onClick={() => applyTheme(themeId)}
                     style={{ ['--theme-swatch' as string]: SLIDE_THEMES[themeId].accent }}
                   >
-                    {SLIDE_THEMES[themeId].label}
+                    {t(SLIDE_THEMES[themeId].label)}
                   </button>
                 ))}
               </div>
               <div className="slide-insert-photo">
-                <span>Insert photo</span>
+                <span>{t('Insert photo')}</span>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -1069,15 +1074,15 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
                     event.target.value = ''
                   }}
                 />
-                <button type="button" onClick={() => fileInputRef.current?.click()}><Image size={13} /> Upload image</button>
+                <button type="button" onClick={() => fileInputRef.current?.click()}><Image size={13} /> {t('Upload image')}</button>
                 <div>
                   <input
                     value={imageUrlDraft}
                     onChange={event => setImageUrlDraft(event.target.value)}
-                    placeholder="https://… or data URL"
-                    aria-label="Image URL"
+                    placeholder={t('https://… or data URL')}
+                    aria-label={t('Image URL')}
                   />
-                  <button type="button" onClick={insertPhotoFromUrl}>Add URL</button>
+                  <button type="button" onClick={insertPhotoFromUrl}>{t('Add URL')}</button>
                 </div>
                 {active.imageUrl && (
                   <button
@@ -1085,14 +1090,14 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
                     className={active.imageFit === 'cover' ? 'is-active' : ''}
                     onClick={() => patchSlide({ imageFit: active.imageFit === 'cover' ? 'contain' : 'cover' })}
                   >
-                    Crop fit: {active.imageFit === 'cover' ? 'Cover' : 'Contain'}
+                    {t('Crop fit: {fit}', { fit: t(active.imageFit === 'cover' ? 'Cover' : 'Contain') })}
                   </button>
                 )}
               </div>
               <div className="slide-shape-actions">
-                <span>Shapes</span>
-                <button type="button" onClick={() => addShape('text')}><Type size={13} /> Text box</button>
-                <button type="button" onClick={() => addShape('rect')}><Square size={13} /> Rectangle</button>
+                <span>{t('Shapes')}</span>
+                <button type="button" onClick={() => addShape('text')}><Type size={13} /> {t('Text box')}</button>
+                <button type="button" onClick={() => addShape('rect')}><Square size={13} /> {t('Rectangle')}</button>
               </div>
             </aside>
           </div>
@@ -1100,8 +1105,8 @@ export function PresentationWorkspace({ data, onChange, onAskHelios }: EditorPro
       </section>
 
       {presenting && active && (
-        <div className={`presentation-mode transition-${active.transition || 'none'}`} role="dialog" aria-modal="true" aria-label="Presenting Stage slides">
-          <button type="button" onClick={() => setPresenting(false)}><Maximize2 size={15} /> Exit</button>
+        <div className={`presentation-mode transition-${active.transition || 'none'}`} role="dialog" aria-modal="true" aria-label={t('Presenting Stage slides')}>
+          <button type="button" onClick={() => setPresenting(false)}><Maximize2 size={15} /> {t('Exit')}</button>
           <article key={`${active.id}-${active.transition || 'none'}-${activeIndex}`} className="presentation-mode-stage">
             {renderCanvas(active, false)}
           </article>
@@ -1133,6 +1138,8 @@ function parseLegacyMailHtml(html: string): Partial<MailData> {
 }
 
 export function MailWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const t = useT()
+  const locale = useLocale()
   const value = data as unknown as MailData
   const seeded = useMemo(() => {
     if (value.to || value.subject || value.body) return value
@@ -1169,43 +1176,43 @@ export function MailWorkspace({ data, onChange, onAskHelios }: EditorProps) {
     <div className="mail-workspace">
       <header className="writing-toolbar">
         <strong>DISPATCH</strong>
-        <button type="button" onClick={() => insertSnippet('greeting')}>Greeting</button>
-        <button type="button" onClick={() => insertSnippet('signoff')}>Sign-off</button>
-        <button type="button" onClick={saveDraft}><Mail size={14} /> Save draft</button>
+        <button type="button" onClick={() => insertSnippet('greeting')}>{t('Greeting')}</button>
+        <button type="button" onClick={() => insertSnippet('signoff')}>{t('Sign-off')}</button>
+        <button type="button" onClick={saveDraft}><Mail size={14} /> {t('Save draft')}</button>
         <span />
         <button
           type="button"
           className="writing-helios-action"
-          onClick={() => onAskHelios(`Rewrite this Dispatch mail draft so it is clearer and more professional.\n\nTo: ${mail.to}\nCc: ${mail.cc}\nSubject: ${mail.subject}\n\n${mail.body}`)}
+          onClick={() => onAskHelios(t('Rewrite this Dispatch mail draft so it is clearer and more professional.\n\nTo: {to}\nCc: {cc}\nSubject: {subject}\n\n{body}', { to: mail.to, cc: mail.cc, subject: mail.subject, body: mail.body }))}
         >
-          <Sparkles size={14} /> Rewrite with Helios
+          <Sparkles size={14} /> {t('Rewrite with Helios')}
         </button>
       </header>
       <div className="mail-composer">
         <label>
-          <span>To</span>
-          <input value={mail.to} onChange={event => patch({ to: event.target.value })} placeholder="name@example.com" aria-label="To" />
+          <span>{t('To')}</span>
+          <input value={mail.to} onChange={event => patch({ to: event.target.value })} placeholder="name@example.com" aria-label={t('To')} />
         </label>
         <label>
-          <span>Cc</span>
-          <input value={mail.cc} onChange={event => patch({ cc: event.target.value })} placeholder="optional" aria-label="Cc" />
+          <span>{t('Cc')}</span>
+          <input value={mail.cc} onChange={event => patch({ cc: event.target.value })} placeholder={t('optional')} aria-label={t('Cc')} />
         </label>
         <label>
           <span>Subject</span>
-          <input value={mail.subject} onChange={event => patch({ subject: event.target.value })} placeholder="Subject line" aria-label="Subject" />
+          <input value={mail.subject} onChange={event => patch({ subject: event.target.value })} placeholder={t('Subject line')} aria-label={t('Subject line')} />
         </label>
         <label className="mail-body-field">
-          <span>Body</span>
+          <span>{t('Body')}</span>
           <textarea
             value={mail.body}
             onChange={event => patch({ body: event.target.value })}
-            placeholder="Write the message…"
-            aria-label="Mail body"
+            placeholder={t('Write the message…')}
+            aria-label={t('Mail body')}
           />
         </label>
         <footer>
-          <small>{mail.savedAt ? `Draft saved ${new Date(mail.savedAt).toLocaleString()}` : 'Draft autosaves with the Project · use Save draft to stamp a checkpoint'}</small>
-          <button type="button" onClick={saveDraft}>Save draft</button>
+          <small>{mail.savedAt ? t('Draft saved {time}', { time: new Date(mail.savedAt).toLocaleString(locale) }) : t('Draft autosaves with the Project · use Save draft to stamp a checkpoint')}</small>
+          <button type="button" onClick={saveDraft}>{t('Save draft')}</button>
         </footer>
       </div>
     </div>
@@ -1247,6 +1254,7 @@ function weaveSectionsFromHtml(html: string): WeaveSection[] {
 }
 
 export function WeaveWorkspace({ data, onChange, onAskHelios }: EditorProps) {
+  const t = useT()
   const value = data as unknown as WeaveData
   const editorRef = useRef<HTMLDivElement>(null)
   const safeHtml = useMemo(() => sanitizeHtml(value.html || '<h1>Weave page</h1><p>Edit together here.</p>'), [value.html])
@@ -1274,7 +1282,7 @@ export function WeaveWorkspace({ data, onChange, onAskHelios }: EditorProps) {
   }
 
   function addSection() {
-    const title = window.prompt('Section title')?.trim() || `Section ${sections.length + 1}`
+    const title = window.prompt(t('Section title'))?.trim() || t('Section {n}', { n: sections.length + 1 })
     const section = { id: crypto.randomUUID(), title }
     const nextSections = [...sections, section]
     command('insertHTML', `<h2>${title.replace(/</g, '&lt;')}</h2><p><br></p>`)
@@ -1286,32 +1294,32 @@ export function WeaveWorkspace({ data, onChange, onAskHelios }: EditorProps) {
     <div className="weave-workspace">
       <header className="writing-toolbar">
         <strong>WEAVE</strong>
-        <div className="weave-presence" aria-label="People editing">
+        <div className="weave-presence" aria-label={t('People editing')}>
           <Users size={13} />
           {presence.map(person => (
-            <span key={person.id} style={{ ['--presence-color' as string]: person.color }} title={person.name}>
+            <span key={person.id} style={{ ['--presence-color' as string]: person.color }} title={person.id === 'you' ? t('You') : person.name}>
               {person.name.slice(0, 1)}
             </span>
           ))}
-          <small>Live page</small>
+          <small>{t('Live page')}</small>
         </div>
-        <button type="button" onClick={() => command('bold')} title="Bold"><Bold size={14} /></button>
-        <button type="button" onClick={() => command('italic')} title="Italic"><Italic size={14} /></button>
-        <button type="button" onClick={() => command('insertUnorderedList')} title="List"><List size={14} /></button>
-        <button type="button" onClick={() => command('formatBlock', 'h2')} title="Heading"><Heading2 size={14} /></button>
-        <button type="button" onClick={addSection}><Plus size={13} /> Section</button>
+        <button type="button" onClick={() => command('bold')} title={t('Bold')}><Bold size={14} /></button>
+        <button type="button" onClick={() => command('italic')} title={t('Italic')}><Italic size={14} /></button>
+        <button type="button" onClick={() => command('insertUnorderedList')} title={t('List')}><List size={14} /></button>
+        <button type="button" onClick={() => command('formatBlock', 'h2')} title={t('Heading')}><Heading2 size={14} /></button>
+        <button type="button" onClick={addSection}><Plus size={13} /> {t('Section')}</button>
         <span />
         <button
           type="button"
           className="writing-helios-action"
-          onClick={() => onAskHelios('Tighten this Weave live page: clarify decisions, owners, and open questions')}
+          onClick={() => onAskHelios(t('Tighten this Weave live page: clarify decisions, owners, and open questions'))}
         >
-          <Sparkles size={14} /> Clarify with Helios
+          <Sparkles size={14} /> {t('Clarify with Helios')}
         </button>
       </header>
       <div className="weave-layout">
-        <aside className="weave-sections" aria-label="Sections">
-          <header><strong>SECTIONS</strong></header>
+        <aside className="weave-sections" aria-label={t('Sections')}>
+          <header><strong>{t('SECTIONS')}</strong></header>
           {sections.map(section => (
             <button
               type="button"
@@ -1325,13 +1333,13 @@ export function WeaveWorkspace({ data, onChange, onAskHelios }: EditorProps) {
               {section.title}
             </button>
           ))}
-          <button type="button" className="weave-add-section" onClick={addSection}><Plus size={12} /> Add section</button>
+          <button type="button" className="weave-add-section" onClick={addSection}><Plus size={12} /> {t('Add section')}</button>
           <div className="weave-presence-list">
-            <strong>HERE NOW</strong>
+            <strong>{t('HERE NOW')}</strong>
             {presence.map(person => (
               <article key={person.id}>
                 <i style={{ background: person.color }} />
-                <span>{person.name}{person.id === 'you' ? ' (editing)' : ' viewing'}</span>
+                <span>{person.id === 'you' ? t('{name} (editing)', { name: t('You') }) : t('{name} viewing', { name: person.name })}</span>
               </article>
             ))}
           </div>
@@ -1344,7 +1352,7 @@ export function WeaveWorkspace({ data, onChange, onAskHelios }: EditorProps) {
             suppressContentEditableWarning
             role="textbox"
             aria-multiline="true"
-            aria-label="Weave live page"
+            aria-label={t('Weave live page')}
             onInput={event => update({ html: sanitizeHtml(event.currentTarget.innerHTML), sections: weaveSectionsFromHtml(event.currentTarget.innerHTML) })}
           />
         </div>

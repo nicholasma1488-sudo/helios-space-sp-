@@ -17,6 +17,7 @@ import {
   replaceExtension,
   type EditorLanguage,
 } from './repoModel'
+import { useT } from '../i18n'
 
 interface CodeData {
   files: Record<string, string>
@@ -52,6 +53,7 @@ function sameFiles(a: Record<string, string>, b: Record<string, string>) {
 }
 
 export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = true }: Props) {
+  const t = useT()
   const value = data as unknown as CodeData
   const monacoTheme = monacoThemeFor(useResolvedTheme())
   const workspaceFiles = useMemo(() => value.files || {}, [value.files])
@@ -129,13 +131,13 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   const activeLanguage = value.language || (activeFile ? languageForFile(activeFile) : 'javascript')
 
   const preview = useMemo(() => {
-    const html = files['index.html'] || '<main id="app"><p>Add index.html to preview the web app.</p></main>'
+    const html = files['index.html'] || `<main id="app"><p>${t('Add index.html to preview the web app.')}</p></main>`
     const css = files['styles.css'] || files['style.css'] || ''
     const js = files['app.js'] || files['index.js'] || ''
     return html
       .replace(/<link[^>]+href=["'](?:styles|style)\.css["'][^>]*>/i, `<style>${css}</style>`)
       .replace(/<script[^>]+src=["'](?:app|index)\.js["'][^>]*><\/script>/i, `<script>${js.replace(/<\/script/gi, '<\\/script')}</script>`)
-  }, [files])
+  }, [files, t])
 
   function patch(next: Partial<CodeData>) {
     const merged = { ...value, ...next }
@@ -252,7 +254,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     setRightPanel('terminal')
 
     if (lang === 'html' || lang === 'css' || lang === 'javascript' || activeFile.endsWith('.js')) {
-      output.push('Opening live preview from index.html / styles / app.js…')
+      output.push(t('Opening live preview from index.html / styles / app.js…'))
       setRightPanel('preview')
       setPreviewKey(key => key + 1)
       patch({ terminal: output.slice(-120) })
@@ -267,11 +269,11 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
         source,
         files,
       })
-      output.push(result.stdout || '(no stdout)')
+      output.push(result.stdout || t('(no stdout)'))
       if (result.stderr) output.push(result.stderr)
-      if (result.status) output.push(`[exit ${result.status}]`)
+      if (result.status) output.push(t('[exit {status}]', { status: result.status }))
     } catch (error) {
-      output.push(`Run failed: ${(error as Error).message}`)
+      output.push(t('Run failed: {error}', { error: (error as Error).message }))
     } finally {
       setRunning(false)
       patch({ terminal: output.slice(-120) })
@@ -284,11 +286,11 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     if (!command) return
     const output = [...(value.terminal || []), `$ ${command}`]
     const normalized = command.toLowerCase()
-    if (normalized === 'help') output.push('Supported: help, ls, clear, preview, run, download')
-    else if (normalized === 'ls') output.push(Object.keys(files).join('   ') || '(empty repository)')
+    if (normalized === 'help') output.push(t('Supported: help, ls, clear, preview, run, download'))
+    else if (normalized === 'ls') output.push(Object.keys(files).join('   ') || t('(empty repository)'))
     else if (normalized === 'clear') output.splice(0, output.length)
     else if (['preview', 'npm run preview'].includes(normalized)) {
-      output.push('Preview rebuilt from index.html, styles.css and app.js.')
+      output.push(t('Preview rebuilt from index.html, styles.css and app.js.'))
       setRightPanel('preview')
       setPreviewKey(key => key + 1)
     } else if (normalized === 'run') {
@@ -297,16 +299,18 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
       return
     } else if (normalized === 'download') {
       downloadCode()
-      output.push(Object.keys(files).length > 1 ? 'Downloaded zip folder.' : 'Downloaded file.')
-    } else if (normalized === 'commit') output.push('Edits autosave. Optional snapshots live under History.')
-    else output.push(`Command not available in the browser sandbox: ${command}`)
+      output.push(Object.keys(files).length > 1 ? t('Downloaded zip folder.') : t('Downloaded file.'))
+    } else if (normalized === 'commit') output.push(t('Edits autosave. Optional snapshots live under History.'))
+    else output.push(t('Command not available in the browser sandbox: {command}', { command }))
     patch({ terminal: output.slice(-120) })
     setTerminalInput('')
   }
 
   function askHeliosFromPanel(event?: React.FormEvent) {
     event?.preventDefault()
-    const prompt = heliosPrompt.trim() || `Review ${activeFile || 'this repository'} and write the next useful file changes as path-tagged code blocks`
+    const prompt = heliosPrompt.trim() || (activeFile
+      ? t('Review {name} and write the next useful file changes as path-tagged code blocks', { name: activeFile })
+      : t('Review this repository and write the next useful file changes as path-tagged code blocks'))
     setRightPanel('helios')
     onAskHelios(prompt)
     setHeliosPrompt('')
@@ -319,7 +323,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
     <RepoEmptyState
       canEdit={canEdit && !repo.viewingCommit}
       onAddFile={() => {
-        const path = window.prompt('File name, including extension', 'main.cpp')?.trim()
+        const path = window.prompt(t('File name, including extension'), 'main.cpp')?.trim()
         if (path && isValidRepoPath(path) && files[path] === undefined) createFile(path)
       }}
       onAddReadme={() => createFile('README.md', README_STARTER)}
@@ -329,26 +333,26 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
       <div className="code-toolbar liquid-glass">
         <strong className="code-ide-label">Helios IDE</strong>
         <label className="code-language-switch">
-          <span>Language</span>
+          <span>{t('Language')}</span>
           <select
             value={activeLanguage}
             disabled={!canEdit || Boolean(repo.viewingCommit)}
             onChange={event => switchLanguage(event.target.value as EditorLanguage)}
-            aria-label="Code language"
+            aria-label={t('Code language')}
           >
             {LANGUAGE_OPTIONS.map(option => (
-              <option key={option.id} value={option.id}>{option.label}</option>
+              <option key={option.id} value={option.id}>{t(option.label)}</option>
             ))}
           </select>
         </label>
         <button type="button" className="liquid-glass-btn" disabled={running || !activeFile} onClick={() => void runActiveFile()}>
-          <Play size={13} /> {running ? 'Running…' : 'Run'}
+          <Play size={13} /> {running ? t('Running…') : t('Run')}
         </button>
         <button type="button" className="liquid-glass-btn" onClick={() => { setRightPanel('preview'); setPreviewKey(key => key + 1) }}>
-          <RefreshCw size={13} /> Preview
+          <RefreshCw size={13} /> {t('Preview')}
         </button>
         <button type="button" className="liquid-glass-btn is-primary" disabled={Object.keys(files).length === 0} onClick={downloadCode}>
-          <Download size={13} /> {Object.keys(files).length > 1 ? 'Download ZIP' : 'Download'}
+          <Download size={13} /> {Object.keys(files).length > 1 ? t('Download ZIP') : t('Download')}
         </button>
       </div>
       <div className="code-tabs">
@@ -357,7 +361,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
             <FileCode2 size={12} />
             <span>{name}</span>
             {repo.dirtyPaths.includes(name) && <i className="repo-dirty-dot" />}
-            <b role="button" tabIndex={0} aria-label={`Close ${name}`} onClick={event => { event.stopPropagation(); closeFile(name) }}><X size={11} /></b>
+            <b role="button" tabIndex={0} aria-label={t('Close {name}', { name })} onClick={event => { event.stopPropagation(); closeFile(name) }}><X size={11} /></b>
           </button>
         ))}
       </div>
@@ -365,9 +369,9 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
         <>
           <div className="repo-file-meta">
             <FileCode2 size={13} />
-            <span>{project?.name || 'repository'} / {activeFile}</span>
-            <small>{LANGUAGE_OPTIONS.find(item => item.id === activeLanguage)?.label || activeLanguage}</small>
-            {!editorValue && <small>This file is empty. Start writing — changes autosave.</small>}
+            <span>{project?.name || t('repository')} / {activeFile}</span>
+            <small>{t(LANGUAGE_OPTIONS.find(item => item.id === activeLanguage)?.label || activeLanguage)}</small>
+            {!editorValue && <small>{t('This file is empty. Start writing — changes autosave.')}</small>}
           </div>
           <div className="code-monaco">
             <Editor
@@ -404,38 +408,40 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
   const sidePanel = (
     <section className="code-output-zone helios-ide-side">
       <nav>
-        <button type="button" className={rightPanel === 'preview' ? 'is-active' : ''} onClick={() => setRightPanel('preview')}><Play size={12} /> Preview</button>
-        <button type="button" className={rightPanel === 'terminal' ? 'is-active' : ''} onClick={() => setRightPanel('terminal')}><TerminalSquare size={12} /> Terminal</button>
-        <button type="button" className={rightPanel === 'helios' ? 'is-active' : ''} onClick={() => setRightPanel('helios')}><Sparkles size={12} /> Helios</button>
-        {rightPanel === 'preview' && <button type="button" onClick={() => setPreviewKey(key => key + 1)} aria-label="Refresh preview"><RefreshCw size={12} /></button>}
+        <button type="button" className={rightPanel === 'preview' ? 'is-active' : ''} onClick={() => setRightPanel('preview')}><Play size={12} /> {t('Preview')}</button>
+        <button type="button" className={rightPanel === 'terminal' ? 'is-active' : ''} onClick={() => setRightPanel('terminal')}><TerminalSquare size={12} /> {t('Terminal')}</button>
+        <button type="button" className={rightPanel === 'helios' ? 'is-active' : ''} onClick={() => setRightPanel('helios')}><Sparkles size={12} /> {t('Helios')}</button>
+        {rightPanel === 'preview' && <button type="button" onClick={() => setPreviewKey(key => key + 1)} aria-label={t('Refresh preview')}><RefreshCw size={12} /></button>}
       </nav>
-      {rightPanel === 'preview' && <iframe key={previewKey} title="Live project preview" sandbox="allow-scripts" srcDoc={preview} />}
+      {rightPanel === 'preview' && <iframe key={previewKey} title={t('Live project preview')} sandbox="allow-scripts" srcDoc={preview} />}
       {rightPanel === 'terminal' && (
         <div className="browser-terminal">
           <div>{(value.terminal || []).map((line, index) => <p key={index}>{line}</p>)}</div>
-          <form onSubmit={runTerminal}><span>$</span><input value={terminalInput} onChange={event => setTerminalInput(event.target.value)} aria-label="Terminal command" /></form>
+          <form onSubmit={runTerminal}><span>$</span><input value={terminalInput} onChange={event => setTerminalInput(event.target.value)} aria-label={t('Terminal command')} /></form>
         </div>
       )}
       {rightPanel === 'helios' && (
         <div className="helios-ide-panel">
           <Sparkles size={22} />
-          <h3>Helios</h3>
-          <p>Ask Helios about the open file, missing tests, or the next useful change. The side panel stays docked while you edit.</p>
+          <h3>{t('Helios')}</h3>
+          <p>{t('Ask Helios about the open file, missing tests, or the next useful change. The side panel stays docked while you edit.')}</p>
           <form onSubmit={askHeliosFromPanel}>
             <textarea
               value={heliosPrompt}
               onChange={event => setHeliosPrompt(event.target.value)}
-              placeholder={`Review ${activeFile || 'this repository'}…`}
-              aria-label="Ask Helios"
+              placeholder={t('Review {name}…', { name: activeFile || t('this repository') })}
+              aria-label={t('Ask Helios')}
             />
-            <button type="submit" className="liquid-glass-btn is-primary"><Sparkles size={13} /> Ask Helios</button>
+            <button type="submit" className="liquid-glass-btn is-primary"><Sparkles size={13} /> {t('Ask Helios')}</button>
           </form>
           <button
             type="button"
             className="liquid-glass-btn"
-            onClick={() => onAskHelios(`Review ${activeFile || 'this repository'} and write the next useful file changes as path-tagged code blocks`)}
+            onClick={() => onAskHelios(activeFile
+              ? t('Review {name} and write the next useful file changes as path-tagged code blocks', { name: activeFile })
+              : t('Review this repository and write the next useful file changes as path-tagged code blocks'))}
           >
-            Quick review of {activeFile || 'repo'}
+            {activeFile ? t('Quick review of {name}', { name: activeFile }) : t('Quick review of repo')}
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { FilePlus2, Grid3X3, Search } from 'lucide-react'
 import { AppIcon } from '../components/AppIcon'
+import { getLocale, t, useT } from '../i18n'
 import { useApp } from '../store/appStore'
 import { openProjectWorkspace } from '../product/flow'
 import {
@@ -15,13 +16,13 @@ import './MiniAppsView.css'
 
 function relativeTime(value: string) {
   const minutes = Math.round((Date.now() - new Date(value).getTime()) / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 1) return t('Just now')
+  if (minutes < 60) return t('{count}m ago', { count: minutes })
   const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t('{count}h ago', { count: hours })
   const days = Math.round(hours / 24)
-  if (days < 14) return `${days}d ago`
-  return new Date(value).toLocaleDateString()
+  if (days < 14) return t('{count}d ago', { count: days })
+  return new Date(value).toLocaleDateString(getLocale())
 }
 
 function openTopBarCreatePanel(app?: SuiteApp) {
@@ -29,6 +30,7 @@ function openTopBarCreatePanel(app?: SuiteApp) {
 }
 
 export function MiniAppsView() {
+  const t = useT()
   const { state, dispatch } = useApp()
   const edition = editionFor(state.user?.plan)
   const apps = suiteAppsForEdition(edition)
@@ -74,11 +76,11 @@ export function MiniAppsView() {
         </div>
         <label className="suite-search">
           <Search size={16} aria-hidden="true" />
-          <span className="sr-only">Search apps</span>
+          <span className="sr-only">{t('Search apps')}</span>
           <input
             value={query}
             onChange={event => setQuery(event.target.value)}
-            placeholder="Search Docs / Sheets / Code…"
+            placeholder={t('Search Docs / Sheets / Code…')}
           />
         </label>
       </header>
@@ -90,15 +92,15 @@ export function MiniAppsView() {
       >
         <span className="suite-hero-icon" aria-hidden="true"><Grid3X3 size={22} /></span>
         <span>
-          <strong>Open Mini Apps from the top bar</strong>
-          <small>Expands a half-screen panel — pick Docs, Sheets, Code, and the rest</small>
+          <strong>{t('Open Mini Apps from the top bar')}</strong>
+          <small>{t('Expands a half-screen panel — pick Docs, Sheets, Code, and the rest')}</small>
         </span>
       </button>
 
       <div className="suite-body">
         <section className="suite-apps" aria-labelledby="suite-apps-title">
           <header>
-            <h2 id="suite-apps-title">{query ? 'Search results' : 'Mini Apps'}</h2>
+            <h2 id="suite-apps-title">{query ? t('Search results') : t('Mini Apps')}</h2>
             <span>{filtered.length}</span>
           </header>
           <div className="suite-grid suite-grid-guides">
@@ -108,9 +110,9 @@ export function MiniAppsView() {
                 type="button"
                 data-app-id={app.id}
                 className="suite-tile suite-tile-guide liquid-glass-btn"
-                title={app.guideTip}
+                title={t(app.guideTip)}
                 onClick={() => openTopBarCreatePanel(app)}
-                aria-label={`Open ${app.name}`}
+                aria-label={t('Open “{name}”', { name: app.name })}
               >
                 <span className="suite-tile-icon" style={{ background: app.color }} aria-hidden="true">
                   <AppIcon icon={app.icon} />
@@ -118,8 +120,8 @@ export function MiniAppsView() {
                 <strong className="suite-tile-name">{app.name}</strong>
                 <span className="suite-guide">
                   <span className="suite-guide-meta">
-                    <b>{app.guideTip}</b>
-                    <small>{app.description}</small>
+                    <b>{t(app.guideTip)}</b>
+                    <small>{t(app.description)}</small>
                   </span>
                 </span>
               </button>
@@ -128,24 +130,24 @@ export function MiniAppsView() {
           {filtered.length === 0 && (
             <div className="suite-empty">
               <Search size={22} />
-              <strong>No matching app</strong>
-              <span>Try Docs, Sheets, Slides, or Code</span>
+              <strong>{t('No matching app')}</strong>
+              <span>{t('Try Docs, Sheets, Slides, or Code')}</span>
             </div>
           )}
         </section>
 
         <section className="suite-files" aria-labelledby="suite-recent-title">
           <header>
-            <h2 id="suite-recent-title">Recent files</h2>
-            <span>Also on Home</span>
+            <h2 id="suite-recent-title">{t('Recent files')}</h2>
+            <span>{t('Also on Home')}</span>
           </header>
           {recent.length === 0 ? (
             <div className="suite-empty">
               <FilePlus2 size={22} />
-              <strong>No files yet</strong>
-              <span>Open Mini Apps from the top bar to create a file.</span>
+              <strong>{t('No files yet')}</strong>
+              <span>{t('Open Mini Apps from the top bar to create a file.')}</span>
               <button type="button" className="liquid-glass-btn is-primary" onClick={() => openTopBarCreatePanel()}>
-                Open Mini Apps
+                {t('Open Mini Apps')}
               </button>
             </div>
           ) : (

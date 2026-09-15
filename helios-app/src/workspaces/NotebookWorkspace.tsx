@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import {
   Bold, List, ListOrdered, Pencil, Plus, Search, Sparkles, Tag, Trash2,
 } from 'lucide-react'
+import { useLocale, useT } from '../i18n'
 
 interface FolioPage {
   id: string
@@ -96,6 +97,8 @@ function applyShortcut(body: string, selectionStart: number, selectionEnd: numbe
 }
 
 export function NotebookWorkspace({ data, onChange, onAskHelios }: Props) {
+  const t = useT()
+  const locale = useLocale()
   const value = data as NotebookData
   const pages = useMemo(() => asPages(value), [value])
   const [search, setSearch] = useState('')
@@ -197,33 +200,33 @@ export function NotebookWorkspace({ data, onChange, onAskHelios }: Props) {
     <div className="notebook-workspace folio-workspace">
       <header className="writing-toolbar">
         <strong>FOLIO</strong>
-        <button type="button" onClick={addPage}><Plus size={13} /> Page</button>
-        <button type="button" onClick={() => formatSelection('bold')} title="Bold (Ctrl/Cmd+B)"><Bold size={14} /></button>
-        <button type="button" onClick={() => formatSelection('ul')} title="Bullet list"><List size={14} /></button>
-        <button type="button" onClick={() => formatSelection('ol')} title="Numbered list"><ListOrdered size={14} /></button>
+        <button type="button" onClick={addPage}><Plus size={13} /> {t('Page')}</button>
+        <button type="button" onClick={() => formatSelection('bold')} title={t('Bold (Ctrl/Cmd+B)')}><Bold size={14} /></button>
+        <button type="button" onClick={() => formatSelection('ul')} title={t('Bullet list')}><List size={14} /></button>
+        <button type="button" onClick={() => formatSelection('ol')} title={t('Numbered list')}><ListOrdered size={14} /></button>
         <span />
         <label className="folio-search">
           <Search size={13} />
           <input
             value={search}
             onChange={event => setSearch(event.target.value)}
-            placeholder="Search pages…"
-            aria-label="Search Folio pages"
+            placeholder={t('Search pages…')}
+            aria-label={t('Search Folio pages')}
           />
         </label>
         <button
           type="button"
           className="writing-helios-action"
-          onClick={() => onAskHelios('Summarize this Folio notebook, highlight open threads, and suggest what to capture next')}
+          onClick={() => onAskHelios(t('Summarize this Folio notebook, highlight open threads, and suggest what to capture next'))}
         >
-          <Sparkles size={14} /> Summarize
+          <Sparkles size={14} /> {t('Summarize')}
         </button>
       </header>
 
       <div className="folio-layout">
-        <aside className="folio-sidebar" aria-label="Folio pages">
+        <aside className="folio-sidebar" aria-label={t('Folio pages')}>
           <header>
-            <strong>PAGES</strong>
+            <strong>{t('PAGES')}</strong>
             <span>{pages.length}</span>
           </header>
           <div className="folio-page-list">
@@ -231,11 +234,11 @@ export function NotebookWorkspace({ data, onChange, onAskHelios }: Props) {
               <article key={page.id} className={page.id === active?.id ? 'is-active' : ''}>
                 <button type="button" className="folio-page-select" onClick={() => commit(pages, page.id)}>
                   <strong>{page.title}</strong>
-                  <small>{page.tags.length ? page.tags.map(tag => `#${tag}`).join(' ') : 'No tags'}</small>
+                  <small>{page.tags.length ? page.tags.map(tag => `#${tag}`).join(' ') : t('No tags')}</small>
                 </button>
                 <div className="folio-page-actions">
-                  <button type="button" aria-label={`Rename ${page.title}`} onClick={() => setRenamingId(page.id)}><Pencil size={12} /></button>
-                  <button type="button" aria-label={`Delete ${page.title}`} disabled={pages.length <= 1} onClick={() => deletePage(page.id)}><Trash2 size={12} /></button>
+                  <button type="button" aria-label={t('Rename {name}', { name: page.title })} onClick={() => setRenamingId(page.id)}><Pencil size={12} /></button>
+                  <button type="button" aria-label={t('Delete {name}', { name: page.title })} disabled={pages.length <= 1} onClick={() => deletePage(page.id)}><Trash2 size={12} /></button>
                 </div>
                 {renamingId === page.id && (
                   <form
@@ -246,18 +249,18 @@ export function NotebookWorkspace({ data, onChange, onAskHelios }: Props) {
                       renamePage(page.id, input.value)
                     }}
                   >
-                    <input name="title" defaultValue={page.title} autoFocus aria-label="Page title" />
-                    <button type="submit">Save</button>
+                    <input name="title" defaultValue={page.title} autoFocus aria-label={t('Page title')} />
+                    <button type="submit">{t('Save')}</button>
                   </form>
                 )}
               </article>
             ))}
-            {filtered.length === 0 && <p className="folio-empty">No pages match “{search.trim()}”.</p>}
+            {filtered.length === 0 && <p className="folio-empty">{t('No pages match “{query}”.', { query: search.trim() })}</p>}
           </div>
-          <button type="button" className="folio-add-page" onClick={addPage}><Plus size={13} /> New page</button>
+          <button type="button" className="folio-add-page" onClick={addPage}><Plus size={13} /> {t('New page')}</button>
         </aside>
 
-        <section className="folio-editor" aria-label="Folio page editor">
+        <section className="folio-editor" aria-label={t('Folio page editor')}>
           {active ? (
             <>
               <header className="folio-editor-header">
@@ -265,7 +268,7 @@ export function NotebookWorkspace({ data, onChange, onAskHelios }: Props) {
                   className="folio-title-field"
                   value={active.title}
                   onChange={event => patchActive({ title: event.target.value })}
-                  aria-label="Page title"
+                  aria-label={t('Page title')}
                 />
                 <form className="folio-tags" onSubmit={addTag}>
                   <Tag size={13} />
@@ -275,7 +278,7 @@ export function NotebookWorkspace({ data, onChange, onAskHelios }: Props) {
                       key={tag}
                       className="folio-tag"
                       onClick={() => patchActive({ tags: active.tags.filter(item => item !== tag) })}
-                      title="Remove tag"
+                      title={t('Remove tag')}
                     >
                       #{tag} ×
                     </button>
@@ -283,8 +286,8 @@ export function NotebookWorkspace({ data, onChange, onAskHelios }: Props) {
                   <input
                     value={tagDraft}
                     onChange={event => setTagDraft(event.target.value)}
-                    placeholder="Add tag"
-                    aria-label="Add tag"
+                    placeholder={t('Add tag')}
+                    aria-label={t('Add tag')}
                   />
                 </form>
               </header>
@@ -294,18 +297,20 @@ export function NotebookWorkspace({ data, onChange, onAskHelios }: Props) {
                 value={active.body}
                 onChange={event => patchActive({ body: event.target.value })}
                 onKeyDown={onBodyKeyDown}
-                aria-label={`${active.title} body`}
-                placeholder="Write notes… Use **bold**, - lists, or Ctrl/Cmd+B"
+                aria-label={t('{title} body', { title: active.title })}
+                placeholder={t('Write notes… Use **bold**, - lists, or Ctrl/Cmd+B')}
               />
               <footer className="folio-footer">
-                <small>Autosaves with the Project · {active.updatedAt ? `Updated ${new Date(active.updatedAt).toLocaleString()}` : 'Not saved yet'}</small>
-                <small>{active.body.length.toLocaleString()} chars</small>
+                <small>{active.updatedAt
+                  ? t('Autosaves with the Project · Updated {time}', { time: new Date(active.updatedAt).toLocaleString(locale) })
+                  : t('Autosaves with the Project · Not saved yet')}</small>
+                <small>{t('{count} chars', { count: active.body.length.toLocaleString(locale) })}</small>
               </footer>
             </>
           ) : (
             <div className="folio-empty-state">
-              <strong>No pages yet</strong>
-              <button type="button" onClick={addPage}><Plus size={14} /> Create a page</button>
+              <strong>{t('No pages yet')}</strong>
+              <button type="button" onClick={addPage}><Plus size={14} /> {t('Create a page')}</button>
             </div>
           )}
         </section>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Plus, RefreshCw, Trash2, TrendingUp } from 'lucide-react'
 import { api, type MarketQuote } from '../api'
+import { getLocale, useLocale, useT } from '../i18n'
 import './StocksWorkspace.css'
 
 interface StocksData {
@@ -20,7 +21,7 @@ function normalizeSymbol(value: string) {
 
 function formatPrice(value: number | null, currency?: string) {
   if (value == null || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat(undefined, {
+  return new Intl.NumberFormat(getLocale(), {
     style: currency ? 'currency' : 'decimal',
     currency: currency && currency.length === 3 ? currency : 'USD',
     maximumFractionDigits: 2,
@@ -35,6 +36,8 @@ function formatChange(value: number | null, percent: number | null) {
 }
 
 export function StocksWorkspace({ data, onChange }: Props) {
+  const t = useT()
+  const locale = useLocale()
   const value = data as StocksData
   const symbols = useMemo(() => {
     const list = Array.isArray(value.symbols) ? value.symbols.map(normalizeSymbol).filter(Boolean) : []
@@ -90,18 +93,18 @@ export function StocksWorkspace({ data, onChange }: Props) {
     <div className="stocks-workspace">
       <header>
         <div>
-          <small>WATCHLIST</small>
-          <h2>Stocks</h2>
-          <p>{updatedAt ? `Updated ${new Date(updatedAt).toLocaleTimeString()}` : 'Quotes refresh every 30 seconds.'}</p>
+          <small>{t('WATCHLIST')}</small>
+          <h2>{t('Stocks')}</h2>
+          <p>{updatedAt ? t('Updated {time}', { time: new Date(updatedAt).toLocaleTimeString(locale) }) : t('Quotes refresh every 30 seconds.')}</p>
         </div>
         <button type="button" onClick={() => setSymbols([...symbols])} disabled={loading}>
           <RefreshCw size={14} className={loading ? 'is-spinning' : undefined} />
-          {loading ? 'Refreshing…' : 'Refresh'}
+          {loading ? t('Refreshing…') : t('Refresh')}
         </button>
       </header>
 
       <form onSubmit={addSymbol}>
-        <label htmlFor="stock-symbol">Add ticker</label>
+        <label htmlFor="stock-symbol">{t('Add ticker')}</label>
         <input
           id="stock-symbol"
           value={draft}
@@ -111,7 +114,7 @@ export function StocksWorkspace({ data, onChange }: Props) {
           autoCapitalize="characters"
         />
         <button type="submit" disabled={!normalizeSymbol(draft) || symbols.length >= 20}>
-          <Plus size={14} /> Add
+          <Plus size={14} /> {t('Add')}
         </button>
       </form>
 
@@ -121,11 +124,11 @@ export function StocksWorkspace({ data, onChange }: Props) {
         <table>
           <thead>
             <tr>
-              <th>Symbol</th>
-              <th>Name</th>
-              <th>Price</th>
+              <th>{t('Symbol')}</th>
+              <th>{t('Name')}</th>
+              <th>{t('Price')}</th>
               <th>Change</th>
-              <th>Market</th>
+              <th>{t('Market')}</th>
               <th />
             </tr>
           </thead>
@@ -142,7 +145,7 @@ export function StocksWorkspace({ data, onChange }: Props) {
                   <td>{formatChange(quote?.change ?? null, quote?.change_percent ?? null)}</td>
                   <td>{quote?.market_state || '—'}</td>
                   <td>
-                    <button type="button" onClick={() => setSymbols(symbols.filter(item => item !== symbol))} aria-label={`Remove ${symbol}`}>
+                    <button type="button" onClick={() => setSymbols(symbols.filter(item => item !== symbol))} aria-label={t('Remove {symbol}', { symbol })}>
                       <Trash2 size={14} />
                     </button>
                   </td>
@@ -154,8 +157,8 @@ export function StocksWorkspace({ data, onChange }: Props) {
         {symbols.length === 0 && (
           <div className="stocks-empty">
             <TrendingUp size={22} />
-            <strong>Add a ticker to start watching</strong>
-            <span>US, Hong Kong and Shanghai symbols all work.</span>
+            <strong>{t('Add a ticker to start watching')}</strong>
+            <span>{t('US, Hong Kong and Shanghai symbols all work.')}</span>
           </div>
         )}
       </div>
