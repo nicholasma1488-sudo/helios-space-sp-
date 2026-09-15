@@ -1,5 +1,9 @@
 # Helios Space
 
+**Current upgrade work:** [`CHAT_UX_UPGRADE.md`](./CHAT_UX_UPGRADE.md) — exact
+list, priority, quality rubric, and success measures for the chat / Forge /
+memory / collab pass. Implementation follows that document only.
+
 Helios Space is a React application for creating projects and sharing progress. Accounts, projects, posts, audiences, and reactions are persisted in SQLite by the included Express server.
 
 The logged-out experience opens with a cinematic product landing page and a motion-connected transition into authentication. Inside the app, **Lifestyle (nav: Space)** is the social feed core. Helios Space is **completely free** — no Orbit / Stripe paywall in the product UI.
