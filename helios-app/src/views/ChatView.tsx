@@ -101,7 +101,7 @@ export function ChatView() {
         const requested = Number(sessionStorage.getItem('helios-open-conversation') || 0)
         sessionStorage.removeItem('helios-open-conversation')
         const target = result.conversations.find(item => item.id === requested) ?? result.conversations.find(item => item.kind === 'project') ?? result.conversations[0]
-        if (target) { setTab(target.kind); setActiveId(target.id) }
+        if (target) setActiveId(target.id)
       }
     } catch (error) {
       dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Chat Hub could not load: {error}', { error: (error as Error).message }), tone: 'warning' } })

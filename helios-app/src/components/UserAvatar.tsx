@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-const PALETTE = ['#6d51cd', '#3d8b6e', '#c96442', '#5b8def', '#b44d8a', '#2f6f8f', '#8a6b2f', '#5c4b8a']
+const PALETTE = ['#c96442', '#3d8b6e', '#5b8def', '#8a6b2f', '#2f6f8f', '#c47a2c', '#7a8bb8', '#5c6570']
 
 function initialsOf(name: string) {
   const parts = name.split(/\s+/).filter(Boolean)

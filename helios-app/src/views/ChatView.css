@@ -248,8 +248,9 @@
   grid-template-columns: 48px minmax(0, 1fr) auto;
   gap: 10px;
   width: 100%;
-  padding: 10px 14px;
+  padding: 12px 14px;
   border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--helios-border) 70%, transparent);
   background: transparent;
   color: inherit;
   text-align: left;
@@ -934,14 +935,25 @@
 }
 
 @media (max-width: 680px) {
-  .chat-hub { display: block; overflow: auto; height: 100%; }
-  .chat-hub-sidebar { height: auto; min-height: 100%; border-right: 0; }
+  .chat-hub {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    width: 100%;
+    min-width: 100%;
+    height: 100%;
+    animation: none;
+  }
+  .chat-hub-sidebar {
+    flex: 1;
+    min-height: 0;
+    border-right: 0;
+  }
   .chat-thread {
-    position: fixed;
-    z-index: 30;
+    position: absolute;
     inset: 0;
-    top: calc(58px + env(safe-area-inset-top, 0px));
-    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    z-index: 2;
+    width: auto;
     display: none;
   }
   .chat-hub:has(.chat-thread .chat-thread-header) .chat-thread { display: flex; }
@@ -958,6 +970,7 @@
     cursor: pointer;
   }
   .chat-composer-hint { display: none; }
+  .chat-composer { padding-right: 56px; }
   html.helios-is-fullscreen .chat-thread {
     inset: 0 !important;
     top: 0 !important;
