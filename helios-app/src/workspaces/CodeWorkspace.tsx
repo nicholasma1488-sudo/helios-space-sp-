@@ -7,6 +7,7 @@ import {
 import type { Project } from '../api'
 import { api } from '../api'
 import { RepoEmptyState, RepoFrame, useProjectRepo } from './RepoFrame'
+import { monacoThemeFor, useResolvedTheme } from '../hooks/useResolvedTheme'
 import {
   isValidRepoPath,
   LANGUAGE_OPTIONS,
@@ -46,6 +47,7 @@ function downloadBlob(blob: Blob, filename: string) {
 
 export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = true }: Props) {
   const value = data as unknown as CodeData
+  const monacoTheme = monacoThemeFor(useResolvedTheme())
   const workspaceFiles = useMemo(() => value.files || {}, [value.files])
   const repo = useProjectRepo(project?.id, canEdit)
   const [rightPanel, setRightPanel] = useState<'preview' | 'terminal' | 'helios'>('preview')
@@ -332,7 +334,7 @@ export function CodeWorkspace({ data, onChange, onAskHelios, project, canEdit = 
                 if (!canEdit || repo.viewingCommit || !activeFile) return
                 patch({ files: { ...files, [activeFile]: next || '' } })
               }}
-              theme="vs-dark"
+              theme={monacoTheme}
               options={{
                 automaticLayout: true,
                 minimap: { enabled: false },

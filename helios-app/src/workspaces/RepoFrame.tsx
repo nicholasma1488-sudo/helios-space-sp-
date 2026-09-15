@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { api, type Project, type ProjectCommit } from '../api'
 import { artifactPathForKind, filesFromList, isValidRepoPath, languageForFile, README_STARTER, sortFilePaths } from './repoModel'
+import { monacoThemeFor, useResolvedTheme } from '../hooks/useResolvedTheme'
 
 interface RepoFrameProps {
   project: Project
@@ -369,6 +370,7 @@ export function RepoBoundWorkspace({
   children: React.ReactNode
 }) {
   const repo = useProjectRepo(project.id, canEdit)
+  const monacoTheme = monacoThemeFor(useResolvedTheme())
   const artifact = artifactPathForKind(kind)
   const [activeFile, setActiveFile] = useState(artifact)
   const seeded = useRef(false)
@@ -447,7 +449,7 @@ export function RepoBoundWorkspace({
                 persist({ ...workingFiles, [selected]: nextValue })
                 if (selected === artifact && kind === 'writing') onChange({ ...data, html: nextValue })
               }}
-              theme="vs-dark"
+              theme={monacoTheme}
               options={{ automaticLayout: true, minimap: { enabled: false }, fontSize: 13, fontFamily: 'Fira Code, Menlo, monospace', padding: { top: 14 }, wordWrap: 'on', readOnly: !canEdit || Boolean(repo.viewingCommit) }}
             />
           </div>

@@ -4,6 +4,7 @@ import { Save, Send, Sparkles, X } from 'lucide-react'
 import { api } from '../api'
 import type { Project } from '../api'
 import { useApp } from '../store/appStore'
+import { monacoThemeFor, useResolvedTheme } from '../hooks/useResolvedTheme'
 import { PublishModal } from './PublishModal'
 
 interface Props {
@@ -29,6 +30,7 @@ function languageFor(project: Project | null): string {
 
 export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
   const { state, dispatch } = useApp()
+  const monacoTheme = monacoThemeFor(useResolvedTheme())
   const [editorContent, setEditorContent] = useState(activeProject?.content ?? '')
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved')
   const [saveError, setSaveError] = useState('')
@@ -236,11 +238,11 @@ export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
 
   return (
     <>
-      <div className="flex flex-col flex-1 overflow-hidden" style={{ background: '#0d0d10' }}>
+      <div className="flex flex-col flex-1 overflow-hidden" style={{ background: 'var(--helios-bg)' }}>
         <header className="helios-editor-header flex items-center gap-3 px-5 py-3 border-b"
           style={{ borderColor: 'var(--helios-border)', flexShrink: 0, background: 'var(--helios-surface)' }}>
           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: 'var(--helios-accent)', color: '#fff', fontSize: 13 }} aria-hidden="true">
+            style={{ background: 'var(--helios-accent)', color: 'var(--helios-on-accent)', fontSize: 13 }} aria-hidden="true">
             {'</>'}
           </div>
           <div className="helios-editor-project flex-1 min-w-0">
@@ -261,19 +263,19 @@ export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
             <button onClick={() => dispatch({ type: 'TOGGLE_HELIOS_PANEL' })} title="Ask Helios"
               aria-pressed={state.heliosPanelOpen}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer"
-              style={{ background: state.heliosPanelOpen ? 'var(--helios-accent)' : 'var(--helios-surface2)', color: state.heliosPanelOpen ? '#fff' : 'var(--helios-accent)', border: 'none' }}>
+              style={{ background: state.heliosPanelOpen ? 'var(--helios-accent)' : 'var(--helios-surface2)', color: state.heliosPanelOpen ? 'var(--helios-on-accent)' : 'var(--helios-accent)', border: 'none' }}>
               <Sparkles size={12} /> Helios
             </button>
 
             <button onClick={handleSave} disabled={!activeProject || saveStatus === 'saving' || closing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer"
-              style={{ background: 'var(--helios-success)', color: '#fff', border: 'none', opacity: (!activeProject || saveStatus === 'saving' || closing) ? 0.55 : 1 }}>
+              style={{ background: 'var(--helios-success)', color: 'var(--helios-on-success)', border: 'none', opacity: (!activeProject || saveStatus === 'saving' || closing) ? 0.55 : 1 }}>
               <Save size={12} /> Save
             </button>
 
             <button onClick={handleOpenPublish} disabled={!activeProject || openingPublish || closing}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs cursor-pointer"
-              style={{ background: 'var(--helios-accent2)', color: '#1a1a1a', border: 'none', opacity: (!activeProject || openingPublish || closing) ? 0.55 : 1 }}>
+              style={{ background: 'var(--helios-accent2)', color: 'var(--helios-on-accent2)', border: 'none', opacity: (!activeProject || openingPublish || closing) ? 0.55 : 1 }}>
               <Send size={12} /> {openingPublish ? 'Saving…' : 'Publish'}
             </button>
 
@@ -301,7 +303,7 @@ export function CodeEditorView({ activeProject, onProjectUpdate }: Props) {
             language={languageFor(activeProject)}
             value={activeProject ? editorContent : 'Open a project from Home to start editing.'}
             onChange={handleEditorChange}
-            theme="vs-dark"
+            theme={monacoTheme}
             options={{
               fontSize: 13,
               minimap: { enabled: false },
