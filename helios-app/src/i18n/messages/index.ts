@@ -5,6 +5,7 @@ import * as home from './home'
 import * as profile from './profile'
 import * as helios from './helios'
 import * as feed from './feed'
+import * as space from './space'
 import * as chat from './chat'
 import * as auth from './auth'
 import * as apps from './apps'
@@ -18,7 +19,7 @@ export type Dict = Record<string, string>
  * string. Later areas win on duplicate keys, so put shared vocabulary in
  * `common` and keep area files to their own screens.
  */
-const AREAS = [common, shell, home, profile, helios, feed, chat, auth, apps, workspaces]
+const AREAS = [common, shell, home, profile, helios, feed, space, chat, auth, apps, workspaces]
 
 function merge(pick: (area: { zhCN: Dict; zhTW: Dict }) => Dict): Dict {
   return Object.assign({}, ...AREAS.map(pick))

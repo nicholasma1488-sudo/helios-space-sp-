@@ -8,6 +8,7 @@ import { NewProjectModal } from '../components/NewProjectModal'
 import { MINI_APP_CATALOG, getMiniApp, getSpaceDefinition, type MiniAppDefinition } from '../product/catalog'
 import { categoryForSpace, openCreatorProfile, openOrCreateProjectChat, openProjectWorkspace } from '../product/flow'
 import { useApp, type SpaceTab } from '../store/appStore'
+import { useLocale, useT } from '../i18n'
 import './SpaceView.css'
 
 const TABS: Array<{ id: SpaceTab; label: string }> = [
@@ -24,6 +25,7 @@ const TABS: Array<{ id: SpaceTab; label: string }> = [
 
 export function SpaceView() {
   const { state, dispatch } = useApp()
+  const t = useT()
   const space = getSpaceDefinition(state.activeSpaceId)
   const miniApps = space.miniApps.map(getMiniApp)
   const projects = state.projects.filter(project => project.space_id === space.id)
@@ -46,11 +48,11 @@ export function SpaceView() {
       setPosts(postResult.posts)
       setLiveSessions(liveResult.sessions)
     } catch (error) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Space activity could not load: ${(error as Error).message}`, tone: 'warning' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Space activity could not load: {error}', { error: (error as Error).message }), tone: 'warning' } })
     } finally {
       setLoading(false)
     }
-  }, [dispatch, space.id])
+  }, [dispatch, space.id, t])
 
   useEffect(() => { void refresh() }, [refresh])
 
@@ -80,7 +82,7 @@ export function SpaceView() {
       setPosts(current => [result.post, ...current])
       setComposer('')
       setLinkedProjectId(null)
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Progress shared in ${space.name}`, tone: 'success' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Progress shared in {name}', { name: space.name }), tone: 'success' } })
     } catch (error) {
       dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
     } finally {
@@ -95,10 +97,10 @@ export function SpaceView() {
 
   async function startLive(project: Project) {
     try {
-      const result = await api.live.create({ project_id: project.id, title: `Building ${project.name} in ${space.name}`, audience: 'public' })
+      const result = await api.live.create({ project_id: project.id, title: t('Building {name} in {space}', { name: project.name, space: space.name }), audience: 'public' })
       dispatch({ type: 'OPEN_LIVE_SESSION', sessionId: result.session.id })
     } catch (error) {
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: `Could not go live: ${(error as Error).message}`, tone: 'warning' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Could not go live: {error}', { error: (error as Error).message }), tone: 'warning' } })
     }
   }
 
@@ -121,25 +123,25 @@ export function SpaceView() {
       <header className="space-hero">
         <div className="space-hero-orbit" aria-hidden="true"><i /><i /><span>{space.name.slice(0, 1)}</span></div>
         <div className="space-hero-copy">
-          <span>{space.kind === 'subject' ? 'SUBJECT SPACE' : 'HOBBY SPACE'}</span>
+          <span>{space.kind === 'subject' ? t('SUBJECT SPACE') : t('HOBBY SPACE')}</span>
           <h1>{space.name}</h1>
           <p>{space.description}</p>
         </div>
         <div className="space-hero-stats">
-          <span><strong>{projects.length}</strong> Projects</span>
-          <span><strong>{liveSessions.length}</strong> Live now</span>
-          <span><strong>{members.length}</strong> Active people</span>
+          <span><strong>{projects.length}</strong> {t('Projects')}</span>
+          <span><strong>{liveSessions.length}</strong> {t('Live now')}</span>
+          <span><strong>{members.length}</strong> {t('Active people')}</span>
         </div>
         <div className="space-hero-actions">
-          <button type="button" onClick={() => { dispatch({ type: 'SET_SPACE_TAB', tab: 'apps' }); setLaunchApp(miniApps[0]) }}><Plus size={15} /> Open {miniApps[0]?.shortName}</button>
-          <button type="button" onClick={() => dispatch({ type: 'SET_SPACE_TAB', tab: 'chat' })}><MessageCircle size={15} /> Chat Hub</button>
-          <button type="button" onClick={() => dispatch({ type: 'SET_SPACE_TAB', tab: 'live' })}><Radio size={15} /> View Live</button>
+          <button type="button" onClick={() => { dispatch({ type: 'SET_SPACE_TAB', tab: 'apps' }); setLaunchApp(miniApps[0]) }}><Plus size={15} /> {t('Open {name}', { name: miniApps[0]?.shortName ?? '' })}</button>
+          <button type="button" onClick={() => dispatch({ type: 'SET_SPACE_TAB', tab: 'chat' })}><MessageCircle size={15} /> {t('Chat Hub')}</button>
+          <button type="button" onClick={() => dispatch({ type: 'SET_SPACE_TAB', tab: 'live' })}><Radio size={15} /> {t('View Live')}</button>
         </div>
       </header>
 
-      <nav className="space-tabs" aria-label={`${space.name} sections`}>
+      <nav className="space-tabs" aria-label={t('{name} sections', { name: space.name })}>
         {TABS.map(tab => (
-          <button type="button" key={tab.id} aria-current={state.activeSpaceTab === tab.id ? 'page' : undefined} onClick={() => dispatch({ type: 'SET_SPACE_TAB', tab: tab.id })} className={state.activeSpaceTab === tab.id ? 'is-active' : ''}>{tab.label}</button>
+          <button type="button" key={tab.id} aria-current={state.activeSpaceTab === tab.id ? 'page' : undefined} onClick={() => dispatch({ type: 'SET_SPACE_TAB', tab: tab.id })} className={state.activeSpaceTab === tab.id ? 'is-active' : ''}>{t(tab.label)}</button>
         ))}
       </nav>
 
@@ -199,36 +201,38 @@ function SpaceFeed({
   onOpenLive: (id: number) => void
   onPostUpdate: (post: Post) => void
 }) {
+  const t = useT()
+  const locale = useLocale()
   return (
     <div className="space-feed-layout">
       <section className="space-feed-main">
-        <div className="space-section-heading"><div><span>ACTIVE COMMUNITY</span><h2>{spaceName} Feed</h2></div><small>Work, feedback and meaningful progress</small></div>
+        <div className="space-section-heading"><div><span>{t('ACTIVE COMMUNITY')}</span><h2>{t('{name} Feed', { name: spaceName })}</h2></div><small>{t('Work, feedback and meaningful progress')}</small></div>
         <form className="space-composer" onSubmit={onSubmit}>
-          <div><Sparkles size={17} /><textarea value={composer} maxLength={2000} onChange={event => setComposer(event.target.value)} placeholder={`Share useful ${spaceName} progress, a question, result or project update…`} aria-label={`Post in ${spaceName}`} /></div>
+          <div><Sparkles size={17} /><textarea value={composer} maxLength={2000} onChange={event => setComposer(event.target.value)} placeholder={t('Share useful {name} progress, a question, result or project update…', { name: spaceName })} aria-label={t('Post in {name}', { name: spaceName })} /></div>
           <footer>
-            <label><FolderGit2 size={13} /><select value={linkedProjectId ?? ''} onChange={event => setLinkedProjectId(event.target.value ? Number(event.target.value) : null)} aria-label="Link project"><option value="">No linked project</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
-            <button type="submit" disabled={!composer.trim() || posting}><Send size={14} /> {posting ? 'Sharing…' : 'Share progress'}</button>
+            <label><FolderGit2 size={13} /><select value={linkedProjectId ?? ''} onChange={event => setLinkedProjectId(event.target.value ? Number(event.target.value) : null)} aria-label={t('Link project')}><option value="">{t('No linked project')}</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
+            <button type="submit" disabled={!composer.trim() || posting}><Send size={14} /> {posting ? t('Sharing…') : t('Share progress')}</button>
           </footer>
         </form>
         {loading && <SpaceSkeleton />}
-        {!loading && posts.length === 0 && <div className="space-empty"><MessageCircle size={23} /><strong>Start the useful conversation</strong><span>Share the first project update, question or finding in this Space.</span></div>}
+        {!loading && posts.length === 0 && <div className="space-empty"><MessageCircle size={23} /><strong>{t('Start the useful conversation')}</strong><span>{t('Share the first project update, question or finding in this Space.')}</span></div>}
         {!loading && posts.map(post => <SpacePostCard key={post.id} post={post} onOpenProject={onOpenProject} onUpdate={onPostUpdate} />)}
       </section>
 
       <aside className="space-feed-side">
         <section>
-          <div className="side-section-heading"><h2>Start creating</h2><span>{miniApps.length} contextual tools</span></div>
+          <div className="side-section-heading"><h2>{t('Start creating')}</h2><span>{t('{count} contextual tools', { count: miniApps.length })}</span></div>
           <div className="space-mini-list">{miniApps.slice(0, 5).map(app => <button type="button" key={app.id} onClick={() => onLaunch(app)} style={{ '--app-accent': app.accent } as React.CSSProperties}><i>{app.shortName.slice(0, 1)}</i><span><strong>{app.name}</strong><small>{app.description}</small></span><ChevronRight size={14} /></button>)}</div>
         </section>
         <section>
-          <div className="side-section-heading"><h2>Recent Projects</h2><span>{projects.length}</span></div>
-          {projects.slice(0, 4).map(project => <button type="button" className="space-project-row" key={project.id} onClick={() => onOpenProject(project.id)}><FolderGit2 size={15} /><span><strong>{project.name}</strong><small>{project.app_kind} · {new Date(project.updated_at).toLocaleDateString()}</small></span></button>)}
-          {projects.length === 0 && <div className="side-empty">A Mini App will create the first durable Project here.</div>}
+          <div className="side-section-heading"><h2>{t('Recent Projects')}</h2><span>{projects.length}</span></div>
+          {projects.slice(0, 4).map(project => <button type="button" className="space-project-row" key={project.id} onClick={() => onOpenProject(project.id)}><FolderGit2 size={15} /><span><strong>{project.name}</strong><small>{project.app_kind} · {new Date(project.updated_at).toLocaleDateString(locale)}</small></span></button>)}
+          {projects.length === 0 && <div className="side-empty">{t('A Mini App will create the first durable Project here.')}</div>}
         </section>
         <section>
-          <div className="side-section-heading"><h2>Live work</h2><span>{liveSessions.length} active</span></div>
-          {liveSessions.slice(0, 3).map(session => <button type="button" className="space-live-row" key={session.id} onClick={() => onOpenLive(session.id)}><i><Radio size={13} /></i><span><strong>{session.title}</strong><small>{session.owner_name} · {session.viewer_count} watching</small></span></button>)}
-          {liveSessions.length === 0 && <div className="side-empty">No one is Live in this Space yet.</div>}
+          <div className="side-section-heading"><h2>{t('Live work')}</h2><span>{t('{count} active', { count: liveSessions.length })}</span></div>
+          {liveSessions.slice(0, 3).map(session => <button type="button" className="space-live-row" key={session.id} onClick={() => onOpenLive(session.id)}><i><Radio size={13} /></i><span><strong>{session.title}</strong><small>{session.owner_name} · {t('{count} watching', { count: session.viewer_count })}</small></span></button>)}
+          {liveSessions.length === 0 && <div className="side-empty">{t('No one is Live in this Space yet.')}</div>}
         </section>
       </aside>
     </div>
@@ -237,6 +241,8 @@ function SpaceFeed({
 
 function SpacePostCard({ post, onOpenProject, onUpdate }: { post: Post; onOpenProject: (id: number) => void; onUpdate: (post: Post) => void }) {
   const { state, dispatch } = useApp()
+  const t = useT()
+  const locale = useLocale()
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const reactionTotal = Object.values(post.reactions).reduce((sum, value) => sum + value, 0)
@@ -262,7 +268,7 @@ function SpacePostCard({ post, onOpenProject, onUpdate }: { post: Post; onOpenPr
     if (!post.project_id) return
     try {
       await api.projects.requestCollaboration(post.project_id)
-      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: 'Collaboration request sent with the Project attached.', tone: 'success' } })
+      dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: t('Collaboration request sent with the Project attached.'), tone: 'success' } })
     } catch (error) {
       dispatch({ type: 'PUSH_TOAST', toast: { id: String(Date.now()), message: (error as Error).message, tone: 'warning' } })
     }
@@ -270,23 +276,23 @@ function SpacePostCard({ post, onOpenProject, onUpdate }: { post: Post; onOpenPr
 
   return (
     <article className="space-post-card" data-post-id={post.id}>
-      <header><span className="space-avatar">{post.author_name.slice(0, 1).toUpperCase()}</span><div><strong>{post.author_name}</strong><small>{post.author_handle} · {new Date(post.created_at).toLocaleDateString()}</small></div>{post.author_id !== state.user?.id && <button type="button" onClick={() => { if (post.author_id) void api.follow(post.author_id) }}>Follow</button>}</header>
+      <header><span className="space-avatar">{post.author_name.slice(0, 1).toUpperCase()}</span><div><strong>{post.author_name}</strong><small>{post.author_handle} · {new Date(post.created_at).toLocaleDateString(locale)}</small></div>{post.author_id !== state.user?.id && <button type="button" onClick={() => { if (post.author_id) void api.follow(post.author_id) }}>{t('Follow')}</button>}</header>
       <p>{post.body}</p>
-      {post.media_url && <img src={post.media_url} alt="Shared progress" />}
+      {post.media_url && <img src={post.media_url} alt={t('Shared progress')} />}
       {post.project_id && post.project_name && (
         <div className="space-post-links">
-          <button type="button" className="space-post-project" onClick={() => onOpenProject(post.project_id!)}><FolderGit2 size={15} /><span><small>{post.post_type === 'live-replay' ? 'LIVE REPLAY' : 'PROJECT'}</small><strong>{post.project_name}</strong></span><ChevronRight size={15} /></button>
-          {post.project_app_kind && <button type="button" className="space-post-project" onClick={() => onOpenProject(post.project_id!)}><Rocket size={15} /><span><small>MINI APP</small><strong>{getMiniApp(post.project_app_kind).name}</strong></span></button>}
+          <button type="button" className="space-post-project" onClick={() => onOpenProject(post.project_id!)}><FolderGit2 size={15} /><span><small>{post.post_type === 'live-replay' ? t('LIVE REPLAY') : t('PROJECT')}</small><strong>{post.project_name}</strong></span><ChevronRight size={15} /></button>
+          {post.project_app_kind && <button type="button" className="space-post-project" onClick={() => onOpenProject(post.project_id!)}><Rocket size={15} /><span><small>{t('MINI APP')}</small><strong>{getMiniApp(post.project_app_kind).name}</strong></span></button>}
         </div>
       )}
-      {post.author_id && post.author_id !== state.user?.id && <button type="button" className="space-post-project" onClick={() => openCreatorProfile({ id: post.author_id!, name: post.author_name, handle: post.author_handle }, dispatch)}>Creator page <ChevronRight size={13} /></button>}
-      <div className="space-post-meta"><span>💡 {reactionTotal} useful reactions</span><button type="button" onClick={() => setCommentsOpen(value => !value)}>{post.comment_count} comments</button></div>
+      {post.author_id && post.author_id !== state.user?.id && <button type="button" className="space-post-project" onClick={() => openCreatorProfile({ id: post.author_id!, name: post.author_name, handle: post.author_handle }, dispatch)}>{t('Creator page')} <ChevronRight size={13} /></button>}
+      <div className="space-post-meta"><span>💡 {t('{count} useful reactions', { count: reactionTotal })}</span><button type="button" onClick={() => setCommentsOpen(value => !value)}>{t('{count} comments', { count: post.comment_count })}</button></div>
       <footer>
-        <button type="button" aria-pressed={post.my_reactions.includes('💡')} onClick={() => void react()} disabled={busy}>💡 Useful</button>
-        <button type="button" onClick={() => setCommentsOpen(value => !value)}><MessageCircle size={15} /> Comment</button>
-        <button type="button" aria-pressed={post.is_saved} onClick={() => void save()} disabled={busy}><Bookmark size={15} fill={post.is_saved ? 'currentColor' : 'none'} /> {post.is_saved ? 'Saved' : 'Save'}</button>
-        <button type="button" onClick={() => void navigator.clipboard.writeText(post.body)}><Copy size={14} /> Share</button>
-        {post.project_id && post.author_id !== state.user?.id && <button type="button" onClick={() => void requestCollaboration()}><Users size={14} /> Collaborate</button>}
+        <button type="button" aria-pressed={post.my_reactions.includes('💡')} onClick={() => void react()} disabled={busy}>💡 {t('Useful')}</button>
+        <button type="button" onClick={() => setCommentsOpen(value => !value)}><MessageCircle size={15} /> {t('Comment')}</button>
+        <button type="button" aria-pressed={post.is_saved} onClick={() => void save()} disabled={busy}><Bookmark size={15} fill={post.is_saved ? 'currentColor' : 'none'} /> {post.is_saved ? t('Saved') : t('Save')}</button>
+        <button type="button" onClick={() => void navigator.clipboard.writeText(post.body)}><Copy size={14} /> {t('Share')}</button>
+        {post.project_id && post.author_id !== state.user?.id && <button type="button" onClick={() => void requestCollaboration()}><Users size={14} /> {t('Collaborate')}</button>}
       </footer>
       {commentsOpen && <SpaceComments postId={post.id} onCountChange={delta => onUpdate({ ...post, comment_count: Math.max(0, post.comment_count + delta) })} />}
     </article>
@@ -294,6 +300,7 @@ function SpacePostCard({ post, onOpenProject, onUpdate }: { post: Post; onOpenPr
 }
 
 function SpaceComments({ postId, onCountChange }: { postId: number; onCountChange: (delta: number) => void }) {
+  const t = useT()
   const [comments, setComments] = useState<Comment[]>([])
   const [draft, setDraft] = useState('')
   useEffect(() => { void api.posts.comments.list(postId).then(result => setComments(result.comments)) }, [postId])
@@ -306,7 +313,7 @@ function SpaceComments({ postId, onCountChange }: { postId: number; onCountChang
     setDraft('')
     onCountChange(1)
   }
-  return <section className="space-comments">{comments.map(comment => <article key={comment.id}><span>{comment.author_name.slice(0, 1)}</span><div><strong>{comment.author_name}</strong><p>{comment.body}</p></div></article>)}<form onSubmit={submit}><input value={draft} maxLength={600} onChange={event => setDraft(event.target.value)} placeholder="Add useful feedback…" aria-label="Comment" /><button type="submit" disabled={!draft.trim()}><Send size={13} /></button></form></section>
+  return <section className="space-comments">{comments.map(comment => <article key={comment.id}><span>{comment.author_name.slice(0, 1)}</span><div><strong>{comment.author_name}</strong><p>{comment.body}</p></div></article>)}<form onSubmit={submit}><input value={draft} maxLength={600} onChange={event => setDraft(event.target.value)} placeholder={t('Add useful feedback…')} aria-label={t('Comment')} /><button type="submit" disabled={!draft.trim()}><Send size={13} /></button></form></section>
 }
 
 function ProjectsPanel({ projects, sessions, onOpen, onNew, onChat, onLive }: {
@@ -317,11 +324,13 @@ function ProjectsPanel({ projects, sessions, onOpen, onNew, onChat, onLive }: {
   onChat: (project: Project) => void
   onLive: (project: Project) => void
 }) {
+  const t = useT()
+  const locale = useLocale()
   return (
     <section className="space-panel">
       <div className="space-panel-heading">
-        <div><span>DURABLE WORK</span><h2>Projects</h2><p>Each Project stays connected to its Mini App, Chat, Live session and Feed posts.</p></div>
-        <button type="button" onClick={onNew}><Plus size={15} /> New Project</button>
+        <div><span>{t('DURABLE WORK')}</span><h2>{t('Projects')}</h2><p>{t('Each Project stays connected to its Mini App, Chat, Live session and Feed posts.')}</p></div>
+        <button type="button" onClick={onNew}><Plus size={15} /> {t('New Project')}</button>
       </div>
       <div className="space-project-grid">
         {projects.map(project => {
@@ -331,19 +340,19 @@ function ProjectsPanel({ projects, sessions, onOpen, onNew, onChat, onLive }: {
             <article key={project.id} className="space-project-card">
               <button type="button" onClick={() => onOpen(project.id)}>
                 <i><FolderGit2 size={19} /></i>
-                <span>{app.name}{live ? ' · LIVE' : ''}</span>
+                <span>{app.name}{live ? ` · ${t('LIVE')}` : ''}</span>
                 <strong>{project.name}</strong>
-                <small>{project.visibility} · Updated {new Date(project.updated_at).toLocaleDateString()}{project.collaborator_role ? ` · ${project.collaborator_role}` : ''}</small>
+                <small>{t(project.visibility)} · {t('Updated {time}', { time: new Date(project.updated_at).toLocaleDateString(locale) })}{project.collaborator_role ? ` · ${t(project.collaborator_role)}` : ''}</small>
               </button>
               <footer>
-                <button type="button" onClick={() => onOpen(project.id)}>Open</button>
-                <button type="button" onClick={() => onChat(project)}>Project Chat</button>
-                {project.can_edit && <button type="button" onClick={() => onLive(project)}>{live ? 'View Live' : 'Go Live'}</button>}
+                <button type="button" onClick={() => onOpen(project.id)}>{t('Open')}</button>
+                <button type="button" onClick={() => onChat(project)}>{t('Project Chat')}</button>
+                {project.can_edit && <button type="button" onClick={() => onLive(project)}>{live ? t('View Live') : t('Go Live')}</button>}
               </footer>
             </article>
           )
         })}
-        {projects.length === 0 && <div className="space-empty wide"><FolderGit2 size={25} /><strong>No Projects in this Space</strong><span>Start from a Mini App workspace so the work stays connected.</span></div>}
+        {projects.length === 0 && <div className="space-empty wide"><FolderGit2 size={25} /><strong>{t('No Projects in this Space')}</strong><span>{t('Start from a Mini App workspace so the work stays connected.')}</span></div>}
       </div>
     </section>
   )
@@ -358,6 +367,7 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
   onOpen: (id: number) => void
   onLive: (project: Project) => void
 }) {
+  const t = useT()
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<'space' | 'all'>('space')
   const source = scope === 'space' ? apps : catalog
@@ -392,23 +402,23 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
     <section className="space-panel">
       <div className="space-panel-heading">
         <div>
-          <span>CONTEXTUAL CAPABILITIES</span>
-          <h2>Mini App Workspaces</h2>
-          <p>Every Mini App is a Project workspace. Start from Code Editor, Notebook, Data Viz or Writing — then keep editing, collaborating and going Live from the same Project.</p>
+          <span>{t('CONTEXTUAL CAPABILITIES')}</span>
+          <h2>{t('Mini App Workspaces')}</h2>
+          <p>{t('Every Mini App is a Project workspace. Start from Code Editor, Notebook, Data Viz or Writing — then keep editing, collaborating and going Live from the same Project.')}</p>
         </div>
         <div className="space-apps-toolbar">
           <div className="workspace-mode-switch space-apps-scope">
-            <button type="button" className={scope === 'space' ? 'is-active' : ''} onClick={() => setScope('space')}>This Space · {apps.length}</button>
-            <button type="button" className={scope === 'all' ? 'is-active' : ''} onClick={() => setScope('all')}>All apps · {catalog.length}</button>
+            <button type="button" className={scope === 'space' ? 'is-active' : ''} onClick={() => setScope('space')}>{t('This Space · {count}', { count: apps.length })}</button>
+            <button type="button" className={scope === 'all' ? 'is-active' : ''} onClick={() => setScope('all')}>{t('All apps · {count}', { count: catalog.length })}</button>
           </div>
           <label className="space-apps-search">
-            <span className="sr-only">Search mini apps</span>
-            <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search word, comic, lab, sheet…" />
+            <span className="sr-only">{t('Search mini apps')}</span>
+            <input value={query} onChange={event => setQuery(event.target.value)} placeholder={t('Search word, comic, lab, sheet…')} />
           </label>
         </div>
       </div>
       {!query && (
-        <div className="core-workspace-row" aria-label="Core workspaces">
+        <div className="core-workspace-row" aria-label={t('Core workspaces')}>
           {coreWorkspaces.map(app => {
             const appProjects = projects.filter(project => project.app_kind === app.id)
             return (
@@ -420,7 +430,7 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
                 onClick={() => appProjects[0] ? onOpen(appProjects[0].id) : onLaunch(app)}
               >
                 <strong>{app.shortName}</strong>
-                <span>{appProjects[0] ? `Open ${appProjects[0].name}` : 'Create Project'}</span>
+                <span>{appProjects[0] ? t('Open {name}', { name: appProjects[0].name }) : t('Create Project')}</span>
               </button>
             )
           })}
@@ -436,7 +446,7 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
               return (
                 <article key={app.id} className="mini-app-workspace-card" style={{ '--app-accent': app.accent } as React.CSSProperties}>
                   <i>{app.shortName.slice(0, 1)}</i>
-                  <span>{live ? <b><Radio size={10} /> LIVE NOW</b> : app.live && <b><Radio size={10} /> LIVE READY</b>}</span>
+                  <span>{live ? <b><Radio size={10} /> {t('LIVE NOW')}</b> : app.live && <b><Radio size={10} /> {t('LIVE READY')}</b>}</span>
                   <h3>{app.name}</h3>
                   <p>{app.description}</p>
                   {appProjects.length > 0 && (
@@ -444,14 +454,14 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
                       {appProjects.slice(0, 3).map(project => (
                         <li key={project.id}>
                           <button type="button" onClick={() => onOpen(project.id)}><FolderGit2 size={12} /> {project.name}</button>
-                          {project.can_edit && <button type="button" onClick={() => onLive(project)}>Go Live</button>}
+                          {project.can_edit && <button type="button" onClick={() => onLive(project)}>{t('Go Live')}</button>}
                         </li>
                       ))}
                     </ul>
                   )}
                   <footer>
-                    {appProjects[0] && <button type="button" onClick={() => onOpen(appProjects[0].id)}>Open workspace</button>}
-                    <button type="button" onClick={() => onLaunch(app)}>Create Project <Rocket size={14} /></button>
+                    {appProjects[0] && <button type="button" onClick={() => onOpen(appProjects[0].id)}>{t('Open workspace')}</button>}
+                    <button type="button" onClick={() => onLaunch(app)}>{t('Create Project')} <Rocket size={14} /></button>
                   </footer>
                 </article>
               )
@@ -462,8 +472,8 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
       {filtered.length === 0 && (
         <div className="space-empty wide">
           <Rocket size={25} />
-          <strong>No mini apps match</strong>
-          <span>Try “comic”, “sheet”, “lab” or “word”.</span>
+          <strong>{t('No mini apps match')}</strong>
+          <span>{t('Try “comic”, “sheet”, “lab” or “word”.')}</span>
         </div>
       )}
     </section>
@@ -472,6 +482,7 @@ function MiniAppsPanel({ apps, catalog, projects, sessions, onLaunch, onOpen, on
 
 function SpaceChatPanel({ spaceId, projects, onOpenProject }: { spaceId: string; projects: Project[]; onOpenProject: (id: number) => void }) {
   const { dispatch } = useApp()
+  const t = useT()
   const [conversations, setConversations] = useState<Conversation[]>([])
   useEffect(() => { void api.chat.list().then(result => setConversations(result.conversations.filter(item => item.space_id === spaceId || (item.project_id && projects.some(project => project.id === item.project_id))))) }, [projects, spaceId])
   const projectChats = conversations.filter(item => item.kind === 'project')
@@ -480,11 +491,11 @@ function SpaceChatPanel({ spaceId, projects, onOpenProject }: { spaceId: string;
   return (
     <section className="space-panel">
       <div className="space-panel-heading">
-        <div><span>SPACE CONVERSATIONS</span><h2>Chat Hub</h2><p>Project Chat stays bound to the work. Group and Private chats stay in the same visual system.</p></div>
-        <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}><MessageCircle size={15} /> Open full Chat Hub</button>
+        <div><span>{t('SPACE CONVERSATIONS')}</span><h2>{t('Chat Hub')}</h2><p>{t('Project Chat stays bound to the work. Group and Private chats stay in the same visual system.')}</p></div>
+        <button type="button" onClick={() => dispatch({ type: 'SET_VIEW', view: 'chat' })}><MessageCircle size={15} /> {t('Open full Chat Hub')}</button>
       </div>
       <div className="space-chat-columns">
-        <ChatKindColumn title="Project Chat" detail="Bound to a Project, collaborators and Mini App" items={projectChats} empty="Open a Project and start its chat." onOpen={id => { sessionStorage.setItem('helios-open-conversation', String(id)); dispatch({ type: 'SET_VIEW', view: 'chat' }) }} extra={item => item.project_id ? <button type="button" onClick={() => onOpenProject(item.project_id!)}>Open Project</button> : null} />
+        <ChatKindColumn title="Project Chat" detail="Bound to a Project, collaborators and Mini App" items={projectChats} empty="Open a Project and start its chat." onOpen={id => { sessionStorage.setItem('helios-open-conversation', String(id)); dispatch({ type: 'SET_VIEW', view: 'chat' }) }} extra={item => item.project_id ? <button type="button" onClick={() => onOpenProject(item.project_id!)}>{t('Open Project')}</button> : null} />
         <ChatKindColumn title="Group Chat" detail="Several people, one thread" items={groups} empty="Create a group from Chat Hub." onOpen={id => { sessionStorage.setItem('helios-open-conversation', String(id)); dispatch({ type: 'SET_VIEW', view: 'chat' }) }} />
         <ChatKindColumn title="Private Chat" detail="Two people" items={privates} empty="Start a private chat from Chat Hub." onOpen={id => { sessionStorage.setItem('helios-open-conversation', String(id)); dispatch({ type: 'SET_VIEW', view: 'chat' }) }} />
       </div>
@@ -500,48 +511,140 @@ function ChatKindColumn({ title, detail, items, empty, onOpen, extra }: {
   onOpen: (id: number) => void
   extra?: (item: Conversation) => React.ReactNode
 }) {
+  const t = useT()
   return (
     <section className="space-chat-column">
-      <header><strong>{title}</strong><small>{detail}</small></header>
+      <header><strong>{t(title)}</strong><small>{t(detail)}</small></header>
       {items.map(item => (
         <article key={item.id}>
           <button type="button" onClick={() => onOpen(item.id)}>
             <strong>{item.title}</strong>
-            <small>{item.last_message || 'No messages yet'}{item.unread ? ` · ${item.unread} unread` : ''}</small>
+            <small>{item.last_message || t('No messages yet')}{item.unread ? ` · ${t('{count} unread', { count: item.unread })}` : ''}</small>
           </button>
           {extra?.(item)}
         </article>
       ))}
-      {items.length === 0 && <p>{empty}</p>}
+      {items.length === 0 && <p>{t(empty)}</p>}
     </section>
   )
 }
 
 function LivePanel({ sessions, projects, onOpen, onStart }: { sessions: LiveSession[]; projects: Project[]; onOpen: (id: number) => void; onStart: (project: Project) => void }) {
-  return <section className="space-panel"><div className="space-panel-heading"><div><span>WORK HAPPENING NOW</span><h2>Live collaborative work</h2><p>Live opens the actual Project—not a detached video stream.</p></div></div><div className="space-live-grid">{sessions.map(session => <button type="button" key={session.id} onClick={() => onOpen(session.id)}><span><i /> LIVE · {session.viewer_count} watching</span><h3>{session.title}</h3><p>{session.owner_name} is working in {session.project_name}</p><b>Join workspace <ChevronRight size={13} /></b></button>)}{projects.map(project => <article key={project.id}><Radio size={20} /><h3>Go Live with {project.name}</h3><p>Share the changing work and receive comments or suggestions.</p><button type="button" onClick={() => onStart(project)}>Go Live</button></article>)}{sessions.length === 0 && projects.length === 0 && <div className="space-empty wide"><Radio size={25} /><strong>No Live work yet</strong><span>Create a Project, then Go Live from its common shell.</span></div>}</div></section>
+  const t = useT()
+  return (
+    <section className="space-panel">
+      <div className="space-panel-heading">
+        <div><span>{t('WORK HAPPENING NOW')}</span><h2>{t('Live collaborative work')}</h2><p>{t('Live opens the actual Project—not a detached video stream.')}</p></div>
+      </div>
+      <div className="space-live-grid">
+        {sessions.map(session => (
+          <button type="button" key={session.id} onClick={() => onOpen(session.id)}>
+            <span><i /> {t('LIVE · {count} watching', { count: session.viewer_count })}</span>
+            <h3>{session.title}</h3>
+            <p>{t('{name} is working in {project}', { name: session.owner_name, project: session.project_name })}</p>
+            <b>{t('Join workspace')} <ChevronRight size={13} /></b>
+          </button>
+        ))}
+        {projects.map(project => (
+          <article key={project.id}>
+            <Radio size={20} />
+            <h3>{t('Go Live with {name}', { name: project.name })}</h3>
+            <p>{t('Share the changing work and receive comments or suggestions.')}</p>
+            <button type="button" onClick={() => onStart(project)}>{t('Go Live')}</button>
+          </article>
+        ))}
+        {sessions.length === 0 && projects.length === 0 && (
+          <div className="space-empty wide">
+            <Radio size={25} />
+            <strong>{t('No Live work yet')}</strong>
+            <span>{t('Create a Project, then Go Live from its common shell.')}</span>
+          </div>
+        )}
+      </div>
+    </section>
+  )
 }
 
 function MembersPanel({ members, currentUserId }: { members: Array<{ id: number; name: string; handle: string }>; currentUserId: number }) {
-  return <section className="space-panel"><div className="space-panel-heading"><div><span>PEOPLE AROUND THE WORK</span><h2>Active members</h2><p>Creators are surfaced through useful contributions, not a compulsive leaderboard.</p></div></div><div className="space-member-grid">{members.map(member => <article key={member.id}><span>{member.name.slice(0, 1)}</span><div><strong>{member.name}</strong><small>{member.handle}{member.id === currentUserId ? ' · You' : ''}</small></div>{member.id !== currentUserId && <button type="button" onClick={() => void api.follow(member.id)}>Follow work</button>}</article>)}</div></section>
+  const t = useT()
+  return (
+    <section className="space-panel">
+      <div className="space-panel-heading">
+        <div><span>{t('PEOPLE AROUND THE WORK')}</span><h2>{t('Active members')}</h2><p>{t('Creators are surfaced through useful contributions, not a compulsive leaderboard.')}</p></div>
+      </div>
+      <div className="space-member-grid">
+        {members.map(member => (
+          <article key={member.id}>
+            <span>{member.name.slice(0, 1)}</span>
+            <div><strong>{member.name}</strong><small>{member.handle}{member.id === currentUserId ? ` · ${t('You')}` : ''}</small></div>
+            {member.id !== currentUserId && <button type="button" onClick={() => void api.follow(member.id)}>{t('Follow work')}</button>}
+          </article>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 function ChallengesPanel({ spaceName, apps, onStart }: { spaceName: string; apps: MiniAppDefinition[]; onStart: (app: MiniAppDefinition) => void }) {
+  const t = useT()
   const challenges = [
     ['Make one honest first draft', 'Create work before optimizing it.', apps[0]],
     ['Explain the difficult part', 'Publish a useful project-backed reflection.', apps[Math.min(1, apps.length - 1)]],
     ['Help another creator', 'Leave specific feedback that moves work forward.', apps[0]],
   ] as const
-  return <section className="space-panel"><div className="space-panel-heading"><div><span>MEANINGFUL MOMENTUM</span><h2>{spaceName} Challenges</h2><p>Solar recognises completion and helping—not empty clicks.</p></div></div><div className="challenge-grid">{challenges.map(([title, detail, app], index) => <article key={title}><span>0{index + 1}</span><h3>{title}</h3><p>{detail}</p><small>+ Solar after genuine completion</small><button type="button" onClick={() => onStart(app)}>Start with {app.shortName}</button></article>)}</div></section>
+  return (
+    <section className="space-panel">
+      <div className="space-panel-heading">
+        <div><span>{t('MEANINGFUL MOMENTUM')}</span><h2>{t('{name} Challenges', { name: spaceName })}</h2><p>{t('Solar recognises completion and helping—not empty clicks.')}</p></div>
+      </div>
+      <div className="challenge-grid">
+        {challenges.map(([title, detail, app], index) => (
+          <article key={title}>
+            <span>0{index + 1}</span>
+            <h3>{t(title)}</h3>
+            <p>{t(detail)}</p>
+            <small>{t('+ Solar after genuine completion')}</small>
+            <button type="button" onClick={() => onStart(app)}>{t('Start with {name}', { name: app.shortName })}</button>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 function ResourcesPanel({ spaceName }: { spaceName: string }) {
-  return <section className="space-panel"><div className="space-panel-heading"><div><span>KEEP CONTEXT CLOSE</span><h2>{spaceName} Resources</h2><p>Project notes, shared explanations and community findings stay near the work.</p></div></div><div className="resource-grid"><article><BookOpen size={20} /><h3>Project-backed notes</h3><p>Open Notes or Reader to create a durable resource others can reference.</p></article><article><MessageCircle size={20} /><h3>Useful discussions</h3><p>Comments and Project Chats preserve decisions beside their source.</p></article><article><Radio size={20} /><h3>Live session history</h3><p>Ended sessions retain their event history as a practical replay artifact.</p></article></div></section>
+  const t = useT()
+  return (
+    <section className="space-panel">
+      <div className="space-panel-heading">
+        <div><span>{t('KEEP CONTEXT CLOSE')}</span><h2>{t('{name} Resources', { name: spaceName })}</h2><p>{t('Project notes, shared explanations and community findings stay near the work.')}</p></div>
+      </div>
+      <div className="resource-grid">
+        <article><BookOpen size={20} /><h3>{t('Project-backed notes')}</h3><p>{t('Open Notes or Reader to create a durable resource others can reference.')}</p></article>
+        <article><MessageCircle size={20} /><h3>{t('Useful discussions')}</h3><p>{t('Comments and Project Chats preserve decisions beside their source.')}</p></article>
+        <article><Radio size={20} /><h3>{t('Live session history')}</h3><p>{t('Ended sessions retain their event history as a practical replay artifact.')}</p></article>
+      </div>
+    </section>
+  )
 }
 
 function HeliosSpacePanel({ prompts, spaceName, onOpen }: { prompts: string[]; spaceName: string; onOpen: () => void }) {
-  return <section className="space-panel helios-space-panel"><div><span className="helios-space-orb"><Sparkles size={27} /></span><small>CONTEXT: {spaceName.toUpperCase()}</small><h2>Helios understands where you are.</h2><p>Open the side panel with this Space, its active Project, Mini App and selected work in the context packet.</p><div>{prompts.map(prompt => <button type="button" key={prompt} onClick={() => { sessionStorage.setItem('helios-pending-prompt', prompt); onOpen() }}>{prompt}<ChevronRight size={13} /></button>)}</div><button type="button" className="helios-open-button" onClick={onOpen}><Sparkles size={15} /> Open Helios</button></div></section>
+  const t = useT()
+  return (
+    <section className="space-panel helios-space-panel">
+      <div>
+        <span className="helios-space-orb"><Sparkles size={27} /></span>
+        <small>{t('CONTEXT: {name}', { name: spaceName.toUpperCase() })}</small>
+        <h2>{t('Helios understands where you are.')}</h2>
+        <p>{t('Open the side panel with this Space, its active Project, Mini App and selected work in the context packet.')}</p>
+        <div>{prompts.map(prompt => <button type="button" key={prompt} onClick={() => { sessionStorage.setItem('helios-pending-prompt', prompt); onOpen() }}>{prompt}<ChevronRight size={13} /></button>)}</div>
+        <button type="button" className="helios-open-button" onClick={onOpen}><Sparkles size={15} /> {t('Open Helios')}</button>
+      </div>
+    </section>
+  )
 }
 
 function SpaceSkeleton() {
-  return <div className="space-skeleton" aria-label="Loading Space activity"><i /><i /><i /></div>
+  const t = useT()
+  return <div className="space-skeleton" aria-label={t('Loading Space activity')}><i /><i /><i /></div>
 }
