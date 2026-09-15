@@ -124,11 +124,13 @@
 }
 
 .helios-dock-history-item strong {
+  display: -webkit-box;
   overflow: hidden;
   font-size: 13px;
   font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.3;
 }
 
 .helios-dock-history-item span {
