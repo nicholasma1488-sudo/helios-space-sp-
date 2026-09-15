@@ -298,6 +298,11 @@
   color: var(--helios-text);
 }
 
+.helios-api-form .helios-field { margin-top: 8px; }
+.helios-api-form .helios-field > span { font-size: 11px; }
+.helios-api-form .helios-input { min-height: 36px; padding: 7px 10px; font-size: 12px; }
+.helios-api-form .helios-field small { color: var(--helios-muted); font-size: 10px; line-height: 1.35; }
+
 .helios-api-key { position: relative; }
 .helios-api-key .helios-input { padding-right: 36px; }
 .helios-api-key > button {
