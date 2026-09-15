@@ -3,6 +3,7 @@ import { api } from '../api'
 import type { User, SiteInfo } from '../api'
 import { Logo } from './Logo'
 import { Mail, Lock, User as UserIcon, AtSign, Eye, EyeOff, Loader, AlertCircle } from 'lucide-react'
+import { LanguageSwitcher } from '../i18n'
 import './AuthScreen.css'
 
 interface Props { onAuth: (user: User) => void; defaultMode?: 'login' | 'register'; onBack?: () => void }
@@ -138,6 +139,9 @@ export function AuthScreen({ onAuth, defaultMode = 'register', onBack }: Props) 
   return (
     <div className={'auth-screen-v2 fixed inset-0 flex items-center justify-center p-4' + (leaving ? ' is-leaving' : '')}
       style={{ background: 'var(--helios-bg)', overflowY: 'auto' }}>
+      <div className="auth-language-switcher">
+        <LanguageSwitcher compact />
+      </div>
 
       {/* Background radial glow */}
       <div aria-hidden="true" style={{

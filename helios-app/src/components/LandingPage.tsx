@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { Logo } from './Logo'
 import { InteractiveOrbitScene, type HeroPhase, type StageMode } from './InteractiveOrbitScene'
+import { LanguageSwitcher } from '../i18n'
 import './LandingPage.css'
 
 interface Props {
@@ -157,6 +158,7 @@ export function LandingPage({ onGetStarted, onSignIn }: Props) {
           <button type="button" onClick={() => enterAuth('register')} className="landing-nav-primary">
             Create your space <ArrowRight size={13} />
           </button>
+          <LanguageSwitcher compact />
         </div>
       </header>
 

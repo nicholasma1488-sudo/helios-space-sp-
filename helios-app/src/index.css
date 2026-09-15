@@ -707,3 +707,27 @@ body {
 .motion-reduced .liquid-glass-btn:active {
   transform: none !important;
 }
+
+.helios-language-switcher select {
+  appearance: none;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--helios-border);
+  border-radius: 999px;
+  background:
+    var(--helios-surface)
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%23888888' d='M1 1l5 5 5-5'/></svg>")
+    no-repeat right 10px center;
+  color: var(--helios-text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.helios-language-switcher.is-compact select {
+  padding: 5px 26px 5px 8px;
+  font-size: 11px;
+}
+.helios-language-switcher select:focus-visible {
+  outline: 2px solid var(--helios-accent);
+  outline-offset: 2px;
+}

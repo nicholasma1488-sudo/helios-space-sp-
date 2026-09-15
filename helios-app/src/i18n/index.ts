@@ -104,3 +104,5 @@ export function useT() {
 }
 
 export const isChineseLanguage = (lang: Language = current) => lang !== 'en'
+
+export { LanguageSwitcher } from './LanguageSwitcher'
